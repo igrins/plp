@@ -1,3 +1,4 @@
+from . import basic
 
 if 1:
 
@@ -9,7 +10,7 @@ if 1:
         imgs = []
         hdrs = []
         for item in item_list:
-            img, hdr = readfits(item)
+            img, hdr = basic.readfits(item)
             #img_min = array(img).min()
             #print 'item', item
             #if img_min <= 0:

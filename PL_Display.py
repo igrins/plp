@@ -40,7 +40,7 @@ import time, os
 from scipy.optimize import curve_fit
 import matplotlib.gridspec as gridspec
 
-
+import Libs.pipeline as pipeline
 
 AP_DEGREE = 3
 WL_DEGREE = [3,2]
@@ -664,6 +664,23 @@ class CDisplay():
             self.StatusInsert("["+objtype+"] "+'-'*(50-len(objtype)-3))
             self.StatusInsert(str(non+noff)+" out of "+str(ntotal)+" files selected.")
             for groupID in ongroupIDs:
+                curonlist, curofflist = self.get_cur_lists(groupID, non,
+                                                           ongroupID1list,
+                                                           ongroupID2list,
+                                                           offgroupID1list,
+                                                           offgroupID2list,
+                                                           onfilelist,
+                                                           offfilelist)
+                self.reduce_cal_flat1(objtype, groupID,
+                                      curonlist, curofflist, non, noff,
+                                      do_bp=do_bp,
+                                      cal_flat=cal_flat,
+                                      cal_flat_ft=cal_flat_ft)
+
+    def get_cur_lists(self, groupID, non,
+                      ongroupID1list, ongroupID2list,
+                      offgroupID1list, offgroupID2list,
+                      onfilelist, offfilelist):
                 curonlist=[]
                 curofflist=[]
                 for i in range(0,non):
@@ -671,6 +688,16 @@ class CDisplay():
                         curonlist.append(onfilelist[i])
                     if offgroupID1list[i]==groupID or offgroupID2list[i]==groupID:
                         curofflist.append(offfilelist[i])
+
+                return curonlist, curofflist
+
+
+    def reduce_cal_flat1(self, objtype,
+                         groupID, curonlist, curofflist,
+                         non, noff,
+                         do_bp=True,
+                         cal_flat=None,
+                         cal_flat_ft=False):
                 if len(curonlist)==len(curofflist):
                     self.StatusInsert('<Group Number '+str(groupID)+' ('+str(non+noff)+' files)> ')
 
@@ -851,15 +878,15 @@ class CDisplay():
                     try: self.std[groupID]=specfiles
                     except: self.std={groupID:specfiles}
 
-                    '''
-                    #2013-12-24 CKSim below pickle-do's are for the development stage.
-                    file=open(self.reducepath+'std_spectra.txt','wb')
-                    pickle.dump(std_spectra, file)
-                    file.close()
-                    file=open(self.reducepath+'wave.txt','wb')
-                    pickle.dump(waves, file)
-                    file.close()
-                    '''
+                    # '''
+                    # #2013-12-24 CKSim below pickle-do's are for the development stage.
+                    # file=open(self.reducepath+'std_spectra.txt','wb')
+                    # pickle.dump(std_spectra, file)
+                    # file.close()
+                    # file=open(self.reducepath+'wave.txt','wb')
+                    # pickle.dump(waves, file)
+                    # file.close()
+                    # '''
 
 
 
@@ -917,47 +944,36 @@ class CDisplay():
 
                     specfiles = self.telcor(specfiles,pngpath=self.makepng)
 
-    '''
+    # '''
+    # def readechellogram(self, list):
+
+    #     imgs = []
+    #     hdrs = []
+    #     for item in list:
+    #         img, hdr = readfits(item)
+
+    #         #2014-03-10 cksim
+    #         #H-band: rotate 90 CW band flip horizontally
+    #         #K-band: 90
+    #         if self.band == 'H':
+    #             img = np.rot90(img)
+    #             img = np.fliplr(img)
+    #         if self.band == 'K':
+    #             img = np.rot90(img,3)
+
+    #         img_min = array(img).min()
+
+    #         if img_min <= 0:
+    #             img -= img_min
+
+    #         imgs.append(img)
+    #         hdrs.append(hdr)
+
+    #     return imgs,hdrs
+    # '''
+
     def readechellogram(self, list):
-
-        imgs = []
-        hdrs = []
-        for item in list:
-            img, hdr = readfits(item)
-
-            #2014-03-10 cksim
-            #H-band: rotate 90 CW band flip horizontally
-            #K-band: 90
-            if self.band == 'H':
-                img = np.rot90(img)
-                img = np.fliplr(img)
-            if self.band == 'K':
-                img = np.rot90(img,3)
-
-            img_min = array(img).min()
-
-            if img_min <= 0:
-                img -= img_min
-
-            imgs.append(img)
-            hdrs.append(hdr)
-
-        return imgs,hdrs
-    '''
-
-    def readechellogram(self, list):
-
-        imgs = []
-        hdrs = []
-        for item in list:
-            img, hdr = readfits(item)
-            #img_min = array(img).min()
-            #print 'item', item
-            #if img_min <= 0:
-            #    img -= img_min
-
-            imgs.append(img)
-            hdrs.append(hdr)
+        imgs,hdrs = pipeline.readechellogram(list)
         print 'imgs', imgs
         return imgs,hdrs
 
