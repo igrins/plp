@@ -101,13 +101,22 @@ class CDisplay():
         if hasattr(self,'reducepath'): initialdir=self.reducepath
         filenamefullpath = tkFileDialog.askopenfilename(filetypes = [('Text files','*.txt'),('All files','*')], \
                                                         title="Select the observation log file...",initialdir=initialdir)
+
         if filenamefullpath:
             print filenamefullpath
+            filename = self.get_filename(filenamefullpath)
+            self.set_loadlogpath(filename, filenamefullpath)
+            self.set_loadlogpath_tk(filename, filenamefullpath)
+
+    def get_filename(self, filenamefullpath):
             if hasattr(self,'reducepath') == False:
                 self.reducepathentry.set(filenamefullpath.split('IGRINS_DT_Log')[0])
                 self.reducepath = self.reducepathentry.get()
             filename = filenamefullpath.split('/')[-1]
-            self.obslog.set(filename)
+            return filename
+
+    def set_loadlogpath(self, filename, filenamefullpath):
+
             self.obsid = filename.split('_')[3]
             self.band = filename.split('.')[0].split('_')[4]
 
@@ -121,40 +130,69 @@ class CDisplay():
             igroupID1 = headerline.index('GROUP1')
             igroupID2 = headerline.index('GROUP2')
 
-            #self.cal_dark_l.delete(0,END)
-            self.cal_flat_l.delete(0,END)
-            self.cal_arc_l.delete(0,END)
-            self.obj_std_l.delete(0,END)
-            self.obj_tar_l.delete(0,END)
-
             self.loglines = []
             self.logfilenames = []
             self.logframetypes = []
             self.loggroupID1s = []
             self.loggroupID2s = []
+            self.logobjtypes = []
+            self.item_list = {}
+
             for logline in loglines[2:]:
                 if logline[0] != '#':
                     line = logline.split(',')
-
-                    item = line[ifilename][:-5]+' ['+line[iframetype]+']['+line[igroupID1]+']['+line[igroupID2]+']'
-                    #if line[iobjtype] == 'DARK':
-                    #    self.cal_dark_l.insert(END,item)
-                    if line[iobjtype] == 'FLAT':
-                        self.cal_flat_l.insert(END,item)
-                    elif line[iobjtype] == 'ARC':
-                        self.cal_arc_l.insert(END,item)
-                    elif line[iobjtype] == 'SKY':
-                        self.cal_arc_l.insert(END,item)
-                    elif line[iobjtype] == 'STD':
-                        self.obj_std_l.insert(END,item)
-                    elif line[iobjtype] == 'TAR':
-                        self.obj_tar_l.insert(END,item)
 
                     self.loglines.append(line)
                     self.logfilenames.append(line[ifilename])
                     self.logframetypes.append(line[iframetype])
                     self.loggroupID1s.append(line[igroupID1])
                     self.loggroupID2s.append(line[igroupID2])
+
+                    item = line[ifilename][:-5]+' ['+line[iframetype]+']['+line[igroupID1]+']['+line[igroupID2]+']'
+                    objtype = line[iobjtype]
+
+                    self.item_list.setdefault(objtype, []).append(item)
+                    self.logobjtypes.append(objtype)
+
+    def set_loadlogpath_tk(self, filename, filenamefullpath):
+            self.obslog.set(filename)
+
+            # we still need this to get iobjtype etc.
+            # file = open(filenamefullpath,'r')
+            # loglines = file.read()
+            # loglines = loglines.splitlines()
+            # headerline = loglines[1].split(',')
+            # ifilename = headerline.index('FILENAME')
+            # iobjtype = headerline.index('OBJTYPE')
+            # iframetype = headerline.index('FRAMETYPE')
+            # igroupID1 = headerline.index('GROUP1')
+            # igroupID2 = headerline.index('GROUP2')
+
+            #self.cal_dark_l.delete(0,END)
+            self.cal_flat_l.delete(0,END)
+            self.cal_arc_l.delete(0,END)
+            self.obj_std_l.delete(0,END)
+            self.obj_tar_l.delete(0,END)
+
+            #for line in self.loglines:
+
+            for objtype in self.item_list:
+                for item in self.item_list[objtype]:
+                    # this can should be more efficient. -JJLEE
+
+                    #if line[iobjtype] == 'DARK':
+                    #    self.cal_dark_l.insert(END,item)
+                    if objtype == 'FLAT':
+                        self.cal_flat_l.insert(END,item)
+                    elif objtype == 'ARC':
+                        self.cal_arc_l.insert(END,item)
+                    elif objtype == 'SKY':
+                        self.cal_arc_l.insert(END,item)
+                    elif objtype == 'STD':
+                        self.obj_std_l.insert(END,item)
+                    elif objtype == 'TAR':
+                        self.obj_tar_l.insert(END,item)
+
 
             '''
             for line in self.loglines[2:]:
@@ -209,6 +247,11 @@ class CDisplay():
         return list
 
     def listbox2filelist(self,listbox,frametype):
+        ntotal, items = self.listbox2filelist_get_items(listbox)
+        filenamelist, groupID1list, groupID2list, groupIDs, n = self.listbox2files_item(items, frametype)
+        return filenamelist, groupID1list, groupID2list, groupIDs, n, ntotal
+
+    def listbox2filelist_get_items(self, listbox):
         items = listbox.get(0, END)
         ntotal = len(items)
         curselections = listbox.curselection()
@@ -219,6 +262,11 @@ class CDisplay():
             for i in curselection_i:
                 selected.append(items[i[0]])
             items = selected
+        print "###"
+        print items
+        return ntotal, items
+
+    def listbox2files_item(self, items, frametype):
         filenamelist=[]
         groupID1list=[]
         groupID2list=[]
@@ -231,7 +279,7 @@ class CDisplay():
         groupIDs=list(set(groupID1list+groupID2list))
         groupIDs.sort()
 
-        return filenamelist, groupID1list, groupID2list, groupIDs, n, ntotal
+        return filenamelist, groupID1list, groupID2list, groupIDs, n
 
     def Location(self,master):
         ttk.Label(master,text="Working directory").grid(row=1,column=1,sticky=W,pady=1)
@@ -583,8 +631,34 @@ class CDisplay():
      '''
 
     def reduce_cal_flat(self):
-        onfilelist, ongroupID1list, ongroupID2list, ongroupIDs, non, ntotal = self.listbox2filelist(self.cal_flat_l,'ON')
-        offfilelist,offgroupID1list,offgroupID2list,offgroupIDs,noff,ntotal = self.listbox2filelist(self.cal_flat_l,'OFF')
+        ntotal, item_list = self.listbox2filelist_get_items(self.cal_flat_l)
+
+        do_bp = self.cal_flat_bp.get()
+
+        cal_flat = dict(method=self.cal_flat_cm.get(),
+                        sigma=self.cal_flat_cm_sigma.get(),
+                        clip=self.cal_flat_cm_clip.get())
+
+        cal_flat_ft = self.cal_flat_ft.get() # fine-tuning mode
+        self.reduce_cal_flat_real(item_list, "ON", "OFF",
+                                  do_bp=do_bp,
+                                  cal_flat=cal_flat,
+                                  cal_flat_ft=cal_flat_ft)
+
+    def reduce_cal_flat_real(self, item_list, ntotal,
+                             frametype1="ON",
+                             frametype2="OFF",
+                             do_bp=True,
+                             cal_flat=None,
+                             cal_flat_ft=False):
+
+        onfilelist, ongroupID1list, ongroupID2list, ongroupIDs, non = self.listbox2files_item(item_list, frametype1)
+        offfilelist,offgroupID1list,offgroupID2list,offgroupIDs,noff = self.listbox2files_item(item_list, frametype2)
+
+
+        # onfilelist, ongroupID1list, ongroupID2list, ongroupIDs, non, ntotal = self.listbox2filelist(self.cal_flat_l,'ON')
+        # offfilelist,offgroupID1list,offgroupID2list,offgroupIDs,noff,ntotal = self.listbox2filelist(self.cal_flat_l,'OFF')
+
         if non == noff and non >= 1 and ongroupIDs==offgroupIDs :
             objtype = 'FLAT'
             self.StatusInsert("["+objtype+"] "+'-'*(50-len(objtype)-3))
@@ -603,21 +677,21 @@ class CDisplay():
                     imgsA, hdrsA = self.readechellogram(curonlist)
                     imgsB, hdrsB = self.readechellogram(curofflist)
 
-                    print 'list A', imgsA, len(imgsA)
-                    print 'list B', imgsB, len(imgsB)
+                    #print 'list A', imgsA, len(imgsA)
+                    #print 'list B', imgsB, len(imgsB)
 
                     #correct bad pixel
-                    if self.cal_flat_bp.get() == 1:
+                    if do_bp == 1:
                         self.StatusInsert("Bad pixel correction...")
                         imgsA, hdrsA = self.badpixcor(imgsA,headers=hdrsA)
                         imgsB, hdrsB = self.badpixcor(imgsB,headers=hdrsB)
 
-                    on, hdr_on = self.combine(objtype, 'ON', imgsA, groupID, self.cal_flat_cm.get() \
-                                              , sclip=self.cal_flat_cm_clip.get(), sigma=self.cal_flat_cm_sigma.get() \
+                    on, hdr_on = self.combine(objtype, 'ON', imgsA, groupID, cal_flat["method"] \
+                                              , sclip=cal_flat["clip"], sigma=cal_flat["sigma"] \
                                               , headers=hdrsA)
 
-                    off, hdr_off = self.combine(objtype, 'OFF', imgsB, groupID, self.cal_flat_cm.get() \
-                                              , sclip=self.cal_flat_cm_clip.get(), sigma=self.cal_flat_cm_sigma.get() \
+                    off, hdr_off = self.combine(objtype, 'OFF', imgsB, groupID, cal_flat["method"] \
+                                              , sclip=cal_flat["clip"], sigma=cal_flat["sigma"] \
                                               , headers=hdrsB)
 
                     flat, hdr = self.subtract(objtype, 'ON-OFF', on, off, groupID, headers=hdr_on)
@@ -631,7 +705,9 @@ class CDisplay():
                 stripfiles = self.deskew(objtype,flat, groupID, header=hdr,outname='.ONOFF')
                 #check_deskew = deskew_plot(self.band, self.reducepath, name=self.fileprefix+objtype+ \
                 #                                       '_G'+str(groupID)+'.ONOFF', start=0, end=23)
-                if self.cal_flat_ft.get() == 1: #fine-tuning mode'
+
+
+                if cal_flat_ft: #fine-tuning mode'
                     print 'Please wait for the residual display (Standard extraction map)'
                     check_deskew = deskew_plot(self.band, self.reducepath, name=self.fileprefix+objtype+ \
                                                        '_G'+str(groupID)+'.ONOFF', start=0, end=23)
@@ -1145,7 +1221,7 @@ class CDisplay():
           glob.glob(deskew_path+'apmap_%s_%02d.*.dat' % \
                        (self.band, AP_DEGREE))
         apfiles.sort()
-
+        print 'apfile', apfiles
         if len(apfiles) == 0:
             self.StatusInsert("No data files of the transformation function")
         else:
@@ -1154,6 +1230,7 @@ class CDisplay():
                   glob.glob(deskew_path+'apwav_%s_%02d_%02d.*.dat' % \
                             (self.band, WL_DEGREE[0], WL_DEGREE[1]))
                 wlfiles.sort()
+                print 'wvfiles', wlfiles
                 ostrips, owaves, ohdrs = \
                   extract_ap(img, apfiles, wlfiles=wlfiles, \
                                  ap_width=ap_width, header=header)
