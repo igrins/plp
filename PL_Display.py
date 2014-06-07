@@ -267,6 +267,18 @@ class CDisplay():
         return ntotal, items
 
     def listbox2files_item(self, items, frametype):
+        """
+        items: list of strings
+          filename[frametype][group1][group2]
+        frametype : string
+
+        return:
+          filenamelist + ".fits"
+          groupID1list
+          groupID2list
+          groupIDs = list(set(groupID1list+groupID2list))
+          n = len(filenamelist)
+        """
         filenamelist=[]
         groupID1list=[]
         groupID2list=[]
@@ -648,7 +660,7 @@ class CDisplay():
     def reduce_cal_flat_real(self, item_list, ntotal,
                              frametype1="ON",
                              frametype2="OFF",
-                             do_bp=True,
+                             do_bp=False,
                              cal_flat=None,
                              cal_flat_ft=False):
 
@@ -664,32 +676,69 @@ class CDisplay():
             self.StatusInsert("["+objtype+"] "+'-'*(50-len(objtype)-3))
             self.StatusInsert(str(non+noff)+" out of "+str(ntotal)+" files selected.")
             for groupID in ongroupIDs:
-                curonlist, curofflist = self.get_cur_lists(groupID, non,
-                                                           ongroupID1list,
-                                                           ongroupID2list,
-                                                           offgroupID1list,
-                                                           offgroupID2list,
-                                                           onfilelist,
-                                                           offfilelist)
-                self.reduce_cal_flat1(objtype, groupID,
-                                      curonlist, curofflist, non, noff,
-                                      do_bp=do_bp,
-                                      cal_flat=cal_flat,
-                                      cal_flat_ft=cal_flat_ft)
+                curonlist = self.get_cur_lists(groupID,
+                                               ongroupID1list,
+                                               ongroupID2list,
+                                               onfilelist)
 
-    def get_cur_lists(self, groupID, non,
+                curofflist = self.get_cur_lists(groupID,
+                                                offgroupID1list,
+                                                offgroupID2list,
+                                                offfilelist)
+
+                if len(curonlist)==len(curofflist):
+                    self.StatusInsert('<Group Number '+str(groupID)+' ('+str(non+noff)+' files)> ')
+                    _ = self.reduce_cal_flat1(objtype, groupID,
+                                              curonlist, curofflist, non, noff,
+                                              do_bp=do_bp,
+                                              cal_flat=cal_flat,
+                                              )
+                    flat, hdr = _
+                    self.save1file(self.fileprefix+objtype+'_G'+str(groupID),flat,header=hdr)
+
+                #--aperture extraction--
+                self.deskew(objtype,flat, groupID, header=hdr,outname='.ONOFF')
+                #check_deskew = deskew_plot(self.band, self.reducepath, name=self.fileprefix+objtype+ \
+                #                                       '_G'+str(groupID)+'.ONOFF', start=0, end=23)
+
+
+                if cal_flat_ft: #fine-tuning mode'
+
+                    print 'Please wait for the residual display (Standard extraction map)'
+                    deskew_plot(self.band, self.reducepath, name=self.fileprefix+objtype+ \
+                                                       '_G'+str(groupID)+'.ONOFF', start=0, end=23)
+                    finetune_flag = tkMessageBox.askyesno("Order extraction", "Make new order extraction map?")
+                    #finetune_flag = True
+
+                    if finetune_flag:
+                        self.reduce_cal_flat1_finetune(flat, hdr,
+                                                       objtype, groupID,
+                                                       custompath=custompath)
+                        # new files will be written to custompath
+
+                        self.deskew(objtype, flat, groupID, header=hdr, deskew_path=custompath, \
+                                    outname='_custom.ONOFF') #deskew using update mapping data
+
+                        print 'Please wait for the new display for the residuals (customized mapping)'
+                        deskew_plot(self.band, self.reducepath, name=self.fileprefix+objtype+ \
+                                                        '_G'+str(groupID)+'_custom.ONOFF', start=0, end=23)
+
+
+    def get_cur_lists(self, groupID,
                       ongroupID1list, ongroupID2list,
-                      offgroupID1list, offgroupID2list,
-                      onfilelist, offfilelist):
-                curonlist=[]
-                curofflist=[]
-                for i in range(0,non):
-                    if ongroupID1list[i]==groupID or ongroupID2list[i]==groupID:
-                        curonlist.append(onfilelist[i])
-                    if offgroupID1list[i]==groupID or offgroupID2list[i]==groupID:
-                        curofflist.append(offfilelist[i])
+                      onfilelist):
+        """
+        from onfilelist, return only those whose group1 or group2 is groupID.
+        """
+        curonlist=[]
+        for fn, group1, group2 in zip(onfilelist,
+                                      ongroupID1list,
+                                      ongroupID2list
+                                      ):
+            if group1==groupID or group2[i]==groupID:
+                curonlist.append(fn)
 
-                return curonlist, curofflist
+        return curonlist
 
 
     def reduce_cal_flat1(self, objtype,
@@ -697,9 +746,7 @@ class CDisplay():
                          non, noff,
                          do_bp=True,
                          cal_flat=None,
-                         cal_flat_ft=False):
-                if len(curonlist)==len(curofflist):
-                    self.StatusInsert('<Group Number '+str(groupID)+' ('+str(non+noff)+' files)> ')
+                         ):
 
                     imgsA, hdrsA = self.readechellogram(curonlist)
                     imgsB, hdrsB = self.readechellogram(curofflist)
@@ -726,22 +773,13 @@ class CDisplay():
 
                     flat, hdr = self.normalizeto1(flat, header=hdr_on)
 
-                    self.save1file(self.fileprefix+objtype+'_G'+str(groupID),flat,header=hdr)
+                    return flat, hdr
 
-                #--aperture extraction--
-                stripfiles = self.deskew(objtype,flat, groupID, header=hdr,outname='.ONOFF')
-                #check_deskew = deskew_plot(self.band, self.reducepath, name=self.fileprefix+objtype+ \
-                #                                       '_G'+str(groupID)+'.ONOFF', start=0, end=23)
-
-
-                if cal_flat_ft: #fine-tuning mode'
-                    print 'Please wait for the residual display (Standard extraction map)'
-                    check_deskew = deskew_plot(self.band, self.reducepath, name=self.fileprefix+objtype+ \
-                                                       '_G'+str(groupID)+'.ONOFF', start=0, end=23)
-                    finetune_flag = tkMessageBox.askyesno("Order extraction", "Make new order extraction map?")
-                    #finetune_flag = True
-
-                    if finetune_flag == True:
+    def reduce_cal_flat1_finetune(self, flat, hdr,
+                                  objtype,
+                                  groupID,
+                                  custompath=custompath
+                                  ):
 
                         if self.band == "H":
 
@@ -755,11 +793,6 @@ class CDisplay():
                                          npoints=40, spix=10, dpix=20, thres=400, \
                                          start_col= 1024, ap_thres=None, degree=None, devide=20.0, target_path=custompath)
 
-                        stripfiles = self.deskew(objtype,flat, groupID, header=hdr, deskew_path=custompath, \
-                                                 outname='_custom.ONOFF') #deskew using update mapping data
-                        print 'Please wait for the new display for the residuals (customized mapping)'
-                        check_deskew = deskew_plot(self.band, self.reducepath, name=self.fileprefix+objtype+ \
-                                                        '_G'+str(groupID)+'_custom.ONOFF', start=0, end=23)
                         #finetune_flag = tkMessageBox.askyesno("Order extraction", "Make new order extraction map?")
                 #--end of aperture extraction--
 
@@ -795,6 +828,7 @@ class CDisplay():
                     #arc, hdr = self.subtract(objtype, 'ON-OFF', on, off, groupID, headers=hdr_on)
                     arc, hdr = on, hdr_on # test with no subtract dark
                     arc = ip.cosmicrays(arc, threshold=1000, flux_ratio=0.2, wbox=3)   # Add by Huynh Anh 2014.04.08
+
 
                     self.save1file(self.fileprefix+objtype+'_G'+ \
                                    str(groupID),arc,header=hdr)  #self.combine(objtype, '', arc, self.cal_arc_cm.get(), headers=hdr_arc)
