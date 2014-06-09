@@ -647,14 +647,14 @@ class CDisplay():
 
         do_bp = self.cal_flat_bp.get()
 
-        cal_flat = dict(method=self.cal_flat_cm.get(),
-                        sigma=self.cal_flat_cm_sigma.get(),
-                        clip=self.cal_flat_cm_clip.get())
+        cal_flat_cm = dict(method=self.cal_flat_cm.get(),
+                           sigma=self.cal_flat_cm_sigma.get(),
+                           clip=self.cal_flat_cm_clip.get())
 
         cal_flat_ft = self.cal_flat_ft.get() # fine-tuning mode
-        self.reduce_cal_flat_real(item_list, "ON", "OFF",
+        self.reduce_cal_flat_real(item_list, ntotal, "ON", "OFF",
                                   do_bp=do_bp,
-                                  cal_flat=cal_flat,
+                                  cal_flat=cal_flat_cm,
                                   cal_flat_ft=cal_flat_ft)
 
     def reduce_cal_flat_real(self, item_list, ntotal,
@@ -798,80 +798,152 @@ class CDisplay():
 
 
     def reduce_cal_arc(self):
-        onfilelist, ongroupID1list, ongroupID2list, ongroupIDs, non, ntotal = self.listbox2filelist(self.cal_arc_l,'ON')
-        offfilelist,offgroupID1list,offgroupID2list,offgroupIDs,noff,ntotal = self.listbox2filelist(self.cal_arc_l,'OFF')
+        ntotal, item_list = self.listbox2filelist_get_items(self.cal_arc_l)
+        cal_arc_bp = self.cal_arc_bp.get()
+        cal_arc_ft = self.cal_arc_ft.get()
+
+        cal_arc_cm = dict(method=self.cal_arc_cm.get(),
+                          sigma=self.cal_arc_cm_sigma.get(),
+                          clip=self.cal_arc_cm_clip.get())
+
+        self.reduce_cal_arc_real(item_list, ntotal,
+                                 frametype1="ON",
+                                 frametype2="OFF",
+                                 cal_arc_bp=cal_arc_bp,
+                                 cal_arc_cm=cal_arc_cm,
+                                 cal_arc_ft=cal_arc_ft,
+                                 )
+
+    def reduce_cal_arc_real(self, item_list, ntotal,
+                            frametype1="ON",
+                            frametype2="OFF",
+                            cal_arc_bp=False,
+                            cal_arc_cm=None,
+                            cal_arc_ft=False,
+                            ):
+
+        onfilelist, ongroupID1list, ongroupID2list, ongroupIDs, non = self.listbox2files_item(item_list, frametype1)
+        offfilelist,offgroupID1list,offgroupID2list,offgroupIDs,noff = self.listbox2files_item(item_list, frametype2)
+
+
         if non == noff and non >= 1 and ongroupIDs==offgroupIDs :
             objtype = 'ARC'
             self.StatusInsert("["+objtype+"] "+'-'*(50-len(objtype)-3))
             self.StatusInsert(str(non+noff)+" out of "+str(ntotal)+" files selected.")
             for groupID in ongroupIDs:
-                curonlist=[]
-                curofflist=[]
-                for i in range(0,non):
-                    if ongroupID1list[i]==groupID or ongroupID2list[i]==groupID:
-                        curonlist.append(onfilelist[i])
-                    if offgroupID1list[i]==groupID or offgroupID2list[i]==groupID:
-                        curofflist.append(offfilelist[i])
+
+                curonlist = self.get_cur_lists(groupID,
+                                               ongroupID1list,
+                                               ongroupID2list,
+                                               onfilelist)
+
+                curofflist = self.get_cur_lists(groupID,
+                                                offgroupID1list,
+                                                offgroupID2list,
+                                                offfilelist)
+
+
                 if len(curonlist)==len(curofflist):
                     self.StatusInsert('<Group Number '+str(groupID)+' ('+str(non+noff)+' files)> ')
 
-                    imgsA, hdrsA = self.readechellogram(curonlist)
-                    imgsB, hdrsB = self.readechellogram(curofflist)
-                    if self.cal_arc_bp.get() == 1:
-                        self.StatusInsert("Bad pixel correction...")
-                        imgsA, hdrsA = self.badpixcor(imgsA,headers=hdrsA)
-                        imgsB, hdrsB = self.badpixcor(imgsB,headers=hdrsB)
 
-                    on, hdr_on = self.combine(objtype, 'ON', imgsA, groupID, self.cal_arc_cm.get(), sclip=self.cal_arc_cm_clip.get(), sigma=self.cal_arc_cm_sigma.get(), headers=hdrsA)
-                    off, hdr_off = self.combine(objtype, 'OFF', imgsB, groupID, self.cal_arc_cm.get(), sclip=self.cal_arc_cm_clip.get(), sigma=self.cal_arc_cm_sigma.get(), headers=hdrsB)
-
-                    #arc, hdr = self.subtract(objtype, 'ON-OFF', on, off, groupID, headers=hdr_on)
-                    arc, hdr = on, hdr_on # test with no subtract dark
-                    arc = ip.cosmicrays(arc, threshold=1000, flux_ratio=0.2, wbox=3)   # Add by Huynh Anh 2014.04.08
-
+                    _ = self.reduce_cal_arc1(objtype, groupID,
+                                              curonlist, curofflist, non, noff,
+                                              do_bp=cal_arc_bp,
+                                              cal_arc_cm=cal_arc_cm,
+                                              )
+                    arc, hdr = _
 
                     self.save1file(self.fileprefix+objtype+'_G'+ \
                                    str(groupID),arc,header=hdr)  #self.combine(objtype, '', arc, self.cal_arc_cm.get(), headers=hdr_arc)
 
                 #--aperture extraction--
-                stripfiles = self.deskew(objtype,arc, groupID, header=hdr, deskew_path=custompath, outname='.ONOFF')
+                self.deskew(objtype,arc, groupID, header=hdr,
+                            deskew_path=custompath, outname='.ONOFF')
 
-                # --wavelength calibration using OH line list - Added by Huynh Anh 2014.02.04
-                if self.cal_arc_ft.get() == 1: # fine-tuning mode'
+            # --wavelength calibration using OH line list - Added by Huynh Anh 2014.02.04
+            if cal_arc_ft == 1: # fine-tuning mode'
+                for groupID in ongroupIDs:
+
                     #print 'Wavelength calibration using referent OH line list'
                     #print '>>>>>>>>> Running >>>>>>>>>>'
                     self.StatusInsert('Wavelength Calibration using reference OH line list')
                     self.wavelength_oh(objtype, groupID)
 
-                else:
+            else:
 
-                    #id_stripfiles = self.identify(objtype,stripfiles,makepng=self.makepng)
-                    pass
+                #id_stripfiles = self.identify(objtype,stripfiles,makepng=self.makepng)
+                pass
 
 
+    def reduce_cal_arc1(self, objtype, groupID,
+                        curonlist, curofflist, non, noff,
+                        do_bp=False,
+                        cal_arc_cm=None,
+                        ):
+
+                    imgsA, hdrsA = self.readechellogram(curonlist)
+                    imgsB, hdrsB = self.readechellogram(curofflist)
+                    if do_bp == 1:
+                        self.StatusInsert("Bad pixel correction...")
+                        imgsA, hdrsA = self.badpixcor(imgsA,headers=hdrsA)
+                        imgsB, hdrsB = self.badpixcor(imgsB,headers=hdrsB)
+
+                    on, hdr_on = self.combine(objtype, 'ON', imgsA, groupID, cal_arc_cm["method"], sclip=cal_arc_cm["clip"], sigma=cal_arc_cm["sigma"], headers=hdrsA)
+                    off, hdr_off = self.combine(objtype, 'OFF', imgsB, groupID, cal_arc_cm["method"], sclip=cal_arc_cm["clip"], sigma=cal_arc_cm["sigma"], headers=hdrsB)
+
+                    #arc, hdr = self.subtract(objtype, 'ON-OFF', on, off, groupID, headers=hdr_on)
+                    arc, hdr = on, hdr_on # test with no subtract dark
+                    arc = ip.cosmicrays(arc, threshold=1000, flux_ratio=0.2, wbox=3)   # Add by Huynh Anh 2014.04.08
+
+                    return arc, hdr
 
     def reduce_obj_std(self):
-        Afilelist, AgroupID1list, AgroupID2list, AgroupIDs, nA, ntotal = self.listbox2filelist(self.obj_std_l,'A')
-        Bfilelist, BgroupID1list, BgroupID2list, BgroupIDs, nB, ntotal = self.listbox2filelist(self.obj_std_l,'B')
+        ntotal, item_list = self.listbox2filelist_get_items(self.obj_std_l)
+        # cal_arc_bp = self.cal_arc_bp.get()
+        # cal_arc_ft = self.cal_arc_ft.get()
+        do_cosmicray = self.obj_std_cr.get()
+        do_badpixel = self.obj_std_bp.get()
+
+        combine_kwargs = dict(method=self.obj_std_cm.get(),
+                              sigma=self.obj_std_cm_sigma.get(),
+                              clip=self.obj_std_cm_clip.get())
+
+        self.reduce_obj_std_real(item_list, ntotal,
+                                 frametype1="A", frametype2="B",
+                                 do_cosmicray=do_cosmicray,
+                                 do_badpixel=do_badpixel,
+                                 combine_kwargs=combine_kwargs)
+
+    def reduce_obj_std_real(self, item_list, ntotal,
+                            frametype1="A", frametype2="B",
+                            do_cosmicray=False,
+                            do_badpixel=False,
+                            combine_kwargs=None):
+        Afilelist, AgroupID1list, AgroupID2list, AgroupIDs, nA = self.listbox2files_item(item_list, frametype1)
+        Bfilelist, BgroupID1list, BgroupID2list, BgroupIDs, nB = self.listbox2files_item(item_list, frametype2)
+
+        # Afilelist, AgroupID1list, AgroupID2list, AgroupIDs, nA, ntotal = self.listbox2filelist(self.obj_std_l,'A')
+        # Bfilelist, BgroupID1list, BgroupID2list, BgroupIDs, nB, ntotal = self.listbox2filelist(self.obj_std_l,'B')
         if nA == nB and nA >= 1 and AgroupIDs==BgroupIDs:
             objtype = 'STD' #'STANDARD'
             self.StatusInsert("["+objtype+"] "+'-'*(50-len(objtype)-3))
             self.StatusInsert(str(nA+nB)+" out of "+str(ntotal)+" files selected.")
             for groupID in AgroupIDs:
-                curAlist=[]
-                curBlist=[]
-                for i in range(0,nA):
-                    if AgroupID1list[i]==groupID or AgroupID2list[i]==groupID:
-                        curAlist.append(Afilelist[i])
-                    if BgroupID1list[i]==groupID or BgroupID2list[i]==groupID:
-                        curBlist.append(Bfilelist[i])
+                curAlist = self.get_cur_lists(groupID,
+                                              AgroupID1list, AgroupID2list,
+                                              Afilelist)
+                curBlist = self.get_cur_lists(groupID,
+                                              BgroupID1list, BgroupID2list,
+                                              Bfilelist)
+
                 if len(curAlist)==len(curBlist):
                     self.StatusInsert('<Group Number '+str(groupID)+' ('+str(nA+nB)+' files)> ')
 
                     imgsA, hdrsA = self.readechellogram(curAlist)
                     imgsB, hdrsB = self.readechellogram(curBlist)
                     #correct cosmic rays
-                    if self.obj_std_cr.get()==1:
+                    if do_cosmicray==1:
                         self.StatusInsert("Cosmic ray correction... It might take long computing time.")
                         imgsA, hdrsA = self.cosmicraycor(imgsA,headers=hdrsA)
                         imgsB, hdrsB = self.cosmicraycor(imgsB,headers=hdrsB)
@@ -880,7 +952,7 @@ class CDisplay():
                         imgsB, hdrsB = imgsB[:], hdrsB[:]
 
                     #correct bad pixel
-                    if self.obj_std_bp.get() == 1:
+                    if do_badpixel == 1:
                         self.StatusInsert("Bad pixel correction...")
                         imgsA, hdrsA = self.badpixcor(imgsA,headers=hdrsA)
                         imgsB, hdrsB = self.badpixcor(imgsB,headers=hdrsB)
@@ -892,7 +964,11 @@ class CDisplay():
 
                     imgs, hdrs = self.nflat(objtype,imgs,groupID,headers=hdrs)
 
-                    img, hdr = self.combine(objtype,'AB',imgs,groupID, self.obj_std_cm.get(), sclip=self.obj_std_cm_clip.get(), sigma=self.obj_std_cm_sigma.get(), headers=hdrs)
+                    img, hdr = self.combine(objtype,'AB',imgs,groupID,
+                                            combine_kwargs["method"],
+                                            sclip=combine_kwargs["clip"],
+                                            sigma=combine_kwargs["sigma"],
+                                            headers=hdrs)
 
                     stripfiles = self.deskew(objtype, img, groupID, header=hdr, deskew_path=custompath, outname='.AB') #deskew
 
@@ -900,7 +976,8 @@ class CDisplay():
 
                     stripfiles = self.transform_aperture(objtype, groupID)
 
-                    specfiles = self.trace_n_average_AB(stripfiles,pngpath=self.makepng)
+                    specfiles = self.trace_n_average_AB(stripfiles,
+                                                        pngpath=self.makepng)
 
                     #specfiles = ['SDCH_20130827-1_STANDARD_G%s.AB.tr.%03i.tpn' %(groupID,i) for i in range(1,24)]
                     specfiles = self.H_n_cont_removal(specfiles,threslow=1.5, threshigh=4., \
@@ -925,8 +1002,31 @@ class CDisplay():
 
 
     def reduce_obj_tar(self):
-        Afilelist, AgroupID1list, AgroupID2list, AgroupIDs, nA, ntotal = self.listbox2filelist(self.obj_tar_l,'A')
-        Bfilelist, BgroupID1list, BgroupID2list, BgroupIDs, nB, ntotal = self.listbox2filelist(self.obj_tar_l,'B')
+
+        ntotal, item_list = self.listbox2filelist_get_items(self.obj_tar_l)
+        # cal_arc_bp = self.cal_arc_bp.get()
+        # cal_arc_ft = self.cal_arc_ft.get()
+        do_cosmicray = self.obj_tar_cr.get()
+        do_badpixel = self.obj_tar_bp.get()
+
+        combine_kwargs = dict(method=self.obj_tar_cm.get(),
+                              sigma=self.obj_tar_cm_sigma.get(),
+                              clip=self.obj_tar_cm_clip.get())
+
+        self.reduce_obj_tar_real(item_list, ntotal,
+                                 frametype1="A", frametype2="B",
+                                 do_cosmicray=do_cosmicray,
+                                 do_badpixel=do_badpixel,
+                                 combine_kwargs=combine_kwargs)
+
+    def reduce_obj_tar_real(self, item_list, ntotal,
+                            frametype1="A", frametype2="B",
+                            do_cosmicray=False,
+                            do_badpixel=False,
+                            combine_kwargs=None):
+        Afilelist, AgroupID1list, AgroupID2list, AgroupIDs, nA = self.listbox2files_item(item_list, frametype1)
+        Bfilelist, BgroupID1list, BgroupID2list, BgroupIDs, nB = self.listbox2files_item(item_list, frametype2)
+
         if nA == nB and nA >= 1 and AgroupIDs==BgroupIDs:
             objtype = 'TAR' #'TARGET'
             self.StatusInsert("["+objtype+"] "+'-'*(50-len(objtype)-3))
@@ -945,7 +1045,7 @@ class CDisplay():
                     imgsA, hdrsA = self.readechellogram(curAlist)
                     imgsB, hdrsB = self.readechellogram(curBlist)
                     #correct cosmic rays
-                    if self.obj_std_cr.get()==1:
+                    if do_cosmicray==1:
                         self.StatusInsert("Cosmic ray correction...")
                         imgsA, hdrsA = self.cosmicraycor(imgsA,headers=hdrsA)
                         imgsB, hdrsB = self.cosmicraycor(imgsB,headers=hdrsB)
@@ -954,7 +1054,7 @@ class CDisplay():
                         imgsB, hdrsB = imgsB[:], hdrsB[:]
 
                     #correct bad pixel
-                    if self.obj_std_bp.get() == 1:
+                    if do_badpixel == 1:
                         self.StatusInsert("Bad pixel correction...")
                         imgsA, hdrsA = self.badpixcor(imgsA,headers=hdrsA)
                         imgsB, hdrsB = self.badpixcor(imgsB,headers=hdrsB)
@@ -966,7 +1066,11 @@ class CDisplay():
 
                     imgs, hdrs = self.nflat(objtype,imgs,groupID,headers=hdrs)
 
-                    img, hdr = self.combine(objtype,'AB',imgs,groupID, self.obj_std_cm.get(), sclip=self.obj_tar_cm_clip.get(), sigma=self.obj_tar_cm_sigma.get(), headers=hdrs)
+                    img, hdr = self.combine(objtype,'AB',imgs,groupID,
+                                            combine_kwargs["method"],
+                                            sclip=combine_kwargs["clip"],
+                                            sigma=combine_kwargs["sigma"],
+                                            headers=hdrs)
 
                     stripfiles = self.deskew(objtype,img, groupID, header=hdr, deskew_path=custompath, outname='.AB') #deskew
 
@@ -974,7 +1078,8 @@ class CDisplay():
 
                     stripfiles = self.transform_aperture(objtype, groupID)
 
-                    specfiles = self.trace_n_average_AB(stripfiles,pngpath=self.makepng)
+                    specfiles = self.trace_n_average_AB(stripfiles,
+                                                        pngpath=self.makepng)
 
                     specfiles = self.telcor(specfiles,pngpath=self.makepng)
 
@@ -1381,31 +1486,43 @@ class CDisplay():
             check(stripfile, order[i], tstrip, lxx_tr, lwave, linear_par, linear_wave, pngpath= self.pngpath, datpath=self.datpath,\
                     outputname= self.band + '_result_t' + self.fileprefix + objtype + '_G'+ str(groupID) + '.ONOFF.')
 
-            # Plot results
-            final = plt.figure(1, figsize=(16,6))
-            ax = final.add_subplot(111)
+
+        fn = self.band + '_result_t' + self.fileprefix + objtype + '_G'+ str(groupID) + '.ONOFF.' + "png"
+        figname = os.path.join(self.pngpath, fn)
+        self.wavelength_oh_figure(objtype, groupID,
+                                  start, max(number), order,
+                                  figname)
+
+    def wavelength_oh_figure(self, objtype, groupID,
+                             start, max_number, order,
+                             figname):
+        # Plot results
+        final = plt.figure(1, figsize=(16,6))
+        ax = final.add_subplot(111)
+        for i in range(start, max_number):
             a = np.genfromtxt(self.datpath + self.band + '_result_t' + self.fileprefix + objtype + '_G'+ str(groupID) + '.ONOFF.' + str(order[i]) + '.dat')
             ax.plot(a[:,0], a[:,3], 'k.')
-            plt.xlabel('Wavelength [um]')
-            plt.ylabel('Delta X [pixels]')
-            plt.title('Distortion correction and wavelength calibration')
 
-            x_majorLocator = MultipleLocator(0.02)
-            x_majorFormatter = FormatStrFormatter('%0.3f')
-            x_minorLocator = MultipleLocator(0.004)
-            #y_majorLocator = MultipleLocator(max(a[:,3] - min(a[:,3])/ 10))
-            #y_majorFormatter = FormatStrFormatter('%0.2f')
-            #y_minorLocator = MultipleLocator(max(a[:,3] - min(a[:,3])/ 50))
+        plt.xlabel('Wavelength [um]')
+        plt.ylabel('Delta X [pixels]')
+        plt.title('Distortion correction and wavelength calibration')
 
-            ax.xaxis.set_major_locator(x_majorLocator)
-            ax.xaxis.set_major_formatter(x_majorFormatter)
-            ax.xaxis.set_minor_locator(x_minorLocator)
-            #ax.yaxis.set_major_locator(y_majorLocator)
-            #ax.yaxis.set_major_formatter(y_majorFormatter)
-            #ax.yaxis.set_minor_locator(y_minorLocator)
+        x_majorLocator = MultipleLocator(0.02)
+        x_majorFormatter = FormatStrFormatter('%0.3f')
+        x_minorLocator = MultipleLocator(0.004)
+        #y_majorLocator = MultipleLocator(max(a[:,3] - min(a[:,3])/ 10))
+        #y_majorFormatter = FormatStrFormatter('%0.2f')
+        #y_minorLocator = MultipleLocator(max(a[:,3] - min(a[:,3])/ 50))
 
-        plt.show()
+        ax.xaxis.set_major_locator(x_majorLocator)
+        ax.xaxis.set_major_formatter(x_majorFormatter)
+        ax.xaxis.set_minor_locator(x_minorLocator)
+        #ax.yaxis.set_major_locator(y_majorLocator)
+        #ax.yaxis.set_major_formatter(y_majorFormatter)
+        #ax.yaxis.set_minor_locator(y_minorLocator)
 
+        #plt.show()
+        plt.savefig(figname)
 
     def transform_aperture(self, objtype, groupID):
 
