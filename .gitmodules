@@ -1,0 +1,3 @@
+[submodule "plp.wiki"]
+	path = plp.wiki
+	url = git@github.com:igrins/plp.wiki.git
