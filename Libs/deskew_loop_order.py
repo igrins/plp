@@ -47,7 +47,9 @@ def moments(data):
     width = sqrt(abs((arange(data.size) - x)**2*data).sum()/data.sum())
     height = data.max()
     """ We can determine background value by median of background array """
-    backgroundArray1 = data[0 : int((len(data) - 4*int(width))/2)]
+    try: backgroundArray1 = data[0 : int((len(data) - 4*int(width))/2)]
+    except ValueError:
+        return
     backgroundArray2 = data[int((len(data) + 4*int(width))/2) : len(data)]
     backgroundArray = list(backgroundArray1) + list(backgroundArray2)
     backgroundArray = array(backgroundArray)
