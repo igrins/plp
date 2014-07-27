@@ -22,8 +22,8 @@ class CFrame(ttk.Frame,threading.Thread):
         '''   
         ttk.Frame.__init__(self, master)
         self.master=master
-        self.master.title("Pipeline Package v1.05")
-        self.master.iconname("Pipeline Package v1.05")
+        self.master.title("Pipeline Package v1.06")
+        self.master.iconname("Pipeline Package v1.06")
         
         self.draw = CDisplay(self.master, path)
         

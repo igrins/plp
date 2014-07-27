@@ -603,8 +603,8 @@ class CDisplay():
                     imgsA, hdrsA = self.readechellogram(curonlist)
                     imgsB, hdrsB = self.readechellogram(curofflist)
                     
-                    print 'list A', imgsA, len(imgsA)
-                    print 'list B', imgsB, len(imgsB)
+                    #print 'list A', imgsA, len(imgsA)
+                    #print 'list B', imgsB, len(imgsB)
                     
                     #correct bad pixel 
                     if self.cal_flat_bp.get() == 1:
@@ -1144,7 +1144,8 @@ class CDisplay():
         apfiles = \
           glob.glob(deskew_path+'apmap_%s_%02d.*.dat' % \
                        (self.band, AP_DEGREE)) 
-
+        apfiles.sort()
+        print 'apfile', apfiles
         if len(apfiles) == 0:
             self.StatusInsert("No data files of the transformation function")
         else:
@@ -1152,7 +1153,8 @@ class CDisplay():
                 wlfiles = \
                   glob.glob(deskew_path+'apwav_%s_%02d_%02d.*.dat' % \
                             (self.band, WL_DEGREE[0], WL_DEGREE[1]))        
-              
+                wlfiles.sort()
+                print 'wvfiles', wlfiles
                 ostrips, owaves, ohdrs = \
                   extract_ap(img, apfiles, wlfiles=wlfiles, \
                                  ap_width=ap_width, header=header)
