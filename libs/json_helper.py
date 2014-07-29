@@ -1,11 +1,15 @@
 import numpy as np
-
+import numpy.polynomial as P
 
 def encode_array(obj):
     if isinstance(obj, np.ndarray):
         return obj.tolist()
     elif hasattr(obj, "dtype"):
         return np.asscalar(obj)
+    # # check if numpy polynomial. Need to be improved
+    # elif hasattr(obj, "convert"):
+    #     p = obj.convert(kind=P.Polynomial)
+    #     return ["polynomial", p.coef]
     else:
         raise TypeError(repr(obj) + " is not JSON serializable")
 

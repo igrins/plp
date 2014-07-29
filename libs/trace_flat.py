@@ -327,7 +327,7 @@ def get_y_derivativemap(flat, flat_bpix, bg_std_norm,
     flat_deriv_bpix = ni.gaussian_filter1d(flat_bpix, 1,
                                            order=1, axis=0)
 
-    # We alos make a median-filtered one. This one will be used to make masks.
+    # We also make a median-filtered one. This one will be used to make masks.
     flat_medianed = ni.median_filter(flat,
                                      size=med_filter_size)
 
@@ -355,7 +355,7 @@ def get_y_derivativemap(flat, flat_bpix, bg_std_norm,
         flat_deriv_pos_msk = (flat_deriv_masked > flat_max * 0.5)
         flat_deriv_neg_msk = (flat_deriv_masked < flat_min * 0.5)
 
-    return dict(data=flat_deriv_bpix,
+    return dict(data=flat_deriv, #_bpix,
                 pos_mask=flat_deriv_pos_msk,
                 neg_mask=flat_deriv_neg_msk,
                 )
@@ -384,9 +384,9 @@ def get_aperture_solutions(flat_deriv,
     return sol_bottom_up_list
 
 
-def plot_sollutions(flat,
-                    cent_bottomup_list,
-                    bottom_up_solutions):
+def plot_solutions(flat,
+                   cent_bottomup_list,
+                   bottom_up_solutions):
 
     import matplotlib.pyplot as plt
 
@@ -506,9 +506,9 @@ def process_flat(ondata_list, offdata_list):
     bottom_up_solutions, centroid_bottom_up_list = _
 
     if 0:
-        plot_sollutions(flat_norm,
-                        centroid_bottom_up_list,
-                        bottom_up_solutions)
+        plot_solutions(flat_norm,
+                       centroid_bottom_up_list,
+                       bottom_up_solutions)
 
     return_object["cent_up_list"] = cent_up_list
     return_object["cent_bottom_list"] = cent_bottom_list
