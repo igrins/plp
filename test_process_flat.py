@@ -1,0 +1,79 @@
+import os
+#import numpy as np
+
+import libs.process_flat
+reload(libs.process_flat)
+
+from libs.process_flat import FlatOff, FlatOn
+
+
+from libs.path_info import IGRINSPath, IGRINSLog
+import astropy.io.fits as pyfits
+
+
+if __name__ == "__main__":
+
+    utdate = "20140316"
+    igr_path = IGRINSPath(utdate)
+
+    log_20140316 = dict(flat_off=range(2, 4),
+                        flat_on=range(4, 7),
+                        thar=range(1, 2))
+
+
+    igrins_log = IGRINSLog(igr_path, log_20140316)
+
+    band = "K"
+
+
+    flatoff_products = None
+
+    # INPUT
+    flat_off_filenames = [igrins_log.get_filename(band, i) for i \
+                          in igrins_log.log["flat_off"]]
+
+
+    flat_off_name_ = flat_off_filenames[0]
+    flat_off_name_ = os.path.splitext(flat_off_name_)[0] + ".flat_off_params"
+    flat_off_name = igr_path.get_secondary_calib_filename(flat_off_name_)
+
+
+    #flat_offs = [destriper.get_destriped(hdu.data) for hdu in hdu_list]
+
+    if 1:
+        flat_offs_hdu_list = [pyfits.open(fn)[0] for fn in flat_off_filenames]
+        flat_offs = [hdu.data for hdu in flat_offs_hdu_list]
+
+
+        flat = FlatOff(flat_offs)
+        flatoff_products = flat.make_flatoff_bpixmap(sigma_clip1=100,
+                                                     sigma_clip2=5)
+
+        flatoff_products.save(mastername=flat_off_name,
+                              masterhdu=flat_offs_hdu_list[0])
+
+
+    # INPUT
+    flat_on_filenames = [igrins_log.get_filename(band, i) for i \
+                         in igrins_log.log["flat_on"]]
+
+    if flatoff_products is None:
+        from libs.products import PipelineProducts
+        flatoff_products = PipelineProducts.load(flat_off_name)
+
+
+    if 1:
+        flat_on_name_ = flat_on_filenames[0]
+        flat_on_name_ = os.path.splitext(flat_on_name_)[0] + ".flat_on_params"
+        flat_on_name = igr_path.get_secondary_calib_filename(flat_on_name_)
+
+        flat_on_hdu_list = [pyfits.open(fn)[0] for fn in flat_on_filenames]
+        flat_ons = [hdu.data for hdu in flat_on_hdu_list]
+
+
+        flat_on = FlatOn(flat_ons)
+        flaton_products = flat_on.make_flaton_deadpixmap(flatoff_products)
+
+
+        flaton_products.save(mastername=flat_on_name,
+                             masterhdu=flat_on_hdu_list[0])
