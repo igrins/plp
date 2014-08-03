@@ -388,16 +388,17 @@ def plot_solutions(flat,
                    cent_bottomup_list,
                    bottom_up_solutions):
 
-    import matplotlib.pyplot as plt
 
     x_indices = np.arange(flat.shape[1])
 
-    fig1 = plt.figure(figsize=(7,7))
+    from matplotlib.figure import Figure
+    fig1 = Figure(figsize=(7,7))
+
     ax = fig1.add_subplot(111)
     ax.imshow(flat, origin="lower", cmap="gray_r")
     ax.set_autoscale_on(False)
 
-    fig2 = plt.figure()
+    fig2 = Figure()
     ax21 = fig2.add_subplot(211)
     ax22 = fig2.add_subplot(212)
 

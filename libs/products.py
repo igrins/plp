@@ -9,7 +9,7 @@ class PipelineProducts(dict):
         self.desc = desc
         dict.__init__(self, **kwargs)
 
-    def save(self, mastername, masterhdu):
+    def save(self, mastername, masterhdu=None):
 
         fn, ext = os.path.splitext(mastername)
         dict_to_save = dict()
@@ -17,8 +17,11 @@ class PipelineProducts(dict):
             if hasattr(d, "shape") and (d.shape == masterhdu.data.shape):
                 if d.dtype == bool:
                     d = d.astype("i8")
-                hdu = pyfits.PrimaryHDU(header=masterhdu.header,
-                                        data=d)
+                if masterhdu is not None:
+                    hdu = pyfits.PrimaryHDU(header=masterhdu.header,
+                                            data=d)
+                else:
+                    hdu = pyfits.PrimaryHDU(data=d)
                 fn0 = "".join([fn, ".", k, ".fits"])
                 hdu.writeto(fn0, clobber=True)
                 dict_to_save[k+".fits"] = os.path.basename(fn0)
@@ -43,3 +46,13 @@ class PipelineProducts(dict):
         desc = d.get("desc", "")
 
         return PipelineProducts(desc, **d)
+
+
+def WavelenthSolutions(object):
+    def __init__(self, orders, solutions):
+        self.orders = orders
+        self.solutions = solutions
+
+    def to_json(self):
+        return dict(orders=self.orders,
+                    solutions=self.solutions)

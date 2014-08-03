@@ -182,10 +182,74 @@ def trace_solutions(trace_products):
         bottom_up_solutions_as_list.append((bb_, dd_))
 
     r = PipelineProducts("order trace solutions",
+                         orders=[],
                          bottom_up_centroids=bottom_up_centroids,
                          bottom_up_solutions=bottom_up_solutions_as_list)
 
     return r
+
+
+
+def make_order_flat():
+    import scipy.ndimage as ni
+    slices = ni.find_objects(order_map)
+
+    mean_order_spec = []
+    mask_list = []
+    for o in orders:
+        sl = slices[o-1]
+        d_sl = flat_normed[sl].copy()
+        d_sl[order_map[sl] != o] = np.nan
+
+        f_sl = flat_mask[sl].copy()
+        f_sl[order_map[sl] != o] = np.nan
+        ff = np.nanmean(f_sl, axis=0)
+        mask_list.append(ff)
+
+        mmm = order_map[sl] == o
+        ss = [np.nanmean(d_sl[3:-3][:,i][mmm[:,i][3:-3]]) for i in range(2048)]
+        mean_order_spec.append(ss)
+
+
+    s_list = [get_smoothed_order_spec(s) for s in mean_order_spec]
+    i1i2_list = [get_order_boundary_indices(s, s0) \
+                 for s, s0 in zip(mean_order_spec, s_list)]
+    p_list = [get_order_flat1d(s, i1, i2) for s, (i1, i2) \
+              in zip(s_list, i1i2_list)]
+
+    fig_list, ax_list = prepare_order_trace_plot(s_list)
+    x = np.arange(2048)
+    for s, i1i2, ax in zip(mean_order_spec, i1i2_list, ax_list):
+        check_order_trace1(ax, x, s, i1i2)
+
+    for s, p, ax in zip(mean_order_spec, p_list, ax_list):
+        check_order_trace2(ax, x, p)
+
+
+    # make flat
+    x = np.arange(len(s))
+    flat_im = np.empty(flat_normed.shape, "d")
+    flat_im.fill(np.nan)
+
+    for o, p in zip(orders, p_list):
+        sl = slices[o-1]
+        d_sl = flat_normed[sl].copy()
+        msk = (order_map[sl] == o)
+        d_sl[~msk] = np.nan
+
+        flat_im[sl][msk] = (d_sl / p(x))[msk]
+
+    if 0:
+        hdu_list = igrins_log.get_cal_hdus(band, "HD3417")
+        hd_list = [destriper.get_destriped(hdu.data) for hdu in hdu_list]
+        from stsci_helper import stsci_median
+        hd_spec = stsci_median(hd_list)
+
+
+
+
+
+
 
 if 0:
     if 1: # chevyshev

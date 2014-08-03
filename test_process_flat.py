@@ -1,9 +1,6 @@
 import os
 #import numpy as np
 
-import libs.process_flat
-reload(libs.process_flat)
-
 from libs.process_flat import FlatOff, FlatOn
 
 
@@ -42,7 +39,7 @@ if __name__ == "__main__":
 
     #flat_offs = [destriper.get_destriped(hdu.data) for hdu in hdu_list]
 
-    if 0:
+    if 1:
         flat_offs_hdu_list = [pyfits.open(fn)[0] for fn in flat_off_filenames]
         flat_offs = [hdu.data for hdu in flat_offs_hdu_list]
 
@@ -67,7 +64,7 @@ if __name__ == "__main__":
     flat_on_name_ = os.path.splitext(flat_on_name_)[0] + ".flat_on_params"
     flat_on_name = igr_path.get_secondary_calib_filename(flat_on_name_)
 
-    if 0:
+    if 1:
 
         flat_on_hdu_list = [pyfits.open(fn)[0] for fn in flat_on_filenames]
         flat_ons = [hdu.data for hdu in flat_on_hdu_list]
@@ -110,12 +107,13 @@ if __name__ == "__main__":
                                      masterhdu=hdu)
 
 
-    if 0:
+    if 1:
         from libs.process_flat import check_trace_order
-        fig = figure()
-        check_trace_order(trace_products, fig)
+        from matplotlib.figure import Figure
+        fig1 = Figure()
+        check_trace_order(trace_products, fig1)
 
-    if 0:
+    if 1:
         flat_normed = flaton_products["flat_normed"]
         bottom_up_centroids = trace_solution_products["bottom_up_centroids"]
         bottom_up_solutions_ = trace_solution_products["bottom_up_solutions"]
@@ -129,6 +127,10 @@ if __name__ == "__main__":
             bottom_up_solutions.append((bp, dp))
 
         from libs.trace_flat import plot_solutions
-        plot_solutions(flat_normed,
-                       bottom_up_centroids,
-                       bottom_up_solutions)
+        fig2, fig3 = plot_solutions(flat_normed,
+                                    bottom_up_centroids,
+                                    bottom_up_solutions)
+
+    if 1:
+        from libs.qa_helper import figlist_to_pngs
+        figlist_to_pngs(aperture_solutions_name, [fig1, fig2, fig3])

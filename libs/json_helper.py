@@ -2,7 +2,9 @@ import numpy as np
 import numpy.polynomial as P
 
 def encode_array(obj):
-    if isinstance(obj, np.ndarray):
+    if hasattr(obj, "to_json"):
+        return obj.to_json()
+    elif isinstance(obj, np.ndarray):
         return obj.tolist()
     elif hasattr(obj, "dtype"):
         return np.asscalar(obj)
