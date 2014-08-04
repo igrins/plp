@@ -190,14 +190,19 @@ def trace_solutions(trace_products):
 
 
 
-def make_order_flat():
+def make_order_flat(flaton_products, orders, order_map):
+
+
+    flat_normed  = flaton_products["flat_normed"]
+    flat_mask = flaton_products["flat_mask"]
+
     import scipy.ndimage as ni
     slices = ni.find_objects(order_map)
 
-    mean_order_spec = []
+    mean_order_specs = []
     mask_list = []
     for o in orders:
-        sl = slices[o-1]
+        sl = (slices[o-1][0], slice(0, 2048))
         d_sl = flat_normed[sl].copy()
         d_sl[order_map[sl] != o] = np.nan
 
@@ -207,24 +212,20 @@ def make_order_flat():
         mask_list.append(ff)
 
         mmm = order_map[sl] == o
-        ss = [np.nanmean(d_sl[3:-3][:,i][mmm[:,i][3:-3]]) for i in range(2048)]
-        mean_order_spec.append(ss)
+        ss = [np.nanmean(d_sl[2:-2][:,i][mmm[:,i][2:-2]]) \
+              for i in range(2048)]
+        mean_order_specs.append(ss)
 
 
-    s_list = [get_smoothed_order_spec(s) for s in mean_order_spec]
+    from trace_flat import (get_smoothed_order_spec,
+                            get_order_boundary_indices,
+                            get_order_flat1d)
+
+    s_list = [get_smoothed_order_spec(s) for s in mean_order_specs]
     i1i2_list = [get_order_boundary_indices(s, s0) \
-                 for s, s0 in zip(mean_order_spec, s_list)]
+                 for s, s0 in zip(mean_order_specs, s_list)]
     p_list = [get_order_flat1d(s, i1, i2) for s, (i1, i2) \
               in zip(s_list, i1i2_list)]
-
-    fig_list, ax_list = prepare_order_trace_plot(s_list)
-    x = np.arange(2048)
-    for s, i1i2, ax in zip(mean_order_spec, i1i2_list, ax_list):
-        check_order_trace1(ax, x, s, i1i2)
-
-    for s, p, ax in zip(mean_order_spec, p_list, ax_list):
-        check_order_trace2(ax, x, p)
-
 
     # make flat
     x = np.arange(len(s))
@@ -232,18 +233,54 @@ def make_order_flat():
     flat_im.fill(np.nan)
 
     for o, p in zip(orders, p_list):
-        sl = slices[o-1]
+        sl = (slices[o-1][0], slice(0, 2048))
         d_sl = flat_normed[sl].copy()
         msk = (order_map[sl] == o)
         d_sl[~msk] = np.nan
 
         flat_im[sl][msk] = (d_sl / p(x))[msk]
 
-    if 0:
-        hdu_list = igrins_log.get_cal_hdus(band, "HD3417")
-        hd_list = [destriper.get_destriped(hdu.data) for hdu in hdu_list]
-        from stsci_helper import stsci_median
-        hd_spec = stsci_median(hd_list)
+    r = PipelineProducts("order flat",
+                         order_flat=flat_im,
+                         mean_order_specs=mean_order_specs)
+
+    return r
+
+
+def check_order_flat(order_flat_products):
+
+    from trace_flat import (prepare_order_trace_plot,
+                            check_order_trace1, check_order_trace2)
+
+    mean_order_specs = order_flat_products["mean_order_specs"]
+
+    from trace_flat import (get_smoothed_order_spec,
+                            get_order_boundary_indices,
+                            get_order_flat1d)
+
+    # these are duplicated from make_order_flat
+    s_list = [get_smoothed_order_spec(s) for s in mean_order_specs]
+    i1i2_list = [get_order_boundary_indices(s, s0) \
+                 for s, s0 in zip(mean_order_specs, s_list)]
+    p_list = [get_order_flat1d(s, i1, i2) for s, (i1, i2) \
+              in zip(s_list, i1i2_list)]
+
+    fig_list, ax_list = prepare_order_trace_plot(s_list)
+    x = np.arange(2048)
+    for s, i1i2, ax in zip(mean_order_specs, i1i2_list, ax_list):
+        check_order_trace1(ax, x, s, i1i2)
+
+    for s, p, ax in zip(mean_order_specs, p_list, ax_list):
+        check_order_trace2(ax, x, p)
+
+    return fig_list
+
+
+    # if 0:
+    #     hdu_list = igrins_log.get_cal_hdus(band, "HD3417")
+    #     hd_list = [destriper.get_destriped(hdu.data) for hdu in hdu_list]
+    #     from stsci_helper import stsci_median
+    #     hd_spec = stsci_median(hd_list)
 
 
 

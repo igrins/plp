@@ -575,15 +575,24 @@ def subtract_bg_pattern(d, bottomup_solutions, flat_mask, bpix_mask):
 #         #p = fit_p(p_init, x[210:1890], s[210:1890])
 
 
-def get_order_boundary_indices(s, s0=None):
+def get_order_boundary_indices(s1, s0=None):
     #x = np.arange(len(s))
 
-    s = np.array(s)
-    mm = s > max(s) * 0.05
-    dd1, dd2 = np.nonzero(mm)[0][[0, -1]]
+    # select finite number only. This may happen when orders go out of
+    # chip boundary.
+    s1 = np.array(s1)
+    k1, k2 = np.nonzero(np.isfinite(s1))[0][[0, -1]]
+    s = s1[k1:k2+1]
+
 
     if s0 is None:
         s0 = get_smoothed_order_spec(s)
+    else:
+        s0 = s0[k1:k2+1]
+
+
+    mm = s > max(s) * 0.05
+    dd1, dd2 = np.nonzero(mm)[0][[0, -1]]
 
     # mask out absorption feature
     smooth_size=20
@@ -596,37 +605,61 @@ def get_order_boundary_indices(s, s0=None):
     s1 = ni.gaussian_filter1d(s0[dd1:dd2], smooth_size, order=1)
     #x1 = x[dd1:dd2]
 
-    s1r = s1
+    #s1r = s1 # ni.median_filter(s1, 100)
 
-    s1_std = s1r.std()
-    s1_std = s1r[np.abs(s1r)<2.*s1_std].std()
+    s1_std = s1.std()
+    s1_std = s1[np.abs(s1)<2.*s1_std].std()
 
-    s1r[np.abs(s1r) < 2.*s1_std] = np.nan
+    s1[np.abs(s1) < 2.*s1_std] = np.nan
 
-    if np.any(np.isfinite(s1r[:1024])):
-        i1 = np.nanargmax(s1r[:1024])
-        i1r = np.where(~np.isfinite(s1r[:1024][i1:]))[0][0]
+    indx_center = int(len(s1)*.5)
+
+    left_half = s1[:indx_center]
+    if np.any(np.isfinite(left_half)):
+        i1 = np.nanargmax(left_half)
+        a_ = np.where(~np.isfinite(left_half[i1:]))[0]
+        if len(a_):
+            i1r = a_[0]
+        else:
+            i1r = 0
         i1 = dd1+i1+i1r #+smooth_size
     else:
         i1 = dd1
-    if np.any(np.isfinite(s1r[1024:])):
-        i2 = np.nanargmin(s1r[1024:])
-        i2r = np.where(~np.isfinite(s1r[1024:][:i2]))[0][-1]
-        i2 = dd1+1024+i2r
+
+    right_half = s1[indx_center:]
+    if np.any(np.isfinite(right_half)):
+        i2 = np.nanargmin(right_half)
+        a_ = np.where(~np.isfinite(right_half[:i2]))[0]
+
+        if len(a_):
+            i2r = a_[-1]
+        else:
+            i2r = i2
+        i2 = dd1+indx_center+i2r
     else:
         i2 = dd2
 
-    return i1, i2
+    return k1+i1, k1+i2
 
 
 def get_order_flat1d(s, i1=None, i2=None):
 
+    s = np.array(s)
+    k1, k2 = np.nonzero(np.isfinite(s))[0][[0, -1]]
+    s1 = s[k1:k2+1]
+
+
     if i1 is None:
         i1 = 0
-    if i2 is None:
-        i2 = len(s)
+    else:
+        i1 -= k1
 
-    x = np.arange(len(s))
+    if i2 is None:
+        i2 = len(s1)
+    else:
+        i2 -= k1
+
+    x = np.arange(len(s1))
 
     if 0:
 
@@ -650,6 +683,7 @@ def get_order_flat1d(s, i1=None, i2=None):
             t_list.append([x[1],x[i1]])
         else:
             t_list.append([x[1]])
+
         t_list.append(np.linspace(x[i1]+10, x[i2-1]-10, 10))
         if i2 < len(s) - 10:
             t_list.append([x[i2], x[-2]])
@@ -661,14 +695,27 @@ def get_order_flat1d(s, i1=None, i2=None):
         # s0 = ni.median_filter(s, 40)
         from scipy.interpolate import LSQUnivariateSpline
         p = LSQUnivariateSpline(x,
-                                s,
-                                t, bbox=[0, len(s)-1])
+                                s1,
+                                t, bbox=[0, len(s1)-1])
 
-    return p
+        def p0(x, k1=k1, k2=k2, p=p):
+            msk = (k1 <= x) & (x <= k2)
+            r = np.empty(len(x), dtype="d")
+            r.fill(np.nan)
+            r[msk] = p(x[msk])
+            return r
+
+    return p0
 
 
 def get_smoothed_order_spec(s):
-    s0 = ni.median_filter(s, 40)
+    s = np.array(s)
+    k1, k2 = np.nonzero(np.isfinite(s))[0][[0, -1]]
+    s1 = s[k1:k2+1]
+
+    s0 = np.empty_like(s)
+    s0.fill(np.nan)
+    s0[k1:k2+1] = ni.median_filter(s1, 40)
     return s0
 
 def check_order_trace1(ax, x, s, i1i2):
@@ -682,7 +729,8 @@ def check_order_trace2(ax, x, p):
 
 def prepare_order_trace_plot(s_list, row_col=(3, 2)):
 
-    import matplotlib.pyplot as plt
+    from matplotlib.figure import Figure
+    from mpl_toolkits.axes_grid1 import Grid
 
     row, col = row_col
 
@@ -694,13 +742,12 @@ def prepare_order_trace_plot(s_list, row_col=(3, 2)):
         n_ax_list = [row*col]*n_f
 
 
-    from mpl_toolkits.axes_grid1 import Grid
     i_ax = 0
 
     fig_list = []
     ax_list = []
     for n_ax in n_ax_list:
-        fig = plt.figure()
+        fig = Figure()
         fig_list.append(fig)
 
         grid = Grid(fig, 111, (row, col), ngrids=n_ax,

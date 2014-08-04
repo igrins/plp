@@ -22,7 +22,7 @@ if __name__ == "__main__":
 
     igrins_log = IGRINSLog(igr_path, log_20140316)
 
-    band = "H"
+    band = "K"
 
 
     flat_on_name_ = igrins_log.get_filename(band, igrins_log.log["flat_on"][0])
@@ -117,9 +117,35 @@ if __name__ == "__main__":
         from libs.qa_helper import figlist_to_pngs
         figlist_to_pngs(fn, fig_list)
 
-        import matplotlib.pyplot as plt
-        plt.show()
-
         thar_wvl_sol = get_wavelength_solutions(thar_aligned_echell_products,
                                                 echel)
         thar_wvl_sol.save(fn+".wvlsol", masterhdu=hdu)
+
+    if 1: # make amp and order falt
+
+        orders = thar_products["orders"]
+        order_map = ap.make_order_map()
+        slitpos_map = ap.make_slitpos_map()
+
+
+        # load flat on products
+        flat_on_filenames = [igrins_log.get_filename(band, i) for i \
+                             in igrins_log.log["flat_on"]]
+        flat_on_name_ = flat_on_filenames[0]
+        flat_on_name_ = os.path.splitext(flat_on_name_)[0] + ".flat_on_params"
+        flat_on_name = igr_path.get_secondary_calib_filename(flat_on_name_)
+
+        flaton_products = PipelineProducts.load(flat_on_name)
+
+        from libs.process_flat import make_order_flat, check_order_flat
+        order_flat_products = make_order_flat(flaton_products,
+                                              orders, order_map)
+
+        fn = thar.get_product_name(igr_path)+".orderflat"
+        order_flat_products.save(fn, masterhdu=hdu)
+
+        fig_list = check_order_flat(order_flat_products)
+
+        fn = thar.get_product_name(igr_path)+".orderflat"
+        from libs.qa_helper import figlist_to_pngs
+        figlist_to_pngs(fn, fig_list)
