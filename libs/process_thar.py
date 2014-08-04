@@ -304,7 +304,7 @@ def check_thar_transorm(thar_products, thar_echell_products):
     return [fig2, fig3]
 
 def get_wavelength_solutions(thar_echellogram_products, echel):
-    from ecfit.ecfit import get_ordered_line_data, fit_2dspec, check_fit
+    from ecfit import get_ordered_line_data, fit_2dspec, check_fit
 
     affine_tr = thar_echellogram_products["affine_tr"]
 

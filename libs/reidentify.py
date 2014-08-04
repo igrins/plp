@@ -1,8 +1,8 @@
 import numpy as np
-from find_peak import find_peaks
 import scipy.spatial as spatial
 
 from fit_gaussian import fit_gaussian_simple
+from find_peak import find_peaks
 
 
 def reidentify(s, x_list, x=None, sigma_init=1.5):

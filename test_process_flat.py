@@ -21,7 +21,7 @@ if __name__ == "__main__":
 
     igrins_log = IGRINSLog(igr_path, log_20140316)
 
-    band = "K"
+    band = "H"
 
 
     flatoff_products = None
