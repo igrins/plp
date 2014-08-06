@@ -54,13 +54,18 @@ if __name__ == "__main__":
 
     if 1: #
 
-        sky_names = [igrins_log.get_filename(band, fn) for fn \
+        sky_names = [igrins_log.get_filename(band, fn_) for fn_ \
                       in igrins_log.log["sky"]]
         from libs.process_thar import get_1d_median_specs
         raw_spec_product = get_1d_median_specs(sky_names, ap)
 
 
-        ref_utdate = "20140316"
+        sky_master_fn_ = os.path.splitext(os.path.basename(sky_names[0]))[0]
+        sky_master_fn = igr_path.get_secondary_calib_filename(sky_master_fn_)
+
+        import astropy.io.fits as pyfits
+        raw_spec_product.save(sky_master_fn+".raw_spec",
+                              masterhdu=pyfits.open(sky_names[0])[0])
 
 
         from libs.master_calib import load_sky_ref_data
