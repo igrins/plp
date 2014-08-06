@@ -134,7 +134,6 @@ def get_dx_from_identified_lines(p, identified_lines):
 
 def check_fit(fig, xl, yl, zl, p, orders,
               identified_lines):
-    import matplotlib.pyplot as plt
 
     xi = np.linspace(0, 2048, 256+1)
     yi = np.linspace(orders[0]-1, orders[-1]+1, len(orders)*10)
@@ -143,7 +142,7 @@ def check_fit(fig, xl, yl, zl, p, orders,
 
     from matplotlib.gridspec import GridSpec
     gs = GridSpec(2, 2, height_ratios=[4,1])
-    ax = plt.subplot(gs[0,0])
+    ax = fig.add_subplot(gs[0,0])
     show_grided_image(ax, gi, xl, yl, zl, orders)
 
     dx = get_dx(xl, yl, zl, orders, p)

@@ -1,8 +1,6 @@
 import os
 #import numpy as np
 
-from libs.process_flat import FlatOff, FlatOn
-
 
 from libs.path_info import IGRINSPath, IGRINSLog
 import astropy.io.fits as pyfits
@@ -22,7 +20,7 @@ if __name__ == "__main__":
 
     igrins_log = IGRINSLog(igr_path, log_20140316)
 
-    band = "K"
+    band = "H"
 
 
     flat_on_name_ = igrins_log.get_filename(band, igrins_log.log["flat_on"][0])
@@ -55,7 +53,9 @@ if __name__ == "__main__":
 
 
     if 1: # match order
-        from libs.process_thar import load_thar_ref_data, match_order_thar
+        from libs.process_thar import match_order_thar
+        from libs.master_calib import load_thar_ref_data
+
         ref_date = "20140316"
 
         thar_ref_data = load_thar_ref_data(ref_date, band)

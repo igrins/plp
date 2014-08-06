@@ -11,7 +11,7 @@ class ThAr(object):
         self.file_names = thar_names
 
     def process_thar(self, ap):
-        r = _process_thar(self.file_names, ap)
+        r = get_1d_median_specs(self.file_names, ap)
         return r
 
     def get_product_name(self, igr_path):
@@ -20,8 +20,8 @@ class ThAr(object):
         return igr_path.get_secondary_calib_filename(first_name)
 
 
-def _process_thar(thar_names, ap):
-    hdu_list = [pyfits.open(fn)[0] for fn in thar_names]
+def get_1d_median_specs(fits_names, ap):
+    hdu_list = [pyfits.open(fn)[0] for fn in fits_names]
     _data = stsci_median([hdu.data for hdu in hdu_list])
 
     from destriper import destriper
@@ -30,42 +30,13 @@ def _process_thar(thar_names, ap):
     s = ap.extract_spectra_v2(data)
 
     r = PipelineProducts("1d median specs",
+                         combined_image_raw=_data,
                          combined_image=data,
+                         orders=ap.orders,
                          specs=s)
 
     return r
 
-def get_master_calib_abspath(fn):
-    import os
-    return os.path.join("master_calib", fn)
-
-
-def load_thar_ref_data(ref_date, band):
-    import json
-    # load spec
-
-    igrins_orders = {}
-    igrins_orders["H"] = range(99, 122)
-    igrins_orders["K"] = range(72, 92)
-
-    ref_spec_file = "arc_spec_thar_%s_%s.json" % (band, ref_date)
-    ref_id_file = "thar_identified_%s_%s.json" % (band, ref_date)
-
-    s_list_ = json.load(open(get_master_calib_abspath(ref_spec_file)))
-    s_list_src = [np.array(s) for s in s_list_]
-
-    # reference line list : from previous run
-    ref_lines_list = json.load(open(get_master_calib_abspath(ref_id_file)))
-
-    r = dict(ref_date=ref_date,
-             band=band,
-             ref_spec_file=ref_spec_file,
-             ref_id_file=ref_id_file,
-             ref_lines_list=ref_lines_list,
-             ref_s_list=s_list_src,
-             orders=igrins_orders[band])
-
-    return r
 
 def match_order_thar(thar_products, thar_ref_data):
     import numpy as np
@@ -136,6 +107,10 @@ def reidentify_ThAr_lines(thar_products, thar_ref_data):
                          ref_id_file=thar_ref_data["ref_id_file"])
 
     return r
+
+
+from master_calib import get_master_calib_abspath
+
 
 def load_echelogram(ref_date, band):
     from echellogram import Echellogram
@@ -347,6 +322,7 @@ def get_wavelength_solutions(thar_echellogram_products, echel):
                        (band, igrins_log.date), "w"))
 
     r = PipelineProducts("wavelength solution from ThAr",
+                         orders=orders_band,
                          wvl_sol=wvl_sol)
 
     return r
