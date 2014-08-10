@@ -1,7 +1,8 @@
 import numpy as np
 import numpy.polynomial as P
-from stsci_helper import stsci_median
 import scipy.ndimage as ni
+
+from stsci_helper import stsci_median
 
 class ApCoeff(object):
     """
@@ -54,7 +55,9 @@ class Apertures(object):
 
         return xy2
 
-    def make_order_map(self, frac1=0., frac2=1.):
+    def make_order_map(self, frac1=0., frac2=1.,
+                       mask_top_bottom=False):
+
         from itertools import izip
 
         xx, yy = self.xi, self.yi
@@ -62,15 +65,28 @@ class Apertures(object):
         bottom_list = [self.apcoeffs[o](xx, frac1) for o in self.orders]
         top_list = [self.apcoeffs[o](xx, frac2) for o in self.orders]
 
-        def _g(i1):
-            order_map1 = np.zeros(len(xx), dtype="i")
-            for order, bottom, top in izip(self.orders,
-                                           bottom_list, top_list):
-                m_up = yy>bottom[i1]
-                m_down = yy<top[i1]
-                order_map1[m_up & m_down] = order
+        if mask_top_bottom is False:
+            def _g(i1):
+                order_map1 = np.zeros(len(xx), dtype="i")
+                for order, bottom, top in izip(self.orders,
+                                               bottom_list, top_list):
+                    m_up = yy>bottom[i1]
+                    m_down = yy<top[i1]
+                    order_map1[m_up & m_down] = order
 
-            return order_map1
+                return order_map1
+        else:
+            def _g(i1):
+                order_map1 = np.zeros(len(xx), dtype="i")
+                for order, bottom, top in izip(self.orders,
+                                               bottom_list, top_list):
+                    m_up = yy>bottom[i1]
+                    m_down = yy<top[i1]
+                    order_map1[m_up & m_down] = order
+
+                order_map1[yy>top_list[-1][i1]] = 999
+                order_map1[yy<bottom_list[0][i1]] = 999
+                return order_map1
 
         order_map = np.hstack([_g(i1).reshape((-1,1)) for i1 in xx])
 
@@ -146,6 +162,170 @@ class Apertures(object):
             s_list.append(s)
 
         return s_list
+
+
+    def get_mask_bg_pattern(self, flat_mask):
+        im_shape = flat_mask.shape
+        order_msk = make_order_map(im_shape, bottom_up_solutions)
+        mask_to_estimate_bg_pattern = (flat_mask & order_msk)
+
+        return mask_to_estimate_bg_pattern
+
+    def extract_lsf(self, order_map, slitpos_map, data, x1, x2, bins=None):
+
+        x1, x2 = int(x1), int(x2)
+
+        slices = ni.find_objects(order_map)
+        lsf_list = []
+        if bins is None:
+            bins = np.linspace(0., 1., 40)
+
+        for o in self.orders:
+            sl = slices[o-1][0], slice(x1, x2)
+            msk = (order_map[sl] == o)
+
+            #ss = slitpos_map[sl].copy()
+            #ss[~msk] = np.nan
+
+            hh = np.histogram(slitpos_map[sl][msk],
+                              weights=data[sl][msk], bins=bins,
+                              )
+            lsf_list.append(hh[0])
+
+        return bins, lsf_list
+
+
+    def extract_stellar(self, ordermap_bpixed, profile_map, variance_map,
+                        data, slitoffset_map=None):
+
+
+        map_weighted_spectra = (profile_map*data)/variance_map
+        map_weights = profile_map**2/variance_map
+
+        msk1 = np.isfinite(map_weighted_spectra) & np.isfinite(map_weights)
+
+        iy, ix = np.indices(data.shape)
+
+        if slitoffset_map is not None:
+            ix = ix - slitoffset_map
+
+        bins = np.arange(-0.5, 2048.5)
+
+        s_list = []
+        v_list = []
+        slices = ni.find_objects(ordermap_bpixed)
+        for o in self.orders:
+            sl = slices[o-1][0], slice(0, 2048)
+            msk = (ordermap_bpixed[sl] == o) & msk1[sl]
+
+            x_pos = ix[sl][msk]
+
+            d = map_weighted_spectra[sl][msk]
+
+
+            sum_weighted_spectra = np.histogram(x_pos,
+                                                weights=d, bins=bins,
+                                                )
+            d = map_weights[sl][msk]
+            sum_weights = np.histogram(x_pos,
+                                       weights=d, bins=bins,
+                                       )
+
+            sum_profile = np.histogram(x_pos,
+                                       weights=np.abs(profile_map[sl][msk]),
+                                       bins=bins,
+                                       )
+
+            s = sum_weighted_spectra[0] / sum_weights[0]
+
+            s_list.append(s)
+
+            v = sum_profile[0] / sum_weights[0]
+
+            v_list.append(v)
+
+        return s_list, v_list
+
+
+    def make_profile_map(self, order_map, slitpos_map, lsf,
+                         slitoffset_map=None):
+        """
+        lsf : callable object which takes (o, x, slit_pos)
+
+        o : order (integer)
+        x : detector position in dispersion direction
+        slit_pos : 0..1
+
+        x and slit_pos can be array.
+        """
+
+        iy, ix = np.indices(slitpos_map.shape)
+
+        if slitoffset_map is not None:
+            ix = ix - slitoffset_map
+
+        profile_map = np.empty(slitpos_map.shape, "d")
+        profile_map.fill(np.nan)
+
+        slices = ni.find_objects(order_map)
+        for o in self.orders:
+            sl = slices[o-1][0], slice(0, 2048)
+            msk = (order_map[sl] == o)
+
+            profile1 = np.zeros(profile_map[sl].shape, "d")
+            profile1[msk] = lsf(o, ix[sl][msk], slitpos_map[sl][msk])
+            profile_sum = np.abs(profile1).sum(axis=0)
+            profile1 /= profile_sum
+
+            profile_map[sl][msk] = profile1[msk]
+
+        return profile_map
+
+    def make_synth_map(self, order_map, slitpos_map,
+                       profile_map, s_list,
+                       slitoffset_map=None):
+        """
+        lsf : callable object which takes (o, x, slit_pos)
+
+        o : order (integer)
+        x : detector position in dispersion direction
+        slit_pos : 0..1
+
+        x and slit_pos can be array.
+
+        s_list : list of specs
+        """
+
+        iy, ix = np.indices(slitpos_map.shape)
+
+        if slitoffset_map is not None:
+            ix = ix - slitoffset_map
+
+        synth_map = np.empty(slitpos_map.shape, "d")
+        synth_map.fill(np.nan)
+
+        xx = np.arange(2048)
+
+        slices = ni.find_objects(order_map)
+        for o, s in zip(self.orders, s_list):
+            sl = slices[o-1][0], slice(0, 2048)
+            msk = (order_map[sl] == o)
+
+            from scipy.interpolate import UnivariateSpline
+            s_spline = UnivariateSpline(xx, s, k=3, s=0,
+                                        bbox=[0, 2047])
+
+            ixm = ix[sl][msk]
+            #synth_map[sl][msk] = s_spline(ixm) * lsf(o, ixm, slitpos_map[sl][msk])
+            synth_map[sl][msk] = s_spline(ixm) * profile_map[sl][msk]
+
+        return synth_map
+
+
+if 0:
+    for s, wvl in zip(s_list, wvl_solutions):
+        plot(wvl[100:-5], s[100:-5])
+
 
 
 if __name__ == "__main__":

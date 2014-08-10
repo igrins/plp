@@ -11,15 +11,23 @@ from libs.products import PipelineProducts
 
 if __name__ == "__main__":
 
-    utdate = "20140316"
+    if 0:
+        utdate = "20140316"
+        log_today = dict(flat_off=range(2, 4),
+                         flat_on=range(4, 7),
+                         thar=range(1, 2))
+    elif 1:
+        utdate = "20140525"
+        log_today = dict(flat_off=range(64, 74),
+                         flat_on=range(74, 84),
+                         thar=range(3, 8),
+                         sky=[29])
+
+
     igr_path = IGRINSPath(utdate)
 
-    log_20140316 = dict(flat_off=range(2, 4),
-                        flat_on=range(4, 7),
-                        thar=range(1, 2))
 
-
-    igrins_log = IGRINSLog(igr_path, log_20140316)
+    igrins_log = IGRINSLog(igr_path, log_today)
 
     band = "H"
 

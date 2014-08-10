@@ -17,6 +17,81 @@ def trace_aperture_chebyshev(xy_list, domain=None):
     # xy_list = r["cent_up_list"]
     # domain = [0, 2047]
 
+    # if domain is None:
+    #     xmax = max(max(x) for x, y in xy_list)
+    #     xmin = min(min(x) for x, y in xy_list)
+    #     domain = [xmin, xmax]
+
+    if domain is None:
+        domain = [0, 2047]
+
+    # we first fit the all traces with 2d chebyshev polynomials
+    x_list, o_list, y_list = [], [], []
+    for o, (x, y) in enumerate(xy_list):
+        if hasattr(y, "mask"):
+            msk = ~y.mask & np.isfinite(y.data)
+            y = y.data
+        else:
+            msk = np.isfinite(np.array(y, "d"))
+        x1 = np.array(x)[msk]
+        x_list.append(x1)
+        o_list.append(np.zeros(len(x1))+o)
+        y_list.append(np.array(y)[msk])
+
+    n_o = len(xy_list)
+
+    from astropy.modeling import models, fitting
+    from astropy.modeling.polynomial import Chebyshev2D
+    x_degree, y_degree = 4, 5
+    p_init = Chebyshev2D(x_degree, y_degree,
+                         x_domain=domain, y_domain=[0, n_o-1])
+    fit_p = fitting.LinearLSQFitter()
+
+    xxx, ooo, yyy = (np.concatenate(x_list),
+                     np.concatenate(o_list),
+                     np.concatenate(y_list))
+    p = fit_p(p_init, xxx, ooo, yyy)
+
+    if 0:
+        ax1 = subplot(121)
+        for o, xy in enumerate(xy_list):
+            ax1.plot(x_list[o], y_list[o] - p(x_list[o], o+np.zeros_like(x_list[o])))
+
+    for ii in range(3): # number of iteration
+        mmm = np.abs(yyy - p(xxx, ooo)) < 1 # This need to be fixed with actual estimation of sigma.
+
+        p = fit_p(p_init, xxx[mmm], ooo[mmm], yyy[mmm])
+
+    if 0:
+        ax2=subplot(122, sharey=ax1)
+        for o, xy in enumerate(xy_list):
+            ax2=plot(x_list[o], y_list[o] - p(x_list[o], o+np.zeros_like(x_list[o])))
+
+    # Now we need to derive a 1d chebyshev for each order.  While
+    # there should be an analitical way, here we refit the trace for
+    # each order using the result of 2d fit.
+
+    f_list = []
+    for x, o in zip(x_list, o_list):
+        y_m = p(x, o)
+        f = cheb.Chebyshev.fit(x, y_m, x_degree, domain=domain)
+        f_list.append(f)
+
+    return f_list
+
+
+def trace_aperture_chebyshev_old(xy_list, domain=None):
+    """
+    a list of (x_array, y_array).
+
+    y_array must be a masked array
+    """
+    import numpy.polynomial.chebyshev as cheb
+
+    #for x, y in r["cent_bottom_list"]:
+    # xy_list = r["cent_up_list"]
+    # domain = [0, 2047]
+
 
     if domain is None:
         xmax = max(x.max() for x, y in xy_list)

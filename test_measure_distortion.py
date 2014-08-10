@@ -14,19 +14,24 @@ from libs.apertures import Apertures
 
 if __name__ == "__main__":
 
-    utdate = "20140316"
+
+    if 0:
+        utdate = "20140316"
+        log_today = dict(flat_off=range(2, 4),
+                         flat_on=range(4, 7),
+                         thar=range(1, 2))
+    elif 1:
+        utdate = "20140525"
+        log_today = dict(flat_off=range(64, 74),
+                         flat_on=range(74, 84),
+                         thar=range(3, 8),
+                         sky=[29])
+
     igr_path = IGRINSPath(utdate)
 
-    log_20140316 = dict(flat_off=range(2, 4),
-                        flat_on=range(4, 7),
-                        thar=range(1, 2),
-                        sky=[25])
-
-
-    igrins_log = IGRINSLog(igr_path, log_20140316)
+    igrins_log = IGRINSLog(igr_path, log_today)
 
     band = "H"
-
 
 if 1: # now extract from differnt slit positions to measure the distortion
 
@@ -256,6 +261,10 @@ if 1: # now extract from differnt slit positions to measure the distortion
             xl, yl = np.meshgrid(xi, xi)
             msk = order_map == o
             slitoffset_map[msk] = p2_dict[o](xl[msk], slitpos_map[msk])
+
+        import astropy.io.fits as pyfits
+        pyfits.PrimaryHDU(data=slitoffset_map).writeto("t.fits", clobber=True)
+
 
     if 0:
         # test

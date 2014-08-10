@@ -186,6 +186,7 @@ def trace_solutions(trace_products):
                          bottom_up_centroids=bottom_up_centroids,
                          bottom_up_solutions=bottom_up_solutions_as_list)
 
+
     return r
 
 
@@ -232,16 +233,23 @@ def make_order_flat(flaton_products, orders, order_map):
     flat_im = np.empty(flat_normed.shape, "d")
     flat_im.fill(np.nan)
 
+    fitted_responses = []
+
     for o, p in zip(orders, p_list):
         sl = (slices[o-1][0], slice(0, 2048))
         d_sl = flat_normed[sl].copy()
         msk = (order_map[sl] == o)
         d_sl[~msk] = np.nan
 
-        flat_im[sl][msk] = (d_sl / p(x))[msk]
+        px = p(x)
+        flat_im[sl][msk] = (d_sl / px)[msk]
+        fitted_responses.append(px)
 
     r = PipelineProducts("order flat",
+                         orders=orders,
                          order_flat=flat_im,
+                         fitted_responses=fitted_responses,
+                         i1i2_list=i1i2_list,
                          mean_order_specs=mean_order_specs)
 
     return r
