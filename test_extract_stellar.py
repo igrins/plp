@@ -29,7 +29,7 @@ if __name__ == "__main__":
                          HIP99742=[54, 55, 56, 57],
                          PCyg=[58,59,60, 61],
                          J1833=[42,43,44,45],
-                         TWHya=[8, 9, 10, 11],
+                         TWHya=[8, 9],
                          GammaOph=[38,39,40,41],
                          V889=[46,47,48,49],
                          G11=[32, 33],
@@ -170,11 +170,11 @@ if 1: # now extract from differnt slit positions to measure the distortion
         abba_names = [igrins_log.get_filename(band, fn) for fn \
                       in igrins_log.log["SagARing"]]
 
-        # objname = "HIP94620"
+        # objname = "GammaOph"
         # DO_STD = True
         # FIX_TELLURIC=False
 
-        objname = "PCyg"
+        objname = "J1833"
         DO_STD = False
         FIX_TELLURIC=True
 
@@ -497,6 +497,13 @@ if 1: # now extract from differnt slit positions to measure the distortion
 
             ax1.axhline(1, color="0.5")
             ax2.axhline(1, color="0.5")
+
+if 0:
+    d = np.array(telluric_cor)
+    d[~np.isfinite(d)] = 0.
+    f = pyfits.open("wvlsol.fits")
+    f[0].data = d.astype("f32")
+    f.writeto("wvlsol_test.fits", clobber=True)
 
                 #res = fitted_response[o_new_ind]
                 #ax1.plot(wvl[sl], s[sl])

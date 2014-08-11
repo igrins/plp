@@ -1,0 +1,19 @@
+GAIN    =                  0.9 / electrons/AD Unit
+RDNOISE =                  5.3 / Readout noise (electrons)
+WCSDIM  =                    3
+CTYPE1  = 'MULTISPE'
+CTYPE2  = 'MULTISPE'
+CTYPE3  = 'LINEAR  '
+LTM1_1  =                   1.
+LTM2_2  =                   1.
+CD1_1   =                   1.
+CD2_2   =                   1.
+CD3_3   =                   1.
+LTM3_3  =                   1.
+WAT0_001= 'system=multispec'
+WAT1_001= 'wtype=multispec label=Wavelength units=angstroms'
+WAT3_001= 'wtype=linear'
+BANDID1 = 'spectrum - background median, weights variance, clean no'
+BANDID2 = 'raw - background median, weights none, clean no'
+BANDID3 = 'background - background median'
+BANDID4 = 'sigma - background median, weights variance, clean no'

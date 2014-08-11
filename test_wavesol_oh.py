@@ -174,6 +174,54 @@ if __name__ == "__main__":
         fn = thar.get_product_name(igr_path)+".oh_wvlsol"
         oh_sol_products.save(fn)
 
+        if 1: # save as WAT fits header
+            xx = np.arange(0, 2048)
+            xx_plus1 = np.arange(1, 2048+1)
+
+            from astropy.modeling import models, fitting
+
+            # naive solution to convert 2d to 1d chebyshev
+            p1d_list = []
+            for o in orders_w_solutions:
+                oo = np.empty_like(xx)
+                oo.fill(o)
+                wvl = p(xx, oo) / o * 1.e4 # um to angstrom
+
+                p_init1d = models.Chebyshev1D(domain=[1, 2048],
+                                              degree=p.x_degree)
+                fit_p1d = fitting.LinearLSQFitter()
+                p1d = fit_p1d(p_init1d, xx_plus1, wvl)
+                p1d_list.append(p1d)
+
+            from libs.iraf_helper import get_wat_spec
+            wat_list = get_wat_spec(orders_w_solutions, p1d_list)
+
+        cards = [pyfits.Card.fromstring(l.strip()) \
+                 for l in open("echell_2dspec.header")]
+
+        wat = "wtype=multispec " + " ".join(wat_list)
+        char_per_line = 68
+        num_line, remainder = divmod(len(wat), char_per_line)
+        for i in range(num_line):
+            k = "WAT2_%03d" % (i+1,)
+            v = wat[char_per_line*i:char_per_line*(i+1)]
+            #print k, v
+            c = pyfits.Card(k, v)
+            cards.append(c)
+        if remainder > 0:
+            i = num_line
+            k = "WAT2_%03d" % (i,)
+            v = wat[char_per_line*i:]
+            #print k, v
+            c = pyfits.Card(k, v)
+            cards.append(c)
+
+        if 0:
+            header = pyfits.Header(cards)
+            hdu = pyfits.PrimaryHDU(header=header,
+                                    data=np.array([]).reshape((0,0)))
+            hdu.writeto("wvlsol.fits", clobber=True)
+
         if 0:
             # plot all spectra
             for w, s in zip(wvl_sol, s_list):
