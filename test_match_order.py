@@ -2,7 +2,7 @@ import os
 #import numpy as np
 
 
-from libs.path_info import IGRINSPath, IGRINSLog
+from libs.path_info import IGRINSPath, IGRINSFiles
 import astropy.io.fits as pyfits
 
 from libs.products import PipelineProducts
@@ -10,28 +10,48 @@ from libs.apertures import Apertures
 
 if __name__ == "__main__":
 
+    from libs.recipes import load_recipe_list, make_recipe_dict
+    from libs.products import PipelineProducts, ProductPath, ProductDB
+
     if 0:
         utdate = "20140316"
-        log_today = dict(flat_off=range(2, 4),
-                         flat_on=range(4, 7),
-                         thar=range(1, 2))
+        # log_today = dict(flat_off=range(2, 4),
+        #                  flat_on=range(4, 7),
+        #                  thar=range(1, 2))
     elif 1:
         utdate = "20140525"
-        log_today = dict(flat_off=range(64, 74),
-                         flat_on=range(74, 84),
-                         thar=range(3, 8),
-                         sky=[29])
-
-    igr_path = IGRINSPath(utdate)
-
-    igrins_log = IGRINSLog(igr_path, log_today)
+        # log_today = dict(flat_off=range(64, 74),
+        #                  flat_on=range(74, 84),
+        #                  thar=range(3, 8),
+        #                  sky=[29])
 
     band = "H"
 
+    igr_path = IGRINSPath(utdate)
 
-    flat_on_name_ = igrins_log.get_filename(band, igrins_log.log["flat_on"][0])
-    flat_on_name_ = os.path.splitext(flat_on_name_)[0] + ".aperture_solutions"
-    aperture_solutions_name = igr_path.get_secondary_calib_filename(flat_on_name_)
+    igrins_files = IGRINSFiles(igr_path)
+
+    fn = "%s.recipes" % utdate
+    recipe_list = load_recipe_list(fn)
+    recipe_dict = make_recipe_dict(recipe_list)
+
+    # igrins_log = IGRINSLog(igr_path, log_today)
+
+    obsids = recipe_dict["THAR"][0][0]
+
+    thar_filenames = igrins_files.get_filenames(band, obsids)
+
+    thar_path = ProductPath(igr_path, thar_filenames[0])
+    thar_master_obsid = obsids[0]
+
+    flatoff_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                        "flat_off.db"))
+    flaton_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                       "flat_on.db"))
+
+    basename = flaton_db.query(band, thar_master_obsid)
+    flaton_path = ProductPath(igr_path, basename)
+    aperture_solutions_name = flaton_path.get_secondary_path("aperture_solutions")
 
 
     aperture_solution_products = PipelineProducts.load(aperture_solutions_name)
@@ -49,11 +69,11 @@ if __name__ == "__main__":
 
 
     if 1:
-        thar_names = [igrins_log.get_filename(band, fn) for fn \
-                      in igrins_log.log["thar"]]
+        # thar_names = [igrins_log.get_filename(band, fn) for fn \
+        #               in igrins_log.log["thar"]]
         from libs.process_thar import ThAr
 
-        thar = ThAr(thar_names)
+        thar = ThAr(thar_filenames)
 
         thar_products = thar.process_thar(ap)
 
@@ -82,7 +102,7 @@ if __name__ == "__main__":
     if 1:
 
         fn = thar.get_product_name(igr_path)
-        hdu = pyfits.open(thar_names[0])[0]
+        hdu = pyfits.open(thar_filenames[0])[0]
         thar_products.save(fn, masterhdu=hdu)
 
 
@@ -121,11 +141,15 @@ if __name__ == "__main__":
                                        thar_aligned_echell_products)
 
         from libs.qa_helper import figlist_to_pngs
-        figlist_to_pngs(fn, fig_list)
+        thar_figs = thar_path.get_secondary_path("thar",
+                                                 "thar_dir")
+        figlist_to_pngs(thar_figs, fig_list)
 
         thar_wvl_sol = get_wavelength_solutions(thar_aligned_echell_products,
                                                 echel)
-        thar_wvl_sol.save(fn+".wvlsol", masterhdu=hdu)
+
+        wvlsol_name = thar_path.get_secondary_path("wvlsol_v0")
+        thar_wvl_sol.save(wvlsol_name, masterhdu=hdu)
 
     if 1: # make amp and order falt
 
@@ -135,23 +159,26 @@ if __name__ == "__main__":
 
 
         # load flat on products
-        flat_on_filenames = [igrins_log.get_filename(band, i) for i \
-                             in igrins_log.log["flat_on"]]
-        flat_on_name_ = flat_on_filenames[0]
-        flat_on_name_ = os.path.splitext(flat_on_name_)[0] + ".flat_on_params"
-        flat_on_name = igr_path.get_secondary_calib_filename(flat_on_name_)
+        flat_on_params_name = flaton_path.get_secondary_path("flat_on_params")
 
-        flaton_products = PipelineProducts.load(flat_on_name)
+        flaton_products = PipelineProducts.load(flat_on_params_name)
 
         from libs.process_flat import make_order_flat, check_order_flat
         order_flat_products = make_order_flat(flaton_products,
                                               orders, order_map)
 
-        fn = thar.get_product_name(igr_path)+".orderflat"
+        fn = thar_path.get_secondary_path("orderflat")
         order_flat_products.save(fn, masterhdu=hdu)
 
         fig_list = check_order_flat(order_flat_products)
 
-        fn = thar.get_product_name(igr_path)+".orderflat"
         from libs.qa_helper import figlist_to_pngs
+        fn = thar_path.get_secondary_path("orderflat", "orderflat_dir")
         figlist_to_pngs(fn, fig_list)
+
+    if 1:
+        from libs.products import ProductDB
+        import os
+        thar_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                         "thar.db"))
+        thar_db.update(band, thar_path.basename)

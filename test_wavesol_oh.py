@@ -4,7 +4,7 @@ import numpy as np
 #from libs.process_flat import FlatOff, FlatOn
 
 
-from libs.path_info import IGRINSPath, IGRINSLog
+from libs.path_info import IGRINSPath, IGRINSFiles
 #import astropy.io.fits as pyfits
 
 from libs.products import PipelineProducts
@@ -14,63 +14,82 @@ from libs.apertures import Apertures
 
 if __name__ == "__main__":
 
+    from libs.recipes import load_recipe_list, make_recipe_dict
+    from libs.products import PipelineProducts, ProductPath, ProductDB
+
     if 0:
         utdate = "20140316"
-        log_today = dict(flat_off=range(2, 4),
-                         flat_on=range(4, 7),
-                         thar=range(1, 2))
+        # log_today = dict(flat_off=range(2, 4),
+        #                  flat_on=range(4, 7),
+        #                  thar=range(1, 2))
     elif 1:
         utdate = "20140525"
-        log_today = dict(flat_off=range(64, 74),
-                         flat_on=range(74, 84),
-                         thar=range(3, 8),
-                         sky=[29])
-
-    igr_path = IGRINSPath(utdate)
-
-    igrins_log = IGRINSLog(igr_path, log_today)
+        # log_today = dict(flat_off=range(64, 74),
+        #                  flat_on=range(74, 84),
+        #                  thar=range(3, 8),
+        #                  sky=[29])
 
     band = "H"
+    igr_path = IGRINSPath(utdate)
 
+    igrins_files = IGRINSFiles(igr_path)
+
+    fn = "%s.recipes" % utdate
+    recipe_list = load_recipe_list(fn)
+    recipe_dict = make_recipe_dict(recipe_list)
+
+    # igrins_log = IGRINSLog(igr_path, log_today)
+
+    obsids = recipe_dict["SKY"][0][0]
+
+    sky_filenames = igrins_files.get_filenames(band, obsids)
+
+    sky_path = ProductPath(igr_path, sky_filenames[0])
+    sky_master_obsid = obsids[0]
+
+    flatoff_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                        "flat_off.db"))
+    flaton_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                       "flat_on.db"))
+    thar_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                     "thar.db"))
 
     if 1: # load aperture product
-        flat_on_name_ = igrins_log.get_filename(band, igrins_log.log["flat_on"][0])
-        flat_on_name_ = os.path.splitext(flat_on_name_)[0] + ".aperture_solutions"
-        aperture_solutions_name = igr_path.get_secondary_calib_filename(flat_on_name_)
+        basename = flaton_db.query(band, sky_master_obsid)
+        flaton_path = ProductPath(igr_path, basename)
+        aperture_solutions_name = flaton_path.get_secondary_path("aperture_solutions")
 
 
         aperture_solution_products = PipelineProducts.load(aperture_solutions_name)
 
+
         bottomup_solutions = aperture_solution_products["bottom_up_solutions"]
 
 
-        from libs.process_thar import ThAr
+        basename = thar_db.query(band, sky_master_obsid)
 
-        thar_names = [igrins_log.get_filename(band, fn) for fn \
-                      in igrins_log.log["thar"]]
-        thar = ThAr(thar_names)
+        thar_path = ProductPath(igr_path, basename)
+        thar_spec = thar_path.get_secondary_path("median_spectra")
 
-        fn = thar.get_product_name(igr_path)
 
-        thar_products = PipelineProducts.load(fn)
+        thar_spec_products = PipelineProducts.load(thar_spec)
 
-        ap =  Apertures(thar_products["orders"], bottomup_solutions)
+        ap =  Apertures(thar_spec_products["orders"], bottomup_solutions)
 
 
     if 1: #
 
-        sky_names = [igrins_log.get_filename(band, fn_) for fn_ \
-                      in igrins_log.log["sky"]]
         from libs.process_thar import get_1d_median_specs
-        raw_spec_product = get_1d_median_specs(sky_names, ap)
+        raw_spec_product = get_1d_median_specs(sky_filenames, ap)
 
 
-        sky_master_fn_ = os.path.splitext(os.path.basename(sky_names[0]))[0]
-        sky_master_fn = igr_path.get_secondary_calib_filename(sky_master_fn_)
+        # sky_master_fn_ = os.path.splitext(os.path.basename(sky_names[0]))[0]
+        # sky_master_fn = igr_path.get_secondary_calib_filename(sky_master_fn_)
 
+        fn = sky_path.get_secondary_path("raw_spec")
         import astropy.io.fits as pyfits
-        raw_spec_product.save(sky_master_fn+".raw_spec",
-                              masterhdu=pyfits.open(sky_names[0])[0])
+        raw_spec_product.save(fn,
+                              masterhdu=pyfits.open(sky_filenames[0])[0])
 
 
         from libs.master_calib import load_sky_ref_data
@@ -83,10 +102,12 @@ if __name__ == "__main__":
     if 1: # initial wavelength solution
 
         # this need to be fixed
-        json_name_ = "SDC%s_%s_0003.median_spectra.wvlsol" % (band,
-                                                             igrins_log.date)
+        # thar_db.query(sky_master_obsid)
+        # json_name_ = "SDC%s_%s_0003.median_spectra.wvlsol" % (band,
+        #                                                      igrins_log.date)
 
-        json_name = igr_path.get_secondary_calib_filename(json_name_)
+        json_name = thar_path.get_secondary_path("wvlsol_v0")
+        #json_name = igr_path.get_secondary_calib_filename(json_name_)
         thar_wvl_sol = PipelineProducts.load(json_name)
 
 
@@ -171,7 +192,7 @@ if __name__ == "__main__":
                                            orders=orders_w_solutions,
                                            wvl_sol=wvl_sol)
 
-        fn = thar.get_product_name(igr_path)+".oh_wvlsol"
+        fn = sky_path.get_secondary_path(".wvlsol_v1")
         oh_sol_products.save(fn)
 
         if 1: # save as WAT fits header
@@ -216,11 +237,12 @@ if __name__ == "__main__":
             c = pyfits.Card(k, v)
             cards.append(c)
 
-        if 0:
+        if 1:
             header = pyfits.Header(cards)
             hdu = pyfits.PrimaryHDU(header=header,
                                     data=np.array([]).reshape((0,0)))
-            hdu.writeto("wvlsol.fits", clobber=True)
+            fn = sky_path.get_secondary_path("wvlsol_v1.fits")
+            hdu.writeto(fn, clobber=True)
 
         if 0:
             # plot all spectra
@@ -232,7 +254,7 @@ if __name__ == "__main__":
 
 
         keys = reidentified_lines_map.keys()
-        di_list = [len(reidentified_lines_map[k][0]) for k in keys]
+        di_list = [len(reidentified_lines_map[k_][0]) for k_ in keys]
 
         endi_list = np.add.accumulate(di_list)
 
@@ -242,8 +264,8 @@ if __name__ == "__main__":
         #      in zip(line_indices_list, filter_mask)]
         # line_indices_list_filtered = _
 
-        reidentified_lines_ = [reidentified_lines_map[k] for k in keys]
-        _ = [(v[0][mm], v[1][mm]) for v, mm \
+        reidentified_lines_ = [reidentified_lines_map[k_] for k_ in keys]
+        _ = [(v_[0][mm], v_[1][mm]) for v_, mm \
              in zip(reidentified_lines_, filter_mask)]
 
         reidentified_lines_map_filtered = dict(zip(orders_w_solutions, _))
@@ -264,6 +286,6 @@ if __name__ == "__main__":
                       reidentified_lines_map_filtered)
             fig2.tight_layout()
 
-        fn = thar.get_product_name(igr_path)+".oh_fit2d"
         from libs.qa_helper import figlist_to_pngs
+        fn = sky_path.get_secondary_path("oh_fit2d", "oh_fit2d_dir")
         figlist_to_pngs(fn, [fig1, fig2])

@@ -48,6 +48,47 @@ class PipelineProducts(dict):
         return PipelineProducts(desc, **d)
 
 
+class ProductPath(object):
+    def __init__(self, igr_path, source_filename):
+        self.igr_path = igr_path
+        self.basename = os.path.basename(os.path.splitext(source_filename)[0])
+
+    def get_secondary_path(self, ext, subdir_prefix=None):
+        outname = "%s.%s" % (self.basename, ext)
+        if subdir_prefix is not None:
+            subdir = "%s_%s" % (self.basename, subdir_prefix)
+        else:
+            subdir = None
+        return self.igr_path.get_secondary_calib_filename(outname, subdir)
+
+
+class ProductDB(object):
+    def __init__(self, dbpath):
+        self.dbpath = dbpath
+
+    def update(self, band, basename):
+        with open(self.dbpath, "a") as myfile:
+            myfile.write("%s %s\n" % (band, basename))
+
+    def query(self, band, obsid):
+        import numpy as np
+        with open(self.dbpath, "r") as myfile:
+            obsid_list = []
+            basename_list = []
+            for l0 in myfile.readlines():
+                b_l1 = l0.strip().split()
+                if len(b_l1) != 2: continue
+                b, l1 = b_l1
+                if b != band: continue
+                obsid_list.append(int(l1.strip().split("_")[-1]))
+                basename_list.append(l1.strip())
+
+            # return last one with minimum distance
+            obsid_dist = np.abs(np.array(obsid_list) - obsid)
+            i = np.where(obsid_dist == np.min(obsid_dist))[-1]
+            return basename_list[i]
+
+
 def WavelenthSolutions(object):
     def __init__(self, orders, solutions):
         self.orders = orders

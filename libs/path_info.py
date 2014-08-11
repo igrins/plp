@@ -39,11 +39,36 @@ class IGRINSPath(object):
         return join(self.outdata_path,
                     os.path.basename(fn))
 
-    def get_secondary_calib_filename(self, fn):
-        return join(self.secondary_calib_path,
+    def get_secondary_calib_filename(self, fn, subdir=None):
+        if subdir is not None:
+            dirpath = join(self.secondary_calib_path,
+                           subdir)
+            ensure_dir(dirpath)
+        else:
+            dirpath = self.secondary_calib_path
+        return join(dirpath,
                     os.path.basename(fn))
 
+
 import astropy.io.fits as pyfits
+
+class IGRINSFiles(object):
+    def __init__(self, igrins_path):
+        self.date = igrins_path.utdate
+        self.fn_pattern = join(igrins_path.indata_path,
+                               "SDC%%s_%s_%%04d.fits" % (self.date,))
+
+    def get_filenames(self, band, runids):
+        return [self.get_filename(band, i) for i in runids]
+
+    def get_filename(self, band, runid):
+        return self.fn_pattern % (band, runid)
+
+    def get_hdus(self, band, runids):
+        fn_list = self.get_filenames(band, runids)
+        hdu_list = [pyfits.open(fn)[0] for fn in fn_list]
+        return hdu_list
+
 
 class IGRINSLog(object):
     def __init__(self, igrins_path, log_dict):
@@ -51,6 +76,9 @@ class IGRINSLog(object):
         self.date = igrins_path.utdate
         self.fn_pattern = join(igrins_path.indata_path,
                                "SDC%%s_%s_%%04d.fits" % (self.date,))
+
+    def get_filenames(self, band, runids):
+        return [self.get_filename(band, i) for i in runids]
 
     def get_filename(self, band, runid):
         return self.fn_pattern % (band, runid)

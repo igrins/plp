@@ -4,30 +4,35 @@ import os
 from libs.process_flat import FlatOff, FlatOn
 
 
-from libs.path_info import IGRINSPath, IGRINSLog
+from libs.path_info import IGRINSPath, IGRINSFiles
 import astropy.io.fits as pyfits
 
-from libs.products import PipelineProducts
 
 if __name__ == "__main__":
 
+    from libs.recipes import load_recipe_list, make_recipe_dict
+    from libs.products import PipelineProducts, ProductPath
+
     if 0:
         utdate = "20140316"
-        log_today = dict(flat_off=range(2, 4),
-                         flat_on=range(4, 7),
-                         thar=range(1, 2))
+        # log_today = dict(flat_off=range(2, 4),
+        #                  flat_on=range(4, 7),
+        #                  thar=range(1, 2))
     elif 1:
         utdate = "20140525"
-        log_today = dict(flat_off=range(64, 74),
-                         flat_on=range(74, 84),
-                         thar=range(3, 8),
-                         sky=[29])
+        # log_today = dict(flat_off=range(64, 74),
+        #                  flat_on=range(74, 84),
+        #                  thar=range(3, 8),
+        #                  sky=[29])
 
+    fn = "%s.recipes" % utdate
+    recipe_list = load_recipe_list(fn)
+    recipe_dict = make_recipe_dict(recipe_list)
 
     igr_path = IGRINSPath(utdate)
 
-
-    igrins_log = IGRINSLog(igr_path, log_today)
+    igrins_files = IGRINSFiles(igr_path)
+    #igrins_log = IGRINSLog(igr_path, log_today)
 
     band = "H"
 
@@ -36,45 +41,52 @@ if __name__ == "__main__":
     flaton_products = None
 
     # INPUT
-    flat_off_filenames = [igrins_log.get_filename(band, i) for i \
-                          in igrins_log.log["flat_off"]]
+    obsids = recipe_dict["FLAT_OFF"][0][0]
 
+    flat_off_filenames = igrins_files.get_filenames(band, obsids)
 
-    flat_off_name_ = flat_off_filenames[0]
-    flat_off_name_ = os.path.splitext(flat_off_name_)[0] + ".flat_off_params"
-    flat_off_name = igr_path.get_secondary_calib_filename(flat_off_name_)
+    flatoff_path = ProductPath(igr_path, flat_off_filenames[0])
+    #flat_off_name_ = flat_off_filenames[0]
+    #flat_off_name_ = os.path.splitext(flat_off_name_)[0] + ".flat_off_params"
+    flat_off_name = flatoff_path.get_secondary_path("flat_off_params")
 
 
     #flat_offs = [destriper.get_destriped(hdu.data) for hdu in hdu_list]
 
     if 1:
-        flat_offs_hdu_list = [pyfits.open(fn)[0] for fn in flat_off_filenames]
+        flat_offs_hdu_list = [pyfits.open(fn_)[0] for fn_ in flat_off_filenames]
         flat_offs = [hdu.data for hdu in flat_offs_hdu_list]
 
 
         flat = FlatOff(flat_offs)
-        flatoff_products = flat.make_flatoff_bpixmap(sigma_clip1=100,
-                                                     sigma_clip2=5)
+        flatoff_products = flat.make_flatoff_hotpixmap(sigma_clip1=100,
+                                                       sigma_clip2=5)
 
         flatoff_products.save(mastername=flat_off_name,
                               masterhdu=flat_offs_hdu_list[0])
 
 
     # INPUT
-    flat_on_filenames = [igrins_log.get_filename(band, i) for i \
-                         in igrins_log.log["flat_on"]]
+    obsids = recipe_dict["FLAT_ON"][0][0]
+
+    flat_on_filenames = igrins_files.get_filenames(band, obsids)
+
+    # flat_on_filenames = [igrins_log.get_filename(band, i) for i \
+    #                      in igrins_log.log["flat_on"]]
 
     if flatoff_products is None:
         flatoff_products = PipelineProducts.load(flat_off_name)
 
 
-    flat_on_name_ = flat_on_filenames[0]
-    flat_on_name_ = os.path.splitext(flat_on_name_)[0] + ".flat_on_params"
-    flat_on_name = igr_path.get_secondary_calib_filename(flat_on_name_)
+    flaton_path = ProductPath(igr_path, flat_on_filenames[0])
+    flat_on_name = flaton_path.get_secondary_path("flat_on_params")
+    # flat_on_name_ = flat_on_filenames[0]
+    # flat_on_name_ = os.path.splitext(flat_on_name_)[0] + ".flat_on_params"
+    # flat_on_name = igr_path.get_secondary_calib_filename(flat_on_name_)
 
     if 1:
 
-        flat_on_hdu_list = [pyfits.open(fn)[0] for fn in flat_on_filenames]
+        flat_on_hdu_list = [pyfits.open(fn_)[0] for fn_ in flat_on_filenames]
         flat_ons = [hdu.data for hdu in flat_on_hdu_list]
 
 
@@ -91,12 +103,15 @@ if __name__ == "__main__":
 
     flat_on_name_ = flat_on_filenames[0]
     flat_on_name_ = os.path.splitext(flat_on_name_)[0] + ".aperture_centroids"
-    aperture_centroids_name = igr_path.get_secondary_calib_filename(flat_on_name_)
+
+    aperture_centroids_name = flaton_path.get_secondary_path("aperture_centroids")
+    # aperture_centroids_name = igr_path.get_secondary_calib_filename(flat_on_name_)
 
 
-    flat_on_name_ = flat_on_filenames[0]
-    flat_on_name_ = os.path.splitext(flat_on_name_)[0] + ".aperture_solutions"
-    aperture_solutions_name = igr_path.get_secondary_calib_filename(flat_on_name_)
+    # flat_on_name_ = flat_on_filenames[0]
+    # flat_on_name_ = os.path.splitext(flat_on_name_)[0] + ".aperture_solutions"
+    aperture_solutions_name = flaton_path.get_secondary_path("aperture_solutions")
+    #igr_path.get_secondary_calib_filename(flat_on_name_)
 
 
     if 1:
@@ -141,4 +156,17 @@ if __name__ == "__main__":
 
     if 1:
         from libs.qa_helper import figlist_to_pngs
-        figlist_to_pngs(aperture_solutions_name, [fig1, fig2, fig3])
+        aperture_figs = flaton_path.get_secondary_path("aperture",
+                                                       "aperture_dir")
+
+        figlist_to_pngs(aperture_figs, [fig1, fig2, fig3])
+
+    if 1:
+        from libs.products import ProductDB
+        import os
+        flatoff_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                            "flat_off.db"))
+        flatoff_db.update(band, flatoff_path.basename)
+        flaton_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                           "flat_on.db"))
+        flaton_db.update(band, flaton_path.basename)

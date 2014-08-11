@@ -12,25 +12,25 @@ class FlatOff(object):
     def __init__(self, offdata_list):
         self.data_list = offdata_list
 
-    def make_flatoff_bpixmap(self, sigma_clip1=100, sigma_clip2=10,
-                             medfilter_size=None,
-                             destripe=True):
+    def make_flatoff_hotpixmap(self, sigma_clip1=100, sigma_clip2=10,
+                               medfilter_size=None,
+                               destripe=True):
 
         flat_off = stsci_median(self.data_list)
 
         if destripe:
             flat_offs = destriper.get_destriped(flat_off)
 
-        bpix_mask = bp.badpixel_mask(flat_offs,
-                                     sigma_clip1=sigma_clip1,
-                                     sigma_clip2=sigma_clip2,
-                                     medfilter_size=medfilter_size)
+        hotpix_mask = bp.badpixel_mask(flat_offs,
+                                       sigma_clip1=sigma_clip1,
+                                       sigma_clip2=sigma_clip2,
+                                       medfilter_size=medfilter_size)
 
-        bg_std = flat_offs[~bpix_mask].std()
+        bg_std = flat_offs[~hotpix_mask].std()
 
         r = PipelineProducts("flat off products",
                              flat_off=flat_offs,
-                             bpix_mask=bpix_mask,
+                             hotpix_mask=hotpix_mask,
                              bg_std=bg_std)
         return r
 
@@ -48,21 +48,21 @@ class FlatOn(object):
         # load flat off data
         flat_off = flatoff_product["flat_off"]
         bg_std = flatoff_product["bg_std"]
-        bpix_mask = flatoff_product["bpix_mask"]
+        hotpix_mask = flatoff_product["hotpix_mask"]
 
         flat_on = stsci_median(self.data_list)
         flat_on_off = flat_on - flat_off
 
         # normalize it
         norm_factor = get_flat_normalization(flat_on_off,
-                                             bg_std, bpix_mask)
+                                             bg_std, hotpix_mask)
 
         flat_normed = flat_on_off / norm_factor
         bg_std_norm = bg_std/norm_factor
 
         # mask out bpix
         flat_bpixed = flat_normed.astype("d", copy=True)
-        flat_bpixed[bpix_mask] = np.nan
+        flat_bpixed[hotpix_mask] = np.nan
 
         flat_mask = get_flat_mask(flat_bpixed, bg_std_norm,
                                   sigma=flat_mask_sigma)
