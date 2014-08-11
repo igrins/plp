@@ -30,8 +30,12 @@ if __name__ == "__main__":
                          PCyg=[58,59,60, 61],
                          J1833=[42,43,44,45],
                          TWHya=[8, 9, 10, 11],
+                         GammaOph=[38,39,40,41],
+                         V889=[46,47,48,49],
                          G11=[32, 33],
-                         SagARing=[30,31])
+                         PN_M2_43=[34, 35],
+                         SagARing=[30,31],
+                         WL16=[24,25,26,27])
 
     igr_path = IGRINSPath(utdate)
 
@@ -166,10 +170,17 @@ if 1: # now extract from differnt slit positions to measure the distortion
         abba_names = [igrins_log.get_filename(band, fn) for fn \
                       in igrins_log.log["SagARing"]]
 
+        # objname = "HIP94620"
+        # DO_STD = True
+        # FIX_TELLURIC=False
+
+        objname = "PCyg"
+        DO_STD = False
+        FIX_TELLURIC=True
+
         abba_names = [igrins_log.get_filename(band, fn) for fn \
                       in igrins_log.log[objname]]
 
-        objname = "TWHya"
         if len(abba_names) == 4:
             IF_POINT_SOURCE = True
             ab_names_list = [abba_names[:2], abba_names[2:4][::-1]]
@@ -198,7 +209,9 @@ if 1: # now extract from differnt slit positions to measure the distortion
             b_data = np.sum(b_list, axis=0)
             data_minus = a_data - b_data
 
+            from libs.destriper import destriper
             if 1:
+
                 data_minus = destriper.get_destriped(data_minus,
                                                      ~np.isfinite(data_minus),
                                                      pattern=64)
@@ -206,7 +219,6 @@ if 1: # now extract from differnt slit positions to measure the distortion
             data_minus_flattened = data_minus / orderflat
             data_plus = (a_data + b_data)
 
-            from libs.destriper import destriper
             bias_mask = flaton_products["flat_mask"] & (order_map2 > 0)
             import scipy.ndimage as ni
             bias_mask2 = ni.binary_dilation(bias_mask)
@@ -254,6 +266,10 @@ if 1: # now extract from differnt slit positions to measure the distortion
             ordermap_bpixed = order_map.copy()
             ordermap_bpixed[pix_mask] = 0
 
+        #
+        import astropy.io.fits as pyfits
+        slitoffset_map = pyfits.open("t.fits")[0].data
+
 
         if IF_POINT_SOURCE: # if point source
 
@@ -288,10 +304,6 @@ if 1: # now extract from differnt slit positions to measure the distortion
             # make weight map
             profile_map = ap.make_profile_map(order_map, slitpos_map, lsf)
 
-            #
-            import astropy.io.fits as pyfits
-            slitoffset_map = pyfits.open("t.fits")[0].data
-
             # extract spec
 
             s_list, v_list = ap.extract_stellar(ordermap_bpixed,
@@ -320,6 +332,11 @@ if 1: # now extract from differnt slit positions to measure the distortion
                                                 variance_map2,
                                                 data_minus_flattened,
                                                 slitoffset_map=slitoffset_map)
+
+            # s_list_r, v_list = ap.extract_stellar(ordermap_bpixed, profile_map,
+            #                                       variance_map2,
+            #                                       data_minus_flattened,
+            #                                       slitoffset_map=None)
 
         else: # if extended source
             from scipy.interpolate import UnivariateSpline
@@ -353,8 +370,16 @@ if 1: # now extract from differnt slit positions to measure the distortion
             ax1 = fig1.add_subplot(211)
             ax2 = fig1.add_subplot(212)
             #from libs.stddev_filter import window_stdev
+            if FIX_TELLURIC:
+                s_list_cor = []
+                for s, t in zip(s_list, telluric_cor):
+
+                    s_list_cor.append(s/t)
+            else:
+                s_list_cor = s_list
+
             for o, wvl, s, v in zip(ap.orders, wvl_solutions,
-                                    s_list, v_list):
+                                    s_list_cor, v_list):
 
                 o_new_ind = np.searchsorted(new_orders, o)
                 i1, i2 = i1i2_list[o_new_ind]
@@ -362,6 +387,13 @@ if 1: # now extract from differnt slit positions to measure the distortion
                 #res = fitted_response[o_new_ind]
                 ax1.plot(wvl[sl], s[sl])
 
+            for o, wvl, s, v in zip(ap.orders, wvl_solutions,
+                                    s_list, v_list):
+
+                o_new_ind = np.searchsorted(new_orders, o)
+                i1, i2 = i1i2_list[o_new_ind]
+                sl = slice(i1, i2)
+                ax1.plot(wvl[sl], s[sl], "0.8", zorder=0.5)
                 ax2.plot(wvl[sl], s[sl]/v[sl]**.5)
                 #s_std = window_stdev(s, 25)
                 #ax1.plot(wvl[sl], ni.median_filter(s[sl]/s_std[sl], 10), "g-")
@@ -425,6 +457,9 @@ if 1: # now extract from differnt slit positions to measure the distortion
             #ax2.plot(, zzz)
 
             #ax2 = subplot(212)
+            if DO_STD:
+                telluric_cor = []
+
             for o, wvl, s in zip(ap.orders, wvl_solutions, s_list):
                 o_new_ind = np.searchsorted(new_orders, o)
 
@@ -449,13 +484,16 @@ if 1: # now extract from differnt slit positions to measure the distortion
                 #ax2.plot(xxx, yyy)
                 #ax2.plot(xxx, p(xxx))
 
-                res_ = p(wvl[sl])
+                res_ = p(wvl)
 
                 z_interp = interp1d(xxx, zzz0[z_m], bounds_error=False)
-                A0V = z_interp(wvl[sl])
+                A0V = z_interp(wvl)
                 res_[res_<0.3*res_.max()] = np.nan
-                ax1.plot(wvl[sl], (s[sl]/res_))
-                ax2.plot(wvl[sl], (s[sl]/res_)/A0V)
+                ax1.plot(wvl[sl], (s/res_)[sl])
+                ax2.plot(wvl[sl], (s/res_/A0V)[sl])
+
+                if DO_STD:
+                    telluric_cor.append((s/res_)/A0V)
 
             ax1.axhline(1, color="0.5")
             ax2.axhline(1, color="0.5")
