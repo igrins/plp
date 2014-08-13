@@ -1,6 +1,8 @@
 import numpy as np
 
-fn = "indata/20140525/IGRINS_DT_Log_20140525-1_H.txt"
+utdate = "20140525"
+
+fn = "indata/%s/IGRINS_DT_Log_%s-1_H.txt" % (utdate, utdate)
 
 dtype=[('FILENAME', 'S128'), ('OBSTIME', 'S128'), ('GROUP1', 'i'), ('GROUP2', 'i'), ('OBJNAME', 'S128'), ('OBJTYPE', 'S128'), ('FRAMETYPE', 'S128'), ('EXPTIME', 'd'), ('ROTPA', 'd'), ('RA', 'S128'), ('DEC', 'S128'), ('AM', 'd')]
 
@@ -32,7 +34,7 @@ for lll in groupby(l, keyfunc):
 
 headers = groupby_keys + ["RECIPE", "OBSIDS"]
 
-fout = open("20140525.recipes.tmp", "w")
+fout = open("%s.recipes.tmp" % utdate, "w")
 fout.write(" ".join(headers) + "\n")
 fout.writelines(s_list)
 fout.close()

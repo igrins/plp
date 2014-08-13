@@ -4,7 +4,7 @@ import numpy as np
 #from libs.process_flat import FlatOff, FlatOn
 
 
-from libs.path_info import IGRINSPath, IGRINSLog
+from libs.path_info import IGRINSPath, IGRINSLog, IGRINSFiles
 #import astropy.io.fits as pyfits
 
 from libs.products import PipelineProducts
@@ -14,65 +14,76 @@ from libs.apertures import Apertures
 
 if __name__ == "__main__":
 
+    from libs.recipes import load_recipe_list, make_recipe_dict
+    from libs.products import PipelineProducts, ProductPath, ProductDB
 
     if 0:
         utdate = "20140316"
-        log_today = dict(flat_off=range(2, 4),
-                         flat_on=range(4, 7),
-                         thar=range(1, 2))
+        # log_today = dict(flat_off=range(2, 4),
+        #                  flat_on=range(4, 7),
+        #                  thar=range(1, 2))
     elif 1:
         utdate = "20140525"
-        log_today = dict(flat_off=range(64, 74),
-                         flat_on=range(74, 84),
-                         thar=range(3, 8),
-                         sky=[29])
-
-    igr_path = IGRINSPath(utdate)
-
-    igrins_log = IGRINSLog(igr_path, log_today)
+        # log_today = dict(flat_off=range(64, 74),
+        #                  flat_on=range(74, 84),
+        #                  thar=range(3, 8),
+        #                  sky=[29])
 
     band = "H"
+    igr_path = IGRINSPath(utdate)
 
-if 1: # now extract from differnt slit positions to measure the distortion
+    igrins_files = IGRINSFiles(igr_path)
 
-
-    object_name = "sky"
-    object_Name = "Sky"
-
-
-
-    if 1:
-
-        sky_names = [igrins_log.get_filename(band, fn) for fn \
-                      in igrins_log.log["sky"]]
-
-        sky_master_fn_ = os.path.splitext(os.path.basename(sky_names[0]))[0]
-        sky_master_fn = igr_path.get_secondary_calib_filename(sky_master_fn_)
-
-        raw_spec_products = PipelineProducts.load(sky_master_fn+".raw_spec")
+    fn = "%s.recipes" % utdate
+    recipe_list = load_recipe_list(fn)
+    recipe_dict = make_recipe_dict(recipe_list)
 
 
-    if 1: # load aperture product
-        flat_on_name_ = igrins_log.get_filename(band, igrins_log.log["flat_on"][0])
-        flat_on_name_ = os.path.splitext(flat_on_name_)[0] + ".aperture_solutions"
-        aperture_solutions_name = igr_path.get_secondary_calib_filename(flat_on_name_)
+if 1:
+
+    obsids = recipe_dict["SKY"][0][0]
+
+    sky_filenames = igrins_files.get_filenames(band, obsids)
+
+    sky_path = ProductPath(igr_path, sky_filenames[0])
+    sky_master_obsid = obsids[0]
+
+    # obj_filenames = igrins_files.get_filenames(band, obsids)
+    # obj_path = ProductPath(igr_path, obj_filenames[0])
+    # obj_master_obsid = obsids[0]
+
+    flatoff_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                        "flat_off.db"))
+    flaton_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                       "flat_on.db"))
+    thar_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                       "thar.db"))
+    # sky_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+    #                                 "sky.db"))
+
+    # basename = sky_db.query(band, obj_master_obsid)
+    # sky_path = ProductPath(igr_path, basename)
+    raw_spec_products = PipelineProducts.load(sky_path.get_secondary_path("raw_spec"))
 
 
-        aperture_solution_products = PipelineProducts.load(aperture_solutions_name)
 
-        bottomup_solutions = aperture_solution_products["bottom_up_solutions"]
+    basename = flaton_db.query(band, sky_master_obsid)
+    flaton_path = ProductPath(igr_path, basename)
+
+    aperture_solution_products = PipelineProducts.load(flaton_path.get_secondary_path("aperture_solutions"))
+
+    bottomup_solutions = aperture_solution_products["bottom_up_solutions"]
 
 
-        from libs.process_thar import ThAr
+    basename = thar_db.query(band, sky_master_obsid)
+    thar_path = ProductPath(igr_path, basename)
+    fn = thar_path.get_secondary_path("median_spectra")
+    thar_products = PipelineProducts.load(fn)
 
-        thar_names = [igrins_log.get_filename(band, fn) for fn \
-                      in igrins_log.log["thar"]]
-        thar = ThAr(thar_names)
-
-        fn = thar.get_product_name(igr_path)
-
-        thar_products = PipelineProducts.load(fn)
-
+    # basename = sky_db.query(band, sky_master_obsid)
+    # sky_path = ProductPath(igr_path, basename)
+    fn = sky_path.get_secondary_path("wvlsol_v1")
+    wvlsol_products = PipelineProducts.load(fn)
 
     if 1:
         from libs.master_calib import load_sky_ref_data
@@ -85,8 +96,6 @@ if 1: # now extract from differnt slit positions to measure the distortion
         ohlines_db = sky_ref_data["ohlines_db"]
         ref_ohline_indices = sky_ref_data["ohline_indices"]
 
-        fn = thar.get_product_name(igr_path)+".oh_wvlsol"
-        wvlsol_products = PipelineProducts.load(fn)
 
         orders_w_solutions = wvlsol_products["orders"]
         wvl_solutions = wvlsol_products["wvl_sol"]
@@ -263,7 +272,8 @@ if 1: # now extract from differnt slit positions to measure the distortion
             slitoffset_map[msk] = p2_dict[o](xl[msk], slitpos_map[msk])
 
         import astropy.io.fits as pyfits
-        pyfits.PrimaryHDU(data=slitoffset_map).writeto("t.fits", clobber=True)
+        fn = sky_path.get_secondary_path("slitoffset_map.fits")
+        pyfits.PrimaryHDU(data=slitoffset_map).writeto(fn, clobber=True)
 
 
     if 0:

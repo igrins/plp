@@ -25,21 +25,21 @@ if __name__ == "__main__":
         #                  thar=range(1, 2))
     elif 1:
         utdate = "20140525"
-        log_today = dict(flat_off=range(64, 74),
-                         flat_on=range(74, 84),
-                         thar=range(3, 8),
-                         sky=[29],
-                         HIP94620=[50,51,52,53],
-                         HIP99742=[54, 55, 56, 57],
-                         PCyg=[58,59,60, 61],
-                         J1833=[42,43,44,45],
-                         TWHya=[8, 9],
-                         GammaOph=[38,39,40,41],
-                         V889=[46,47,48,49],
-                         G11=[32, 33],
-                         PN_M2_43=[34, 35],
-                         SagARing=[30,31],
-                         WL16=[24,25,26,27])
+        # log_today = dict(flat_off=range(64, 74),
+        #                  flat_on=range(74, 84),
+        #                  thar=range(3, 8),
+        #                  sky=[29],
+        #                  HIP94620=[50,51,52,53],
+        #                  HIP99742=[54, 55, 56, 57],
+        #                  PCyg=[58,59,60, 61],
+        #                  J1833=[42,43,44,45],
+        #                  TWHya=[8, 9],
+        #                  GammaOph=[38,39,40,41],
+        #                  V889=[46,47,48,49],
+        #                  G11=[32, 33],
+        #                  PN_M2_43=[34, 35],
+        #                  SagARing=[30,31],
+        #                  WL16=[24,25,26,27])
 
     band = "H"
     igr_path = IGRINSPath(utdate)
@@ -72,7 +72,7 @@ if __name__ == "__main__":
             recipe = "A0V_ABBA"
             a0v_abba = recipe_dict[recipe]
 
-            i = 3
+            i = 0
             objname = a0v_abba[i][1][0]
             obsids = a0v_abba[i][0]
 
@@ -355,7 +355,8 @@ if 1:
 
         #
         import astropy.io.fits as pyfits
-        slitoffset_map = pyfits.open("t.fits")[0].data
+        fn = sky_path.get_secondary_path("slitoffset_map.fits")
+        slitoffset_map = pyfits.open(fn)[0].data
 
 
         if IF_POINT_SOURCE: # if point source
