@@ -192,7 +192,7 @@ if __name__ == "__main__":
                                            orders=orders_w_solutions,
                                            wvl_sol=wvl_sol)
 
-        fn = sky_path.get_secondary_path(".wvlsol_v1")
+        fn = sky_path.get_secondary_path("wvlsol_v1")
         oh_sol_products.save(fn)
 
         if 1: # save as WAT fits header
@@ -289,3 +289,10 @@ if __name__ == "__main__":
         from libs.qa_helper import figlist_to_pngs
         fn = sky_path.get_secondary_path("oh_fit2d", "oh_fit2d_dir")
         figlist_to_pngs(fn, [fig1, fig2])
+
+    if 1:
+        from libs.products import ProductDB
+        import os
+        sky_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                        "sky.db"))
+        sky_db.update(band, sky_path.basename)

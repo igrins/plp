@@ -4,7 +4,7 @@ import numpy as np
 #from libs.process_flat import FlatOff, FlatOn
 
 
-from libs.path_info import IGRINSPath, IGRINSLog
+from libs.path_info import IGRINSPath, IGRINSLog, IGRINSFiles
 import astropy.io.fits as pyfits
 
 from libs.products import PipelineProducts
@@ -14,11 +14,15 @@ from libs.apertures import Apertures
 
 if __name__ == "__main__":
 
+    from libs.recipes import load_recipe_list, make_recipe_dict
+    from libs.products import PipelineProducts, ProductPath, ProductDB
+
+
     if 0:
         utdate = "20140316"
-        log_today = dict(flat_off=range(2, 4),
-                         flat_on=range(4, 7),
-                         thar=range(1, 2))
+        # log_today = dict(flat_off=range(2, 4),
+        #                  flat_on=range(4, 7),
+        #                  thar=range(1, 2))
     elif 1:
         utdate = "20140525"
         log_today = dict(flat_off=range(64, 74),
@@ -37,69 +41,173 @@ if __name__ == "__main__":
                          SagARing=[30,31],
                          WL16=[24,25,26,27])
 
+    band = "H"
     igr_path = IGRINSPath(utdate)
 
-    igrins_log = IGRINSLog(igr_path, log_today)
+    igrins_files = IGRINSFiles(igr_path)
 
-    band = "H"
+    fn = "%s.recipes" % utdate
+    recipe_list = load_recipe_list(fn)
+    recipe_dict = make_recipe_dict(recipe_list)
 
-if 1: # now extract from differnt slit positions to measure the distortion
-
-
-    object_name = "sky"
-    object_Name = "Sky"
-
-
+    # igrins_log = IGRINSLog(igr_path, log_today)
 
     if 1:
+        # abba_names = [igrins_log.get_filename(band, fn) for fn \
+        #               in igrins_log.log["HIP94620"]]
+        # abba_names = [igrins_log.get_filename(band, fn) for fn \
+        #               in igrins_log.log["HIP99742"]]
+        # abba_names = [igrins_log.get_filename(band, fn) for fn \
+        #               in igrins_log.log["PCyg"]]
+        # abba_names = [igrins_log.get_filename(band, fn) for fn \
+        #               in igrins_log.log["J1833"]]
 
-        sky_names = [igrins_log.get_filename(band, fn) for fn \
-                      in igrins_log.log["sky"]]
-
-        sky_master_fn_ = os.path.splitext(os.path.basename(sky_names[0]))[0]
-        sky_master_fn = igr_path.get_secondary_calib_filename(sky_master_fn_)
-
-        raw_spec_products = PipelineProducts.load(sky_master_fn+".raw_spec")
-
-
-    if 1: # load aperture product
-        flat_on_name_ = igrins_log.get_filename(band, igrins_log.log["flat_on"][0])
-        flat_on_name_ = os.path.splitext(flat_on_name_)[0] + ".aperture_solutions"
-        aperture_solutions_name = igr_path.get_secondary_calib_filename(flat_on_name_)
-
-
-        aperture_solution_products = PipelineProducts.load(aperture_solutions_name)
-
-        bottomup_solutions = aperture_solution_products["bottom_up_solutions"]
+        # abba_names = [igrins_log.get_filename(band, fn) for fn \
+        #               in igrins_log.log["G11"]]
+        # abba_names = [igrins_log.get_filename(band, fn) for fn \
+        #               in igrins_log.log["SagARing"]]
 
 
-        from libs.process_thar import ThAr
+        if 1:
+            recipe = "A0V_ABBA"
+            a0v_abba = recipe_dict[recipe]
 
-        thar_names = [igrins_log.get_filename(band, fn) for fn \
-                      in igrins_log.log["thar"]]
-        thar = ThAr(thar_names)
+            i = 3
+            objname = a0v_abba[i][1][0]
+            obsids = a0v_abba[i][0]
 
-        fn = thar.get_product_name(igr_path)
+            DO_STD = True
+            FIX_TELLURIC=False
 
-        thar_products = PipelineProducts.load(fn)
+        else:
+            recipe = "STELLAR_ABBA"
+            stellar_abba = recipe_dict[recipe]
+
+            i = 3
+            objname = stellar_abba[i][1][0]
+            obsids = stellar_abba[i][0]
+            print objname
+
+            DO_STD = False
+            FIX_TELLURIC=True
 
 
-    if 1:
-        from libs.master_calib import load_sky_ref_data
+if 1:
 
-        ref_utdate = "20140316"
+    obj_filenames = igrins_files.get_filenames(band, obsids)
+    obj_path = ProductPath(igr_path, obj_filenames[0])
+    obj_master_obsid = obsids[0]
 
-        sky_ref_data = load_sky_ref_data(ref_utdate, band)
+    flatoff_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                        "flat_off.db"))
+    flaton_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                       "flat_on.db"))
+    thar_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                       "thar.db"))
+    sky_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                    "sky.db"))
+
+    A0V_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                    "A0V.db"))
 
 
-        ohlines_db = sky_ref_data["ohlines_db"]
-        ref_ohline_indices = sky_ref_data["ohline_indices"]
 
-        fn = thar.get_product_name(igr_path)+".oh_wvlsol"
-        wvlsol_products = PipelineProducts.load(fn)
+    basename = sky_db.query(band, obj_master_obsid)
+    sky_path = ProductPath(igr_path, basename)
+    raw_spec_products = PipelineProducts.load(sky_path.get_secondary_path("raw_spec"))
 
-        orders_w_solutions = wvlsol_products["orders"]
-        wvl_solutions = wvlsol_products["wvl_sol"]
+    basename = flaton_db.query(band, obj_master_obsid)
+    flaton_path = ProductPath(igr_path, basename)
+
+    aperture_solution_products = PipelineProducts.load(flaton_path.get_secondary_path("aperture_solutions"))
+
+    bottomup_solutions = aperture_solution_products["bottom_up_solutions"]
+
+
+    # thar
+
+    basename = thar_db.query(band, obj_master_obsid)
+    thar_path = ProductPath(igr_path, basename)
+    fn = thar_path.get_secondary_path("median_spectra")
+    thar_products = PipelineProducts.load(fn)
+
+    fn = thar_path.get_secondary_path("orderflat")
+    orderflat_products = PipelineProducts.load(fn)
+
+    # sky
+
+    basename = sky_db.query(band, obj_master_obsid)
+    sky_path = ProductPath(igr_path, basename)
+    fn = sky_path.get_secondary_path("wvlsol_v1")
+    wvlsol_products = PipelineProducts.load(fn)
+
+    orders_w_solutions = wvlsol_products["orders"]
+    wvl_solutions = wvlsol_products["wvl_sol"]
+
+    # flat on & off
+
+    basename = flatoff_db.query(band, obj_master_obsid)
+    flatoff_path = ProductPath(igr_path, basename)
+    fn = flatoff_path.get_secondary_path("flat_off_params")
+    flatoff_products = PipelineProducts.load(fn)
+
+    basename = flaton_db.query(band, obj_master_obsid)
+    flaton_path = ProductPath(igr_path, basename)
+    fn = flaton_path.get_secondary_path("flat_on_params")
+    flaton_products = PipelineProducts.load(fn)
+
+
+    # telluric
+    if FIX_TELLURIC:
+        basename = A0V_db.query(band, obj_master_obsid)
+        A0V_path = ProductPath(igr_path, basename)
+        fn = A0V_path.get_secondary_path("spec_flattened.fits")
+        telluric_cor = list(pyfits.open(fn)[0].data)
+        print fn
+
+    # if 1:
+
+    #     sky_names = [igrins_log.get_filename(band, fn) for fn \
+    #                   in igrins_log.log["sky"]]
+
+    #     sky_master_fn_ = os.path.splitext(os.path.basename(sky_names[0]))[0]
+    #     sky_master_fn = igr_path.get_secondary_calib_filename(sky_master_fn_)
+
+    #     raw_spec_products = PipelineProducts.load(sky_master_fn+".raw_spec")
+
+
+    # if 1: # load aperture product
+    #     flat_on_name_ = igrins_log.get_filename(band, igrins_log.log["flat_on"][0])
+    #     flat_on_name_ = os.path.splitext(flat_on_name_)[0] + ".aperture_solutions"
+    #     aperture_solutions_name = igr_path.get_secondary_calib_filename(flat_on_name_)
+
+
+    #     aperture_solution_products = PipelineProducts.load(aperture_solutions_name)
+
+    #     bottomup_solutions = aperture_solution_products["bottom_up_solutions"]
+
+
+        # from libs.process_thar import ThAr
+
+        # thar_names = [igrins_log.get_filename(band, fn) for fn \
+        #               in igrins_log.log["thar"]]
+        # thar = ThAr(thar_names)
+
+        # fn = thar.get_product_name(igr_path)
+
+        # thar_products = PipelineProducts.load(fn)
+
+
+    # if 1:
+    #     from libs.master_calib import load_sky_ref_data
+
+    #     ref_utdate = "20140316"
+
+    #     sky_ref_data = load_sky_ref_data(ref_utdate, band)
+
+
+    #     ohlines_db = sky_ref_data["ohlines_db"]
+    #     ref_ohline_indices = sky_ref_data["ohline_indices"]
 
     if 1: # make aperture
 
@@ -117,74 +225,52 @@ if 1: # now extract from differnt slit positions to measure the distortion
 
     if 1:
 
-        # INPUT
-        flat_off_filenames = [igrins_log.get_filename(band, i) for i \
-                              in igrins_log.log["flat_off"]]
+        # # INPUT
+        # flat_off_filenames = [igrins_log.get_filename(band, i) for i \
+        #                       in igrins_log.log["flat_off"]]
 
 
-        flat_off_name_ = flat_off_filenames[0]
-        flat_off_name_ = os.path.splitext(flat_off_name_)[0] + ".flat_off_params"
-        flat_off_name = igr_path.get_secondary_calib_filename(flat_off_name_)
-        flatoff_products = PipelineProducts.load(flat_off_name)
+        # flat_off_name_ = flat_off_filenames[0]
+        # flat_off_name_ = os.path.splitext(flat_off_name_)[0] + ".flat_off_params"
+        # flat_off_name = igr_path.get_secondary_calib_filename(flat_off_name_)
+        # flatoff_products = PipelineProducts.load(flat_off_name)
 
 
-        # load flat on products
-        flat_on_filenames = [igrins_log.get_filename(band, i) for i \
-                             in igrins_log.log["flat_on"]]
-        flat_on_name_ = flat_on_filenames[0]
-        flat_on_name_ = os.path.splitext(flat_on_name_)[0] + ".flat_on_params"
-        flat_on_name = igr_path.get_secondary_calib_filename(flat_on_name_)
+        # # load flat on products
+        # flat_on_filenames = [igrins_log.get_filename(band, i) for i \
+        #                      in igrins_log.log["flat_on"]]
+        # flat_on_name_ = flat_on_filenames[0]
+        # flat_on_name_ = os.path.splitext(flat_on_name_)[0] + ".flat_on_params"
+        # flat_on_name = igr_path.get_secondary_calib_filename(flat_on_name_)
 
-        flaton_products = PipelineProducts.load(flat_on_name)
+        # flaton_products = PipelineProducts.load(flat_on_name)
 
-        pix_mask  = flatoff_products["bpix_mask"] | flaton_products["deadpix_mask"]
+        pix_mask  = flatoff_products["hotpix_mask"] | flaton_products["deadpix_mask"]
 
 
 
         #
-        flat_on_name_ = igrins_log.get_filename(band, igrins_log.log["flat_on"][0])
-        flat_on_name_ = os.path.splitext(flat_on_name_)[0] + ".aperture_solutions"
-        aperture_solutions_name = igr_path.get_secondary_calib_filename(flat_on_name_)
+        # flat_on_name_ = igrins_log.get_filename(band, igrins_log.log["flat_on"][0])
+        # flat_on_name_ = os.path.splitext(flat_on_name_)[0] + ".aperture_solutions"
+        # aperture_solutions_name = igr_path.get_secondary_calib_filename(flat_on_name_)
 
 
-        aperture_solution_products = PipelineProducts.load(aperture_solutions_name)
+        # aperture_solution_products = PipelineProducts.load(aperture_solutions_name)
 
 
-        fn = thar.get_product_name(igr_path)+".orderflat"
-        orderflat_products = PipelineProducts.load(fn)
+        # fn = thar.get_product_name(igr_path)+".orderflat"
+        # orderflat_products = PipelineProducts.load(fn)
         orderflat = orderflat_products['order_flat']
         orderflat[pix_mask] = np.nan
 
     if 1:
-        abba_names = [igrins_log.get_filename(band, fn) for fn \
-                      in igrins_log.log["HIP94620"]]
-        abba_names = [igrins_log.get_filename(band, fn) for fn \
-                      in igrins_log.log["HIP99742"]]
-        abba_names = [igrins_log.get_filename(band, fn) for fn \
-                      in igrins_log.log["PCyg"]]
-        abba_names = [igrins_log.get_filename(band, fn) for fn \
-                      in igrins_log.log["J1833"]]
 
-        abba_names = [igrins_log.get_filename(band, fn) for fn \
-                      in igrins_log.log["G11"]]
-        abba_names = [igrins_log.get_filename(band, fn) for fn \
-                      in igrins_log.log["SagARing"]]
+        abba_names = obj_filenames
 
-        # objname = "GammaOph"
-        # DO_STD = True
-        # FIX_TELLURIC=False
-
-        objname = "J1833"
-        DO_STD = False
-        FIX_TELLURIC=True
-
-        abba_names = [igrins_log.get_filename(band, fn) for fn \
-                      in igrins_log.log[objname]]
-
-        if len(abba_names) == 4:
+        if recipe in ["A0V_ABBA", "STELLAR_ABBA"]:
             IF_POINT_SOURCE = True
             ab_names_list = [abba_names[:2], abba_names[2:4][::-1]]
-        elif len(abba_names) == 2:
+        elif recipe in ["EXTENDED_AB"]:
             IF_POINT_SOURCE = False
             ab_names_list = [abba_names[:2]]
 
@@ -223,7 +309,8 @@ if 1: # now extract from differnt slit positions to measure the distortion
             import scipy.ndimage as ni
             bias_mask2 = ni.binary_dilation(bias_mask)
 
-            gain = 5. # what is the gain??
+            import instrument_parameters
+            gain =  instrument_parameters.gain[band]
 
             # random noise
             variance0 = data_minus
@@ -361,12 +448,17 @@ if 1: # now extract from differnt slit positions to measure the distortion
             #                               lsf, s_list,
             #                               slitoffset_map=slitoffset_map)
 
+
+        fig_list = []
         if 1:
             new_orders = orderflat_products["orders"]
             fitted_response = orderflat_products["fitted_responses"]
             i1i2_list = orderflat_products["i1i2_list"]
 
-            fig1 = plt.figure(1)
+            from matplotlib.figure import Figure
+            fig1 = Figure()
+            fig_list.append(fig1)
+
             ax1 = fig1.add_subplot(211)
             ax2 = fig1.add_subplot(212)
             #from libs.stddev_filter import window_stdev
@@ -394,18 +486,31 @@ if 1: # now extract from differnt slit positions to measure the distortion
                 i1, i2 = i1i2_list[o_new_ind]
                 sl = slice(i1, i2)
                 ax1.plot(wvl[sl], s[sl], "0.8", zorder=0.5)
-                ax2.plot(wvl[sl], s[sl]/v[sl]**.5)
+
+                wvl = np.array(wvl)
+                pixel_per_res_element = (wvl/40000.)[:-1]/(wvl[1:]-wvl[:-1])
+                #print pixel_per_res_element[1024]
+                # len(pixel_per_res_element) = 2047. But we ignore it.
+                ax2.plot(wvl[sl], (s[sl]/v[sl]**.5)*(pixel_per_res_element[sl]**.5))
                 #s_std = window_stdev(s, 25)
                 #ax1.plot(wvl[sl], ni.median_filter(s[sl]/s_std[sl], 10), "g-")
 
 
+            ymax = 1.1*max(s_list[12][sl])
+            ax1.set_ylim(0, ymax)
+            pixel_per_res_element = 3.7
+            ymax = 1.2*(s_list[12][1024]/v_list[12][1024]**.5*pixel_per_res_element**.5)
+            ax2.set_ylim(0, ymax)
+            ax2.set_ylabel("S/N per Res. Element")
 
         if IF_POINT_SOURCE: # if point source, try simple telluric factor for A0V
             new_orders = orderflat_products["orders"]
             fitted_response = orderflat_products["fitted_responses"]
             i1i2_list = orderflat_products["i1i2_list"]
 
-            fig2 = plt.figure(2)
+            fig2 = Figure()
+            fig_list.append(fig2)
+
             ax1 = fig2.add_subplot(211)
             for o, wvl, s in zip(ap.orders, wvl_solutions, s_list):
                 o_new_ind = np.searchsorted(new_orders, o)
@@ -498,17 +603,37 @@ if 1: # now extract from differnt slit positions to measure the distortion
             ax1.axhline(1, color="0.5")
             ax2.axhline(1, color="0.5")
 
-if 0:
-    d = np.array(telluric_cor)
+        if 1:
+            figout = obj_path.get_secondary_path("spec", "spec_dir")
+            from libs.qa_helper import figlist_to_pngs
+            figlist_to_pngs(figout, fig_list)
+
+if 1:
+    fn = sky_path.get_secondary_path("wvlsol_v1.fits")
+    f = pyfits.open(fn)
+
+    d = np.array(s_list)
     d[~np.isfinite(d)] = 0.
-    f = pyfits.open("wvlsol.fits")
     f[0].data = d.astype("f32")
-    f.writeto("wvlsol_test.fits", clobber=True)
+    fout = obj_path.get_secondary_path("spec.fits")
+    f.writeto(fout, clobber=True)
 
-                #res = fitted_response[o_new_ind]
-                #ax1.plot(wvl[sl], s[sl])
 
-            #oi = 10
+    if DO_STD:
+        d = np.array(telluric_cor)
+        d[~np.isfinite(d)] = 0.
+        f[0].data = d.astype("f32")
+        fout = obj_path.get_secondary_path("spec_flattened.fits")
+        f.writeto(fout, clobber=True)
+
+        from libs.products import ProductDB
+        import os
+        A0V_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                         "A0V.db"))
+        A0V_db.update(band, obj_path.basename)
+
+
+
 if 0:
 
 

@@ -85,7 +85,7 @@ class ProductDB(object):
 
             # return last one with minimum distance
             obsid_dist = np.abs(np.array(obsid_list) - obsid)
-            i = np.where(obsid_dist == np.min(obsid_dist))[-1]
+            i = np.where(obsid_dist == np.min(obsid_dist))[0][-1]
             return basename_list[i]
 
 
