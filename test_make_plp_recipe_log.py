@@ -35,6 +35,8 @@ for lll in groupby(l, keyfunc):
 headers = groupby_keys + ["RECIPE", "OBSIDS"]
 
 fout = open("%s.recipes.tmp" % utdate, "w")
-fout.write(" ".join(headers) + "\n")
+fout.write(", ".join(headers) + "\n")
+fout.write("# Avaiable recipes : FLAT_OFF, FLAT_ON, THAR, SKY, A0V_ABBA, STELLAR_ABBA, EXTENDED_AB")
+
 fout.writelines(s_list)
 fout.close()
