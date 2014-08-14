@@ -24,7 +24,7 @@ if __name__ == "__main__":
         #                  flat_on=range(4, 7),
         #                  thar=range(1, 2))
     elif 1:
-        utdate = "20140525"
+        utdate = "20140708"
         # log_today = dict(flat_off=range(64, 74),
         #                  flat_on=range(74, 84),
         #                  thar=range(3, 8),
@@ -52,109 +52,113 @@ if __name__ == "__main__":
 
     # igrins_log = IGRINSLog(igr_path, log_today)
 
+
+
+    if 0:
+        recipe = "A0V_ABBA"
+
+        DO_STD = True
+        FIX_TELLURIC=False
+
+    if 0:
+        recipe = "STELLAR_ABBA"
+
+        DO_STD = False
+        FIX_TELLURIC=True
+
+    if 0:
+        recipe = "EXTENDED_AB"
+
+        DO_STD = False
+        FIX_TELLURIC=True
+
     if 1:
-        # abba_names = [igrins_log.get_filename(band, fn) for fn \
-        #               in igrins_log.log["HIP94620"]]
-        # abba_names = [igrins_log.get_filename(band, fn) for fn \
-        #               in igrins_log.log["HIP99742"]]
-        # abba_names = [igrins_log.get_filename(band, fn) for fn \
-        #               in igrins_log.log["PCyg"]]
-        # abba_names = [igrins_log.get_filename(band, fn) for fn \
-        #               in igrins_log.log["J1833"]]
+        recipe = "EXTENDED_ABBA"
 
-        # abba_names = [igrins_log.get_filename(band, fn) for fn \
-        #               in igrins_log.log["G11"]]
-        # abba_names = [igrins_log.get_filename(band, fn) for fn \
-        #               in igrins_log.log["SagARing"]]
+        DO_STD = False
+        FIX_TELLURIC=True
 
+    abba_list = recipe_dict[recipe]
 
-        if 1:
-            recipe = "A0V_ABBA"
-            a0v_abba = recipe_dict[recipe]
+    do_interactive_figure=True
 
-            i = 0
-            objname = a0v_abba[i][1][0]
-            obsids = a0v_abba[i][0]
+# if 1:
+#     abba  = abba_list[-1]
 
-            DO_STD = True
-            FIX_TELLURIC=False
+for abba in abba_list:
 
-        else:
-            recipe = "STELLAR_ABBA"
-            stellar_abba = recipe_dict[recipe]
-
-            i = 3
-            objname = stellar_abba[i][1][0]
-            obsids = stellar_abba[i][0]
-            print objname
-
-            DO_STD = False
-            FIX_TELLURIC=True
-
-
-if 1:
-
-    obj_filenames = igrins_files.get_filenames(band, obsids)
-    obj_path = ProductPath(igr_path, obj_filenames[0])
-    obj_master_obsid = obsids[0]
-
-    flatoff_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
-                                        "flat_off.db"))
-    flaton_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
-                                       "flat_on.db"))
-    thar_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
-                                       "thar.db"))
-    sky_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
-                                    "sky.db"))
-
-    A0V_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
-                                    "A0V.db"))
+    #i = 0
+    objname = abba[1][0]
+    obsids = abba[0]
 
 
 
-    basename = sky_db.query(band, obj_master_obsid)
-    sky_path = ProductPath(igr_path, basename)
-    raw_spec_products = PipelineProducts.load(sky_path.get_secondary_path("raw_spec"))
-
-    basename = flaton_db.query(band, obj_master_obsid)
-    flaton_path = ProductPath(igr_path, basename)
-
-    aperture_solution_products = PipelineProducts.load(flaton_path.get_secondary_path("aperture_solutions"))
-
-    bottomup_solutions = aperture_solution_products["bottom_up_solutions"]
+    print objname
 
 
-    # thar
+    if 1:
 
-    basename = thar_db.query(band, obj_master_obsid)
-    thar_path = ProductPath(igr_path, basename)
-    fn = thar_path.get_secondary_path("median_spectra")
-    thar_products = PipelineProducts.load(fn)
+        obj_filenames = igrins_files.get_filenames(band, obsids)
+        obj_path = ProductPath(igr_path, obj_filenames[0])
+        obj_master_obsid = obsids[0]
 
-    fn = thar_path.get_secondary_path("orderflat")
-    orderflat_products = PipelineProducts.load(fn)
+        flatoff_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                            "flat_off.db"))
+        flaton_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                           "flat_on.db"))
+        thar_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                           "thar.db"))
+        sky_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                        "sky.db"))
 
-    # sky
+        A0V_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                        "A0V.db"))
 
-    basename = sky_db.query(band, obj_master_obsid)
-    sky_path = ProductPath(igr_path, basename)
-    fn = sky_path.get_secondary_path("wvlsol_v1")
-    wvlsol_products = PipelineProducts.load(fn)
 
-    orders_w_solutions = wvlsol_products["orders"]
-    wvl_solutions = wvlsol_products["wvl_sol"]
 
-    # flat on & off
+        basename = sky_db.query(band, obj_master_obsid)
+        sky_path = ProductPath(igr_path, basename)
+        raw_spec_products = PipelineProducts.load(sky_path.get_secondary_path("raw_spec"))
 
-    basename = flatoff_db.query(band, obj_master_obsid)
-    flatoff_path = ProductPath(igr_path, basename)
-    fn = flatoff_path.get_secondary_path("flat_off_params")
-    flatoff_products = PipelineProducts.load(fn)
+        basename = flaton_db.query(band, obj_master_obsid)
+        flaton_path = ProductPath(igr_path, basename)
 
-    basename = flaton_db.query(band, obj_master_obsid)
-    flaton_path = ProductPath(igr_path, basename)
-    fn = flaton_path.get_secondary_path("flat_on_params")
-    flaton_products = PipelineProducts.load(fn)
+        aperture_solution_products = PipelineProducts.load(flaton_path.get_secondary_path("aperture_solutions"))
+
+        bottomup_solutions = aperture_solution_products["bottom_up_solutions"]
+
+
+        # thar
+
+        basename = thar_db.query(band, obj_master_obsid)
+        thar_path = ProductPath(igr_path, basename)
+        fn = thar_path.get_secondary_path("median_spectra")
+        thar_products = PipelineProducts.load(fn)
+
+        fn = thar_path.get_secondary_path("orderflat")
+        orderflat_products = PipelineProducts.load(fn)
+
+        # sky
+
+        basename = sky_db.query(band, obj_master_obsid)
+        sky_path = ProductPath(igr_path, basename)
+        fn = sky_path.get_secondary_path("wvlsol_v1")
+        wvlsol_products = PipelineProducts.load(fn)
+
+        orders_w_solutions = wvlsol_products["orders"]
+        wvl_solutions = wvlsol_products["wvl_sol"]
+
+        # flat on & off
+
+        basename = flatoff_db.query(band, obj_master_obsid)
+        flatoff_path = ProductPath(igr_path, basename)
+        fn = flatoff_path.get_secondary_path("flat_off_params")
+        flatoff_products = PipelineProducts.load(fn)
+
+        basename = flaton_db.query(band, obj_master_obsid)
+        flaton_path = ProductPath(igr_path, basename)
+        fn = flaton_path.get_secondary_path("flat_on_params")
+        flaton_products = PipelineProducts.load(fn)
 
 
     # telluric
@@ -273,7 +277,12 @@ if 1:
         elif recipe in ["EXTENDED_AB"]:
             IF_POINT_SOURCE = False
             ab_names_list = [abba_names[:2]]
-
+        elif recipe in ["EXTENDED_ABBA"]:
+            IF_POINT_SOURCE = False
+            ab_names_list = [abba_names[:2], abba_names[2:4][::-1]]
+        else:
+            print "Unknown recipe : %s" % recipe
+            continue
 
         if 1:
             #ab_names = ab_names_list[0]
@@ -319,10 +328,14 @@ if 1:
             variance_[bias_mask2] = np.nan
             variance_[pix_mask] = np.nan
 
-            st = np.nanstd(variance_)
-            st = np.nanstd(variance_[np.abs(variance_) < 3*st])
+            mm = np.ma.array(variance0, mask=~np.isfinite(variance0))
+            ss = np.ma.median(mm, axis=0)
+            variance_ = variance_ - ss
 
-            variance_[np.abs(variance_) > 3*st] = np.nan
+            for i in range(5):
+                st = np.nanstd(variance_, axis=0)
+                variance_[np.abs(variance_) > 3*st] = np.nan
+                #st = np.nanstd(variance_, axis=0)
 
             variance = destriper.get_destriped(variance0,
                                                 ~np.isfinite(variance_),
@@ -335,7 +348,7 @@ if 1:
             st = np.nanstd(variance_)
             st = np.nanstd(variance_[np.abs(variance_) < 3*st])
 
-            variance_[np.abs(variance_) > 3*st] = np.nan
+            variance_[np.abs(variance_-ss) > 3*st] = np.nan
 
             x_std = ni.median_filter(np.nanstd(variance_, axis=0), 11)
 
@@ -428,7 +441,9 @@ if 1:
 
         else: # if extended source
             from scipy.interpolate import UnivariateSpline
-            lsf_ = UnivariateSpline([0, 1], [1., 1.], k=1, s=0,
+            delta = 0.01
+            lsf_ = UnivariateSpline([0, 0.5-delta, 0.5+delta, 1],
+                                    [1., 1., -1., -1.], k=1, s=0,
                                     bbox=[0, 1])
 
             def lsf(o, x, slitpos):
@@ -456,7 +471,10 @@ if 1:
             fitted_response = orderflat_products["fitted_responses"]
             i1i2_list = orderflat_products["i1i2_list"]
 
-            from matplotlib.figure import Figure
+            if do_interactive_figure:
+                from matplotlib.pyplot import figure as Figure
+            else:
+                from matplotlib.figure import Figure
             fig1 = Figure()
             fig_list.append(fig1)
 
@@ -520,14 +538,17 @@ if 1:
                 res = fitted_response[o_new_ind]
                 #ax1.plot(wvl[sl], (s/res)[sl])
 
-            d = np.genfromtxt("A0V/vegallpr25.50000resam5")
+            from libs.master_calib import get_master_calib_abspath
+            fn = get_master_calib_abspath("A0V/vegallpr25.50000resam5")
+            d = np.genfromtxt(fn)
 
             wvl, flux, cont = (d[:,i] for i in [0, 1, 2])
             ax2 = fig2.add_subplot(212, sharex=ax1)
             wvl = wvl/1000.
             mask_H = (1.450 < wvl) & (wvl < 1.850)
 
-            telluric = pyfits.open("telluric/LBL_A15_s0_w050_R0060000_T.fits")[1].data
+            fn = get_master_calib_abspath("telluric/LBL_A15_s0_w050_R0060000_T.fits")
+            telluric = pyfits.open(fn)[1].data
             telluric_lam = telluric["lam"]
             tel_mask_H = (1.450 < telluric_lam) & (telluric_lam < 1.850)
             #plot(telluric_lam[tel_mask_H], telluric["trans"][tel_mask_H])
@@ -609,29 +630,29 @@ if 1:
             from libs.qa_helper import figlist_to_pngs
             figlist_to_pngs(figout, fig_list)
 
-if 1:
-    fn = sky_path.get_secondary_path("wvlsol_v1.fits")
-    f = pyfits.open(fn)
+    if 1:
+        fn = sky_path.get_secondary_path("wvlsol_v1.fits")
+        f = pyfits.open(fn)
 
-    d = np.array(s_list)
-    d[~np.isfinite(d)] = 0.
-    f[0].data = d.astype("f32")
-    fout = obj_path.get_secondary_path("spec.fits")
-    f.writeto(fout, clobber=True)
-
-
-    if DO_STD:
-        d = np.array(telluric_cor)
+        d = np.array(s_list)
         d[~np.isfinite(d)] = 0.
         f[0].data = d.astype("f32")
-        fout = obj_path.get_secondary_path("spec_flattened.fits")
+        fout = obj_path.get_secondary_path("spec.fits")
         f.writeto(fout, clobber=True)
 
-        from libs.products import ProductDB
-        import os
-        A0V_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
-                                         "A0V.db"))
-        A0V_db.update(band, obj_path.basename)
+
+        if DO_STD:
+            d = np.array(telluric_cor)
+            d[~np.isfinite(d)] = 0.
+            f[0].data = d.astype("f32")
+            fout = obj_path.get_secondary_path("spec_flattened.fits")
+            f.writeto(fout, clobber=True)
+
+            from libs.products import ProductDB
+            import os
+            A0V_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+                                             "A0V.db"))
+            A0V_db.update(band, obj_path.basename)
 
 
 
