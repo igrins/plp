@@ -581,7 +581,8 @@ def get_order_boundary_indices(s1, s0=None):
     # select finite number only. This may happen when orders go out of
     # chip boundary.
     s1 = np.array(s1)
-    k1, k2 = np.nonzero(np.isfinite(s1))[0][[0, -1]]
+    #k1, k2 = np.nonzero(np.isfinite(s1))[0][[0, -1]]
+    k1, k2 = np.nonzero(s1>0.05)[0][[0, -1]]
     s = s1[k1:k2+1]
 
 
