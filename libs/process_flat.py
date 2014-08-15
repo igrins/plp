@@ -41,6 +41,7 @@ class FlatOn(object):
         self.data_list = ondata_list
 
     def make_flaton_deadpixmap(self, flatoff_product=None,
+                               deadpix_mask_old=None,
                                flat_mask_sigma=5.,
                                deadpix_thresh=0.6,
                                smooth_size=9):
@@ -79,6 +80,9 @@ class FlatOn(object):
         refpixel_mask[4:-4,4:-4] = False
 
         deadpix_mask = (flat_ratio<deadpix_thresh) & flat_mask & (~refpixel_mask)
+
+        if deadpix_mask_old is not None:
+            deadpix_mask = deadpix_mask | deadpix_mask_old
 
         flat_bpixed[deadpix_mask] = np.nan
 

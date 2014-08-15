@@ -13,13 +13,15 @@ if __name__ == "__main__":
     from libs.recipes import load_recipe_list, make_recipe_dict
     from libs.products import PipelineProducts, ProductPath
 
+    refdate = "20140316"
+
     if 0:
         utdate = "20140316"
         # log_today = dict(flat_off=range(2, 4),
         #                  flat_on=range(4, 7),
         #                  thar=range(1, 2))
     elif 1:
-        utdate = "20140711"
+        utdate = "20140525"
         # log_today = dict(flat_off=range(64, 74),
         #                  flat_on=range(74, 84),
         #                  thar=range(3, 8),
@@ -34,7 +36,7 @@ if __name__ == "__main__":
     igrins_files = IGRINSFiles(igr_path)
     #igrins_log = IGRINSLog(igr_path, log_today)
 
-    band = "H"
+    band = "K"
 
 
     flatoff_products = None
@@ -93,8 +95,14 @@ if __name__ == "__main__":
         flat_ons = [hdu.data for hdu in flat_on_hdu_list]
 
 
+        from libs.master_calib import get_master_calib_abspath
+        fn = get_master_calib_abspath("deadpix_mask_%s_%s.fits" % (refdate,
+                                                                   band))
+        deadpix_mask_old = pyfits.open(fn)[0].data.astype(bool)
+
         flat_on = FlatOn(flat_ons)
-        flaton_products = flat_on.make_flaton_deadpixmap(flatoff_products)
+        flaton_products = flat_on.make_flaton_deadpixmap(flatoff_products,
+                                                         deadpix_mask_old=deadpix_mask_old)
 
 
         flaton_products.save(mastername=flat_on_name,
