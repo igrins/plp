@@ -42,7 +42,7 @@ class FlatOn(object):
 
     def make_flaton_deadpixmap(self, flatoff_product=None,
                                flat_mask_sigma=5.,
-                               deadpix_thresh=0.3,
+                               deadpix_thresh=0.6,
                                smooth_size=9):
 
         # load flat off data
@@ -69,7 +69,8 @@ class FlatOn(object):
 
 
         # get dead pixel mask
-        flat_smoothed = ni.median_filter(flat_normed, [1, smooth_size])
+        flat_smoothed = ni.median_filter(flat_normed,
+                                         [smooth_size, smooth_size])
         #flat_smoothed[order_map==0] = np.nan
         flat_ratio = flat_normed/flat_smoothed
 
