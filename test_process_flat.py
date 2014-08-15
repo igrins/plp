@@ -19,7 +19,7 @@ if __name__ == "__main__":
         #                  flat_on=range(4, 7),
         #                  thar=range(1, 2))
     elif 1:
-        utdate = "20140525"
+        utdate = "20140711"
         # log_today = dict(flat_off=range(64, 74),
         #                  flat_on=range(74, 84),
         #                  thar=range(3, 8),
@@ -41,9 +41,13 @@ if __name__ == "__main__":
     flaton_products = None
 
     # INPUT
-    obsids = recipe_dict["FLAT_OFF"][0][0]
+    obsids = recipe_dict["FLAT"][0][0]
+    frametypes = recipe_dict["FLAT"][0][1]
 
-    flat_off_filenames = igrins_files.get_filenames(band, obsids)
+    obsids_off = [obsid for obsid, frametype in zip(obsids, frametypes) if frametype == "OFF"]
+    obsids_on = [obsid for obsid, frametype in zip(obsids, frametypes) if frametype == "ON"]
+
+    flat_off_filenames = igrins_files.get_filenames(band, obsids_off)
 
     flatoff_path = ProductPath(igr_path, flat_off_filenames[0])
     #flat_off_name_ = flat_off_filenames[0]
@@ -67,9 +71,8 @@ if __name__ == "__main__":
 
 
     # INPUT
-    obsids = recipe_dict["FLAT_ON"][0][0]
 
-    flat_on_filenames = igrins_files.get_filenames(band, obsids)
+    flat_on_filenames = igrins_files.get_filenames(band, obsids_on)
 
     # flat_on_filenames = [igrins_log.get_filename(band, i) for i \
     #                      in igrins_log.log["flat_on"]]

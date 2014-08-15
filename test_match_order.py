@@ -19,7 +19,7 @@ if __name__ == "__main__":
         #                  flat_on=range(4, 7),
         #                  thar=range(1, 2))
     elif 1:
-        utdate = "20140525"
+        utdate = "20140711"
         # log_today = dict(flat_off=range(64, 74),
         #                  flat_on=range(74, 84),
         #                  thar=range(3, 8),
@@ -105,7 +105,6 @@ if __name__ == "__main__":
         hdu = pyfits.open(thar_filenames[0])[0]
         thar_products.save(fn, masterhdu=hdu)
 
-
     if 1:
         # measure shift of thar lines from reference spectra
 
@@ -114,7 +113,6 @@ if __name__ == "__main__":
         from libs.process_thar import reidentify_ThAr_lines
         thar_reidentified_products = reidentify_ThAr_lines(thar_products,
                                                            thar_ref_data)
-
 
     if 1:
 

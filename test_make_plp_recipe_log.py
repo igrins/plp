@@ -1,12 +1,17 @@
 import numpy as np
+import re
 
-utdate = "20140525"
+utdate = "20140711"
 
 fn = "indata/%s/IGRINS_DT_Log_%s-1_H.txt" % (utdate, utdate)
+p_end_comma = re.compile(r",$")
+s = "".join(p_end_comma.sub("", l) for l in open(fn))
 
 dtype=[('FILENAME', 'S128'), ('OBSTIME', 'S128'), ('GROUP1', 'i'), ('GROUP2', 'i'), ('OBJNAME', 'S128'), ('OBJTYPE', 'S128'), ('FRAMETYPE', 'S128'), ('EXPTIME', 'd'), ('ROTPA', 'd'), ('RA', 'S128'), ('DEC', 'S128'), ('AM', 'd')]
 
-l = np.genfromtxt(fn, names=True, skip_header=1, delimiter=",", dtype=dtype)
+from StringIO import StringIO
+l = np.genfromtxt(StringIO(s),
+                  names=True, skip_header=1, delimiter=",", dtype=dtype)
 
 from itertools import groupby
 
@@ -16,27 +21,33 @@ def keyfunc(l1):
 
 s_list = []
 for lll in groupby(l, keyfunc):
-    obsids = [int(lll1[0].split(".")[0].split("_")[-1]) for lll1 in lll[1]]
+    grouper = list(lll[1])
+    obsids = [int(lll1[0].split(".")[0].split("_")[-1]) for lll1 in grouper]
+    frametypes = [lll1["FRAMETYPE"]  for lll1 in grouper]
+
     objtype = lll[0][1]
-    if objtype.lower() == "std" and len(obsids) == 4:
-        recipe = "A0V_ABBA"
-    elif len(obsids) == 4:
-        recipe = "STELLAR_ABBA"
-    elif len(obsids) == 2:
-        recipe = "EXTENDED_AB"
+    if objtype.lower() == "flat":
+        recipe = "FLAT"
+    elif objtype.lower() == "std":
+        recipe = "A0V_AB"
+    elif objtype.lower() == "tar":
+        recipe = "STELLAR_AB"
     else:
         recipe = "DEFAULT"
 
     s1 = "%s, %s, %d, %d, %f," % lll[0]
-    s2 = "%s, %s\n" % (recipe, " ".join(map(str,obsids)))
-    s_list.append(s1+s2)
+    s2 = "%s, %s, %s\n" % (recipe,
+                           " ".join(map(str,obsids)),
+                           " ".join(frametypes),
+                           )
+    s_list.append(s1+" "+s2)
 
 
-headers = groupby_keys + ["RECIPE", "OBSIDS"]
+headers = groupby_keys + ["RECIPE", "OBSIDS", "FRAMETYPES"]
 
 fout = open("%s.recipes.tmp" % utdate, "w")
 fout.write(", ".join(headers) + "\n")
-fout.write("# Avaiable recipes : FLAT_OFF, FLAT_ON, THAR, SKY, A0V_ABBA, STELLAR_ABBA, EXTENDED_AB")
+fout.write("# Avaiable recipes : FLAT_OFF, FLAT_ON, THAR, SKY, A0V_ABBA, STELLAR_ABBA, EXTENDED_AB\n")
 
 fout.writelines(s_list)
 fout.close()
