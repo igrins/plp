@@ -23,13 +23,13 @@ if __name__ == "__main__":
         #                  flat_on=range(4, 7),
         #                  thar=range(1, 2))
     elif 1:
-        utdate = "20140709"
+        utdate = "20140525"
         # log_today = dict(flat_off=range(64, 74),
         #                  flat_on=range(74, 84),
         #                  thar=range(3, 8),
         #                  sky=[29])
 
-    band = "H"
+    band = "K"
     igr_path = IGRINSPath(utdate)
 
     igrins_files = IGRINSFiles(igr_path)
@@ -154,23 +154,91 @@ if 1:
 
 
         from libs.reidentify_ohlines import fit_ohlines, fit_ohlines_pixel
-        ref_pixel_list, reidentified_lines = \
-                        fit_ohlines(ohlines_db, ref_ohline_indices,
-                                    orders_w_solutions,
-                                    wvl_solutions, s_center)
 
+        def get_reidentified_lines_OH(orders_w_solutions,
+                                      wvl_solutions, s_center):
+            ref_pixel_list, reidentified_lines = \
+                            fit_ohlines(ohlines_db, ref_ohline_indices,
+                                        orders_w_solutions,
+                                        wvl_solutions, s_center)
+
+            reidentified_lines_map = dict(zip(orders_w_solutions,
+                                              reidentified_lines))
+            return reidentified_lines_map, ref_pixel_list
+
+        if band == "H":
+            reidentified_lines_map, ref_pixel_list_oh = \
+                       get_reidentified_lines_OH(orders_w_solutions,
+                                              wvl_solutions,
+                                              s_center)
+
+            def refit_centroid(s_center,
+                               ref_pixel_list=ref_pixel_list_oh):
+                centroids = fit_ohlines_pixel(s_center,
+                                              ref_pixel_list)
+                return centroids
+
+        else: # band K
+            reidentified_lines_map, ref_pixel_list_oh = \
+                       get_reidentified_lines_OH(orders_w_solutions,
+                                                 wvl_solutions,
+                                                 s_center)
+
+            import libs.master_calib as master_calib
+            fn = "hitran_bootstrap_K_%s.json" % ref_utdate
+            bootstrap_name = master_calib.get_master_calib_abspath(fn)
+            import json
+            bootstrap = json.load(open(bootstrap_name))
+
+            import libs.hitran as hitran
+            r, ref_pixel_dict_hitrans = hitran.reidentify(wvl_solutions,
+                                                          s_center,
+                                                          bootstrap)
+            # for i, s in r.items():
+            #     ss = reidentified_lines_map[int(i)]
+            #     ss0 = np.concatenate([ss[0], s["pixel"]])
+            #     ss1 = np.concatenate([ss[1], s["wavelength"]])
+            #     reidentified_lines_map[int(i)] = (ss0, ss1)
+
+            #reidentified_lines_map, ref_pixel_list
+
+            def refit_centroid(s_center,
+                               ref_pixel_list=ref_pixel_list_oh,
+                               ref_pixel_dict_hitrans=ref_pixel_dict_hitrans):
+                centroids_oh = fit_ohlines_pixel(s_center,
+                                                 ref_pixel_list)
+
+                s_dict = dict(zip(orders_w_solutions, s_center))
+                centroids_dict_hitrans = hitran.fit_hitrans_pixel(s_dict,
+                                                                  ref_pixel_dict_hitrans)
+                centroids = []
+                for o, c_oh in zip(orders_w_solutions, centroids_oh):
+                    if o in centroids_dict_hitrans:
+                        c = np.concatenate([c_oh,
+                                            centroids_dict_hitrans[o]["pixel"]])
+                        centroids.append(c)
+                    else:
+                        centroids.append(c_oh)
+
+                return centroids
+
+        # reidentified_lines_map = get_reidentified_lines(orders_w_solutions,
+        #                                                 wvl_solutions,
+        #                                                 s_center)
 
 
     if 1:
         # TODO: we should not need this, instead recycle from preivious step.
-        fitted_centroid_center = fit_ohlines_pixel(s_center,
-                                                   ref_pixel_list)
+        fitted_centroid_center = refit_centroid(s_center)
+        # fitted_centroid_center = fit_ohlines_pixel(s_center,
+        #                                            ref_pixel_list)
 
         d_shift_up = []
         for s in s_up:
             # TODO: ref_pixel_list_filtered need to be updated with recent fit.
-            fitted_centroid = fit_ohlines_pixel(s,
-                                                ref_pixel_list)
+            fitted_centroid = refit_centroid(s)
+            # fitted_centroid = fit_ohlines_pixel(s,
+            #                                     ref_pixel_list)
             d_shift = [b-a for a, b in zip(fitted_centroid_center,
                                            fitted_centroid)]
             d_shift_up.append(d_shift)
@@ -178,8 +246,9 @@ if 1:
         d_shift_down = []
         for s in s_down:
             # TODO: ref_pixel_list_filtered need to be updated with recent fit.
-            fitted_centroid = fit_ohlines_pixel(s,
-                                                ref_pixel_list)
+            fitted_centroid = refit_centroid(s)
+            # fitted_centroid = fit_ohlines_pixel(s,
+            #                                     ref_pixel_list)
             #fitted_centroid_center,
             d_shift = [b-a for a, b in zip(fitted_centroid_center,
                                            fitted_centroid)]
@@ -274,6 +343,10 @@ if 1:
         import astropy.io.fits as pyfits
         fn = sky_path.get_secondary_path("slitoffset_map.fits")
         pyfits.PrimaryHDU(data=slitoffset_map).writeto(fn, clobber=True)
+
+        from libs.qa_helper import figlist_to_pngs
+        fn = sky_path.get_secondary_path("oh_distortion", "oh_fit2d_dir")
+        figlist_to_pngs(fn, fig_list)
 
 
     if 0:

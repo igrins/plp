@@ -23,13 +23,13 @@ if __name__ == "__main__":
         #                  flat_on=range(4, 7),
         #                  thar=range(1, 2))
     elif 1:
-        utdate = "20140710"
+        utdate = "20140525"
         # log_today = dict(flat_off=range(64, 74),
         #                  flat_on=range(74, 84),
         #                  thar=range(3, 8),
         #                  sky=[29])
 
-    band = "H"
+    band = "K"
     igr_path = IGRINSPath(utdate)
 
     igrins_files = IGRINSFiles(igr_path)
@@ -120,6 +120,12 @@ if __name__ == "__main__":
         ohlines_db = sky_ref_data["ohlines_db"]
 
         wvl_solutions = thar_wvl_sol["wvl_sol"]
+
+        if 0: # it would be better to iteratively refit the solution
+            fn = sky_path.get_secondary_path("wvlsol_v1")
+            p = PipelineProducts.load(fn)
+            wvl_solutionv = p["wvl_sol"]
+
         orders_w_solutions = thar_wvl_sol["orders"]
         _ = dict(zip(raw_spec_product["orders"],
                      raw_spec_product["specs"]))
@@ -158,8 +164,16 @@ if __name__ == "__main__":
                                           reidentified_lines))
 
         if band == "K":
-            json_name = "hitran_reidentified_K_%s.json" % igrins_log.date
-            r = json.load(open(json_name))
+            import libs.master_calib as master_calib
+            fn = "hitran_bootstrap_K_%s.json" % ref_date
+            bootstrap_name = master_calib.get_master_calib_abspath(fn)
+            import json
+            bootstrap = json.load(open(bootstrap_name))
+
+            import libs.hitran as hitran
+            r = hitran.reidentify(wvl_solutions, s_list, bootstrap)
+            # json_name = "hitran_reidentified_K_%s.json" % igrins_log.date
+            # r = json.load(open(json_name))
             for i, s in r.items():
                 ss = reidentified_lines_map[int(i)]
                 ss0 = np.concatenate([ss[0], s["pixel"]])

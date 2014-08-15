@@ -19,13 +19,13 @@ if __name__ == "__main__":
         #                  flat_on=range(4, 7),
         #                  thar=range(1, 2))
     elif 1:
-        utdate = "20140711"
+        utdate = "20140525"
         # log_today = dict(flat_off=range(64, 74),
         #                  flat_on=range(74, 84),
         #                  thar=range(3, 8),
         #                  sky=[29])
 
-    band = "H"
+    band = "K"
 
     igr_path = IGRINSPath(utdate)
 

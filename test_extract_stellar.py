@@ -119,7 +119,7 @@ if __name__ == "__main__":
         #                  flat_on=range(4, 7),
         #                  thar=range(1, 2))
     elif 1:
-        utdate = "20140707"
+        utdate = "20140525"
         # log_today = dict(flat_off=range(64, 74),
         #                  flat_on=range(74, 84),
         #                  thar=range(3, 8),
@@ -136,7 +136,7 @@ if __name__ == "__main__":
         #                  SagARing=[30,31],
         #                  WL16=[24,25,26,27])
 
-    band = "H"
+    band = "K"
     igr_path = IGRINSPath(utdate)
 
     igrins_files = IGRINSFiles(igr_path)
@@ -180,10 +180,10 @@ if __name__ == "__main__":
 
 # if 1:
 #     abba  = abba_list[1]
+#     do_interactive_figure=True
 
 for abba in abba_list:
 
-    #i = 0
     objname = abba[-1][0]
     obsids = abba[0]
     frametypes = abba[1]
@@ -696,12 +696,17 @@ for abba in abba_list:
             wvl, flux, cont = (d[:,i] for i in [0, 1, 2])
             ax2 = fig2.add_subplot(212, sharex=ax1)
             wvl = wvl/1000.
-            mask_H = (1.450 < wvl) & (wvl < 1.850)
+            if band == "H":
+                mask_wvl1, mask_wvl2 = 1.450, 1.850
+            else:
+                mask_wvl1, mask_wvl2 = 1.850, 2.550
+
+            mask_H = (mask_wvl1 < wvl) & (wvl < mask_wvl2)
 
             fn = get_master_calib_abspath("telluric/LBL_A15_s0_w050_R0060000_T.fits")
             telluric = pyfits.open(fn)[1].data
             telluric_lam = telluric["lam"]
-            tel_mask_H = (1.450 < telluric_lam) & (telluric_lam < 1.850)
+            tel_mask_H = (mask_wvl1 < telluric_lam) & (telluric_lam < mask_wvl2)
             #plot(telluric_lam[tel_mask_H], telluric["trans"][tel_mask_H])
             from scipy.interpolate import interp1d, UnivariateSpline
             spl = UnivariateSpline(telluric_lam[tel_mask_H],

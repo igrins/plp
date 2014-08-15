@@ -2,13 +2,12 @@ import os
 from jinja2 import Environment, FileSystemLoader
 env = Environment(loader=FileSystemLoader('jinja_templates'))
 
-utdate = "20140707"
+utdate = "20140525"
 dirname = "html_%s" % utdate
 
 if 1:
     #from libs.path_info import IGRINSPath, IGRINSLog, IGRINSFiles
 
-    band = "H"
     #igr_path = IGRINSPath(utdate)
 
     #igrins_files = IGRINSFiles(igr_path)
@@ -37,6 +36,10 @@ if 1:
             jsname = "igrins_spec_%04d_H.js" % obsids[0]
             ss = spec_template.render(utdate=utdate, jsname=jsname)
             open(os.path.join(dirname, s["url_H"]), "w").write(ss)
+
+            jsname = "igrins_spec_%04d_K.js" % obsids[0]
+            ss = spec_template.render(utdate=utdate, jsname=jsname)
+            open(os.path.join(dirname, s["url_K"]), "w").write(ss)
 
 #recipe_dict["A0V_ABBA"]
 #recipe_dict
