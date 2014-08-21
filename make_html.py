@@ -2,7 +2,7 @@ import os
 from jinja2 import Environment, FileSystemLoader
 env = Environment(loader=FileSystemLoader('jinja_templates'))
 
-utdate = "20140525"
+utdate = "20140713"
 dirname = "html_%s" % utdate
 
 if 1:

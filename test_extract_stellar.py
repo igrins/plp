@@ -119,22 +119,7 @@ if __name__ == "__main__":
         #                  flat_on=range(4, 7),
         #                  thar=range(1, 2))
     elif 1:
-        utdate = "20140525"
-        # log_today = dict(flat_off=range(64, 74),
-        #                  flat_on=range(74, 84),
-        #                  thar=range(3, 8),
-        #                  sky=[29],
-        #                  HIP94620=[50,51,52,53],
-        #                  HIP99742=[54, 55, 56, 57],
-        #                  PCyg=[58,59,60, 61],
-        #                  J1833=[42,43,44,45],
-        #                  TWHya=[8, 9],
-        #                  GammaOph=[38,39,40,41],
-        #                  V889=[46,47,48,49],
-        #                  G11=[32, 33],
-        #                  PN_M2_43=[34, 35],
-        #                  SagARing=[30,31],
-        #                  WL16=[24,25,26,27])
+        utdate = "20140713"
 
     band = "K"
     igr_path = IGRINSPath(utdate)
@@ -161,13 +146,13 @@ if __name__ == "__main__":
         DO_STD = False
         FIX_TELLURIC=True
 
-    if 0:
+    if 1:
         recipe = "EXTENDED_AB"
 
         DO_STD = False
         FIX_TELLURIC=True
 
-    if 1:
+    if 0:
         recipe = "EXTENDED_ONOFF"
 
         DO_STD = False
@@ -179,7 +164,10 @@ if __name__ == "__main__":
     do_interactive_figure=False
 
 # if 1:
-#     abba  = abba_list[1]
+#     #abba  = abba_list[7] # GSS 30
+#     #abba  = abba_list[11] # GSS 32
+#     #abba  = abba_list[14] # Serpens 2
+#     abba  = abba_list[6] # Serpens 15
 #     do_interactive_figure=True
 
 for abba in abba_list:
@@ -263,6 +251,8 @@ for abba in abba_list:
         A0V_path = ProductPath(igr_path, basename)
         fn = A0V_path.get_secondary_path("spec_flattened.fits")
         telluric_cor = list(pyfits.open(fn)[0].data)
+        # fn = A0V_path.get_secondary_path("spec.fits")
+        # telluric_cor = list(pyfits.open(fn)[0].data)
         print fn
 
     # if 1:
@@ -476,7 +466,7 @@ for abba in abba_list:
             # estimate lsf
             ordermap_bpixed = order_map.copy()
             ordermap_bpixed[pix_mask] = 0
-
+            ordermap_bpixed[~np.isfinite(orderflat)] = 0
         #
         import astropy.io.fits as pyfits
         fn = sky_path.get_secondary_path("slitoffset_map.fits")
@@ -635,7 +625,7 @@ for abba in abba_list:
                 #res = fitted_response[o_new_ind]
                 wvl, s = np.array(wvl), np.array(s)
                 mmm = np.isfinite(s[sl])
-                ax1.plot(wvl[sl][mmm], s[sl][mmm])
+                ax1.plot(wvl[sl][mmm], s[sl][mmm], "0.5")
 
 
                 dw = np.gradient(wvl)
@@ -816,6 +806,16 @@ for abba in abba_list:
                                              "A0V.db"))
             A0V_db.update(band, obj_path.basename)
 
+
+if 0:
+    import matplotlib.pyplot as plt
+    fig1 = plt.figure(2)
+    ax = fig1.axes[0]
+    for lam in [2.22112, 2.22328, 2.22740, 2.23106]:
+        ax.axvline(lam)
+    ax.set_title(objname)
+    ax.set_xlim(2.211, 2.239)
+    ax.set_ylim(0.69, 1.09)
 
 
 if 0:

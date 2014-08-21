@@ -23,13 +23,13 @@ if __name__ == "__main__":
         #                  flat_on=range(4, 7),
         #                  thar=range(1, 2))
     elif 1:
-        utdate = "20140525"
+        utdate = "20140713"
         # log_today = dict(flat_off=range(64, 74),
         #                  flat_on=range(74, 84),
         #                  thar=range(3, 8),
         #                  sky=[29])
 
-    band = "K"
+    band = "H"
     igr_path = IGRINSPath(utdate)
 
     igrins_files = IGRINSFiles(igr_path)
@@ -126,7 +126,8 @@ if __name__ == "__main__":
             p = PipelineProducts.load(fn)
             wvl_solutionv = p["wvl_sol"]
 
-        orders_w_solutions = thar_wvl_sol["orders"]
+        orders_w_solutions_ = thar_wvl_sol["orders"]
+        orders_w_solutions = [o for o in orders_w_solutions_ if o in raw_spec_product["orders"]]
         _ = dict(zip(raw_spec_product["orders"],
                      raw_spec_product["specs"]))
         s_list = [_[o]for o in orders_w_solutions]
@@ -171,7 +172,7 @@ if __name__ == "__main__":
             bootstrap = json.load(open(bootstrap_name))
 
             import libs.hitran as hitran
-            r = hitran.reidentify(wvl_solutions, s_list, bootstrap)
+            r, ref_pixel_list = hitran.reidentify(wvl_solutions, s_list, bootstrap)
             # json_name = "hitran_reidentified_K_%s.json" % igrins_log.date
             # r = json.load(open(json_name))
             for i, s in r.items():

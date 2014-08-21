@@ -187,8 +187,10 @@ class Apertures(object):
             #ss = slitpos_map[sl].copy()
             #ss[~msk] = np.nan
 
-            hh = np.histogram(slitpos_map[sl][msk],
-                              weights=data[sl][msk], bins=bins,
+            d = data[sl][msk]
+            finite_mask = np.isfinite(d)
+            hh = np.histogram(slitpos_map[sl][msk][finite_mask],
+                              weights=d[finite_mask], bins=bins,
                               )
             lsf_list.append(hh[0])
 
@@ -312,7 +314,8 @@ class Apertures(object):
             msk = (order_map[sl] == o)
 
             from scipy.interpolate import UnivariateSpline
-            s_spline = UnivariateSpline(xx, s, k=3, s=0,
+            msk_s = np.isfinite(s)
+            s_spline = UnivariateSpline(xx[msk_s], s[msk_s], k=3, s=0,
                                         bbox=[0, 2047])
 
             ixm = ix[sl][msk]

@@ -583,6 +583,8 @@ def get_order_boundary_indices(s1, s0=None):
     s1 = np.array(s1)
     #k1, k2 = np.nonzero(np.isfinite(s1))[0][[0, -1]]
     k1, k2 = np.nonzero(s1>0.05)[0][[0, -1]]
+    k1 = max(k1, 4)
+    k2 = min(k2, 2047-4)
     s = s1[k1:k2+1]
 
 

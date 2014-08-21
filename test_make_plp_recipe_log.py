@@ -1,7 +1,7 @@
 import numpy as np
 import re
 
-utdate = "20140711"
+utdate = "20140713"
 
 fn = "indata/%s/IGRINS_DT_Log_%s-1_H.txt" % (utdate, utdate)
 p_end_comma = re.compile(r",$")

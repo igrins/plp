@@ -106,9 +106,10 @@ def fit_hitrans_pixel(s_dict, ref_pixel_dict):
         for ll in ref_pixels:
             sol = fit_gaussian_simple(xx, s_igr, ll,
                                       sigma_init=5, do_plot=False)
+            sigma_init = max(1, sol[0][1])
             sol = fit_gaussian_simple(xx, s_igr,
                                       sol[0][0]+ll-ll[0],
-                                      sigma_init=sol[0][1], do_plot=False)
+                                      sigma_init=sigma_init, do_plot=False)
             sol_list.append(sol)
 
 

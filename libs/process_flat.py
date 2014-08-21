@@ -250,6 +250,8 @@ def make_order_flat(flaton_products, orders, order_map):
         flat_im[sl][msk] = (d_sl / px)[msk]
         fitted_responses.append(px)
 
+    flat_im[flat_im < 0.5] = np.nan
+
     r = PipelineProducts("order flat",
                          orders=orders,
                          order_flat=flat_im,
