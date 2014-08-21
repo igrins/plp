@@ -12,43 +12,44 @@ from libs.apertures import Apertures
 
 #from libs.products import PipelineProducts
 
-if __name__ == "__main__":
+def wvlsol_sky(utdate, refdate="20140316", bands="HK",
+               starting_obsids=None):
 
-    from libs.recipes import load_recipe_list, make_recipe_dict
-    from libs.products import PipelineProducts, ProductPath, ProductDB
+    if not bands in ["H", "K", "HK"]:
+        raise ValueError("bands must be one of 'H', 'K' or 'HK'")
 
-    if 0:
-        utdate = "20140316"
-        # log_today = dict(flat_off=range(2, 4),
-        #                  flat_on=range(4, 7),
-        #                  thar=range(1, 2))
-    elif 1:
-        utdate = "20140713"
-        # log_today = dict(flat_off=range(64, 74),
-        #                  flat_on=range(74, 84),
-        #                  thar=range(3, 8),
-        #                  sky=[29])
+    fn = "%s.recipes" % utdate
+    from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
+    recipe = Recipes(fn)
 
-    band = "H"
+    if starting_obsids is not None:
+        starting_obsids = map(int, starting_obsids.split(","))
+
+    selected = recipe.select("SKY", starting_obsids)
+
+    for s in selected:
+        obsids = s[0]
+
+        for band in bands:
+            process_wvlsol_band(utdate, refdate, band, obsids)
+
+
+
+def process_wvlsol_band(utdate, refdate, band, obsids):
+
+    from libs.products import ProductPath, ProductDB
+
     igr_path = IGRINSPath(utdate)
 
     igrins_files = IGRINSFiles(igr_path)
-
-    fn = "%s.recipes" % utdate
-    recipe_list = load_recipe_list(fn)
-    recipe_dict = make_recipe_dict(recipe_list)
-
-    # igrins_log = IGRINSLog(igr_path, log_today)
-
-    obsids = recipe_dict["SKY"][0][0]
 
     sky_filenames = igrins_files.get_filenames(band, obsids)
 
     sky_path = ProductPath(igr_path, sky_filenames[0])
     sky_master_obsid = obsids[0]
 
-    flatoff_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
-                                        "flat_off.db"))
+    # flatoff_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+    #                                     "flat_off.db"))
     flaton_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
                                        "flat_on.db"))
     thar_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
@@ -307,7 +308,55 @@ if __name__ == "__main__":
 
     if 1:
         from libs.products import ProductDB
-        import os
         sky_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
                                         "sky.db"))
         sky_db.update(band, sky_path.basename)
+
+
+
+if __name__ == "__main__":
+    import sys
+
+    utdate = sys.argv[1]
+    bands = "HK"
+    starting_obsids = None
+
+    if len(sys.argv) >= 3:
+        bands = sys.argv[2]
+
+    if len(sys.argv) >= 4:
+        starting_obsids = sys.argv[3]
+
+    wvlsol_sky(utdate, refdate="20140316", bands=bands,
+               starting_obsids=starting_obsids)
+
+
+# if __name__ == "__main__":
+
+#     from libs.recipes import load_recipe_list, make_recipe_dict
+#     from libs.products import PipelineProducts, ProductPath, ProductDB
+
+#     if 0:
+#         utdate = "20140316"
+#         # log_today = dict(flat_off=range(2, 4),
+#         #                  flat_on=range(4, 7),
+#         #                  thar=range(1, 2))
+#     elif 1:
+#         utdate = "20140713"
+#         # log_today = dict(flat_off=range(64, 74),
+#         #                  flat_on=range(74, 84),
+#         #                  thar=range(3, 8),
+#         #                  sky=[29])
+
+#     band = "H"
+#     igr_path = IGRINSPath(utdate)
+
+#     igrins_files = IGRINSFiles(igr_path)
+
+#     fn = "%s.recipes" % utdate
+#     recipe_list = load_recipe_list(fn)
+#     recipe_dict = make_recipe_dict(recipe_list)
+
+#     # igrins_log = IGRINSLog(igr_path, log_today)
+
+#     obsids = recipe_dict["SKY"][0][0]

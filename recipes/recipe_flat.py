@@ -8,46 +8,46 @@ from libs.path_info import IGRINSPath, IGRINSFiles
 import astropy.io.fits as pyfits
 
 
-if __name__ == "__main__":
+def flat(utdate, refdate="20140316", bands="HK",
+         starting_obsids=None):
 
-    from libs.recipes import load_recipe_list, make_recipe_dict
-    from libs.products import PipelineProducts, ProductPath
-
-    refdate = "20140316"
-
-    if 0:
-        utdate = "20140316"
-        # log_today = dict(flat_off=range(2, 4),
-        #                  flat_on=range(4, 7),
-        #                  thar=range(1, 2))
-    elif 1:
-        utdate = "20140524"
-        # log_today = dict(flat_off=range(64, 74),
-        #                  flat_on=range(74, 84),
-        #                  thar=range(3, 8),
-        #                  sky=[29])
+    if not bands in ["H", "K", "HK"]:
+        raise ValueError("bands must be one of 'H', 'K' or 'HK'")
 
     fn = "%s.recipes" % utdate
-    recipe_list = load_recipe_list(fn)
-    recipe_dict = make_recipe_dict(recipe_list)
+    from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
+    recipe = Recipes(fn)
+
+    if starting_obsids is not None:
+        starting_obsids = map(int, starting_obsids.split(","))
+
+    selected = recipe.select("FLAT", starting_obsids)
+
+    for s in selected:
+        obsids = s[0]
+        frametypes = s[1]
+
+        obsids_off = [obsid for obsid, frametype \
+                      in zip(obsids, frametypes) if frametype == "OFF"]
+        obsids_on = [obsid for obsid, frametype \
+                     in zip(obsids, frametypes) if frametype == "ON"]
+
+        for band in bands:
+            process_flat_band(utdate, refdate, band, obsids_off, obsids_on)
+
+
+def process_flat_band(utdate, refdate, band, obsids_off, obsids_on):
+    from libs.products import PipelineProducts, ProductPath
 
     igr_path = IGRINSPath(utdate)
 
     igrins_files = IGRINSFiles(igr_path)
     #igrins_log = IGRINSLog(igr_path, log_today)
 
-    band = "K"
-
 
     flatoff_products = None
     flaton_products = None
 
-    # INPUT
-    obsids = recipe_dict["FLAT"][0][0]
-    frametypes = recipe_dict["FLAT"][0][1]
-
-    obsids_off = [obsid for obsid, frametype in zip(obsids, frametypes) if frametype == "OFF"]
-    obsids_on = [obsid for obsid, frametype in zip(obsids, frametypes) if frametype == "ON"]
 
     flat_off_filenames = igrins_files.get_filenames(band, obsids_off)
 
@@ -174,10 +174,26 @@ if __name__ == "__main__":
 
     if 1:
         from libs.products import ProductDB
-        import os
         flatoff_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
                                             "flat_off.db"))
         flatoff_db.update(band, flatoff_path.basename)
         flaton_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
                                            "flat_on.db"))
         flaton_db.update(band, flaton_path.basename)
+
+
+if __name__ == "__main__":
+    import sys
+
+    utdate = sys.argv[1]
+    bands = "HK"
+    starting_obsids = None
+
+    if len(sys.argv) >= 3:
+        bands = sys.argv[2]
+
+    if len(sys.argv) >= 4:
+        starting_obsids = sys.argv[3]
+
+    flat(utdate, refdate="20140316", bands=bands,
+         starting_obsids=starting_obsids)

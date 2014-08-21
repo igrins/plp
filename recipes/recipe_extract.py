@@ -4,13 +4,67 @@ import numpy as np
 #from libs.process_flat import FlatOff, FlatOn
 
 
-from libs.path_info import IGRINSPath, IGRINSLog, IGRINSFiles
+from libs.path_info import IGRINSPath, IGRINSFiles
 import astropy.io.fits as pyfits
 
 from libs.products import PipelineProducts
 from libs.apertures import Apertures
 
 #from libs.products import PipelineProducts
+
+
+def a0v_ab(utdate, refdate="20140316", bands="HK",
+           starting_obsids=None):
+    recipe = "A0V_AB"
+    abba_all(recipe, utdate, refdate=refdate, bands=bands,
+             starting_obsids=starting_obsids)
+
+def stellar_ab(utdate, refdate="20140316", bands="HK",
+             starting_obsids=None):
+    recipe = "STELLAR_AB"
+    abba_all(recipe, utdate, refdate=refdate, bands=bands,
+             starting_obsids=starting_obsids)
+
+def extended_ab(utdate, refdate="20140316", bands="HK",
+             starting_obsids=None):
+    recipe = "EXTENDED_AB"
+    abba_all(recipe, utdate, refdate=refdate, bands=bands,
+             starting_obsids=starting_obsids)
+
+def extended_onoff(utdate, refdate="20140316", bands="HK",
+             starting_obsids=None):
+    recipe = "EXTENDED_ONOFF"
+    abba_all(recipe, utdate, refdate=refdate, bands=bands,
+             starting_obsids=starting_obsids)
+
+
+
+def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
+                 starting_obsids=None):
+
+    if not bands in ["H", "K", "HK"]:
+        raise ValueError("bands must be one of 'H', 'K' or 'HK'")
+
+    fn = "%s.recipes" % utdate
+    from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
+    recipe = Recipes(fn)
+
+    if starting_obsids is not None:
+        starting_obsids = map(int, starting_obsids.split(","))
+
+    selected = recipe.select(recipe_name, starting_obsids)
+    if not selected:
+        print "no recipe of with matching arguments is found"
+
+    for s in selected:
+        obsids = s[0]
+        frametypes = s[1]
+
+        for band in bands:
+            process_abba_band(recipe_name, utdate, refdate, band,
+                              obsids, frametypes)
+
+
 
 def save_for_html(dir, name, band, orders, wvl_sol, s_list1, s_list2):
     from libs.path_info import ensure_dir
@@ -31,42 +85,12 @@ def save_for_html(dir, name, band, orders, wvl_sol, s_list1, s_list2):
         df_list.append(df)
     df2 = df_list[0].join(df_list[1:], how="outer")
 
-    # mm = (df0.index[0] < wvl_thar) & (wvl_thar < df0.index[-1])
-    # ss = s_thar[mm]
-    # ww = wvl_thar[mm]
-    # ww3 = np.empty((len(ww)*3,))
-    # ss3 = np.empty((len(ww)*3,))
-    # ww3[::3] = ww
-    # ww3[1::3] = ww
-    # ww3[2::3] = ww
-    # ss3[::3] = ss
-    # ss3[1::3] = 0
-    # ss3[2::3] = np.nan
-
-    # df_m = pd.DataFrame({'model': -ss3},
-    #                     index=ww3)
-
-    # model_output = "model_spec_%s_%s.csv.html" % (object_name, band)
-
     igrins_spec_output1 = "igrins_spec_%s_%s_fig1.csv.html" % (name, band)
     igrins_spec_output2 = "igrins_spec_%s_%s_fig2.csv.html" % (name, band)
-
-    # if object_name == "ur" and uranium_model_urne: # special case for Ur-Ne model
-    #     import astropy.io.fits as pyfits
-    #     # Ur-Neon : limited H-band only
-    #     ur_w = pyfits.open("wvl_literatures/une_wave.fits")[0].data/1.e4
-    #     ur_s = pyfits.open("wvl_literatures/une_spec.fits")[0].data
-
-    #     df_m = pd.DataFrame({'model': -ur_s},
-    #                         index=ur_w)
-
-    #     model_output = "model_spec_urne_%s_%s.csv.html" % (object_name, band)
-
 
 
     df1.to_csv(os.path.join(dir, igrins_spec_output1))
     df2.to_csv(os.path.join(dir, igrins_spec_output2))
-    #df_m.to_csv(model_output)
 
     wvlminmax_list = []
     for o, wvl in zip(orders, wvl_sol):
@@ -78,27 +102,6 @@ def save_for_html(dir, name, band, orders, wvl_sol, s_list1, s_list2):
     f.write(str(wvlminmax_list))
     f.write(";\n")
     f.write("order_minmax=[%d,%d];\n" % (orders[0], orders[-1]))
-    # if object_name == "thar":
-    #     if band == "K":
-    #         f.write("value_max1=70.;\n")
-    #         f.write("value_max2=150.;\n")
-    #     else:
-    #         f.write("value_max1=300.;\n")
-    #         f.write("value_max2=600.;\n")
-    # elif object_name == "sky":
-    #     if band == "K":
-    #         f.write("value_max1=70.;\n")
-    #         f.write("value_max2=150.;\n")
-    #     else:
-    #         f.write("value_max1=90.;\n")
-    #         f.write("value_max2=250.;\n")
-    # elif object_name == "ur":
-    #     if band == "K":
-    #         f.write("value_max1=70.;\n")
-    #         f.write("value_max2=150.;\n")
-    #     else:
-    #         f.write("value_max1=1500.;\n")
-    #         f.write("value_max2=1500.;\n")
 
     f.write('first_filename = "%s";\n' % igrins_spec_output1)
     f.write('second_filename = "%s";\n' % igrins_spec_output2)
@@ -107,80 +110,43 @@ def save_for_html(dir, name, band, orders, wvl_sol, s_list1, s_list2):
 
 
 
-if __name__ == "__main__":
 
-    from libs.recipes import load_recipe_list, make_recipe_dict
-    from libs.products import PipelineProducts, ProductPath, ProductDB
+def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
+                      do_interactive_figure=False):
 
+    from libs.products import ProductPath, ProductDB
 
-    if 0:
-        utdate = "20140316"
-        # log_today = dict(flat_off=range(2, 4),
-        #                  flat_on=range(4, 7),
-        #                  thar=range(1, 2))
-    elif 1:
-        utdate = "20140713"
-
-    band = "K"
-    igr_path = IGRINSPath(utdate)
-
-    igrins_files = IGRINSFiles(igr_path)
-
-    fn = "%s.recipes" % utdate
-    recipe_list = load_recipe_list(fn)
-    recipe_dict = make_recipe_dict(recipe_list)
-
-    # igrins_log = IGRINSLog(igr_path, log_today)
-
-
-
-    if 0:
-        recipe = "A0V_AB"
+    if recipe == "A0V_AB":
 
         DO_STD = True
         FIX_TELLURIC=False
 
-    if 0:
-        recipe = "STELLAR_AB"
+    elif recipe == "STELLAR_AB":
 
         DO_STD = False
         FIX_TELLURIC=True
 
-    if 1:
-        recipe = "EXTENDED_AB"
+    elif recipe == "EXTENDED_AB":
 
         DO_STD = False
         FIX_TELLURIC=True
 
-    if 0:
-        recipe = "EXTENDED_ONOFF"
+    elif recipe == "EXTENDED_ONOFF":
 
         DO_STD = False
         FIX_TELLURIC=True
-
-
-    abba_list = recipe_dict[recipe]
-
-    do_interactive_figure=False
-
-# if 1:
-#     #abba  = abba_list[7] # GSS 30
-#     #abba  = abba_list[11] # GSS 32
-#     #abba  = abba_list[14] # Serpens 2
-#     abba  = abba_list[6] # Serpens 15
-#     do_interactive_figure=True
-
-for abba in abba_list:
-
-    objname = abba[-1][0]
-    obsids = abba[0]
-    frametypes = abba[1]
-
-
-    print objname
 
 
     if 1:
+
+        igr_path = IGRINSPath(utdate)
+
+        igrins_files = IGRINSFiles(igr_path)
+
+        obj_filenames = igrins_files.get_filenames(band, obsids)
+        # obj_path = ProductPath(igr_path, obj_filenames[0])
+        # obj_master_obsid = obsids[0]
+
 
         obj_filenames = igrins_files.get_filenames(band, obsids)
         obj_path = ProductPath(igr_path, obj_filenames[0])
@@ -217,7 +183,7 @@ for abba in abba_list:
         basename = thar_db.query(band, obj_master_obsid)
         thar_path = ProductPath(igr_path, basename)
         fn = thar_path.get_secondary_path("median_spectra")
-        thar_products = PipelineProducts.load(fn)
+        # thar_products = PipelineProducts.load(fn)
 
         fn = thar_path.get_secondary_path("orderflat")
         orderflat_products = PipelineProducts.load(fn)
@@ -387,7 +353,7 @@ for abba in abba_list:
             # first define extract profile (gaussian).
 
 
-            dx = 100
+            # dx = 100
 
             if IF_POINT_SOURCE: # if point source
                 # for point sources, variance estimation becomes wrong
@@ -419,7 +385,7 @@ for abba in abba_list:
             import scipy.ndimage as ni
             bias_mask2 = ni.binary_dilation(bias_mask)
 
-            import instrument_parameters
+            from libs import instrument_parameters
             gain =  instrument_parameters.gain[band]
 
             # random noise
@@ -468,7 +434,6 @@ for abba in abba_list:
             ordermap_bpixed[pix_mask] = 0
             ordermap_bpixed[~np.isfinite(orderflat)] = 0
         #
-        import astropy.io.fits as pyfits
         fn = sky_path.get_secondary_path("slitoffset_map.fits")
         slitoffset_map = pyfits.open(fn)[0].data
 
@@ -590,7 +555,7 @@ for abba in abba_list:
         fig_list = []
         if 1:
             new_orders = orderflat_products["orders"]
-            fitted_response = orderflat_products["fitted_responses"]
+            # fitted_response = orderflat_products["fitted_responses"]
             i1i2_list = orderflat_products["i1i2_list"]
 
             if do_interactive_figure:
@@ -665,7 +630,7 @@ for abba in abba_list:
 
         if IF_POINT_SOURCE: # if point source, try simple telluric factor for A0V
             new_orders = orderflat_products["orders"]
-            fitted_response = orderflat_products["fitted_responses"]
+            # fitted_response = orderflat_products["fitted_responses"]
             i1i2_list = orderflat_products["i1i2_list"]
 
             fig2 = Figure(figsize=(12,8))
@@ -676,7 +641,7 @@ for abba in abba_list:
                 o_new_ind = np.searchsorted(new_orders, o)
                 i1, i2 = i1i2_list[o_new_ind]
                 sl = slice(i1, i2)
-                res = fitted_response[o_new_ind]
+                # res = fitted_response[o_new_ind]
                 #ax1.plot(wvl[sl], (s/res)[sl])
 
             from libs.master_calib import get_master_calib_abspath
@@ -801,10 +766,10 @@ for abba in abba_list:
             f.writeto(fout, clobber=True)
 
             from libs.products import ProductDB
-            import os
             A0V_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
                                              "A0V.db"))
             A0V_db.update(band, obj_path.basename)
+
 
 
 if 0:
@@ -846,3 +811,92 @@ if 0:
                 hh0 = np.sum(lsf_list, axis=0)
                 peak_ind1, peak_ind2 = np.argmax(hh0), np.argmin(hh0)
                 # peak1, peak2 =
+
+
+
+# if __name__ == "__main__":
+
+#     from libs.recipes import load_recipe_list, make_recipe_dict
+#     from libs.products import PipelineProducts, ProductPath, ProductDB
+
+
+#     if 0:
+#         utdate = "20140316"
+#         # log_today = dict(flat_off=range(2, 4),
+#         #                  flat_on=range(4, 7),
+#         #                  thar=range(1, 2))
+#     elif 1:
+#         utdate = "20140713"
+
+#     band = "K"
+#     igr_path = IGRINSPath(utdate)
+
+#     igrins_files = IGRINSFiles(igr_path)
+
+#     fn = "%s.recipes" % utdate
+#     recipe_list = load_recipe_list(fn)
+#     recipe_dict = make_recipe_dict(recipe_list)
+
+#     # igrins_log = IGRINSLog(igr_path, log_today)
+
+
+
+#     if 0:
+#         recipe = "A0V_AB"
+
+#         DO_STD = True
+#         FIX_TELLURIC=False
+
+#     if 0:
+#         recipe = "STELLAR_AB"
+
+#         DO_STD = False
+#         FIX_TELLURIC=True
+
+#     if 1:
+#         recipe = "EXTENDED_AB"
+
+#         DO_STD = False
+#         FIX_TELLURIC=True
+
+#     if 0:
+#         recipe = "EXTENDED_ONOFF"
+
+#         DO_STD = False
+#         FIX_TELLURIC=True
+
+
+#     abba_list = recipe_dict[recipe]
+
+#     do_interactive_figure=False
+
+# if 1:
+#     #abba  = abba_list[7] # GSS 30
+#     #abba  = abba_list[11] # GSS 32
+#     #abba  = abba_list[14] # Serpens 2
+#     abba  = abba_list[6] # Serpens 15
+#     do_interactive_figure=True
+
+# for abba in abba_list:
+
+#     objname = abba[-1][0]
+#     print objname
+#     obsids = abba[0]
+#     frametypes = abba[1]
+
+
+if __name__ == "__main__":
+    import sys
+
+    utdate = sys.argv[1]
+    bands = "HK"
+    starting_obsids = None
+
+    if len(sys.argv) >= 3:
+        bands = sys.argv[2]
+
+    if len(sys.argv) >= 4:
+        starting_obsids = sys.argv[3]
+
+    a0v_ab(utdate, refdate="20140316", bands=bands,
+           starting_obsids=starting_obsids)

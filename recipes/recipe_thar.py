@@ -8,44 +8,44 @@ import astropy.io.fits as pyfits
 from libs.products import PipelineProducts
 from libs.apertures import Apertures
 
-if __name__ == "__main__":
+def thar(utdate, refdate="20140316", bands="HK",
+         starting_obsids=None):
 
-    from libs.recipes import load_recipe_list, make_recipe_dict
-    from libs.products import PipelineProducts, ProductPath, ProductDB
+    if not bands in ["H", "K", "HK"]:
+        raise ValueError("bands must be one of 'H', 'K' or 'HK'")
 
-    if 0:
-        utdate = "20140316"
-        # log_today = dict(flat_off=range(2, 4),
-        #                  flat_on=range(4, 7),
-        #                  thar=range(1, 2))
-    elif 1:
-        utdate = "20140525"
-        # log_today = dict(flat_off=range(64, 74),
-        #                  flat_on=range(74, 84),
-        #                  thar=range(3, 8),
-        #                  sky=[29])
+    fn = "%s.recipes" % utdate
+    from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
+    recipe = Recipes(fn)
 
-    band = "K"
+    if starting_obsids is not None:
+        starting_obsids = map(int, starting_obsids.split(","))
+
+    selected = recipe.select("THAR", starting_obsids)
+
+    for s in selected:
+        obsids = s[0]
+
+        for band in bands:
+            process_thar_band(utdate, refdate, band, obsids)
+
+
+def process_thar_band(utdate, refdate, band, obsids):
+
+    from libs.products import ProductPath, ProductDB
 
     igr_path = IGRINSPath(utdate)
 
     igrins_files = IGRINSFiles(igr_path)
 
-    fn = "%s.recipes" % utdate
-    recipe_list = load_recipe_list(fn)
-    recipe_dict = make_recipe_dict(recipe_list)
-
-    # igrins_log = IGRINSLog(igr_path, log_today)
-
-    obsids = recipe_dict["THAR"][0][0]
 
     thar_filenames = igrins_files.get_filenames(band, obsids)
 
     thar_path = ProductPath(igr_path, thar_filenames[0])
     thar_master_obsid = obsids[0]
 
-    flatoff_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
-                                        "flat_off.db"))
+    # flatoff_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+    #                                     "flat_off.db"))
     flaton_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
                                        "flat_on.db"))
 
@@ -56,9 +56,9 @@ if __name__ == "__main__":
 
     aperture_solution_products = PipelineProducts.load(aperture_solutions_name)
 
-    igrins_orders = {}
-    igrins_orders["H"] = range(99, 122)
-    igrins_orders["K"] = range(72, 92)
+    # igrins_orders = {}
+    # igrins_orders["H"] = range(99, 122)
+    # igrins_orders["K"] = range(72, 92)
 
     if 1:
         bottomup_solutions = aperture_solution_products["bottom_up_solutions"]
@@ -82,9 +82,9 @@ if __name__ == "__main__":
         from libs.process_thar import match_order_thar
         from libs.master_calib import load_thar_ref_data
 
-        ref_date = "20140316"
+        #ref_date = "20140316"
 
-        thar_ref_data = load_thar_ref_data(ref_date, band)
+        thar_ref_data = load_thar_ref_data(refdate, band)
 
         new_orders = match_order_thar(thar_products, thar_ref_data)
 
@@ -153,7 +153,7 @@ if __name__ == "__main__":
 
         orders = thar_products["orders"]
         order_map = ap.make_order_map()
-        slitpos_map = ap.make_slitpos_map()
+        #slitpos_map = ap.make_slitpos_map()
 
 
         # load flat on products
@@ -176,7 +176,51 @@ if __name__ == "__main__":
 
     if 1:
         from libs.products import ProductDB
-        import os
         thar_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
                                          "thar.db"))
         thar_db.update(band, thar_path.basename)
+
+
+if __name__ == "__main__":
+    import sys
+
+    utdate = sys.argv[1]
+    bands = "HK"
+    starting_obsids = None
+
+    if len(sys.argv) >= 3:
+        bands = sys.argv[2]
+
+    if len(sys.argv) >= 4:
+        starting_obsids = sys.argv[3]
+
+    thar(utdate, refdate="20140316", bands=bands,
+         starting_obsids=starting_obsids)
+
+
+# if __name__ == "__main__":
+
+#     from libs.recipes import load_recipe_list, make_recipe_dict
+#     from libs.products import PipelineProducts, ProductPath, ProductDB
+
+#     if 0:
+#         utdate = "20140316"
+#         # log_today = dict(flat_off=range(2, 4),
+#         #                  flat_on=range(4, 7),
+#         #                  thar=range(1, 2))
+#     elif 1:
+#         utdate = "20140525"
+#         # log_today = dict(flat_off=range(64, 74),
+#         #                  flat_on=range(74, 84),
+#         #                  thar=range(3, 8),
+#         #                  sky=[29])
+
+#     band = "K"
+
+#     fn = "%s.recipes" % utdate
+#     recipe_list = load_recipe_list(fn)
+#     recipe_dict = make_recipe_dict(recipe_list)
+
+#     # igrins_log = IGRINSLog(igr_path, log_today)
+
+#     obsids = recipe_dict["THAR"][0][0]
