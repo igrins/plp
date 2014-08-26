@@ -14,10 +14,10 @@ from libs.apertures import Apertures
 
 
 def a0v_ab(utdate, refdate="20140316", bands="HK",
-           starting_obsids=None):
+           starting_obsids=None, interactive=False):
     recipe = "A0V_AB"
     abba_all(recipe, utdate, refdate=refdate, bands=bands,
-             starting_obsids=starting_obsids)
+             starting_obsids=starting_obsids, interactive=interactive)
 
 def stellar_ab(utdate, refdate="20140316", bands="HK",
              starting_obsids=None):
@@ -40,7 +40,7 @@ def extended_onoff(utdate, refdate="20140316", bands="HK",
 
 
 def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
-                 starting_obsids=None):
+                 starting_obsids=None, interactive=False):
 
     if not bands in ["H", "K", "HK"]:
         raise ValueError("bands must be one of 'H', 'K' or 'HK'")
@@ -62,7 +62,7 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
 
         for band in bands:
             process_abba_band(recipe_name, utdate, refdate, band,
-                              obsids, frametypes)
+                              obsids, frametypes, do_interactive_figure=interactive)
 
 
 
