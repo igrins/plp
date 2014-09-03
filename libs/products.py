@@ -4,7 +4,140 @@ import json
 
 import astropy.io.fits as pyfits
 
+from pyfits import Card
+
+class PipelineImage(object):
+    def __init__(self, header, data):
+        self.header = header
+        self.data = data
+
+    def store(self, fn, masterhdu=None):
+        if self.data.dtype == bool:
+            d = self.data.astype("i8")
+        else:
+            d = self.data
+
+        if masterhdu is not None:
+            hdu = pyfits.PrimaryHDU(header=masterhdu.header,
+                                    data=d)
+        else:
+            hdu = pyfits.PrimaryHDU(data=d)
+
+        fn0 = "".join([fn, ".fits"])
+        hdu.writeto(fn0, clobber=True)
+
+
+class PipelineDict(dict):
+    def __init__(self, **kwargs):
+        dict.__init__(self, **kwargs)
+
+    def store(self, fn, masterhdu):
+        json_dump(self, open(fn + ".json", "w"))
+
 class PipelineProducts(dict):
+    def __init__(self, desc):
+        self.desc = desc
+        dict.__init__(self)
+
+    def add(self, desc, value):
+        self[desc] = value
+
+
+class PipelineStorage(object):
+    def __init__(self, igr_path):
+        self.igr_path = igr_path
+        self._cache = {}
+
+    def load(self, product_descs, mastername):
+        mastername, ext_ = os.path.splitext(mastername)
+
+        r = PipelineProducts("")
+        for (section, prefix, ext) in product_descs:
+            fn0 = prefix + mastername + ext
+            fn = self.igr_path.get_section_filename_base(section, fn0)
+
+            print fn
+            if fn in self._cache:
+                r[(section, prefix, ext)] = self._cache[fn]
+            else:
+                v = self.load_one(fn)
+                r[(section, prefix, ext)] = v
+                self._cache[fn] = v
+
+            #self.save_one(fn, v, masterhdu)
+        return r
+
+    def store(self, products, mastername, masterhdu=None):
+        mastername, ext_ = os.path.splitext(mastername)
+
+        for (section, prefix, ext), v in products.items():
+            fn0 = prefix + mastername + ext
+            fn = self.igr_path.get_section_filename_base(section, fn0)
+
+            print fn
+            self._cache[fn] = v
+            self.save_one(fn, v, masterhdu)
+
+    def save_one(self, fn, v, masterhdu=None):
+
+        v.store(fn, masterhdu)
+
+    def load_one(self, fn):
+
+        if fn.endswith("json"):
+            return json.load(open(fn))
+        elif fn.endswith("mask.fits"):
+            hdu = pyfits.open(fn)[0]
+            hdu.data = hdu.data.astype(bool)
+            return hdu
+        elif fn.endswith("fits"):
+            hdu = pyfits.open(fn)[0]
+            return hdu
+        else:
+            raise RuntimeError("Unknown file extension")
+        # #fn, ext = os.path.splitext(mastername)
+        # #dict_to_save = dict()
+        # for k, d in self.items():
+        #     if hasattr(d, "shape") and (d.shape == masterhdu.data.shape):
+        #         if d.dtype == bool:
+        #             d = d.astype("i8")
+        #         if masterhdu is not None:
+        #             hdu = pyfits.PrimaryHDU(header=masterhdu.header,
+        #                                     data=d)
+        #         else:
+        #             hdu = pyfits.PrimaryHDU(data=d)
+        #         fn0 = "".join([fn, ".", k, ".fits"])
+        #         hdu.writeto(fn0, clobber=True)
+        #         dict_to_save[k+".fits"] = os.path.basename(fn0)
+        #     else:
+        #         dict_to_save[k] = d
+        # if dict_to_save:
+        #     json_dump(dict_to_save, open(mastername, "w"))
+
+
+    def save_old(self, mastername, masterhdu=None):
+
+        fn, ext = os.path.splitext(mastername)
+        dict_to_save = dict()
+        for k, d in self.items():
+            if hasattr(d, "shape") and (d.shape == masterhdu.data.shape):
+                if d.dtype == bool:
+                    d = d.astype("i8")
+                if masterhdu is not None:
+                    hdu = pyfits.PrimaryHDU(header=masterhdu.header,
+                                            data=d)
+                else:
+                    hdu = pyfits.PrimaryHDU(data=d)
+                fn0 = "".join([fn, ".", k, ".fits"])
+                hdu.writeto(fn0, clobber=True)
+                dict_to_save[k+".fits"] = os.path.basename(fn0)
+            else:
+                dict_to_save[k] = d
+        if dict_to_save:
+            json_dump(dict_to_save, open(mastername, "w"))
+
+
+class PipelineProductsDeprecated(dict):
     def __init__(self, desc, **kwargs):
         self.desc = desc
         dict.__init__(self, **kwargs)

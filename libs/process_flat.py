@@ -4,9 +4,25 @@ import scipy.ndimage as ni
 from stsci_helper import stsci_median
 import badpixel as bp
 from destriper import destriper
-from products import PipelineProducts
+from products import Card, PipelineImage, PipelineDict, PipelineProducts
 
 from igrins_detector import IGRINSDetector
+
+
+FLAT_OFF_DESC = ("OUTDATA_PATH", "", ".flat_off")
+HOTPIX_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".hotpix_mask")
+FLATOFF_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_off")
+
+FLAT_NORMED_DESC = ("OUTDATA_PATH", "", ".flat_normed")
+FLAT_BPIXED_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_bpixed")
+FLAT_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_mask")
+DEADPIX_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".deadpix_mask")
+FLATON_JSON_DESC = ("OUTDATA_PATH", "", ".flat_on")
+
+FLAT_DERIV_DESC = ("SECONDARY_CALIB_PATH", "FLAT_", ".flat_deriv")
+FLATCENTROIDS_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT", ".centroids")
+
+FLATCENTROID_SOL_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT", ".centroid_solutions")
 
 class FlatOff(object):
     def __init__(self, offdata_list):
@@ -16,10 +32,13 @@ class FlatOff(object):
                                medfilter_size=None,
                                destripe=True):
 
+        flat_off_cards = []
+
         flat_off = stsci_median(self.data_list)
 
         if destripe:
             flat_offs = destriper.get_destriped(flat_off)
+            flat_off_cards.append(Card("HISTORY", "IGR: image destriped."))
 
         hotpix_mask = bp.badpixel_mask(flat_offs,
                                        sigma_clip1=sigma_clip1,
@@ -28,10 +47,24 @@ class FlatOff(object):
 
         bg_std = flat_offs[~hotpix_mask].std()
 
-        r = PipelineProducts("flat off products",
-                             flat_off=flat_offs,
-                             hotpix_mask=hotpix_mask,
-                             bg_std=bg_std)
+
+        flat_off_cards.append(Card("BG_STD", bg_std,
+                                   "IGR: stddev of combined flat" ))
+        flat_off_image = PipelineImage(flat_off_cards,
+                                       flat_offs)
+
+        hotpix_mask_image = PipelineImage([],
+                                          hotpix_mask)
+
+        r = PipelineProducts("flat off products")
+        r.add(FLAT_OFF_DESC, flat_off_image)
+
+        r.add(HOTPIX_MASK_DESC,
+              hotpix_mask_image)
+
+        r.add(FLATOFF_JSON_DESC,
+              PipelineDict(bg_std=bg_std))
+
         return r
 
 from trace_flat import get_flat_normalization, get_flat_mask
@@ -40,16 +73,21 @@ class FlatOn(object):
     def __init__(self, ondata_list):
         self.data_list = ondata_list
 
-    def make_flaton_deadpixmap(self, flatoff_product=None,
+    def make_flaton_deadpixmap(self, flatoff_product,
                                deadpix_mask_old=None,
                                flat_mask_sigma=5.,
                                deadpix_thresh=0.6,
                                smooth_size=9):
 
         # load flat off data
-        flat_off = flatoff_product["flat_off"]
-        bg_std = flatoff_product["bg_std"]
-        hotpix_mask = flatoff_product["hotpix_mask"]
+
+        # flat_off = flatoff_product["flat_off"]
+        # bg_std = flatoff_product["bg_std"]
+        # hotpix_mask = flatoff_product["hotpix_mask"]
+
+        flat_off = flatoff_product[FLAT_OFF_DESC].data
+        bg_std = flatoff_product[FLATOFF_JSON_DESC]["bg_std"]
+        hotpix_mask = flatoff_product[HOTPIX_MASK_DESC].data
 
         flat_on = stsci_median(self.data_list)
         flat_on_off = flat_on - flat_off
@@ -87,12 +125,16 @@ class FlatOn(object):
         flat_bpixed[deadpix_mask] = np.nan
 
 
-        r = PipelineProducts("flat on products",
-                             flat_normed=flat_normed,
-                             flat_bpixed=flat_bpixed,
-                             bg_std_normed=bg_std_norm,
-                             flat_mask=flat_mask,
-                             deadpix_mask=deadpix_mask)
+        r = PipelineProducts("flat on products")
+
+        r.add(FLAT_NORMED_DESC, PipelineImage([], flat_normed))
+        r.add(FLAT_BPIXED_DESC, PipelineImage([], flat_bpixed))
+        r.add(FLAT_MASK_DESC, PipelineImage([], flat_mask))
+        r.add(DEADPIX_MASK_DESC, PipelineImage([], deadpix_mask))
+
+        r.add(FLATON_JSON_DESC,
+              PipelineDict(bg_std_normed=bg_std_norm))
+
         return r
 
 
@@ -102,10 +144,17 @@ from trace_flat import (get_y_derivativemap,
 
 def trace_orders(flaton_products):
 
-    flat_normed=flaton_products["flat_normed"]
-    flat_bpixed=flaton_products["flat_bpixed"]
-    bg_std_normed=flaton_products["bg_std_normed"]
-    flat_mask=flaton_products["flat_mask"]
+    # flat_normed=flaton_products["flat_normed"]
+    # flat_bpixed=flaton_products["flat_bpixed"]
+    # bg_std_normed=flaton_products["bg_std_normed"]
+    # flat_mask=flaton_products["flat_mask"]
+
+
+    flat_normed = flaton_products[FLAT_NORMED_DESC].data
+    flat_bpixed = flaton_products[FLAT_BPIXED_DESC].data
+    flat_mask = flaton_products[FLAT_MASK_DESC].data
+    bg_std_normed = flaton_products[FLATON_JSON_DESC]["bg_std_normed"]
+
     #deadpix_mask=deadpix_mask)
 
     flat_deriv_ = get_y_derivativemap(flat_normed, flat_bpixed,
@@ -129,35 +178,40 @@ def trace_orders(flaton_products):
                                             bg_std=bg_std_normed)
 
 
-    r = PipelineProducts("flat trace centroids",
-                         flat_deriv=flat_deriv,
-                         bottom_centroids=cent_bottom_list,
-                         up_centroids=cent_up_list)
+    r = PipelineProducts("flat trace centroids")
+
+    r.add(FLAT_DERIV_DESC, PipelineImage([], flat_deriv))
+    r.add(FLATCENTROIDS_JSON_DESC,
+          PipelineDict(bottom_centroids=cent_bottom_list,
+                         up_centroids=cent_up_list))
 
     return r
 
 
 def check_trace_order(trace_products, fig, rect=111):
     from mpl_toolkits.axes_grid1 import ImageGrid
-    d = trace_products["flat_deriv"]
+    #d = trace_products["flat_deriv"]
+    d = trace_products[FLAT_DERIV_DESC].data
+    trace_dict = trace_products[FLATCENTROIDS_JSON_DESC]
+
     grid = ImageGrid(fig, rect, (1, 3), share_all=True)
     ax = grid[0]
     im = ax.imshow(d, origin="lower", interpolation="none",
                    cmap="RdBu")
     im.set_clim(-0.05, 0.05)
     ax = grid[1]
-    for l in trace_products["bottom_centroids"]:
+    for l in trace_dict["bottom_centroids"]:
         ax.plot(l[0], l[1], "r-")
-    for l in trace_products["up_centroids"]:
+    for l in trace_dict["up_centroids"]:
         ax.plot(l[0], l[1], "b-")
 
     ax = grid[2]
     im = ax.imshow(d, origin="lower", interpolation="none",
                    cmap="RdBu")
     im.set_clim(-0.05, 0.05)
-    for l in trace_products["bottom_centroids"]:
+    for l in trace_dict["bottom_centroids"]:
         ax.plot(l[0], l[1], "r-")
-    for l in trace_products["up_centroids"]:
+    for l in trace_dict["up_centroids"]:
         ax.plot(l[0], l[1], "b-")
     ax.set_xlim(0, 2048)
     ax.set_ylim(0, 2048)
@@ -165,8 +219,10 @@ def check_trace_order(trace_products, fig, rect=111):
 
 def trace_solutions(trace_products):
 
-    bottom_centroids = trace_products["bottom_centroids"]
-    up_centroids = trace_products["up_centroids"]
+
+    centroids_dict = trace_products[FLATCENTROIDS_JSON_DESC]
+    bottom_centroids = centroids_dict["bottom_centroids"]
+    up_centroids = centroids_dict["up_centroids"]
 
     nx = IGRINSDetector.nx
 
@@ -186,10 +242,13 @@ def trace_solutions(trace_products):
         dd_ = ("poly", dd.coef)
         bottom_up_solutions_as_list.append((bb_, dd_))
 
-    r = PipelineProducts("order trace solutions",
-                         orders=[],
-                         bottom_up_centroids=bottom_up_centroids,
-                         bottom_up_solutions=bottom_up_solutions_as_list)
+
+    r = PipelineProducts("order trace solutions")
+
+    r.add(FLATCENTROID_SOL_JSON_DESC,
+          PipelineDict(orders=[],
+                       bottom_up_centroids=bottom_up_centroids,
+                       bottom_up_solutions=bottom_up_solutions_as_list))
 
 
     return r
@@ -298,8 +357,27 @@ def check_order_flat(order_flat_products):
     #     hd_spec = stsci_median(hd_list)
 
 
+def plot_trace_solutions(flaton_products, trace_solution_products):
+    flat_normed = flaton_products[FLAT_NORMED_DESC].data
+    _d = trace_solution_products[FLATCENTROID_SOL_JSON_DESC]
+    bottom_up_centroids= _d["bottom_up_centroids"]
+    bottom_up_solutions_ = _d["bottom_up_solutions"]
 
+    bottom_up_solutions = []
+    for b, d in bottom_up_solutions_:
+        import numpy.polynomial as P
+        assert b[0] == "poly"
+        assert d[0] == "poly"
+        bp = P.Polynomial(b[1])
+        dp = P.Polynomial(d[1])
+        bottom_up_solutions.append((bp, dp))
 
+    from libs.trace_flat import plot_solutions
+    fig2, fig3 = plot_solutions(flat_normed,
+                                bottom_up_centroids,
+                                bottom_up_solutions)
+
+    return fig2, fig3
 
 
 
