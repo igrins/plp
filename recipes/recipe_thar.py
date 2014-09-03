@@ -63,20 +63,9 @@ def process_thar_band(utdate, refdate, band, obsids, config):
 
     thar_filenames = igr_path.get_filenames(band, obsids)
 
-    # from libs.products import ProductPath, ProductDB
-
-    # igr_path = IGRINSPath(utdate)
-
-    # igrins_files = IGRINSFiles(igr_path)
-
-
-
-    #thar_path = ProductPath(igr_path, thar_filenames[0])
 
     thar_master_obsid = obsids[0]
 
-    # flatoff_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
-    #                                     "flat_off.db"))
     flaton_db_name = igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
                                                         "flat_on.db",
                                                         )
@@ -84,8 +73,6 @@ def process_thar_band(utdate, refdate, band, obsids, config):
 
     flaton_basename = flaton_db.query(band, thar_master_obsid)
 
-    # flaton_path = ProductPath(igr_path, basename)
-    # aperture_solutions_name = flaton_path.get_secondary_path("aperture_solutions")
 
     from libs.process_flat import FLATCENTROID_SOL_JSON_DESC
 
@@ -107,8 +94,6 @@ def process_thar_band(utdate, refdate, band, obsids, config):
         ap =  Apertures(orders, bottomup_solutions)
 
     if 1:
-        # thar_names = [igrins_log.get_filename(band, fn) for fn \
-        #               in igrins_log.log["thar"]]
         from libs.process_thar import ThAr
 
         thar = ThAr(thar_filenames)
@@ -133,15 +118,8 @@ def process_thar_band(utdate, refdate, band, obsids, config):
         from libs.process_thar import ONED_SPEC_JSON
         thar_products[ONED_SPEC_JSON]["orders"] = new_orders
 
-        # order_map = ap.make_order_map()
-        # slitpos_map = ap.make_slitpos_map()
-
 
     if 1:
-
-        # fn = thar.get_product_name(igr_path)
-        # hdu = pyfits.open(thar_filenames[0])[0]
-        # thar_products.save(fn, masterhdu=hdu)
 
         hdu = pyfits.open(thar_filenames[0])[0]
         igr_storage.store(thar_products,
@@ -197,7 +175,6 @@ def process_thar_band(utdate, refdate, band, obsids, config):
         igr_storage.store(thar_wvl_sol,
                           mastername=thar_filenames[0],
                           masterhdu=hdu)
-        #thar_wvl_sol.save(wvlsol_name, masterhdu=hdu)
 
     if 1: # make amp and order falt
 
@@ -242,8 +219,8 @@ def process_thar_band(utdate, refdate, band, obsids, config):
         thar_db = ProductDB(thar_db_name)
         # os.path.join(igr_path.secondary_calib_path,
         #                                  "thar.db"))
-        thar_db.update(band,
-                       os.path.basename(thar_filenames[0]))
+        basename = os.path.splitext(os.path.basename(thar_filenames[0]))[0]
+        thar_db.update(band, basename)
 
 
 if __name__ == "__main__":

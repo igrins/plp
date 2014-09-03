@@ -12,70 +12,112 @@ from libs.apertures import Apertures
 
 #from libs.products import PipelineProducts
 
-def wvlsol_sky(utdate, refdate="20140316", bands="HK",
-               starting_obsids=None):
+from libs.recipe_base import RecipeBase
 
-    if not bands in ["H", "K", "HK"]:
-        raise ValueError("bands must be one of 'H', 'K' or 'HK'")
+class RecipeWvlsolSky(RecipeBase):
+    RECIPE_NAME = "SKY"
 
-    fn = "%s.recipes" % utdate
-    from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
-    recipe = Recipes(fn)
+    def run_selected_bands(self, utdate, selected, bands):
+        for s in selected:
+            obsids = s[0]
+            print obsids
+            # frametypes = s[1]
 
-    if starting_obsids is not None:
-        starting_obsids = map(int, starting_obsids.split(","))
+            for band in bands:
+                process_wvlsol_band(utdate, self.refdate, band, obsids,
+                                    self.config)
 
-    selected = recipe.select("SKY", starting_obsids)
+def wvlsol_sky(utdate, bands="HK",
+               starting_obsids=None, config_file="recipe.config"):
 
-    for s in selected:
-        obsids = s[0]
+    RecipeWvlsolSky()(utdate, bands,
+                      starting_obsids, config_file)
 
-        for band in bands:
-            process_wvlsol_band(utdate, refdate, band, obsids)
+# def wvlsol_sky(utdate, refdate="20140316", bands="HK",
+#                starting_obsids=None):
 
+#     if not bands in ["H", "K", "HK"]:
+#         raise ValueError("bands must be one of 'H', 'K' or 'HK'")
 
+#     fn = "%s.recipes" % utdate
+#     from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
+#     recipe = Recipes(fn)
 
-def process_wvlsol_band(utdate, refdate, band, obsids):
+#     if starting_obsids is not None:
+#         starting_obsids = map(int, starting_obsids.split(","))
 
-    from libs.products import ProductPath, ProductDB
+#     selected = recipe.select("SKY", starting_obsids)
 
-    igr_path = IGRINSPath(utdate)
+#     for s in selected:
+#         obsids = s[0]
 
-    igrins_files = IGRINSFiles(igr_path)
-
-    sky_filenames = igrins_files.get_filenames(band, obsids)
-
-    sky_path = ProductPath(igr_path, sky_filenames[0])
-    sky_master_obsid = obsids[0]
-
-    # flatoff_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
-    #                                     "flat_off.db"))
-    flaton_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
-                                       "flat_on.db"))
-    thar_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
-                                     "thar.db"))
-
-    if 1: # load aperture product
-        basename = flaton_db.query(band, sky_master_obsid)
-        flaton_path = ProductPath(igr_path, basename)
-        aperture_solutions_name = flaton_path.get_secondary_path("aperture_solutions")
+#         for band in bands:
+#             process_wvlsol_band(utdate, refdate, band, obsids)
 
 
-        aperture_solution_products = PipelineProducts.load(aperture_solutions_name)
+def load_aperture(igr_storage, band, master_obsid, flaton_db, thar_db):
+    from libs.process_flat import FLATCENTROID_SOL_JSON_DESC
+
+    flaton_basename = flaton_db.query(band, master_obsid)
+    thar_basename = thar_db.query(band, master_obsid)
+
+    aperture_solution_products = igr_storage.load([FLATCENTROID_SOL_JSON_DESC], flaton_basename)
 
 
-        bottomup_solutions = aperture_solution_products["bottom_up_solutions"]
+    bottomup_solutions = aperture_solution_products[FLATCENTROID_SOL_JSON_DESC]["bottom_up_solutions"]
 
 
-        basename = thar_db.query(band, sky_master_obsid)
+    thar_basename = thar_db.query(band, master_obsid)
 
-        thar_path = ProductPath(igr_path, basename)
-        thar_spec = thar_path.get_secondary_path("median_spectra")
+    # thar_path = ProductPath(igr_path, basename)
+    from libs.process_thar import ONED_SPEC_JSON
+    thar_spec_products = igr_storage.load([ONED_SPEC_JSON],
+                                          thar_basename)
+
+    ap =  Apertures(thar_spec_products[ONED_SPEC_JSON]["orders"],
+                    bottomup_solutions)
+
+    return ap
 
 
-        thar_spec_products = PipelineProducts.load(thar_spec)
+def process_wvlsol_band(utdate, refdate, band, obsids, config):
 
-        ap =  Apertures(thar_spec_products["orders"], bottomup_solutions)
+    from libs.products import ProductDB, PipelineStorage
+
+    igr_path = IGRINSPath(config, utdate)
+
+    igr_storage = PipelineStorage(igr_path)
+
+    sky_filenames = igr_path.get_filenames(band, obsids)
+
+
+    master_obsid = obsids[0]
+
+
+    flaton_db_name = igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
+                                                        "flat_on.db",
+                                                        )
+    flaton_db = ProductDB(flaton_db_name)
+
+    #flaton_basename = flaton_db.query(band, master_obsid)
+
+    thar_db_name = igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
+                                                        "thar.db",
+                                                        )
+    thar_db = ProductDB(thar_db_name)
+
+    #thar_basename = thar_db.query(band, master_obsid)
+
+
+
+
+    # flaton_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+    #                                    "flat_on.db"))
+    # thar_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
+    #                                  "thar.db"))
+
+    ap = load_aperture(igr_storage, band, master_obsid,
+                       flaton_db, thar_db)
 
 
     if 1: #
@@ -87,17 +129,24 @@ def process_wvlsol_band(utdate, refdate, band, obsids):
         # sky_master_fn_ = os.path.splitext(os.path.basename(sky_names[0]))[0]
         # sky_master_fn = igr_path.get_secondary_calib_filename(sky_master_fn_)
 
-        fn = sky_path.get_secondary_path("raw_spec")
         import astropy.io.fits as pyfits
-        raw_spec_product.save(fn,
-                              masterhdu=pyfits.open(sky_filenames[0])[0])
+        masterhdu = pyfits.open(sky_filenames[0])[0]
+
+        igr_storage.store(raw_spec_product,
+                          mastername=sky_filenames[0],
+                          masterhdu=masterhdu)
+
+        # fn = sky_path.get_secondary_path("raw_spec")
+        # raw_spec_product.save(fn,
+        #                       masterhdu=masterhdu)
 
 
         from libs.master_calib import load_sky_ref_data
 
-        ref_date = "20140316"
+        # ref_date = "20140316"
 
-        sky_ref_data = load_sky_ref_data(ref_date, band)
+        refdate = config.get_value("REFDATE", utdate)
+        sky_ref_data = load_sky_ref_data(refdate, band)
 
 
     if 1: # initial wavelength solution
@@ -107,9 +156,16 @@ def process_wvlsol_band(utdate, refdate, band, obsids):
         # json_name_ = "SDC%s_%s_0003.median_spectra.wvlsol" % (band,
         #                                                      igrins_log.date)
 
-        json_name = thar_path.get_secondary_path("wvlsol_v0")
+        from libs.process_thar import THAR_WVLSOL_JSON
+        thar_basename = thar_db.query(band, master_obsid)
+        thar_wvl_sol = igr_storage.load([THAR_WVLSOL_JSON],
+                                        thar_basename)[THAR_WVLSOL_JSON]
+        #print thar_wvl_sol.keys()
+        #["wvl_sol"]
+
+        #json_name = thar_path.get_secondary_path("wvlsol_v0")
         #json_name = igr_path.get_secondary_calib_filename(json_name_)
-        thar_wvl_sol = PipelineProducts.load(json_name)
+        #thar_wvl_sol = PipelineProducts.load(json_name)
 
 
 
@@ -128,9 +184,10 @@ def process_wvlsol_band(utdate, refdate, band, obsids):
             wvl_solutionv = p["wvl_sol"]
 
         orders_w_solutions_ = thar_wvl_sol["orders"]
-        orders_w_solutions = [o for o in orders_w_solutions_ if o in raw_spec_product["orders"]]
-        _ = dict(zip(raw_spec_product["orders"],
-                     raw_spec_product["specs"]))
+        from libs.process_thar import ONED_SPEC_JSON
+        orders_w_solutions = [o for o in orders_w_solutions_ if o in raw_spec_product[ONED_SPEC_JSON]["orders"]]
+        _ = dict(zip(raw_spec_product[ONED_SPEC_JSON]["orders"],
+                     raw_spec_product[ONED_SPEC_JSON]["specs"]))
         s_list = [_[o]for o in orders_w_solutions]
 
 
@@ -167,7 +224,7 @@ def process_wvlsol_band(utdate, refdate, band, obsids):
 
         if band == "K":
             import libs.master_calib as master_calib
-            fn = "hitran_bootstrap_K_%s.json" % ref_date
+            fn = "hitran_bootstrap_K_%s.json" % refdate
             bootstrap_name = master_calib.get_master_calib_abspath(fn)
             import json
             bootstrap = json.load(open(bootstrap_name))
@@ -204,12 +261,15 @@ def process_wvlsol_band(utdate, refdate, band, obsids):
             wvl = p(xx, oo) / o
             wvl_sol.append(list(wvl))
 
-        oh_sol_products = PipelineProducts("Wavelength solution based on ohlines",
-                                           orders=orders_w_solutions,
-                                           wvl_sol=wvl_sol)
+        oh_sol_products = PipelineProducts("Wavelength solution based on ohlines")
+        #from libs.process_thar import ONED_SPEC_JSON
+        from libs.products import PipelineDict
+        SKY_WVLSOL_JSON = ("PRIMARY_CALIB_PATH", "SKY_", ".wvlsol_v1.json")
+        oh_sol_products.add(SKY_WVLSOL_JSON,
+                            PipelineDict(orders=orders_w_solutions,
+                                         wvl_sol=wvl_sol))
 
-        fn = sky_path.get_secondary_path("wvlsol_v1")
-        oh_sol_products.save(fn)
+    if 1:
 
         if 1: # save as WAT fits header
             xx = np.arange(0, 2048)
@@ -217,7 +277,11 @@ def process_wvlsol_band(utdate, refdate, band, obsids):
 
             from astropy.modeling import models, fitting
 
-            # naive solution to convert 2d to 1d chebyshev
+            # We convert 2d chebyshev solution to a seriese of 1d
+            # chebyshev.  For now, use naive (and inefficient)
+            # approach of refitting the solution with 1d. Should be
+            # reimplemented.
+
             p1d_list = []
             for o in orders_w_solutions:
                 oo = np.empty_like(xx)
@@ -230,11 +294,13 @@ def process_wvlsol_band(utdate, refdate, band, obsids):
                 p1d = fit_p1d(p_init1d, xx_plus1, wvl)
                 p1d_list.append(p1d)
 
-            from libs.iraf_helper import get_wat_spec
-            wat_list = get_wat_spec(orders_w_solutions, p1d_list)
+        from libs.iraf_helper import get_wat_spec, default_header_str
+        wat_list = get_wat_spec(orders_w_solutions, p1d_list)
 
+        # cards = [pyfits.Card.fromstring(l.strip()) \
+        #          for l in open("echell_2dspec.header")]
         cards = [pyfits.Card.fromstring(l.strip()) \
-                 for l in open("echell_2dspec.header")]
+                 for l in default_header_str]
 
         wat = "wtype=multispec " + " ".join(wat_list)
         char_per_line = 68
@@ -246,7 +312,7 @@ def process_wvlsol_band(utdate, refdate, band, obsids):
             c = pyfits.Card(k, v)
             cards.append(c)
         if remainder > 0:
-            i = num_line
+            i = num_line+1
             k = "WAT2_%03d" % (i,)
             v = wat[char_per_line*i:]
             #print k, v
@@ -254,11 +320,24 @@ def process_wvlsol_band(utdate, refdate, band, obsids):
             cards.append(c)
 
         if 1:
+            # save fits with empty header
+
             header = pyfits.Header(cards)
             hdu = pyfits.PrimaryHDU(header=header,
                                     data=np.array([]).reshape((0,0)))
-            fn = sky_path.get_secondary_path("wvlsol_v1.fits")
-            hdu.writeto(fn, clobber=True)
+
+            SKY_WVLSOL_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".wvlsol_v1.fits")
+            from libs.products import PipelineImage
+            oh_sol_products.add(SKY_WVLSOL_FITS_DESC,
+                                PipelineImage([],
+                                              np.array([]).reshape((0,0))))
+
+            igr_storage.store(oh_sol_products,
+                              mastername=sky_filenames[0],
+                              masterhdu=hdu)
+
+            #fn = sky_path.get_secondary_path("wvlsol_v1.fits")
+            #hdu.writeto(fn, clobber=True)
 
         if 0:
             # plot all spectra
@@ -266,6 +345,7 @@ def process_wvlsol_band(utdate, refdate, band, obsids):
                 plot(w, s)
 
 
+    if 1:
         # filter out the line indices not well fit by the surface
 
 
@@ -303,14 +383,20 @@ def process_wvlsol_band(utdate, refdate, band, obsids):
             fig2.tight_layout()
 
         from libs.qa_helper import figlist_to_pngs
-        fn = sky_path.get_secondary_path("oh_fit2d", "oh_fit2d_dir")
-        figlist_to_pngs(fn, [fig1, fig2])
+        sky_figs = igr_path.get_section_filename_base("QA_PATH",
+                                                       "oh_fit2d",
+                                                       "oh_fit2d_dir")
+        figlist_to_pngs(sky_figs, [fig1, fig2])
 
     if 1:
         from libs.products import ProductDB
-        sky_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
-                                        "sky.db"))
-        sky_db.update(band, sky_path.basename)
+        sky_db_name = igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
+                                                          "sky.db",
+                                                          )
+
+        sky_db = ProductDB(sky_db_name)
+        basename = os.path.splitext(os.path.basename(sky_filenames[0]))[0]
+        sky_db.update(band, basename)
 
 
 

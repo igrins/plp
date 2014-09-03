@@ -1,3 +1,20 @@
+
+default_header_str = """WCSDIM  =                    3
+CTYPE1  = 'MULTISPE'
+CTYPE2  = 'MULTISPE'
+CTYPE3  = 'LINEAR  '
+LTM1_1  =                   1.
+LTM2_2  =                   1.
+CD1_1   =                   1.
+CD2_2   =                   1.
+CD3_3   =                   1.
+LTM3_3  =                   1.
+WAT0_001= 'system=multispec'
+WAT1_001= 'wtype=multispec label=Wavelength units=angstroms'
+WAT3_001= 'wtype=linear'
+BANDID1 = 'spectrum - background median, weights variance, clean no'
+""".split("\n")
+
 def get_wat_spec(orders, wvl_sol):
     """
     WAT header
