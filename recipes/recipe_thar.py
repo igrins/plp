@@ -8,53 +8,92 @@ import astropy.io.fits as pyfits
 from libs.products import PipelineProducts
 from libs.apertures import Apertures
 
-def thar(utdate, refdate="20140316", bands="HK",
-         starting_obsids=None):
+from libs.recipe_base import RecipeBase
 
-    if not bands in ["H", "K", "HK"]:
-        raise ValueError("bands must be one of 'H', 'K' or 'HK'")
+class RecipeThAr(RecipeBase):
+    RECIPE_NAME = "THAR"
 
-    fn = "%s.recipes" % utdate
-    from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
-    recipe = Recipes(fn)
+    def run_selected_bands(self, utdate, selected, bands):
+        for s in selected:
+            obsids = s[0]
+            print obsids
+            # frametypes = s[1]
 
-    if starting_obsids is not None:
-        starting_obsids = map(int, starting_obsids.split(","))
+            for band in bands:
+                process_thar_band(utdate, self.refdate, band, obsids,
+                                  self.config)
 
-    selected = recipe.select("THAR", starting_obsids)
+def thar(utdate, bands="HK",
+         starting_obsids=None, config_file="recipe.config"):
 
-    for s in selected:
-        obsids = s[0]
-
-        for band in bands:
-            process_thar_band(utdate, refdate, band, obsids)
-
-
-def process_thar_band(utdate, refdate, band, obsids):
-
-    from libs.products import ProductPath, ProductDB
-
-    igr_path = IGRINSPath(utdate)
-
-    igrins_files = IGRINSFiles(igr_path)
+    RecipeThAr()(utdate, bands,
+                 starting_obsids, config_file)
 
 
-    thar_filenames = igrins_files.get_filenames(band, obsids)
 
-    thar_path = ProductPath(igr_path, thar_filenames[0])
+# def thar(utdate, refdate="20140316", bands="HK",
+#          starting_obsids=None):
+
+#     if not bands in ["H", "K", "HK"]:
+#         raise ValueError("bands must be one of 'H', 'K' or 'HK'")
+
+#     fn = "%s.recipes" % utdate
+#     from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
+#     recipe = Recipes(fn)
+
+#     if starting_obsids is not None:
+#         starting_obsids = map(int, starting_obsids.split(","))
+
+#     selected = recipe.select("THAR", starting_obsids)
+
+#     for s in selected:
+#         obsids = s[0]
+
+#         for band in bands:
+#             process_thar_band(utdate, refdate, band, obsids)
+
+
+def process_thar_band(utdate, refdate, band, obsids, config):
+
+    from libs.products import ProductDB, PipelineStorage
+
+    igr_path = IGRINSPath(config, utdate)
+
+    igr_storage = PipelineStorage(igr_path)
+
+    thar_filenames = igr_path.get_filenames(band, obsids)
+
+    # from libs.products import ProductPath, ProductDB
+
+    # igr_path = IGRINSPath(utdate)
+
+    # igrins_files = IGRINSFiles(igr_path)
+
+
+
+    #thar_path = ProductPath(igr_path, thar_filenames[0])
+
     thar_master_obsid = obsids[0]
 
     # flatoff_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
     #                                     "flat_off.db"))
-    flaton_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
-                                       "flat_on.db"))
+    flaton_db_name = igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
+                                                        "flat_on.db",
+                                                        )
+    flaton_db = ProductDB(flaton_db_name)
 
-    basename = flaton_db.query(band, thar_master_obsid)
-    flaton_path = ProductPath(igr_path, basename)
-    aperture_solutions_name = flaton_path.get_secondary_path("aperture_solutions")
+    flaton_basename = flaton_db.query(band, thar_master_obsid)
 
+    # flaton_path = ProductPath(igr_path, basename)
+    # aperture_solutions_name = flaton_path.get_secondary_path("aperture_solutions")
 
-    aperture_solution_products = PipelineProducts.load(aperture_solutions_name)
+    from libs.process_flat import FLATCENTROID_SOL_JSON_DESC
+
+    desc_list = [FLATCENTROID_SOL_JSON_DESC]
+    products = igr_storage.load(desc_list,
+                                mastername=flaton_basename)
+
+    aperture_solution_products = products[FLATCENTROID_SOL_JSON_DESC]
 
     # igrins_orders = {}
     # igrins_orders["H"] = range(99, 122)
@@ -67,7 +106,6 @@ def process_thar_band(utdate, refdate, band, obsids):
 
         ap =  Apertures(orders, bottomup_solutions)
 
-
     if 1:
         # thar_names = [igrins_log.get_filename(band, fn) for fn \
         #               in igrins_log.log["thar"]]
@@ -76,7 +114,6 @@ def process_thar_band(utdate, refdate, band, obsids):
         thar = ThAr(thar_filenames)
 
         thar_products = thar.process_thar(ap)
-
 
     if 1: # match order
         from libs.process_thar import match_order_thar
@@ -93,7 +130,8 @@ def process_thar_band(utdate, refdate, band, obsids):
 
         ap =  Apertures(new_orders, bottomup_solutions)
 
-        thar_products["orders"] = new_orders
+        from libs.process_thar import ONED_SPEC_JSON
+        thar_products[ONED_SPEC_JSON]["orders"] = new_orders
 
         # order_map = ap.make_order_map()
         # slitpos_map = ap.make_slitpos_map()
@@ -101,9 +139,14 @@ def process_thar_band(utdate, refdate, band, obsids):
 
     if 1:
 
-        fn = thar.get_product_name(igr_path)
+        # fn = thar.get_product_name(igr_path)
+        # hdu = pyfits.open(thar_filenames[0])[0]
+        # thar_products.save(fn, masterhdu=hdu)
+
         hdu = pyfits.open(thar_filenames[0])[0]
-        thar_products.save(fn, masterhdu=hdu)
+        igr_storage.store(thar_products,
+                          mastername=thar_filenames[0],
+                          masterhdu=hdu)
 
     if 1:
         # measure shift of thar lines from reference spectra
@@ -113,6 +156,10 @@ def process_thar_band(utdate, refdate, band, obsids):
         from libs.process_thar import reidentify_ThAr_lines
         thar_reidentified_products = reidentify_ThAr_lines(thar_products,
                                                            thar_ref_data)
+
+        igr_storage.store(thar_reidentified_products,
+                          mastername=thar_filenames[0],
+                          masterhdu=hdu)
 
     if 1:
 
@@ -128,57 +175,75 @@ def process_thar_band(utdate, refdate, band, obsids):
              align_echellogram_thar(thar_reidentified_products,
                                     echel, band, ap)
 
-        # bpix_mask = r["flat_bpix_mask"]
-        #from matplotlib.transforms import Affine2D
+        # We do not save this product yet.
+        # igr_storage.store(thar_aligned_echell_products,
+        #                   mastername=thar_filenames[0],
+        #                   masterhdu=hdu)
 
-        # load echellogram data
 
-        # now fit is done.
 
         fig_list = check_thar_transorm(thar_products,
                                        thar_aligned_echell_products)
 
         from libs.qa_helper import figlist_to_pngs
-        thar_figs = thar_path.get_secondary_path("thar",
-                                                 "thar_dir")
+        thar_figs = igr_path.get_section_filename_base("QA_PATH",
+                                                       "thar",
+                                                       "thar_dir")
         figlist_to_pngs(thar_figs, fig_list)
 
         thar_wvl_sol = get_wavelength_solutions(thar_aligned_echell_products,
                                                 echel)
 
-        wvlsol_name = thar_path.get_secondary_path("wvlsol_v0")
-        thar_wvl_sol.save(wvlsol_name, masterhdu=hdu)
+        igr_storage.store(thar_wvl_sol,
+                          mastername=thar_filenames[0],
+                          masterhdu=hdu)
+        #thar_wvl_sol.save(wvlsol_name, masterhdu=hdu)
 
     if 1: # make amp and order falt
 
-        orders = thar_products["orders"]
+        orders = thar_products[ONED_SPEC_JSON]["orders"]
         order_map = ap.make_order_map()
         #slitpos_map = ap.make_slitpos_map()
 
 
         # load flat on products
-        flat_on_params_name = flaton_path.get_secondary_path("flat_on_params")
+        #flat_on_params_name = flaton_path.get_secondary_path("flat_on_params")
 
-        flaton_products = PipelineProducts.load(flat_on_params_name)
+        #flaton_products = PipelineProducts.load(flat_on_params_name)
+        from libs.process_flat import FLAT_NORMED_DESC, FLAT_MASK_DESC
+        flaton_products = igr_storage.load([FLAT_NORMED_DESC, FLAT_MASK_DESC],
+                                           flaton_basename)
 
         from libs.process_flat import make_order_flat, check_order_flat
         order_flat_products = make_order_flat(flaton_products,
                                               orders, order_map)
 
-        fn = thar_path.get_secondary_path("orderflat")
-        order_flat_products.save(fn, masterhdu=hdu)
+        #fn = thar_path.get_secondary_path("orderflat")
+        #order_flat_products.save(fn, masterhdu=hdu)
+
+        igr_storage.store(order_flat_products,
+                          mastername=thar_filenames[0],
+                          masterhdu=hdu)
+
 
         fig_list = check_order_flat(order_flat_products)
 
         from libs.qa_helper import figlist_to_pngs
-        fn = thar_path.get_secondary_path("orderflat", "orderflat_dir")
-        figlist_to_pngs(fn, fig_list)
+        orderflat_figs = igr_path.get_section_filename_base("QA_PATH",
+                                                            "orderflat",
+                                                            "orderflat_dir")
+        figlist_to_pngs(orderflat_figs, fig_list)
 
     if 1:
         from libs.products import ProductDB
-        thar_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
-                                         "thar.db"))
-        thar_db.update(band, thar_path.basename)
+        thar_db_name = igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
+                                                          "thar.db",
+                                                          )
+        thar_db = ProductDB(thar_db_name)
+        # os.path.join(igr_path.secondary_calib_path,
+        #                                  "thar.db"))
+        thar_db.update(band,
+                       os.path.basename(thar_filenames[0]))
 
 
 if __name__ == "__main__":

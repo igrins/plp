@@ -9,20 +9,23 @@ from products import Card, PipelineImage, PipelineDict, PipelineProducts
 from igrins_detector import IGRINSDetector
 
 
-FLAT_OFF_DESC = ("OUTDATA_PATH", "", ".flat_off")
-HOTPIX_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".hotpix_mask")
-FLATOFF_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_off")
+FLAT_OFF_DESC = ("OUTDATA_PATH", "", ".flat_off.fits")
+HOTPIX_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".hotpix_mask.fits")
+FLATOFF_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_off.json")
 
-FLAT_NORMED_DESC = ("OUTDATA_PATH", "", ".flat_normed")
-FLAT_BPIXED_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_bpixed")
-FLAT_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_mask")
-DEADPIX_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".deadpix_mask")
-FLATON_JSON_DESC = ("OUTDATA_PATH", "", ".flat_on")
+FLAT_NORMED_DESC = ("OUTDATA_PATH", "", ".flat_normed.fits")
+FLAT_BPIXED_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_bpixed.fits")
+FLAT_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_mask.fits")
+DEADPIX_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".deadpix_mask.fits")
+FLATON_JSON_DESC = ("OUTDATA_PATH", "", ".flat_on.json")
 
-FLAT_DERIV_DESC = ("SECONDARY_CALIB_PATH", "FLAT_", ".flat_deriv")
-FLATCENTROIDS_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT", ".centroids")
+FLAT_DERIV_DESC = ("SECONDARY_CALIB_PATH", "FLAT_", ".flat_deriv.fits")
+FLATCENTROIDS_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".centroids.json")
 
-FLATCENTROID_SOL_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT", ".centroid_solutions")
+FLATCENTROID_SOL_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".centroid_solutions.json")
+
+ORDER_FLAT_IM_DESC = ("PRIMARY_CALIB_PATH", "ORDERFLAT_", ".fits")
+ORDER_FLAT_JSON_DESC = ("PRIMARY_CALIB_PATH", "ORDERFLAT_", ".json")
 
 class FlatOff(object):
     def __init__(self, offdata_list):
@@ -258,8 +261,8 @@ def trace_solutions(trace_products):
 def make_order_flat(flaton_products, orders, order_map):
 
 
-    flat_normed  = flaton_products["flat_normed"]
-    flat_mask = flaton_products["flat_mask"]
+    flat_normed  = flaton_products[FLAT_NORMED_DESC].data
+    flat_mask = flaton_products[FLAT_MASK_DESC].data
 
     import scipy.ndimage as ni
     slices = ni.find_objects(order_map)
@@ -311,12 +314,13 @@ def make_order_flat(flaton_products, orders, order_map):
 
     flat_im[flat_im < 0.5] = np.nan
 
-    r = PipelineProducts("order flat",
-                         orders=orders,
-                         order_flat=flat_im,
-                         fitted_responses=fitted_responses,
-                         i1i2_list=i1i2_list,
-                         mean_order_specs=mean_order_specs)
+    r = PipelineProducts("order flat")
+    r.add(ORDER_FLAT_IM_DESC, PipelineImage([], flat_im))
+    r.add(ORDER_FLAT_JSON_DESC,
+          PipelineDict(orders=orders,
+                       fitted_responses=fitted_responses,
+                       i1i2_list=i1i2_list,
+                       mean_order_specs=mean_order_specs))
 
     return r
 
@@ -326,7 +330,7 @@ def check_order_flat(order_flat_products):
     from trace_flat import (prepare_order_trace_plot,
                             check_order_trace1, check_order_trace2)
 
-    mean_order_specs = order_flat_products["mean_order_specs"]
+    mean_order_specs = order_flat_products[ORDER_FLAT_JSON_DESC]["mean_order_specs"]
 
     from trace_flat import (get_smoothed_order_spec,
                             get_order_boundary_indices,

@@ -4,7 +4,21 @@ import numpy as np
 import astropy.io.fits as pyfits
 from stsci_helper import stsci_median
 
-from products import PipelineProducts
+#from products import PipelineProducts
+from products import Card, PipelineImage, PipelineDict, PipelineProducts
+
+COMBINED_IMAGE_DESC = ("OUTDATA_PATH", "", ".combined_image.fits")
+ONED_SPEC_JSON = ("OUTDATA_PATH", "", ".oned_spec.json")
+THAR_REID_JSON = ("PRIMARY_CALIB_PATH", "THAR_", ".thar_reid.json")
+THAR_ALIGNED_JSON = ("PRIMARY_CALIB_PATH", "THAR_", ".thar_aligned.json")
+THAR_WVLSOL_JSON = ("PRIMARY_CALIB_PATH", "THAR_", ".wvlsol_v0.json")
+# FLAT_BPIXED_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_bpixed.fits")
+# FLAT_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_mask.fits")
+# DEADPIX_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".deadpix_mask.fits")
+# FLATON_JSON_DESC = ("OUTDATA_PATH", "", ".flat_on.json")
+
+#                          combined_image_raw=_data,
+#                          combined_image=data,
 
 class ThAr(object):
     def __init__(self, thar_names):
@@ -29,11 +43,12 @@ def get_1d_median_specs(fits_names, ap):
 
     s = ap.extract_spectra_v2(data)
 
-    r = PipelineProducts("1d median specs",
-                         combined_image_raw=_data,
-                         combined_image=data,
-                         orders=ap.orders,
-                         specs=s)
+    r = PipelineProducts("1d median specs")
+    r.add(COMBINED_IMAGE_DESC,
+          PipelineImage([], data))
+    r.add(ONED_SPEC_JSON,
+          PipelineDict(orders=ap.orders,
+                       specs=s))
 
     return r
 
@@ -46,7 +61,8 @@ def match_order_thar(thar_products, thar_ref_data):
 
     # load spec
     #s_list_ = json.load(open("arc_spec_thar_%s_%s.json" % (band, date)))
-    s_list_ = thar_products["specs"]
+
+    s_list_ = thar_products[ONED_SPEC_JSON]["specs"]
     s_list_dst = [np.array(s) for s in s_list_]
 
     # match the orders of s_list_src & s_list_dst
@@ -65,8 +81,10 @@ def reidentify_ThAr_lines(thar_products, thar_ref_data):
 
     # load spec
     #s_list_ = json.load(open("arc_spec_thar_%s_%s.json" % (band, date)))
-    orders_dst = thar_products["orders"]
-    s_list_ = thar_products["specs"]
+
+    orders_dst = thar_products[ONED_SPEC_JSON]["orders"]
+    s_list_ = thar_products[ONED_SPEC_JSON]["specs"]
+
     s_list_dst = [np.array(s) for s in s_list_]
 
     orders_intersection = set(orders_src).intersection(orders_dst)
@@ -99,12 +117,13 @@ def reidentify_ThAr_lines(thar_products, thar_ref_data):
                                                        ref_lines_list,
                                                        sol_list_transform)
 
-    r = PipelineProducts("initial reidentification of ThAr lines",
-                         orders=orders,
-                         match_list=reidentified_lines_with_id,
-                         #ref_date=ref_date,
-                         ref_spec_file=thar_ref_data["ref_spec_file"],
-                         ref_id_file=thar_ref_data["ref_id_file"])
+    r = PipelineProducts("initial reidentification of ThAr lines")
+    r.add(THAR_REID_JSON,
+          PipelineDict(orders=orders,
+                       match_list=reidentified_lines_with_id,
+                       #ref_date=ref_date,
+                       ref_spec_file=thar_ref_data["ref_spec_file"],
+                       ref_id_file=thar_ref_data["ref_id_file"]))
 
     return r
 
@@ -122,7 +141,7 @@ def load_echelogram(ref_date, band):
 
 def align_echellogram_thar(thar_reidentified_products, echel, band, ap):
 
-    orders = thar_reidentified_products["orders"]
+    orders = thar_reidentified_products[THAR_REID_JSON]["orders"]
 
     th = np.genfromtxt("ThArlines.dat")
     wvl_thar = th[:,0]/1.e4
@@ -131,7 +150,7 @@ def align_echellogram_thar(thar_reidentified_products, echel, band, ap):
     # line_list : dict of (order, (pixel coord list, wavelengths))
     wvl_list = {}
     pixel_list = {}
-    match_list = thar_reidentified_products["match_list"]
+    match_list = thar_reidentified_products[THAR_REID_JSON]["match_list"]
     for o, s in zip(orders, match_list):
         lineid_list = s[0] # [s1[0] for s1 in s]
         wvl = wvl_thar[lineid_list]
@@ -145,10 +164,11 @@ def align_echellogram_thar(thar_reidentified_products, echel, band, ap):
     from libs.align_echellogram_thar import fit_affine_clip
     affine_tr, mm = fit_affine_clip(xy1f, xy2f)
 
-    r = PipelineProducts("ThAr aligned echellogram products",
-                         xy1f=xy1f, xy2f=xy2f,
-                         affine_tr=affine_tr,
-                         affine_tr_mask=mm)
+    r = PipelineProducts("ThAr aligned echellogram products")
+    r.add(THAR_ALIGNED_JSON,
+          PipelineDict(xy1f=xy1f, xy2f=xy2f,
+                       affine_tr=affine_tr,
+                       affine_tr_mask=mm))
 
     return r
 
@@ -199,8 +219,9 @@ def check_dx2(ax, x, y, dx):
 def check_thar_transorm(thar_products, thar_echell_products):
     # to check the fit results.
 
-    combined_im = thar_products["combined_image"]
+    combined_im = thar_products[COMBINED_IMAGE_DESC].data
 
+    thar_echell_products = thar_echell_products[THAR_ALIGNED_JSON]
     affine_tr = thar_echell_products["affine_tr"]
     affine_tr_mask = thar_echell_products["affine_tr_mask"]
     xy1f, xy2f = thar_echell_products["xy1f"], thar_echell_products["xy2f"]
@@ -281,7 +302,7 @@ def check_thar_transorm(thar_products, thar_echell_products):
 def get_wavelength_solutions(thar_echellogram_products, echel):
     from ecfit import get_ordered_line_data, fit_2dspec, check_fit
 
-    affine_tr = thar_echellogram_products["affine_tr"]
+    affine_tr = thar_echellogram_products[THAR_ALIGNED_JSON]["affine_tr"]
 
     d_x_wvl = {}
     for order, z in echel.zdata.items():
@@ -321,8 +342,9 @@ def get_wavelength_solutions(thar_echellogram_products, echel):
                   open("wvl_sol_phase0_%s_%s.json" % \
                        (band, igrins_log.date), "w"))
 
-    r = PipelineProducts("wavelength solution from ThAr",
-                         orders=orders_band,
-                         wvl_sol=wvl_sol)
+    r = PipelineProducts("wavelength solution from ThAr")
+    r.add(THAR_WVLSOL_JSON,
+          PipelineDict(orders=orders_band,
+                       wvl_sol=wvl_sol))
 
     return r

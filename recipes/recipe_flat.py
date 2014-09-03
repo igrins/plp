@@ -7,51 +7,7 @@ from libs.process_flat import FlatOff, FlatOn
 from libs.path_info import IGRINSPath
 import astropy.io.fits as pyfits
 
-REFDATE = "20140316"
-
-
-class RecipeBase(object):
-    """ The derived mus define RECIPE_NAME attribute and must implement
-        run_selected_bands method.
-    """
-
-    def _validate_bands(self, bands):
-        if not bands in ["H", "K", "HK"]:
-            raise ValueError("bands must be one of 'H', 'K' or 'HK'")
-
-    def get_recipe_name(self, utdate):
-        return "%s.recipes" % utdate
-
-    def get_recipes(self, utdate):
-        fn = self.get_recipe_name(utdate)
-        from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
-        return Recipes(fn)
-
-    def parse_starting_obsids(self, starting_obsids):
-        if starting_obsids is not None:
-            starting_obsids = map(int, starting_obsids.split(","))
-            return starting_obsids
-        else:
-            return None
-
-    def __call__(self, utdate, bands="HK",
-                 starting_obsids=None, config_file="recipe.config"):
-
-        from libs.igrins_config import IGRINSConfig
-        self.config = IGRINSConfig(config_file)
-
-        self.refdate = self.config.get_value('REFDATE', utdate)
-
-        self._validate_bands(bands)
-
-        recipes = self.get_recipes(utdate)
-
-        starting_obsids_parsed = self.parse_starting_obsids(starting_obsids)
-
-        selected = recipes.select(self.RECIPE_NAME, starting_obsids_parsed)
-
-        self.run_selected_bands(utdate, selected, bands)
-
+from libs.recipe_base import RecipeBase
 
 class RecipeFlat(RecipeBase):
     RECIPE_NAME = "FLAT"
@@ -185,14 +141,16 @@ def process_flat_band(utdate, refdate, band, obsids_off, obsids_on,
                                                              "flat_off.db",
                                                              )
         flatoff_db = ProductDB(flatoff_db_name)
-        flatoff_db.update(band, os.path.basename(flat_off_filenames[0]))
+        dbname = os.path.splitext(os.path.basename(flat_off_filenames[0]))[0]
+        flatoff_db.update(band, dbname)
 
 
         flaton_db_name = igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
                                                              "flat_on.db",
                                                              )
         flaton_db = ProductDB(flaton_db_name)
-        flaton_db.update(band, os.path.basename(flat_on_filenames[0]))
+        dbname = os.path.splitext(os.path.basename(flat_on_filenames[0]))[0]
+        flaton_db.update(band, dbname)
 
 
 

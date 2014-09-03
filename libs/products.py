@@ -23,8 +23,8 @@ class PipelineImage(object):
         else:
             hdu = pyfits.PrimaryHDU(data=d)
 
-        fn0 = "".join([fn, ".fits"])
-        hdu.writeto(fn0, clobber=True)
+        #fn0 = "".join([fn, ".fits"])
+        hdu.writeto(fn, clobber=True)
 
 
 class PipelineDict(dict):
@@ -32,7 +32,7 @@ class PipelineDict(dict):
         dict.__init__(self, **kwargs)
 
     def store(self, fn, masterhdu):
-        json_dump(self, open(fn + ".json", "w"))
+        json_dump(self, open(fn, "w"))
 
 class PipelineProducts(dict):
     def __init__(self, desc):
@@ -53,10 +53,10 @@ class PipelineStorage(object):
 
         r = PipelineProducts("")
         for (section, prefix, ext) in product_descs:
-            fn0 = prefix + mastername + ext
+            fn0 = prefix + os.path.basename(mastername) + ext
             fn = self.igr_path.get_section_filename_base(section, fn0)
 
-            print fn
+            print "load", fn
             if fn in self._cache:
                 r[(section, prefix, ext)] = self._cache[fn]
             else:
@@ -71,10 +71,10 @@ class PipelineStorage(object):
         mastername, ext_ = os.path.splitext(mastername)
 
         for (section, prefix, ext), v in products.items():
-            fn0 = prefix + mastername + ext
+            fn0 = prefix + os.path.basename(mastername) + ext
             fn = self.igr_path.get_section_filename_base(section, fn0)
 
-            print fn
+            print "store", fn
             self._cache[fn] = v
             self.save_one(fn, v, masterhdu)
 
@@ -88,8 +88,7 @@ class PipelineStorage(object):
             return json.load(open(fn))
         elif fn.endswith("mask.fits"):
             hdu = pyfits.open(fn)[0]
-            hdu.data = hdu.data.astype(bool)
-            return hdu
+            return PipelineImage(hdu, hdu.data.astype(bool))
         elif fn.endswith("fits"):
             hdu = pyfits.open(fn)[0]
             return hdu
