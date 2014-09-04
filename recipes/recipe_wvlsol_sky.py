@@ -264,8 +264,8 @@ def process_wvlsol_band(utdate, refdate, band, obsids, config):
         oh_sol_products = PipelineProducts("Wavelength solution based on ohlines")
         #from libs.process_thar import ONED_SPEC_JSON
         from libs.products import PipelineDict
-        SKY_WVLSOL_JSON = ("PRIMARY_CALIB_PATH", "SKY_", ".wvlsol_v1.json")
-        oh_sol_products.add(SKY_WVLSOL_JSON,
+        SKY_WVLSOL_JSON_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".wvlsol_v1.json")
+        oh_sol_products.add(SKY_WVLSOL_JSON_DESC,
                             PipelineDict(orders=orders_w_solutions,
                                          wvl_sol=wvl_sol))
 
@@ -397,6 +397,12 @@ def process_wvlsol_band(utdate, refdate, band, obsids, config):
         sky_db = ProductDB(sky_db_name)
         basename = os.path.splitext(os.path.basename(sky_filenames[0]))[0]
         sky_db.update(band, basename)
+
+
+        thar_db = ProductDB(thar_db_name)
+        # os.path.join(igr_path.secondary_calib_path,
+        #                                  "thar.db"))
+        thar_db.update(band, basename)
 
 
 

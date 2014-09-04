@@ -12,83 +12,130 @@ from libs.apertures import Apertures
 
 #from libs.products import PipelineProducts
 
-def distortion_sky(utdate, refdate="20140316", bands="HK",
-                   starting_obsids=None):
+from libs.recipe_base import RecipeBase
 
-    if not bands in ["H", "K", "HK"]:
-        raise ValueError("bands must be one of 'H', 'K' or 'HK'")
+class RecipeDistortionSky(RecipeBase):
+    RECIPE_NAME = "SKY"
 
-    fn = "%s.recipes" % utdate
-    from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
-    recipe = Recipes(fn)
+    def run_selected_bands(self, utdate, selected, bands):
+        for s in selected:
+            obsids = s[0]
+            print obsids
+            # frametypes = s[1]
 
-    if starting_obsids is not None:
-        starting_obsids = map(int, starting_obsids.split(","))
+            for band in bands:
+                process_distortion_sky_band(utdate, self.refdate, band, obsids,
+                                            self.config)
+                # process_wvlsol_band(utdate, self.refdate, band, obsids,
+                #                     self.config)
 
-    selected = recipe.select("SKY", starting_obsids)
+def distortion_sky(utdate, bands="HK",
+                   starting_obsids=None, config_file="recipe.config"):
 
-    for s in selected:
-        obsids = s[0]
+    RecipeDistortionSky()(utdate, bands,
+                          starting_obsids, config_file)
 
-        for band in bands:
-            process_distortion_sky_band(utdate, refdate, band, obsids)
+# def distortion_sky(utdate, refdate="20140316", bands="HK",
+#                    starting_obsids=None):
 
+#     if not bands in ["H", "K", "HK"]:
+#         raise ValueError("bands must be one of 'H', 'K' or 'HK'")
 
+#     fn = "%s.recipes" % utdate
+#     from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
+#     recipe = Recipes(fn)
 
+#     if starting_obsids is not None:
+#         starting_obsids = map(int, starting_obsids.split(","))
 
-def process_distortion_sky_band(utdate, refdate, band, obsids):
+#     selected = recipe.select("SKY", starting_obsids)
 
-    from libs.products import ProductPath, ProductDB
+#     for s in selected:
+#         obsids = s[0]
 
-    igr_path = IGRINSPath(utdate)
-    igrins_files = IGRINSFiles(igr_path)
-
-    sky_filenames = igrins_files.get_filenames(band, obsids)
-
-    sky_path = ProductPath(igr_path, sky_filenames[0])
-    sky_master_obsid = obsids[0]
-
-    # obj_filenames = igrins_files.get_filenames(band, obsids)
-    # obj_path = ProductPath(igr_path, obj_filenames[0])
-    # obj_master_obsid = obsids[0]
-
-    # flatoff_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
-    #                                     "flat_off.db"))
-    flaton_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
-                                       "flat_on.db"))
-    thar_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
-                                       "thar.db"))
-    # sky_db = ProductDB(os.path.join(igr_path.secondary_calib_path,
-    #                                 "sky.db"))
-
-    # basename = sky_db.query(band, obj_master_obsid)
-    # sky_path = ProductPath(igr_path, basename)
-    raw_spec_products = PipelineProducts.load(sky_path.get_secondary_path("raw_spec"))
+#         for band in bands:
+#             process_distortion_sky_band(utdate, refdate, band, obsids)
 
 
+def load_aperture(igr_storage, band, master_obsid, flaton_db,
+                  orders, orders_w_solutions):
+    from libs.process_flat import FLATCENTROID_SOL_JSON_DESC
 
-    basename = flaton_db.query(band, sky_master_obsid)
-    flaton_path = ProductPath(igr_path, basename)
+    flaton_basename = flaton_db.query(band, master_obsid)
 
-    aperture_solution_products = PipelineProducts.load(flaton_path.get_secondary_path("aperture_solutions"))
-
-    bottomup_solutions = aperture_solution_products["bottom_up_solutions"]
+    aperture_solution_products = igr_storage.load([FLATCENTROID_SOL_JSON_DESC], flaton_basename)
 
 
-    basename = thar_db.query(band, sky_master_obsid)
-    thar_path = ProductPath(igr_path, basename)
-    fn = thar_path.get_secondary_path("median_spectra")
-    # thar_products = PipelineProducts.load(fn)
+    bottomup_solutions = aperture_solution_products[FLATCENTROID_SOL_JSON_DESC]["bottom_up_solutions"]
 
-    # basename = sky_db.query(band, sky_master_obsid)
-    # sky_path = ProductPath(igr_path, basename)
-    fn = sky_path.get_secondary_path("wvlsol_v1")
-    wvlsol_products = PipelineProducts.load(fn)
 
-    if 1:
+    _o_s = dict(zip(orders, bottomup_solutions))
+    ap =  Apertures(orders_w_solutions,
+                    [_o_s[o] for o in orders_w_solutions])
+
+    # _o_s = dict(zip(orders, bottomup_solutions))
+    # ap =  Apertures(orders,
+    #                 [_o_s[o] for o in orders])
+    # # ap =  Apertures(orders,
+    # #                 bottomup_solutions)
+
+    return ap
+
+
+
+def process_distortion_sky_band(utdate, refdate, band, obsids, config):
+
+    from libs.products import ProductDB, PipelineStorage
+
+    igr_path = IGRINSPath(config, utdate)
+
+    igr_storage = PipelineStorage(igr_path)
+
+    sky_filenames = igr_path.get_filenames(band, obsids)
+
+
+    sky_basename = os.path.splitext(os.path.basename(sky_filenames[0]))[0]
+
+    master_obsid = obsids[0]
+
+
+    flaton_db_name = igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
+                                                        "flat_on.db",
+                                                        )
+    flaton_db = ProductDB(flaton_db_name)
+
+    thar_db_name = igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
+                                                        "thar.db",
+                                                        )
+    thar_db = ProductDB(thar_db_name)
+
+
+
+    from libs.process_thar import COMBINED_IMAGE_DESC, ONED_SPEC_JSON
+    raw_spec_products = igr_storage.load([COMBINED_IMAGE_DESC, ONED_SPEC_JSON],
+                                         sky_basename)
+
+    # raw_spec_products = PipelineProducts.load(sky_path.get_secondary_path("raw_spec"))
+
+    SKY_WVLSOL_JSON_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".wvlsol_v1.json")
+
+    wvlsol_products = igr_storage.load([SKY_WVLSOL_JSON_DESC],
+                                       sky_basename)[SKY_WVLSOL_JSON_DESC]
+
+    orders_w_solutions = wvlsol_products["orders"]
+    wvl_solutions = wvlsol_products["wvl_sol"]
+
+    ap = load_aperture(igr_storage, band, master_obsid,
+                       flaton_db,
+                       raw_spec_products[ONED_SPEC_JSON]["orders"],
+                       orders_w_solutions)
+    #orders_w_solutions = ap.orders
+
+
+    if 1: # load reference data
         from libs.master_calib import load_sky_ref_data
 
-        ref_utdate = "20140316"
+        ref_utdate = config.get_value("REFDATE", utdate)
 
         sky_ref_data = load_sky_ref_data(ref_utdate, band)
 
@@ -100,11 +147,50 @@ def process_distortion_sky_band(utdate, refdate, band, obsids):
         orders_w_solutions = wvlsol_products["orders"]
         wvl_solutions = wvlsol_products["wvl_sol"]
 
-    if 1: # make aperture
 
-        _o_s = dict(zip(raw_spec_products["orders"], bottomup_solutions))
-        ap =  Apertures(orders_w_solutions,
-                        [_o_s[o] for o in orders_w_solutions])
+    if 0:
+        raw_spec_products = PipelineProducts.load(sky_path.get_secondary_path("raw_spec"))
+
+
+
+        basename = flaton_db.query(band, sky_master_obsid)
+        flaton_path = ProductPath(igr_path, basename)
+
+        aperture_solution_products = PipelineProducts.load(flaton_path.get_secondary_path("aperture_solutions"))
+
+        bottomup_solutions = aperture_solution_products["bottom_up_solutions"]
+
+
+        basename = thar_db.query(band, sky_master_obsid)
+        thar_path = ProductPath(igr_path, basename)
+        fn = thar_path.get_secondary_path("median_spectra")
+        # thar_products = PipelineProducts.load(fn)
+
+        # basename = sky_db.query(band, sky_master_obsid)
+        # sky_path = ProductPath(igr_path, basename)
+        fn = sky_path.get_secondary_path("wvlsol_v1")
+        wvlsol_products = PipelineProducts.load(fn)
+
+        if 1:
+            from libs.master_calib import load_sky_ref_data
+
+            ref_utdate = "20140316"
+
+            sky_ref_data = load_sky_ref_data(ref_utdate, band)
+
+
+            ohlines_db = sky_ref_data["ohlines_db"]
+            ref_ohline_indices = sky_ref_data["ohline_indices"]
+
+
+            orders_w_solutions = wvlsol_products["orders"]
+            wvl_solutions = wvlsol_products["wvl_sol"]
+
+        if 1: # make aperture
+
+            _o_s = dict(zip(raw_spec_products["orders"], bottomup_solutions))
+            ap =  Apertures(orders_w_solutions,
+                            [_o_s[o] for o in orders_w_solutions])
 
 
     if 1:
@@ -120,7 +206,7 @@ def process_distortion_sky_band(utdate, refdate, band, obsids):
         slice_down = [(slit_slice[i_center-i-1], slit_slice[i_center-i]) \
                       for i in range(n_slice_one_direction)]
 
-        d = raw_spec_products["combined_image"]
+        d = raw_spec_products[COMBINED_IMAGE_DESC].data
         s_center = ap.extract_spectra_v2(d, slice_center[0], slice_center[1])
 
         s_up, s_down = [], []
@@ -169,8 +255,8 @@ def process_distortion_sky_band(utdate, refdate, band, obsids):
         if band == "H":
             reidentified_lines_map, ref_pixel_list_oh = \
                        get_reidentified_lines_OH(orders_w_solutions,
-                                              wvl_solutions,
-                                              s_center)
+                                                 wvl_solutions,
+                                                 s_center)
 
             def refit_centroid(s_center,
                                ref_pixel_list=ref_pixel_list_oh):
@@ -341,12 +427,27 @@ def process_distortion_sky_band(utdate, refdate, band, obsids):
             slitoffset_map[msk] = p2_dict[o](xl[msk], slitpos_map[msk])
 
         import astropy.io.fits as pyfits
-        fn = sky_path.get_secondary_path("slitoffset_map.fits")
-        pyfits.PrimaryHDU(data=slitoffset_map).writeto(fn, clobber=True)
+        #fn = sky_path.get_secondary_path("slitoffset_map.fits")
+        #pyfits.PrimaryHDU(data=slitoffset_map).writeto(fn, clobber=True)
+
+        SLITOFFSET_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".slitoffset_map.fits")
+        from libs.products import PipelineImage, PipelineProducts
+        distortion_products = PipelineProducts("Distortion map")
+        distortion_products.add(SLITOFFSET_FITS_DESC,
+                                PipelineImage([],
+                                              slitoffset_map))
+
+        igr_storage.store(distortion_products,
+                          mastername=sky_filenames[0],
+                          masterhdu=None)
+
 
         from libs.qa_helper import figlist_to_pngs
-        fn = sky_path.get_secondary_path("oh_distortion", "oh_fit2d_dir")
-        figlist_to_pngs(fn, fig_list)
+        sky_figs = igr_path.get_section_filename_base("QA_PATH",
+                                                      "oh_distortion",
+                                                      "oh_distortion_dir")
+        print fig_list
+        figlist_to_pngs(sky_figs, fig_list)
 
 
     if 0:
