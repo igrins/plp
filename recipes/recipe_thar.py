@@ -199,7 +199,7 @@ def process_thar_band(utdate, refdate, band, obsids, config):
         #order_flat_products.save(fn, masterhdu=hdu)
 
         igr_storage.store(order_flat_products,
-                          mastername=thar_filenames[0],
+                          mastername=flaton_basename,
                           masterhdu=hdu)
 
 

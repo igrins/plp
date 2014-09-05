@@ -48,6 +48,14 @@ class PipelineStorage(object):
         self.igr_path = igr_path
         self._cache = {}
 
+    def get_path(self, desc, mastername):
+        section, prefix, ext = desc
+        fn0 = prefix + os.path.basename(mastername) + ext
+        fn = self.igr_path.get_section_filename_base(section, fn0)
+
+        return fn
+
+
     def load(self, product_descs, mastername):
         mastername, ext_ = os.path.splitext(mastername)
 
