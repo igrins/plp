@@ -126,11 +126,14 @@ def process_flat_band(utdate, refdate, band, obsids_off, obsids_on,
         fig2, fig3 = plot_trace_solutions(flaton_products,
                                           trace_solution_products)
 
+    flatoff_basename = os.path.splitext(os.path.basename(flat_off_filenames[0]))[0]
+    flaton_basename = os.path.splitext(os.path.basename(flat_on_filenames[0]))[0]
+
     if 1:
         from libs.qa_helper import figlist_to_pngs
         aperture_figs = igr_path.get_section_filename_base("QA_PATH",
                                                            "aperture",
-                                                           "aperture_dir")
+                                                           "aperture_"+flaton_basename)
 
         figlist_to_pngs(aperture_figs, [fig1, fig2, fig3])
 
@@ -141,16 +144,15 @@ def process_flat_band(utdate, refdate, band, obsids_off, obsids_on,
                                                              "flat_off.db",
                                                              )
         flatoff_db = ProductDB(flatoff_db_name)
-        dbname = os.path.splitext(os.path.basename(flat_off_filenames[0]))[0]
-        flatoff_db.update(band, dbname)
+        #dbname = os.path.splitext(os.path.basename(flat_off_filenames[0]))[0]
+        flatoff_db.update(band, flatoff_basename)
 
 
         flaton_db_name = igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
                                                              "flat_on.db",
                                                              )
         flaton_db = ProductDB(flaton_db_name)
-        dbname = os.path.splitext(os.path.basename(flat_on_filenames[0]))[0]
-        flaton_db.update(band, dbname)
+        flaton_db.update(band, flaton_basename)
 
 
 
