@@ -75,7 +75,7 @@ class PipelineStorage(object):
             #self.save_one(fn, v, masterhdu)
         return r
 
-    def store(self, products, mastername, masterhdu=None):
+    def store(self, products, mastername, masterhdu=None, cache=True):
         mastername, ext_ = os.path.splitext(mastername)
 
         for (section, prefix, ext), v in products.items():
@@ -83,7 +83,8 @@ class PipelineStorage(object):
             fn = self.igr_path.get_section_filename_base(section, fn0)
 
             print "store", fn
-            self._cache[fn] = v
+            if cache:
+                self._cache[fn] = v
             self.save_one(fn, v, masterhdu)
 
     def save_one(self, fn, v, masterhdu=None):

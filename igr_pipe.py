@@ -7,6 +7,8 @@ import recipes.recipe_wvlsol_sky
 from recipes.recipe_extract import (a0v_ab, stellar_ab,
                                     extended_ab, extended_onoff)
 
+from recipes.recipe_extract_plot import plot_spec
+
 recipe_list = [recipes.recipe_flat.flat,
                recipes.recipe_thar.thar,
                recipes.recipe_wvlsol_sky.sky_wvlsol,
@@ -14,7 +16,8 @@ recipe_list = [recipes.recipe_flat.flat,
                a0v_ab,
                stellar_ab,
                extended_ab,
-               extended_onoff
+               extended_onoff,
+               plot_spec
                ]
 
 parser = argh.ArghParser()

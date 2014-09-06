@@ -26,15 +26,21 @@ class Recipes(object):
         self.recipe_dict = make_recipe_dict(self.recipe_list)
 
     def select(self, recipe_name, starting_obsids=None):
-        if recipe_name not in self.recipe_dict:
+        if recipe_name == "ALL_RECIPES":
+            recipes_selected = []
+            for v in self.recipe_dict.values():
+                recipes_selected.extend(v)
+        elif recipe_name not in self.recipe_dict:
             return []
+        else:
+            recipes_selected = self.recipe_dict[recipe_name]
 
         if starting_obsids is None:
-            return self.recipe_dict[recipe_name]
+            return recipes_selected # self.recipe_dict[recipe_name]
 
         selected = []
         selected_obsids = []
-        for _ in self.recipe_dict[recipe_name]:
+        for _ in recipes_selected:
             obsids = _[0]
             if obsids[0] in starting_obsids:
                 selected.append(_)

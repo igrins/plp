@@ -18,7 +18,8 @@ class IGRINSPath(object):
                       "OUTDATA_PATH",
                       "PRIMARY_CALIB_PATH",
                       "SECONDARY_CALIB_PATH",
-                      "QA_PATH"]
+                      "QA_PATH",
+                      "HTML_PATH"]
 
     def __init__(self, config, utdate):
 
