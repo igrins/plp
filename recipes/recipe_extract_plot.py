@@ -13,73 +13,6 @@ from libs.apertures import Apertures
 #from libs.products import PipelineProducts
 
 
-def a0v_ab(utdate, refdate="20140316", bands="HK",
-           starting_obsids=None,
-           interactive=False,
-           config_file="recipe.config"):
-    recipe = "A0V_AB"
-    abba_all(recipe, utdate, refdate=refdate, bands=bands,
-             starting_obsids=starting_obsids, interactive=interactive,
-             config_file=config_file)
-
-def stellar_ab(utdate, refdate="20140316", bands="HK",
-               starting_obsids=None,
-               interactive=False,
-               config_file="recipe.config"):
-    recipe = "STELLAR_AB"
-    abba_all(recipe, utdate, refdate=refdate, bands=bands,
-             starting_obsids=starting_obsids,
-             interactive=interactive,
-             config_file=config_file)
-
-def extended_ab(utdate, refdate="20140316", bands="HK",
-                starting_obsids=None,
-                config_file="recipe.config"):
-    recipe = "EXTENDED_AB"
-    abba_all(recipe, utdate, refdate=refdate, bands=bands,
-             starting_obsids=starting_obsids,
-             config_file=config_file)
-
-def extended_onoff(utdate, refdate="20140316", bands="HK",
-                   starting_obsids=None,
-                   config_file="recipe.config"):
-    recipe = "EXTENDED_ONOFF"
-    abba_all(recipe, utdate, refdate=refdate, bands=bands,
-             starting_obsids=starting_obsids,
-             config_file=config_file)
-
-
-
-def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
-             starting_obsids=None, interactive=False,
-             config_file="recipe.config"):
-
-    from libs.igrins_config import IGRINSConfig
-    config = IGRINSConfig(config_file)
-
-    if not bands in ["H", "K", "HK"]:
-        raise ValueError("bands must be one of 'H', 'K' or 'HK'")
-
-    fn = "%s.recipes" % utdate
-    from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
-    recipe = Recipes(fn)
-
-    if starting_obsids is not None:
-        starting_obsids = map(int, starting_obsids.split(","))
-
-    selected = recipe.select(recipe_name, starting_obsids)
-    if not selected:
-        print "no recipe of with matching arguments is found"
-
-    for s in selected:
-        obsids = s[0]
-        frametypes = s[1]
-
-        for band in bands:
-            process_abba_band(recipe_name, utdate, refdate, band,
-                              obsids, frametypes, config,
-                              do_interactive_figure=interactive)
-
 
 def plot_spec(utdate, refdate="20140316", bands="HK",
               starting_obsids=None, interactive=False,
@@ -109,7 +42,10 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
         obsids = s[0]
         frametypes = s[1]
         recipe_name = s[2]["RECIPE"]
-        print recipe_name
+        if recipe_name not in ["A0V_AB", "STELLAR_AB",
+                               "EXTENDED_AB", "EXTENDED_ONOFF"]:
+            continue
+
         for band in bands:
             process_abba_band(recipe_name, utdate, refdate, band,
                               obsids, frametypes, config,
@@ -144,6 +80,8 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
         DO_STD = False
         FIX_TELLURIC=True
 
+    else:
+        raise ValueError("Unsupported Recipe : %s" % recipe)
 
     if 1:
 
@@ -225,9 +163,10 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
                                    tgt_basename)[SN_FITS_DESC]
         tgt_sn = list(tgt_sn_.data)
 
+    fig_list = []
 
     # telluric
-    if FIX_TELLURIC:
+    if 1: #FIX_TELLURIC:
         A0V_basename = db["a0v"].query(band, master_obsid)
 
         SPEC_FITS_FLATTENED_DESC = ("OUTDATA_PATH", "",
@@ -255,7 +194,6 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
 
 
 
-        fig_list = []
         if 1:
 
 
@@ -439,7 +377,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
             ax2.axhline(1, color="0.5")
 
     # save figures
-    if 1:
+    if fig_list:
         figout = igr_path.get_section_filename_base("QA_PATH",
                                                     "spec_"+tgt_basename,
                                                     "spec_dir")
