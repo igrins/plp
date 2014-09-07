@@ -44,7 +44,8 @@ def get_offset_transform(thar_spec_src, thar_spec_dst):
         offset = center - np.argmax(cor)
         offsets.append(offset)
 
-    from skimage.measure import ransac, LineModel
+    #from skimage.measure import ransac, LineModel
+    from skimage_measure_fit import ransac, LineModel
 
     xi = np.arange(len(offsets))
     data = np.array([xi, offsets]).T
