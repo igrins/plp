@@ -49,8 +49,16 @@
    <td>{{ src.obsids }}</td>
    <td>{{ src.frametypes }}</td>
    <td>
-  <a href="{{ src.url_H }}">H</a>
-  <a href="{{ src.url_K }}">K</a>
+     {% if src.url_H is defined %}
+       <a href="{{ src.url_H }}">H</a>
+     {% else %}
+       H
+     {% endif %}
+     {% if src.url_K is defined %}
+       <a href="{{ src.url_K }}">K</a>
+     {% else %}
+       K
+     {% endif %}
    </td>
   </tr>
 {% endfor %}

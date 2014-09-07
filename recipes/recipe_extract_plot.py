@@ -456,6 +456,15 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
         save_for_html(dirname, objroot, band, orders_w_solutions,
                       wvl_list_html, s_list_html, sn_list_html)
 
+        from jinja2 import Environment, FileSystemLoader
+        env = Environment(loader=FileSystemLoader('jinja_templates'))
+        spec_template = env.get_template('spec.html')
+
+        jsname = "igrins_spec_%04d_%s.js" % (master_obsid, band)
+        ss = spec_template.render(utdate=utdate, jsname=jsname)
+        htmlname = "igrins_spec_%04d_%s.html" % (master_obsid, band)
+        open(os.path.join(dirname, htmlname), "w").write(ss)
+
 
     if do_interactive_figure:
         import matplotlib.pyplot as plt
