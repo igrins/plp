@@ -733,7 +733,8 @@ def check_order_trace2(ax, x, p):
 def prepare_order_trace_plot(s_list, row_col=(3, 2)):
 
     from matplotlib.figure import Figure
-    from mpl_toolkits.axes_grid1 import Grid
+    #from mpl_toolkits.axes_grid1 import Grid
+    from axes_grid_patched import Grid
 
     row, col = row_col
 
