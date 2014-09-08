@@ -417,22 +417,42 @@ def save_for_html(dir, name, band, orders, wvl_sol, s_list1, s_list2):
     from libs.path_info import ensure_dir
     ensure_dir(dir)
 
+    # Pandas requires the byte order of data (from fits) needs to be
+    # converted to native byte order of the computer this script is
+    # running.
     wvl_sol = [w.byteswap().newbyteorder() for w in wvl_sol]
     s_list1 = [s1.byteswap().newbyteorder() for s1 in s_list1]
     s_list2 = [s2.byteswap().newbyteorder() for s2 in s_list2]
 
-    df_list = []
+    df_even_odd = {}
     for o, wvl, s in zip(orders, wvl_sol, s_list1):
-        df = pd.DataFrame({'order%03d'%o: s},
+        oo = ["even", "odd"][o % 2]
+        dn = 'order_%s'%oo
+        df = pd.DataFrame({dn: s},
                           index=wvl)
-        df_list.append(df)
+        df[dn][wvl[0]] = "NaN"
+        df[dn][wvl[-1]] = "NaN"
+
+        df_even_odd.setdefault(oo, []).append(df)
+
+    df_list = [pd.concat(v).fillna("NaN") for v in df_even_odd.values()]
     df1 = df_list[0].join(df_list[1:], how="outer")
 
-    df_list = []
+    #df_list = []
+    df_even_odd = {}
     for o, wvl, s in zip(orders, wvl_sol, s_list2):
-        df = pd.DataFrame({'order%03d'%o: s},
+        oo = ["even", "odd"][o % 2]
+        dn = 'order_%s'%oo
+        df = pd.DataFrame({dn: s},
                           index=wvl)
-        df_list.append(df)
+
+        df[dn][wvl[0]] = "NaN"
+        df[dn][wvl[-1]] = "NaN"
+
+        df_even_odd.setdefault(oo, []).append(df)
+
+        #df_list.append(df)
+    df_list = [pd.concat(v).fillna("NaN") for v in df_even_odd.values()]
     df2 = df_list[0].join(df_list[1:], how="outer")
 
     igrins_spec_output1 = "igrins_spec_%s_%s_fig1.csv.html" % (name, band)
