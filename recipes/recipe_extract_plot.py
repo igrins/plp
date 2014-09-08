@@ -1,17 +1,7 @@
 import os
 import numpy as np
 
-#from libs.process_flat import FlatOff, FlatOn
-
-
-from libs.path_info import IGRINSPath, IGRINSFiles
-import astropy.io.fits as pyfits
-
-from libs.products import PipelineProducts
-from libs.apertures import Apertures
-
-#from libs.products import PipelineProducts
-
+from libs.path_info import IGRINSPath
 
 
 def plot_spec(utdate, refdate="20140316", bands="HK",
@@ -42,6 +32,8 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
         obsids = s[0]
         frametypes = s[1]
         recipe_name = s[2]["RECIPE"]
+        objname = s[2]["OBJNAME"]
+
         if recipe_name not in ["A0V_AB", "STELLAR_AB",
                                "EXTENDED_AB", "EXTENDED_ONOFF"]:
             continue
@@ -50,34 +42,32 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
             process_abba_band(recipe_name, utdate, refdate, band,
                               obsids, frametypes, config,
                               do_interactive_figure=interactive,
-                              threshold_a0v=threshold_a0v)
+                              threshold_a0v=threshold_a0v,
+                              objname=objname)
 
 
 def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
                       config,
                       do_interactive_figure=False,
-                      threshold_a0v=0.1):
+                      threshold_a0v=0.1,
+                      objname=""):
 
-    from libs.products import ProductPath, ProductDB, PipelineStorage
+    from libs.products import ProductDB, PipelineStorage
 
     if recipe == "A0V_AB":
 
-        DO_STD = True
         FIX_TELLURIC=False
 
     elif recipe == "STELLAR_AB":
 
-        DO_STD = False
         FIX_TELLURIC=True
 
     elif recipe == "EXTENDED_AB":
 
-        DO_STD = False
         FIX_TELLURIC=True
 
     elif recipe == "EXTENDED_ONOFF":
 
-        DO_STD = False
         FIX_TELLURIC=True
 
     else:
@@ -122,7 +112,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
 
 
     if 1: # make aperture
-        SKY_WVLSOL_JSON_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".wvlsol_v1.json")
+        from libs.storage_descriptions import SKY_WVLSOL_JSON_DESC
 
         sky_basename = db["sky"].query(band, master_obsid)
         wvlsol_products = igr_storage.load([SKY_WVLSOL_JSON_DESC],
@@ -134,7 +124,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
 
 
     # prepare i1i2_list
-    from libs.process_flat import ORDER_FLAT_JSON_DESC
+    from libs.storage_descriptions import ORDER_FLAT_JSON_DESC
     prod = igr_storage.load([ORDER_FLAT_JSON_DESC],
                             basenames["flat_on"])[ORDER_FLAT_JSON_DESC]
 
@@ -150,15 +140,14 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
 
 
 
+    from libs.storage_descriptions import (SPEC_FITS_DESC,
+                                           SN_FITS_DESC)
+
     if 1: # load target spectrum
-        SPEC_FITS_DESC = ("OUTDATA_PATH", "",
-                          ".spec.fits")
         tgt_spec_ = igr_storage.load([SPEC_FITS_DESC],
                                      tgt_basename)[SPEC_FITS_DESC]
         tgt_spec = list(tgt_spec_.data)
 
-        SN_FITS_DESC = ("OUTDATA_PATH", "",
-                        ".sn.fits")
         tgt_sn_ = igr_storage.load([SN_FITS_DESC],
                                    tgt_basename)[SN_FITS_DESC]
         tgt_sn = list(tgt_sn_.data)
@@ -169,8 +158,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
     if 1: #FIX_TELLURIC:
         A0V_basename = db["a0v"].query(band, master_obsid)
 
-        SPEC_FITS_FLATTENED_DESC = ("OUTDATA_PATH", "",
-                                    ".spec_flattened.fits")
+        from libs.storage_descriptions import SPEC_FITS_FLATTENED_DESC
         telluric_cor_ = igr_storage.load([SPEC_FITS_FLATTENED_DESC],
                                          A0V_basename)[SPEC_FITS_FLATTENED_DESC]
 
@@ -179,19 +167,10 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
         telluric_cor = list(telluric_cor_.data)
 
 
-        SPEC_FITS_DESC = ("OUTDATA_PATH", "",
-                                    ".spec.fits")
         a0v_spec_ = igr_storage.load([SPEC_FITS_DESC],
-                                         A0V_basename)[SPEC_FITS_DESC]
+                                     A0V_basename)[SPEC_FITS_DESC]
 
-        #A0V_path = ProductPath(igr_path, A0V_basename)
-        #fn = A0V_path.get_secondary_path("spec_flattened.fits")
         a0v_spec = list(a0v_spec_.data)
-
-        # fn = A0V_path.get_secondary_path("spec.fits")
-        # telluric_cor = list(pyfits.open(fn)[0].data)
-        #print fn
-
 
 
         if 1:
@@ -231,7 +210,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
                 sl = slice(i1, i2)
                 #res = fitted_response[o_new_ind]
                 #wvl, s = np.array(wvl), np.array(s)
-                mmm = np.isfinite(s[sl])
+                # mmm = np.isfinite(s[sl])
 
                 wvl_list_html.append(wvl[sl])
                 s_list_html.append(s[sl])
@@ -272,115 +251,26 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
             # pixel_per_res_element = 3.7
             # ymax = 1.2*(s_list[12][1024]/v_list[12][1024]**.5*pixel_per_res_element**.5)
             # ax2.set_ylim(0, ymax)
+            ax1a.set_ylabel("Counts [DN]")
             ax1b.set_ylabel("S/N per Res. Element")
+            ax1b.set_xlabel("Wavelength [um]")
 
+            ax2a.set_ylabel("A0V flattened")
+            ax2b.set_ylabel("Target / A0V")
+            ax2b.set_xlabel("Wavelength [um]")
 
-        if 0: # IF_POINT_SOURCE: # if point source, try simple telluric factor for A0V
-            # new_orders = orderflat_products["orders"]
-            # # fitted_response = orderflat_products["fitted_responses"]
-            # i1i2_list = orderflat_products["i1i2_list"]
+            ax1a.set_title(objname)
+            ax2a.set_title(objname)
 
-            fig2 = Figure(figsize=(12,8))
-            fig_list.append(fig2)
-
-            ax1 = fig2.add_subplot(211)
-            for o_index, wvl, s in zip(order_indices,
-                                       wvl_solutions, s_list):
-                i1, i2 = i1i2_list[o_index]
-                sl = slice(i1, i2)
-                # res = fitted_response[o_new_ind]
-                #ax1.plot(wvl[sl], (s/res)[sl])
-
-            from libs.master_calib import get_master_calib_abspath
-            fn = get_master_calib_abspath("A0V/vegallpr25.50000resam5")
-            d = np.genfromtxt(fn)
-
-            wvl, flux, cont = (d[:,i] for i in [0, 1, 2])
-            ax2 = fig2.add_subplot(212, sharex=ax1)
-            wvl = wvl/1000.
-            if band == "H":
-                mask_wvl1, mask_wvl2 = 1.450, 1.850
-            else:
-                mask_wvl1, mask_wvl2 = 1.850, 2.550
-
-            mask_H = (mask_wvl1 < wvl) & (wvl < mask_wvl2)
-
-            fn = get_master_calib_abspath("telluric/LBL_A15_s0_w050_R0060000_T.fits")
-            telluric = pyfits.open(fn)[1].data
-            telluric_lam = telluric["lam"]
-            tel_mask_H = (mask_wvl1 < telluric_lam) & (telluric_lam < mask_wvl2)
-            #plot(telluric_lam[tel_mask_H], telluric["trans"][tel_mask_H])
-            from scipy.interpolate import interp1d, UnivariateSpline
-            spl = UnivariateSpline(telluric_lam[tel_mask_H],
-                                   telluric["trans"][tel_mask_H],
-                                   k=1,s=0)
-
-            spl = interp1d(telluric_lam[tel_mask_H],
-                           telluric["trans"][tel_mask_H],
-                           bounds_error=False
-                           )
-
-            trans = spl(wvl[mask_H])
-            ax1.plot(wvl[mask_H], flux[mask_H]/cont[mask_H]*trans,
-                     color="0.5", zorder=0.5)
-
-
-            trans_m = ni.maximum_filter(trans, 128)
-            trans_mg = ni.gaussian_filter(trans_m, 32)
-
-            zzz0 = flux[mask_H]/cont[mask_H]
-            zzz = zzz0*trans
-            mmm = trans/trans_mg > 0.95
-            zzz[~mmm] = np.nan
-            wvl_zzz = wvl[mask_H]
-            #ax2.plot(, zzz)
-
-            #ax2 = subplot(212)
-            if DO_STD:
-                telluric_cor = []
-
-            for o_index, wvl, s in zip(order_indices, wvl_solutions, s_list):
-
-                i1, i2 = i1i2_list[o_index]
-                sl = slice(i1, i2)
-                wvl1, wvl2 = wvl[i1], wvl[i2]
-                #wvl1, wvl2 = wvl[0], wvl[-1]
-                z_m = (wvl1 < wvl_zzz) & (wvl_zzz < wvl2)
-
-                ss = interp1d(wvl, s)
-
-                s_interped = ss(wvl_zzz[z_m])
-
-                xxx, yyy = wvl_zzz[z_m], s_interped/zzz[z_m]
-
-                from astropy.modeling import models, fitting
-                p_init = models.Chebyshev1D(domain=[xxx[0], xxx[-1]],
-                                            degree=6)
-                fit_p = fitting.LinearLSQFitter()
-                x_m = np.isfinite(yyy)
-                p = fit_p(p_init, xxx[x_m], yyy[x_m])
-                #ax2.plot(xxx, yyy)
-                #ax2.plot(xxx, p(xxx))
-
-                res_ = p(wvl)
-
-                z_interp = interp1d(xxx, zzz0[z_m], bounds_error=False)
-                A0V = z_interp(wvl)
-                res_[res_<0.3*res_.max()] = np.nan
-                ax1.plot(wvl[sl], (s/res_)[sl])
-                ax2.plot(wvl[sl], (s/res_/A0V)[sl])
-
-                if DO_STD:
-                    telluric_cor.append((s/res_)/A0V)
-
-            ax1.axhline(1, color="0.5")
-            ax2.axhline(1, color="0.5")
 
     # save figures
     if fig_list:
+        for fig in fig_list:
+            fig.tight_layout()
+
         figout = igr_path.get_section_filename_base("QA_PATH",
                                                     "spec_"+tgt_basename,
-                                                    "spec_dir")
+                                                    "spec_"+tgt_basename)
         #figout = obj_path.get_secondary_path("spec", "spec_dir")
         from libs.qa_helper import figlist_to_pngs
         figlist_to_pngs(figout, fig_list)

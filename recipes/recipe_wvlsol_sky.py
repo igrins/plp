@@ -3,8 +3,7 @@ import numpy as np
 
 #from libs.process_flat import FlatOff, FlatOn
 
-
-from libs.path_info import IGRINSPath, IGRINSFiles
+from libs.path_info import IGRINSPath
 #import astropy.io.fits as pyfits
 
 from libs.products import PipelineProducts
@@ -60,7 +59,7 @@ def sky_wvlsol(utdate, bands="HK",
 
 
 def load_aperture(igr_storage, band, master_obsid, flaton_db, thar_db):
-    from libs.process_flat import FLATCENTROID_SOL_JSON_DESC
+    from libs.storage_descriptions import FLATCENTROID_SOL_JSON_DESC
 
     flaton_basename = flaton_db.query(band, master_obsid)
     thar_basename = thar_db.query(band, master_obsid)
@@ -74,11 +73,11 @@ def load_aperture(igr_storage, band, master_obsid, flaton_db, thar_db):
     thar_basename = thar_db.query(band, master_obsid)
 
     # thar_path = ProductPath(igr_path, basename)
-    from libs.process_thar import ONED_SPEC_JSON
-    thar_spec_products = igr_storage.load([ONED_SPEC_JSON],
+    from libs.storage_descriptions import ONED_SPEC_JSON_DESC
+    thar_spec_products = igr_storage.load([ONED_SPEC_JSON_DESC],
                                           thar_basename)
 
-    ap =  Apertures(thar_spec_products[ONED_SPEC_JSON]["orders"],
+    ap =  Apertures(thar_spec_products[ONED_SPEC_JSON_DESC]["orders"],
                     bottomup_solutions)
 
     return ap
@@ -160,10 +159,10 @@ def process_wvlsol_band(utdate, refdate, band, obsids, config):
         # json_name_ = "SDC%s_%s_0003.median_spectra.wvlsol" % (band,
         #                                                      igrins_log.date)
 
-        from libs.process_thar import THAR_WVLSOL_JSON
+        from libs.storage_descriptions import THAR_WVLSOL_JSON_DESC
         thar_basename = thar_db.query(band, master_obsid)
-        thar_wvl_sol = igr_storage.load([THAR_WVLSOL_JSON],
-                                        thar_basename)[THAR_WVLSOL_JSON]
+        thar_wvl_sol = igr_storage.load([THAR_WVLSOL_JSON_DESC],
+                                        thar_basename)[THAR_WVLSOL_JSON_DESC]
         #print thar_wvl_sol.keys()
         #["wvl_sol"]
 
@@ -188,10 +187,10 @@ def process_wvlsol_band(utdate, refdate, band, obsids, config):
             wvl_solutionv = p["wvl_sol"]
 
         orders_w_solutions_ = thar_wvl_sol["orders"]
-        from libs.process_thar import ONED_SPEC_JSON
-        orders_w_solutions = [o for o in orders_w_solutions_ if o in raw_spec_product[ONED_SPEC_JSON]["orders"]]
-        _ = dict(zip(raw_spec_product[ONED_SPEC_JSON]["orders"],
-                     raw_spec_product[ONED_SPEC_JSON]["specs"]))
+        from libs.storage_descriptions import ONED_SPEC_JSON_DESC
+        orders_w_solutions = [o for o in orders_w_solutions_ if o in raw_spec_product[ONED_SPEC_JSON_DESC]["orders"]]
+        _ = dict(zip(raw_spec_product[ONED_SPEC_JSON_DESC]["orders"],
+                     raw_spec_product[ONED_SPEC_JSON_DESC]["specs"]))
         s_list = [_[o]for o in orders_w_solutions]
 
 
@@ -268,7 +267,7 @@ def process_wvlsol_band(utdate, refdate, band, obsids, config):
         oh_sol_products = PipelineProducts("Wavelength solution based on ohlines")
         #from libs.process_thar import ONED_SPEC_JSON
         from libs.products import PipelineDict
-        SKY_WVLSOL_JSON_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".wvlsol_v1.json")
+        from libs.storage_descriptions import SKY_WVLSOL_JSON_DESC
         oh_sol_products.add(SKY_WVLSOL_JSON_DESC,
                             PipelineDict(orders=orders_w_solutions,
                                          wvl_sol=wvl_sol))
@@ -330,7 +329,7 @@ def process_wvlsol_band(utdate, refdate, band, obsids, config):
             hdu = pyfits.PrimaryHDU(header=header,
                                     data=np.array([]).reshape((0,0)))
 
-            SKY_WVLSOL_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".wvlsol_v1.fits")
+            from libs.storage_descriptions import SKY_WVLSOL_FITS_DESC
             from libs.products import PipelineImage
             oh_sol_products.add(SKY_WVLSOL_FITS_DESC,
                                 PipelineImage([],
@@ -413,7 +412,7 @@ def process_wvlsol_band(utdate, refdate, band, obsids, config):
 
 def load_aperture2(igr_storage, band, master_obsid, flaton_db,
                   orders, orders_w_solutions):
-    from libs.process_flat import FLATCENTROID_SOL_JSON_DESC
+    from libs.storage_descriptions import FLATCENTROID_SOL_JSON_DESC
 
     flaton_basename = flaton_db.query(band, master_obsid)
 
@@ -458,20 +457,22 @@ def process_distortion_sky_band(utdate, refdate, band, obsids, config):
                                                         )
     flaton_db = ProductDB(flaton_db_name)
 
-    thar_db_name = igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
-                                                        "thar.db",
-                                                        )
-    thar_db = ProductDB(thar_db_name)
+    # thar_db_name = igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
+    #                                                     "thar.db",
+    #                                                     )
+    # thar_db = ProductDB(thar_db_name)
 
 
 
-    from libs.process_thar import COMBINED_IMAGE_DESC, ONED_SPEC_JSON
-    raw_spec_products = igr_storage.load([COMBINED_IMAGE_DESC, ONED_SPEC_JSON],
+    from libs.storage_descriptions import (COMBINED_IMAGE_DESC,
+                                           ONED_SPEC_JSON_DESC)
+    raw_spec_products = igr_storage.load([COMBINED_IMAGE_DESC,
+                                          ONED_SPEC_JSON_DESC],
                                          sky_basename)
 
     # raw_spec_products = PipelineProducts.load(sky_path.get_secondary_path("raw_spec"))
 
-    SKY_WVLSOL_JSON_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".wvlsol_v1.json")
+    from libs.storage_descriptions import SKY_WVLSOL_JSON_DESC
 
     wvlsol_products = igr_storage.load([SKY_WVLSOL_JSON_DESC],
                                        sky_basename)[SKY_WVLSOL_JSON_DESC]
@@ -481,7 +482,7 @@ def process_distortion_sky_band(utdate, refdate, band, obsids, config):
 
     ap = load_aperture2(igr_storage, band, master_obsid,
                         flaton_db,
-                        raw_spec_products[ONED_SPEC_JSON]["orders"],
+                        raw_spec_products[ONED_SPEC_JSON_DESC]["orders"],
                         orders_w_solutions)
     #orders_w_solutions = ap.orders
 
@@ -735,11 +736,11 @@ def process_distortion_sky_band(utdate, refdate, band, obsids, config):
             msk = order_map == o
             slitoffset_map[msk] = p2_dict[o](xl[msk], slitpos_map[msk])
 
-        import astropy.io.fits as pyfits
-        #fn = sky_path.get_secondary_path("slitoffset_map.fits")
-        #pyfits.PrimaryHDU(data=slitoffset_map).writeto(fn, clobber=True)
+        # import astropy.io.fits as pyfits
+        # fn = sky_path.get_secondary_path("slitoffset_map.fits")
+        # pyfits.PrimaryHDU(data=slitoffset_map).writeto(fn, clobber=True)
 
-        SLITOFFSET_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".slitoffset_map.fits")
+        from libs.storage_descriptions import SLITOFFSET_FITS_DESC
         from libs.products import PipelineImage, PipelineProducts
         distortion_products = PipelineProducts("Distortion map")
         distortion_products.add(SLITOFFSET_FITS_DESC,

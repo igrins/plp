@@ -161,7 +161,7 @@ class ProcessABBABand(object):
 
 
         if 1: # make aperture
-            SKY_WVLSOL_JSON_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".wvlsol_v1.json")
+            from libs.storage_descriptions import SKY_WVLSOL_JSON_DESC
 
             sky_basename = db["sky"].query(band, master_obsid)
             wvlsol_products = igr_storage.load([SKY_WVLSOL_JSON_DESC],
@@ -170,15 +170,18 @@ class ProcessABBABand(object):
             orders_w_solutions = wvlsol_products["orders"]
             wvl_solutions = map(np.array, wvlsol_products["wvl_sol"])
 
-            from libs.process_thar import COMBINED_IMAGE_DESC, ONED_SPEC_JSON
-            raw_spec_products = igr_storage.load([COMBINED_IMAGE_DESC, ONED_SPEC_JSON],
+            from libs.storage_descriptions import (COMBINED_IMAGE_DESC,
+                                                   ONED_SPEC_JSON_DESC)
+
+            raw_spec_products = igr_storage.load([COMBINED_IMAGE_DESC,
+                                                  ONED_SPEC_JSON_DESC],
                                                  sky_basename)
 
             from recipe_wvlsol_sky import load_aperture2
 
             ap = load_aperture2(igr_storage, band, master_obsid,
                                 db["flat_on"],
-                                raw_spec_products[ONED_SPEC_JSON]["orders"],
+                                raw_spec_products[ONED_SPEC_JSON_DESC]["orders"],
                                 orders_w_solutions)
 
             # load_aperture2(igr_storage, band, master_obsid, flaton_db,
@@ -197,8 +200,7 @@ class ProcessABBABand(object):
         if FIX_TELLURIC:
             A0V_basename = db["a0v"].query(band, master_obsid)
 
-            SPEC_FITS_FLATTENED_DESC = ("OUTDATA_PATH", "",
-                                        ".spec_flattened.fits")
+            from libs.storage_descriptions import SPEC_FITS_FLATTENED_DESC
             telluric_cor_ = igr_storage.load([SPEC_FITS_FLATTENED_DESC],
                                              A0V_basename)[SPEC_FITS_FLATTENED_DESC]
 
@@ -207,8 +209,7 @@ class ProcessABBABand(object):
             telluric_cor = list(telluric_cor_.data)
 
 
-            SPEC_FITS_DESC = ("OUTDATA_PATH", "",
-                                        ".spec.fits")
+            from libs.storage_descriptions import SPEC_FITS_DESC
             a0v_spec_ = igr_storage.load([SPEC_FITS_DESC],
                                              A0V_basename)[SPEC_FITS_DESC]
 
@@ -223,12 +224,11 @@ class ProcessABBABand(object):
 
         if 1:
 
-            from libs.process_flat import (HOTPIX_MASK_DESC,
-                                           DEADPIX_MASK_DESC,
-                                           ORDER_FLAT_IM_DESC,
-                                           ORDER_FLAT_JSON_DESC,
-                                           FLAT_NORMED_DESC,
-                                           FLAT_MASK_DESC)
+            from libs.storage_descriptions import (HOTPIX_MASK_DESC,
+                                                   DEADPIX_MASK_DESC,
+                                                   ORDER_FLAT_IM_DESC,
+                                                   ORDER_FLAT_JSON_DESC,
+                                                   FLAT_MASK_DESC)
 
             hotpix_mask = igr_storage.load([HOTPIX_MASK_DESC],
                                            basenames["flat_off"])[HOTPIX_MASK_DESC]
@@ -490,8 +490,8 @@ class ProcessABBABand(object):
                 #                               slitoffset_map=slitoffset_map)
 
             if 1: # save the product
-                from libs.process_thar import COMBINED_IMAGE_DESC, ONED_SPEC_JSON
-                VARIANCE_MAP_DESC = ("OUTDATA_PATH", "", ".variance_map.fits")
+                from libs.storage_descriptions import (COMBINED_IMAGE_DESC,
+                                                       VARIANCE_MAP_DESC)
                 from libs.products import PipelineImage
 
                 r = PipelineProducts("1d specs")
@@ -523,7 +523,7 @@ class ProcessABBABand(object):
                 # r.save(fn, masterhdu=master_hdu)
 
 
-            from libs.process_flat import ORDER_FLAT_JSON_DESC
+            from libs.storage_descriptions import ORDER_FLAT_JSON_DESC
             prod = igr_storage.load([ORDER_FLAT_JSON_DESC],
                                     basenames["flat_on"])[ORDER_FLAT_JSON_DESC]
 
@@ -724,7 +724,7 @@ class ProcessABBABand(object):
             # save html
 
         if 1:
-            SKY_WVLSOL_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".wvlsol_v1.fits")
+            from libs.storage_descriptions import SKY_WVLSOL_FITS_DESC
             fn = igr_storage.get_path(SKY_WVLSOL_FITS_DESC,
                                       basenames["sky"])
 
@@ -734,7 +734,10 @@ class ProcessABBABand(object):
             d = np.array(s_list)
             f[0].data = d.astype("f32")
 
-            SPEC_FITS_DESC = ("OUTDATA_PATH", "", ".spec.fits")
+            from libs.storage_descriptions import (SPEC_FITS_DESC,
+                                                   VARIANCE_FITS_DESC,
+                                                   SN_FITS_DESC)
+
             fout = igr_storage.get_path(SPEC_FITS_DESC,
                                         tgt_basename)
 
@@ -743,16 +746,14 @@ class ProcessABBABand(object):
 
             d = np.array(v_list)
             f[0].data = d.astype("f32")
-            SPEC_FITS_DESC = ("OUTDATA_PATH", "", ".variance.fits")
-            fout = igr_storage.get_path(SPEC_FITS_DESC,
+            fout = igr_storage.get_path(VARIANCE_FITS_DESC,
                                         tgt_basename)
 
             f.writeto(fout, clobber=True)
 
             d = np.array(sn_list)
             f[0].data = d.astype("f32")
-            SPEC_FITS_DESC = ("OUTDATA_PATH", "", ".sn.fits")
-            fout = igr_storage.get_path(SPEC_FITS_DESC,
+            fout = igr_storage.get_path(SN_FITS_DESC,
                                         tgt_basename)
 
             f.writeto(fout, clobber=True)
@@ -763,8 +764,7 @@ class ProcessABBABand(object):
                 d[~np.isfinite(d)] = 0.
                 f[0].data = d.astype("f32")
 
-                SPEC_FITS_FLATTENED_DESC = ("OUTDATA_PATH", "",
-                                            ".spec_flattened.fits")
+                from libs.storage_descriptions import SPEC_FITS_FLATTENED_DESC
                 fout = igr_storage.get_path(SPEC_FITS_FLATTENED_DESC,
                                             tgt_basename)
 

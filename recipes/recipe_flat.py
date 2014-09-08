@@ -67,7 +67,10 @@ def process_flat_band(utdate, refdate, band, obsids_off, obsids_on,
 
     if 1: # flat on
 
-        from libs.process_flat import FLAT_OFF_DESC, HOTPIX_MASK_DESC, FLATOFF_JSON_DESC
+        from libs.storage_descriptions import (FLAT_OFF_DESC,
+                                               HOTPIX_MASK_DESC,
+                                               FLATOFF_JSON_DESC)
+
         desc_list = [FLAT_OFF_DESC, HOTPIX_MASK_DESC, FLATOFF_JSON_DESC]
         flatoff_products = igr_storage.load(desc_list,
                                             mastername=flat_off_filenames[0])

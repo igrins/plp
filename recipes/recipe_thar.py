@@ -74,7 +74,7 @@ def process_thar_band(utdate, refdate, band, obsids, config):
     flaton_basename = flaton_db.query(band, thar_master_obsid)
 
 
-    from libs.process_flat import FLATCENTROID_SOL_JSON_DESC
+    from libs.storage_descriptions import FLATCENTROID_SOL_JSON_DESC
 
     desc_list = [FLATCENTROID_SOL_JSON_DESC]
     products = igr_storage.load(desc_list,
@@ -115,8 +115,8 @@ def process_thar_band(utdate, refdate, band, obsids, config):
 
         ap =  Apertures(new_orders, bottomup_solutions)
 
-        from libs.process_thar import ONED_SPEC_JSON
-        thar_products[ONED_SPEC_JSON]["orders"] = new_orders
+        from libs.storage_descriptions import ONED_SPEC_JSON_DESC
+        thar_products[ONED_SPEC_JSON_DESC]["orders"] = new_orders
 
 
     if 1:
@@ -178,7 +178,9 @@ def process_thar_band(utdate, refdate, band, obsids, config):
 
     if 1: # make amp and order falt
 
-        orders = thar_products[ONED_SPEC_JSON]["orders"]
+        from libs.storage_descriptions import ONED_SPEC_JSON_DESC
+
+        orders = thar_products[ONED_SPEC_JSON_DESC]["orders"]
         order_map = ap.make_order_map()
         #slitpos_map = ap.make_slitpos_map()
 
@@ -187,7 +189,9 @@ def process_thar_band(utdate, refdate, band, obsids, config):
         #flat_on_params_name = flaton_path.get_secondary_path("flat_on_params")
 
         #flaton_products = PipelineProducts.load(flat_on_params_name)
-        from libs.process_flat import FLAT_NORMED_DESC, FLAT_MASK_DESC
+        from libs.storage_descriptions import (FLAT_NORMED_DESC,
+                                               FLAT_MASK_DESC)
+
         flaton_products = igr_storage.load([FLAT_NORMED_DESC, FLAT_MASK_DESC],
                                            flaton_basename)
 

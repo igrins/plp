@@ -9,23 +9,6 @@ from products import Card, PipelineImage, PipelineDict, PipelineProducts
 from igrins_detector import IGRINSDetector
 
 
-FLAT_OFF_DESC = ("OUTDATA_PATH", "", ".flat_off.fits")
-HOTPIX_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".hotpix_mask.fits")
-FLATOFF_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_off.json")
-
-FLAT_NORMED_DESC = ("OUTDATA_PATH", "", ".flat_normed.fits")
-FLAT_BPIXED_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_bpixed.fits")
-FLAT_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_mask.fits")
-DEADPIX_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".deadpix_mask.fits")
-FLATON_JSON_DESC = ("OUTDATA_PATH", "", ".flat_on.json")
-
-FLAT_DERIV_DESC = ("SECONDARY_CALIB_PATH", "FLAT_", ".flat_deriv.fits")
-FLATCENTROIDS_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".centroids.json")
-
-FLATCENTROID_SOL_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".centroid_solutions.json")
-
-ORDER_FLAT_IM_DESC = ("PRIMARY_CALIB_PATH", "ORDERFLAT_", ".fits")
-ORDER_FLAT_JSON_DESC = ("PRIMARY_CALIB_PATH", "ORDERFLAT_", ".json")
 
 class FlatOff(object):
     def __init__(self, offdata_list):
@@ -59,6 +42,11 @@ class FlatOff(object):
         hotpix_mask_image = PipelineImage([],
                                           hotpix_mask)
 
+
+        from storage_descriptions import (FLAT_OFF_DESC,
+                                          FLATOFF_JSON_DESC,
+                                          HOTPIX_MASK_DESC)
+
         r = PipelineProducts("flat off products")
         r.add(FLAT_OFF_DESC, flat_off_image)
 
@@ -87,6 +75,11 @@ class FlatOn(object):
         # flat_off = flatoff_product["flat_off"]
         # bg_std = flatoff_product["bg_std"]
         # hotpix_mask = flatoff_product["hotpix_mask"]
+
+        from storage_descriptions import (FLAT_OFF_DESC,
+                                          FLATOFF_JSON_DESC,
+                                          HOTPIX_MASK_DESC)
+
 
         flat_off = flatoff_product[FLAT_OFF_DESC].data
         bg_std = flatoff_product[FLATOFF_JSON_DESC]["bg_std"]
@@ -128,6 +121,13 @@ class FlatOn(object):
         flat_bpixed[deadpix_mask] = np.nan
 
 
+        from storage_descriptions import (FLAT_NORMED_DESC,
+                                          FLAT_BPIXED_DESC,
+                                          FLAT_MASK_DESC,
+                                          DEADPIX_MASK_DESC,
+                                          FLATON_JSON_DESC)
+
+
         r = PipelineProducts("flat on products")
 
         r.add(FLAT_NORMED_DESC, PipelineImage([], flat_normed))
@@ -151,6 +151,11 @@ def trace_orders(flaton_products):
     # flat_bpixed=flaton_products["flat_bpixed"]
     # bg_std_normed=flaton_products["bg_std_normed"]
     # flat_mask=flaton_products["flat_mask"]
+
+    from storage_descriptions import (FLAT_NORMED_DESC,
+                                      FLAT_BPIXED_DESC,
+                                      FLAT_MASK_DESC,
+                                      FLATON_JSON_DESC)
 
 
     flat_normed = flaton_products[FLAT_NORMED_DESC].data
@@ -183,6 +188,9 @@ def trace_orders(flaton_products):
 
     r = PipelineProducts("flat trace centroids")
 
+    from storage_descriptions import (FLAT_DERIV_DESC,
+                                      FLATCENTROIDS_JSON_DESC)
+
     r.add(FLAT_DERIV_DESC, PipelineImage([], flat_deriv))
     r.add(FLATCENTROIDS_JSON_DESC,
           PipelineDict(bottom_centroids=cent_bottom_list,
@@ -194,6 +202,10 @@ def trace_orders(flaton_products):
 def check_trace_order(trace_products, fig, rect=111):
     from mpl_toolkits.axes_grid1 import ImageGrid
     #d = trace_products["flat_deriv"]
+
+    from storage_descriptions import (FLAT_DERIV_DESC,
+                                      FLATCENTROIDS_JSON_DESC)
+
     d = trace_products[FLAT_DERIV_DESC].data
     trace_dict = trace_products[FLATCENTROIDS_JSON_DESC]
 
@@ -223,6 +235,8 @@ def check_trace_order(trace_products, fig, rect=111):
 def trace_solutions(trace_products):
 
 
+    from storage_descriptions import FLATCENTROIDS_JSON_DESC
+
     centroids_dict = trace_products[FLATCENTROIDS_JSON_DESC]
     bottom_centroids = centroids_dict["bottom_centroids"]
     up_centroids = centroids_dict["up_centroids"]
@@ -248,6 +262,8 @@ def trace_solutions(trace_products):
 
     r = PipelineProducts("order trace solutions")
 
+    from storage_descriptions import FLATCENTROID_SOL_JSON_DESC
+
     r.add(FLATCENTROID_SOL_JSON_DESC,
           PipelineDict(orders=[],
                        bottom_up_centroids=bottom_up_centroids,
@@ -260,6 +276,8 @@ def trace_solutions(trace_products):
 
 def make_order_flat(flaton_products, orders, order_map):
 
+    from storage_descriptions import (FLAT_NORMED_DESC,
+                                      FLAT_MASK_DESC)
 
     flat_normed  = flaton_products[FLAT_NORMED_DESC].data
     flat_mask = flaton_products[FLAT_MASK_DESC].data
@@ -314,6 +332,10 @@ def make_order_flat(flaton_products, orders, order_map):
 
     flat_im[flat_im < 0.5] = np.nan
 
+
+    from storage_descriptions import (ORDER_FLAT_IM_DESC,
+                                      ORDER_FLAT_JSON_DESC)
+
     r = PipelineProducts("order flat")
     r.add(ORDER_FLAT_IM_DESC, PipelineImage([], flat_im))
     r.add(ORDER_FLAT_JSON_DESC,
@@ -329,6 +351,8 @@ def check_order_flat(order_flat_products):
 
     from trace_flat import (prepare_order_trace_plot,
                             check_order_trace1, check_order_trace2)
+
+    from storage_descriptions import ORDER_FLAT_JSON_DESC
 
     mean_order_specs = order_flat_products[ORDER_FLAT_JSON_DESC]["mean_order_specs"]
 
@@ -362,6 +386,10 @@ def check_order_flat(order_flat_products):
 
 
 def plot_trace_solutions(flaton_products, trace_solution_products):
+
+    from storage_descriptions import (FLAT_NORMED_DESC,
+                                      FLATCENTROID_SOL_JSON_DESC)
+
     flat_normed = flaton_products[FLAT_NORMED_DESC].data
     _d = trace_solution_products[FLATCENTROID_SOL_JSON_DESC]
     bottom_up_centroids= _d["bottom_up_centroids"]
@@ -427,71 +455,71 @@ if 0:
 
 
 
-def process_flat(ondata_list, offdata_list):
+# def process_flat(ondata_list, offdata_list):
 
 
-    return_object = {}
+#     return_object = {}
 
 
 
-    return_object["flat_on_off"] = flat_on_off
-    return_object["flat_norm_factor"] = norm_factor
-    return_object["flat_normed"] = flat_norm
-    return_object["flat_bpix_mask"] = bpix_mask
-    return_object["bg_std"] = bg_std
-    return_object["bg_std_normed"] = bg_std_norm
-    return_object["flat_mask"] = flat_mask
+#     return_object["flat_on_off"] = flat_on_off
+#     return_object["flat_norm_factor"] = norm_factor
+#     return_object["flat_normed"] = flat_norm
+#     return_object["flat_bpix_mask"] = bpix_mask
+#     return_object["bg_std"] = bg_std
+#     return_object["bg_std_normed"] = bg_std_norm
+#     return_object["flat_mask"] = flat_mask
 
 
-    flat_deriv_ = get_y_derivativemap(flat_norm, flat_bpix,
-                                      bg_std_norm,
-                                      max_sep_order=150, pad=50,
-                                      flat_mask=flat_mask)
+#     flat_deriv_ = get_y_derivativemap(flat_norm, flat_bpix,
+#                                       bg_std_norm,
+#                                       max_sep_order=150, pad=50,
+#                                       flat_mask=flat_mask)
 
-    flat_deriv, flat_deriv_pos_msk, flat_deriv_neg_msk = flat_deriv_["data"], flat_deriv_["pos_mask"], flat_deriv_["neg_mask"]
-
-
-    return_object["flat_deriv"] = flat_deriv
-    return_object["flat_deriv_pos_mask"] = flat_deriv_pos_msk
-    return_object["flat_deriv_neg_mask"] = flat_deriv_neg_msk
-
-    ny, nx = flat_deriv.shape
-    cent_bottom_list = identify_horizontal_line(flat_deriv,
-                                                flat_deriv_pos_msk,
-                                                pad=50,
-                                                bg_std=bg_std_norm)
-
-    cent_up_list = identify_horizontal_line(-flat_deriv,
-                                            flat_deriv_neg_msk,
-                                            pad=50,
-                                            bg_std=bg_std_norm)
+#     flat_deriv, flat_deriv_pos_msk, flat_deriv_neg_msk = flat_deriv_["data"], flat_deriv_["pos_mask"], flat_deriv_["neg_mask"]
 
 
-    if 1: # chevyshev
-        _ = trace_centroids_chevyshev(cent_bottom_list,
-                                      cent_up_list,
-                                      domain=[0, 2048],
-                                      ref_x=nx/2)
+#     return_object["flat_deriv"] = flat_deriv
+#     return_object["flat_deriv_pos_mask"] = flat_deriv_pos_msk
+#     return_object["flat_deriv_neg_mask"] = flat_deriv_neg_msk
 
-    if 0:
-        order = 5
-        func_fitter = get_line_fiiter(order)
+#     ny, nx = flat_deriv.shape
+#     cent_bottom_list = identify_horizontal_line(flat_deriv,
+#                                                 flat_deriv_pos_msk,
+#                                                 pad=50,
+#                                                 bg_std=bg_std_norm)
 
-        _ = trace_centroids(cent_bottom_list,
-                            cent_up_list,
-                            func_fitter=func_fitter,
-                            ref_x=nx/2)
+#     cent_up_list = identify_horizontal_line(-flat_deriv,
+#                                             flat_deriv_neg_msk,
+#                                             pad=50,
+#                                             bg_std=bg_std_norm)
 
-    bottom_up_solutions, centroid_bottom_up_list = _
 
-    if 0:
-        plot_solutions(flat_norm,
-                       centroid_bottom_up_list,
-                       bottom_up_solutions)
+#     if 1: # chevyshev
+#         _ = trace_centroids_chevyshev(cent_bottom_list,
+#                                       cent_up_list,
+#                                       domain=[0, 2048],
+#                                       ref_x=nx/2)
 
-    return_object["cent_up_list"] = cent_up_list
-    return_object["cent_bottom_list"] = cent_bottom_list
-    return_object["bottomup_solutions"] = bottom_up_solutions
-    return_object["bottomup_centroids"] = centroid_bottom_up_list
+#     if 0:
+#         order = 5
+#         func_fitter = get_line_fiiter(order)
 
-    return return_object
+#         _ = trace_centroids(cent_bottom_list,
+#                             cent_up_list,
+#                             func_fitter=func_fitter,
+#                             ref_x=nx/2)
+
+#     bottom_up_solutions, centroid_bottom_up_list = _
+
+#     if 0:
+#         plot_solutions(flat_norm,
+#                        centroid_bottom_up_list,
+#                        bottom_up_solutions)
+
+#     return_object["cent_up_list"] = cent_up_list
+#     return_object["cent_bottom_list"] = cent_bottom_list
+#     return_object["bottomup_solutions"] = bottom_up_solutions
+#     return_object["bottomup_centroids"] = centroid_bottom_up_list
+
+#     return return_object
