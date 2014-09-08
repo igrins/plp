@@ -64,10 +64,11 @@ class PipelineStorage(object):
             fn0 = prefix + os.path.basename(mastername) + ext
             fn = self.igr_path.get_section_filename_base(section, fn0)
 
-            print "load", fn
             if fn in self._cache:
+                print "loading (cached)", fn
                 r[(section, prefix, ext)] = self._cache[fn]
             else:
+                print "loading", fn
                 v = self.load_one(fn)
                 r[(section, prefix, ext)] = v
                 self._cache[fn] = v
