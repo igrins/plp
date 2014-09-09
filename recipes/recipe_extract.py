@@ -140,7 +140,7 @@ class ProcessABBABand(object):
             db = {}
             basenames = {}
 
-            db_types = ["flat_off", "flat_on", "thar", "sky", "a0v"]
+            db_types = ["flat_off", "flat_on", "thar", "sky"]
 
             for db_type in db_types:
 
@@ -149,6 +149,16 @@ class ProcessABBABand(object):
                                                             )
                 db[db_type] = ProductDB(db_name)
 
+
+            # db on output path
+            db_types = ["a0v"]
+
+            for db_type in db_types:
+
+                db_name = igr_path.get_section_filename_base("OUTDATA_PATH",
+                                                            "%s.db" % db_type,
+                                                            )
+                db[db_type] = ProductDB(db_name)
 
             # to get basenames
             db_types = ["flat_off", "flat_on", "thar", "sky"]
@@ -170,11 +180,9 @@ class ProcessABBABand(object):
             orders_w_solutions = wvlsol_products["orders"]
             wvl_solutions = map(np.array, wvlsol_products["wvl_sol"])
 
-            from libs.storage_descriptions import (COMBINED_IMAGE_DESC,
-                                                   ONED_SPEC_JSON_DESC)
+            from libs.storage_descriptions import ONED_SPEC_JSON_DESC
 
-            raw_spec_products = igr_storage.load([COMBINED_IMAGE_DESC,
-                                                  ONED_SPEC_JSON_DESC],
+            raw_spec_products = igr_storage.load([ONED_SPEC_JSON_DESC],
                                                  sky_basename)
 
             from recipe_wvlsol_sky import load_aperture2

@@ -88,11 +88,21 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
         db = {}
         basenames = {}
 
-        db_types = ["flat_off", "flat_on", "thar", "sky", "a0v"]
+        db_types = ["flat_off", "flat_on", "thar", "sky"]
 
         for db_type in db_types:
 
             db_name = igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
+                                                        "%s.db" % db_type,
+                                                        )
+            db[db_type] = ProductDB(db_name)
+
+        # db on output path
+        db_types = ["a0v"]
+
+        for db_type in db_types:
+
+            db_name = igr_path.get_section_filename_base("OUTDATA_PATH",
                                                         "%s.db" % db_type,
                                                         )
             db[db_type] = ProductDB(db_name)

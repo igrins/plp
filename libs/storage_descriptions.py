@@ -28,12 +28,12 @@ ORDER_FLAT_JSON_DESC = ("PRIMARY_CALIB_PATH", "ORDERFLAT_", ".json")
 # image related descriptions
 
 COMBINED_IMAGE_DESC = ("OUTDATA_PATH", "", ".combined_image.fits")
-ONED_SPEC_JSON_DESC = ("OUTDATA_PATH", "", ".oned_spec.json")
+ONED_SPEC_JSON_DESC = ("PRIMARY_CALIB_PATH", "", ".oned_spec.json")
 
 # THAR related descriptions
 
-COMBINED_IMAGE_DESC = ("OUTDATA_PATH", "", ".combined_image.fits")
-ONED_SPEC_JSON_DESC = ("OUTDATA_PATH", "", ".oned_spec.json")
+#COMBINED_IMAGE_DESC = ("OUTDATA_PATH", "", ".combined_image.fits")
+#ONED_SPEC_JSON_DESC = ("OUTDATA_PATH", "", ".oned_spec.json")
 
 THAR_REID_JSON_DESC = ("PRIMARY_CALIB_PATH", "THAR_", ".thar_reid.json")
 THAR_ALIGNED_JSON_DESC = ("PRIMARY_CALIB_PATH", "THAR_", ".thar_aligned.json")
