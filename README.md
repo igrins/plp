@@ -1,8 +1,8 @@
 # IGRINS Pipeline Package
 
-IGRINS pipeline package is currently in active development. 
+IGRINS pipeline package is currently in active development. There are two versions for now. Once the version 2 becomes mature, version one may be deprecated.
 
-Currently there are two versions.
+- https://github.com/igrins/plp/releases
 
 ## Version 1
 
@@ -27,7 +27,7 @@ at KASI (led by Dr. Jae-Joon Lee) in close collaboration with KHU's
 team.
 
 The new pipeline is designed to produce decent quality of processed
-data of all the observing data without human interaction. It was also
+data of all the observing data without (or minimum) human interaction. It was also
 designed to be adaptable for a real time processing during the
 observing run.
 
@@ -41,3 +41,4 @@ should be used to which data sets.
 
 The page below briefly describes how to run the pipeline version 2.
 
+ - https://github.com/igrins/plp/wiki/How-to-run-pipeline
