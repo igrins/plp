@@ -16,7 +16,7 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
     if not bands in ["H", "K", "HK"]:
         raise ValueError("bands must be one of 'H', 'K' or 'HK'")
 
-    fn = "%s.recipes" % utdate
+    fn = config.get_value('RECIPE_LOG_PATH', utdate)
     from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
     recipe = Recipes(fn)
 

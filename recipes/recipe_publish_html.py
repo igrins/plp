@@ -2,15 +2,13 @@ import os
 from jinja2 import Environment, FileSystemLoader
 
 
-def make_html(utdate, dirname):
-    #from libs.path_info import IGRINSPath, IGRINSLog, IGRINSFiles
+def make_html(utdate, dirname, config_file="recipe.config"):
 
-    #igr_path = IGRINSPath(utdate)
+    from libs.igrins_config import IGRINSConfig
+    config = IGRINSConfig(config_file)
 
-    #igrins_files = IGRINSFiles(igr_path)
-
+    fn = config.get_value('RECIPE_LOG_PATH', utdate)
     from libs.recipes import load_recipe_list
-    fn = "%s.recipes" % utdate
     recipe_list = load_recipe_list(fn)
     #recipe_dict = make_recipe_dict(recipe_list)
 

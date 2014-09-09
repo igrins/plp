@@ -8,7 +8,8 @@ class RecipeBase(object):
             raise ValueError("bands must be one of 'H', 'K' or 'HK'")
 
     def get_recipe_name(self, utdate):
-        return "%s.recipes" % utdate
+        fn = self.config.get_value('RECIPE_LOG_PATH', utdate)
+        return fn
 
     def get_recipes(self, utdate):
         fn = self.get_recipe_name(utdate)

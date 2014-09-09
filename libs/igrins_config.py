@@ -18,7 +18,7 @@ class IGRINSConfig(object):
 if __name__ == "__main__":
 
     igrins_config = IGRINSConfig()
-    print igrins_config.get_value('INDATA_PATH', "20140525")
+    print igrins_config.get_value('RECIPE_LOG_PATH', "20140525")
 
     # print config.get("DEFAULT", 'INDATA_PATH', 0, dict(UTDATE="20140525"))
 
