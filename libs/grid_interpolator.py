@@ -17,6 +17,12 @@ class GridInterpolator(object):
                                  method="linear")
         elif self._interpolator == "mlab":
             from matplotlib.mlab import griddata
-            z_gridded = griddata(xl, yl, zl, self.xi, self.yi)
+            try:
+                import mpl_toolkits.natgrid
+            except ImportError:
+                z_gridded = griddata(xl, yl, zl, self.xi, self.yi,
+                                     interp="linear")
+            else:
+                z_gridded = griddata(xl, yl, zl, self.xi, self.yi)
 
         return z_gridded
