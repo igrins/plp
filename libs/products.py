@@ -1,6 +1,7 @@
 import os
 from json_helper import json_dump
 import json
+import numpy as np
 
 import astropy.io.fits as pyfits
 
@@ -13,9 +14,9 @@ class PipelineImage(object):
 
     def store(self, fn, masterhdu=None):
         if self.data.dtype == bool:
-            d = self.data.astype("i8")
+            d = np.array(self.data).astype("i8")
         else:
-            d = self.data
+            d = np.array(self.data)
 
         if masterhdu is not None:
             hdu = pyfits.PrimaryHDU(header=masterhdu.header,
