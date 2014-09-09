@@ -151,7 +151,9 @@ def align_echellogram_thar(thar_reidentified_products, echel, band, ap):
 
     orders = thar_reidentified_products[THAR_REID_JSON_DESC]["orders"]
 
-    th = np.genfromtxt("ThArlines.dat")
+    fn0 = "ThArlines.dat"
+    fn = get_master_calib_abspath(fn0)
+    th = np.genfromtxt(fn)
     wvl_thar = th[:,0]/1.e4
     #s_thar = np.clip(th[:,1], a_min=20, a_max=np.inf)
 
