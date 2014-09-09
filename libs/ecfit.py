@@ -49,23 +49,26 @@ class GridInterpolator(object):
         self.xx, self.yy = np.meshgrid(xi, yi)
         self._interpolator = interpolator
 
+
+    def _grid_scipy(self, xl, yl, zl):
+        from scipy.interpolate import griddata
+        x_sample = 256
+        z_gridded = griddata(np.array([yl*x_sample, xl]).T,
+                             np.array(zl),
+                             (self.yy*x_sample, self.xx),
+                             method="linear")
+        return z_gridded
+
+
     def __call__(self, xl, yl, zl):
         if self._interpolator == "scipy":
-            from scipy.interpolate import griddata
-            x_sample = 256
-            z_gridded = griddata(np.array([yl*x_sample, xl]).T,
-                                 np.array(zl),
-                                 (self.yy*x_sample, self.xx),
-                                 method="linear")
+            z_gridded = self._grid_scipy(xl, yl, zl)
         elif self._interpolator == "mlab":
             from matplotlib.mlab import griddata
             try:
-                import mpl_toolkits.natgrid
-            except ImportError:
-                z_gridded = griddata(xl, yl, zl, self.xi, self.yi,
-                                     interp="linear")
-            else:
                 z_gridded = griddata(xl, yl, zl, self.xi, self.yi)
+            except Exception:
+                z_gridded = self._grid_scipy(xl, yl, zl)
 
         return z_gridded
 
