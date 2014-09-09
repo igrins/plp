@@ -96,7 +96,8 @@ class FlatOn(object):
         bg_std_norm = bg_std/norm_factor
 
         # mask out bpix
-        flat_bpixed = flat_normed.astype("d", copy=True)
+        flat_bpixed = flat_normed.astype("d") # by default, astype
+                                              # returns new array.
         flat_bpixed[hotpix_mask] = np.nan
 
         flat_mask = get_flat_mask(flat_bpixed, bg_std_norm,

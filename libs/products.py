@@ -13,10 +13,18 @@ class PipelineImage(object):
         self.data = data
 
     def store(self, fn, masterhdu=None):
-        if self.data.dtype == bool:
-            d = np.array(self.data).astype("i8")
-        else:
-            d = np.array(self.data)
+        d = self.data
+
+        if d.dtype.kind == "b":
+            d = d.astype("uint8")
+
+        if hasattr(d, "filled"): # if masked array
+            if d.dtype.kind in  "ui": # "u" or "i"
+                d = d.filled(0) # not sure if this is safe
+            elif d.dtype.kind == "f":
+                d = d.astype("d").filled(np.nan)
+            else:
+                raise ValueError("unsupported dtype :  %s" % str(d.dtype))
 
         if masterhdu is not None:
             hdu = pyfits.PrimaryHDU(header=masterhdu.header,
