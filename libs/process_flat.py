@@ -201,7 +201,8 @@ def trace_orders(flaton_products):
 
 
 def check_trace_order(trace_products, fig, rect=111):
-    from mpl_toolkits.axes_grid1 import ImageGrid
+    #from mpl_toolkits.axes_grid1 import ImageGrid
+    from libs.axes_grid import ImageGrid
     #d = trace_products["flat_deriv"]
 
     from storage_descriptions import (FLAT_DERIV_DESC,

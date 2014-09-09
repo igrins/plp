@@ -1,5 +1,4 @@
 import os
-from jinja2 import Environment, FileSystemLoader
 
 
 def make_html(utdate, dirname, config_file="recipe.config"):
@@ -53,6 +52,7 @@ def publish_html(utdate, config_file="recipe.config"):
 
     dirname = config.get_value("HTML_PATH", utdate)
 
+    from jinja2 import Environment, FileSystemLoader
     env = Environment(loader=FileSystemLoader('jinja_templates'))
     template = env.get_template('index.html')
 

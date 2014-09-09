@@ -421,9 +421,9 @@ if 0:
 #     frametypes = abba[1]
 
 
-import pandas as pd
 
 def save_for_html(dir, name, band, orders, wvl_sol, s_list1, s_list2):
+    import pandas as pd
     from libs.path_info import ensure_dir
     ensure_dir(dir)
 
