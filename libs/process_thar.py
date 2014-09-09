@@ -188,7 +188,7 @@ def plot_detected(ax1, im, x_det, y_det):
                cmap="gray_r",
                vmin=0, vmax=63)
 
-    ax1.plot(x_det, y_det, "ro", ms=3)
+    ax1.plot(x_det, y_det, "ro", ms=5)
 
 
 

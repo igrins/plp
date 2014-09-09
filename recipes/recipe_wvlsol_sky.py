@@ -93,6 +93,8 @@ def process_wvlsol_band(utdate, refdate, band, obsids, config):
 
     sky_filenames = igr_path.get_filenames(band, obsids)
 
+    sky_basename = os.path.splitext(os.path.basename(sky_filenames[0]))[0]
+
 
     master_obsid = obsids[0]
 
@@ -385,10 +387,11 @@ def process_wvlsol_band(utdate, refdate, band, obsids, config):
                       reidentified_lines_map_filtered)
             fig2.tight_layout()
 
+    if 1:
         from libs.qa_helper import figlist_to_pngs
         sky_figs = igr_path.get_section_filename_base("QA_PATH",
                                                        "oh_fit2d",
-                                                       "oh_fit2d_dir")
+                                                       "oh_fit2d_"+sky_basename)
         figlist_to_pngs(sky_figs, [fig1, fig2])
 
     if 1:
@@ -398,8 +401,7 @@ def process_wvlsol_band(utdate, refdate, band, obsids, config):
                                                           )
 
         sky_db = ProductDB(sky_db_name)
-        basename = os.path.splitext(os.path.basename(sky_filenames[0]))[0]
-        sky_db.update(band, basename)
+        sky_db.update(band, sky_basename)
 
 
         # thar_db = ProductDB(thar_db_name)
@@ -446,8 +448,8 @@ def process_distortion_sky_band(utdate, refdate, band, obsids, config):
 
     sky_filenames = igr_path.get_filenames(band, obsids)
 
-
     sky_basename = os.path.splitext(os.path.basename(sky_filenames[0]))[0]
+
 
     master_obsid = obsids[0]
 
@@ -755,7 +757,7 @@ def process_distortion_sky_band(utdate, refdate, band, obsids, config):
         from libs.qa_helper import figlist_to_pngs
         sky_figs = igr_path.get_section_filename_base("QA_PATH",
                                                       "oh_distortion",
-                                                      "oh_distortion_dir")
+                                                      "oh_distortion_"+sky_basename)
         print fig_list
         figlist_to_pngs(sky_figs, fig_list)
 

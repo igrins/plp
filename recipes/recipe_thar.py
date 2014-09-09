@@ -63,6 +63,8 @@ def process_thar_band(utdate, refdate, band, obsids, config):
 
     thar_filenames = igr_path.get_filenames(band, obsids)
 
+    thar_basename = os.path.splitext(os.path.basename(thar_filenames[0]))[0]
+
 
     thar_master_obsid = obsids[0]
 
@@ -166,7 +168,7 @@ def process_thar_band(utdate, refdate, band, obsids, config):
         from libs.qa_helper import figlist_to_pngs
         thar_figs = igr_path.get_section_filename_base("QA_PATH",
                                                        "thar",
-                                                       "thar_dir")
+                                                       "thar_"+thar_basename)
         figlist_to_pngs(thar_figs, fig_list)
 
         thar_wvl_sol = get_wavelength_solutions(thar_aligned_echell_products,
@@ -206,13 +208,13 @@ def process_thar_band(utdate, refdate, band, obsids, config):
                           mastername=flaton_basename,
                           masterhdu=hdu)
 
-
+    if 1:
         fig_list = check_order_flat(order_flat_products)
 
         from libs.qa_helper import figlist_to_pngs
         orderflat_figs = igr_path.get_section_filename_base("QA_PATH",
                                                             "orderflat",
-                                                            "orderflat_dir")
+                                                            "orderflat_"+thar_basename)
         figlist_to_pngs(orderflat_figs, fig_list)
 
     if 1:
@@ -223,8 +225,7 @@ def process_thar_band(utdate, refdate, band, obsids, config):
         thar_db = ProductDB(thar_db_name)
         # os.path.join(igr_path.secondary_calib_path,
         #                                  "thar.db"))
-        basename = os.path.splitext(os.path.basename(thar_filenames[0]))[0]
-        thar_db.update(band, basename)
+        thar_db.update(band, thar_basename)
 
 
 if __name__ == "__main__":

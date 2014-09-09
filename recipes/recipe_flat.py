@@ -135,7 +135,7 @@ def process_flat_band(utdate, refdate, band, obsids_off, obsids_on,
     if 1:
         from libs.qa_helper import figlist_to_pngs
         aperture_figs = igr_path.get_section_filename_base("QA_PATH",
-                                                           "aperture",
+                                                           "aperture_"+flaton_basename,
                                                            "aperture_"+flaton_basename)
 
         figlist_to_pngs(aperture_figs, [fig1, fig2, fig3])
