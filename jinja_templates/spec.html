@@ -1,0 +1,21 @@
+<html ng-app="myApp">
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.0-beta.14/angular.min.js"></script>
+<script type="text/javascript" src="{{ jsname }}"></script>
+<script type="text/javascript" src="../static/myctrl.js"></script>
+<script type="text/javascript" src="../static/dygraph-combined.js"></script>
+<script type="text/javascript" src="../static/interact.js"></script>
+</head>
+<body>
+<div ng-controller="MyCtrl"><span>{[{name}]} -- order ({[{order_min}]} ~ {[{order_max}]}) :</span>
+<input type="number" name="order" ng-model="order"/><button ng-click="go()">go</button><span>---</span>
+<button ng-click="prev_order()">prev order</button>
+<button ng-click="next_order()">next order</button>
+<button ng-click="show_all_order()">all orders</button>
+</div>
+<p>zoom-in (click-drag), pan (shift-click-drag), resotre zoom (double click)</p>
+<div id="graphdiv" style="position:absolute;left:30px;right:30px;height:200px"></div><div id="graphdiv2"
+style="position:absolute;left:30px;right:30px;margin-top:210px;height:200px"></div><script type="text/javascript"
+src="../static/jj.js"></script>
+</body>
+</html>

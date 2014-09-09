@@ -1,0 +1,6 @@
+*.pyc
+*~
+*#
+*.recipes
+*.tmp
+html_*
