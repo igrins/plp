@@ -286,9 +286,13 @@ def check_thar_transorm(thar_products, thar_echell_products):
 
         ax2 = grid[1]
         im = check_dx1(ax2, x, y, dx, gi, mystd=2*mystd)
-        from mpl_toolkits.decorator import colorbar
-        cb = colorbar(im, ax=ax2, loc=1)
-        cb.set_label(r"$\Delta\lambda$ [pixel]")
+        try:
+            from mpl_toolkits.decorator import colorbar
+        except ImportError:
+            pass
+        else:
+            cb = colorbar(im, ax=ax2, loc=1)
+            cb.set_label(r"$\Delta\lambda$ [pixel]")
         check_dx2(ax2, x, y, dx)
 
         ax1 = grid[0]
