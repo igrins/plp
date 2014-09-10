@@ -31,8 +31,8 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
     for s in selected:
         obsids = s[0]
         frametypes = s[1]
-        recipe_name = s[2]["RECIPE"]
-        objname = s[2]["OBJNAME"]
+        recipe_name = s[2]["RECIPE"].strip()
+        objname = s[2]["OBJNAME"].strip()
 
         if recipe_name not in ["A0V_AB", "STELLAR_AB",
                                "EXTENDED_AB", "EXTENDED_ONOFF"]:
