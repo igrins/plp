@@ -1,4 +1,3 @@
-import re
 import os
 import numpy as np
 
@@ -10,14 +9,45 @@ def prepare_recipe_logs(utdate, config_file="recipe.config"):
     fn0 = config.get_value('INDATA_PATH', utdate)
     fn = os.path.join(fn0, "IGRINS_DT_Log_%s-1_H.txt" % (utdate,))
 
-    p_end_comma = re.compile(r",$")
-    s = "".join(p_end_comma.sub("", l) for l in open(fn))
+    # p_end_comma = re.compile(r",\s$")
+    # s = "".join(p_end_comma.sub(",\n", l) for l in lines)
 
-    dtype=[('FILENAME', 'S128'), ('OBSTIME', 'S128'), ('GROUP1', 'i'), ('GROUP2', 'i'), ('OBJNAME', 'S128'), ('OBJTYPE', 'S128'), ('FRAMETYPE', 'S128'), ('EXPTIME', 'd'), ('ROTPA', 'd'), ('RA', 'S128'), ('DEC', 'S128'), ('AM', 'd')]
+    #s = "".join(lines)
 
-    from StringIO import StringIO
-    l = np.genfromtxt(StringIO(s),
-                      names=True, skip_header=1, delimiter=",", dtype=dtype)
+    # dtype=[('FILENAME', 'S128'), ('OBSTIME', 'S128'), ('GROUP1', 'i'), ('GROUP2', 'i'), ('OBJNAME', 'S128'), ('OBJTYPE', 'S128'), ('FRAMETYPE', 'S128'), ('EXPTIME', 'd'), ('ROTPA', 'd'), ('RA', 'S128'), ('DEC', 'S128'), ('AM', 'd')]
+
+    # log file format for March and May, July is different.
+    dtype_=[('FILENAME', 'S128'),
+            ('OBSTIME', 'S128'),
+            ('GROUP1', 'i'),
+            ('GROUP2', 'i'),
+            ('OBJNAME', 'S128'),
+            ('OBJTYPE', 'S128'),
+            ('FRAMETYPE', 'S128'),
+            ('EXPTIME', 'd'),
+            ('ROTPA', 'd'),
+            ('RA', 'S128'),
+            ('DEC', 'S128'),
+            ('AM', 'd'),
+            ('OBSDATE', 'S128'),
+            ('SEQID1', 'i'),
+            ('SEQID2', 'i'),
+            ('ALT', 'd'),
+            ('AZI', 'd'),
+            ('OBSERVER', 'S128'),
+            ('EPOCH', 'S128'),
+            ('AGPOS', 'S128'),
+            ]
+    dtype_map = dict(dtype_)
+
+    dtype_replace = dict(SEQID1="GROUP1", SEQID2="GROUP2")
+
+    lines = open(fn).readlines()
+    stripped_lines = [s1.strip() for s1 in lines[1].split(",")]
+    dtype = [(dtype_replace.get(s1, s1), dtype_map[s1]) for s1 in stripped_lines if s1]
+
+    l = np.genfromtxt(fn,
+                      skip_header=2, delimiter=",", dtype=dtype)
 
     from itertools import groupby
 
