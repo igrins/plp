@@ -8,7 +8,8 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
               starting_obsids=None, interactive=False,
               recipe_name = "ALL_RECIPES",
               config_file="recipe.config",
-              threshold_a0v=0.1):
+              threshold_a0v=0.2,
+              html_output=False):
 
     from libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
@@ -43,14 +44,16 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
                               obsids, frametypes, config,
                               do_interactive_figure=interactive,
                               threshold_a0v=threshold_a0v,
-                              objname=objname)
+                              objname=objname,
+                              html_output=html_output)
 
 
 def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
                       config,
                       do_interactive_figure=False,
                       threshold_a0v=0.1,
-                      objname=""):
+                      objname="",
+                      html_output=False):
 
     from libs.products import ProductDB, PipelineStorage
 
@@ -193,84 +196,71 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
             fig1 = Figure(figsize=(12,6))
             fig_list.append(fig1)
 
-            fig2 = Figure(figsize=(12,6))
-            fig_list.append(fig2)
-
             ax1a = fig1.add_subplot(211)
             ax1b = fig1.add_subplot(212, sharex=ax1a)
 
-            ax2a = fig2.add_subplot(211)
-            ax2b = fig2.add_subplot(212, sharex=ax2a)
-            #from libs.stddev_filter import window_stdev
-
             for wvl, s, sn in zip(wvl_solutions, tgt_spec, tgt_sn):
+                #s[s<0] = np.nan
+                #sn[sn<0] = np.nan
+
                 ax1a.plot(wvl, s)
                 ax1b.plot(wvl, sn)
 
-
-
-
-            wvl_list_html, s_list_html, sn_list_html = [], [], []
-
-            for o_index, wvl, s, sn in zip(order_indices,
-                                          wvl_solutions,
-                                          tgt_spec, tgt_sn):
-
-                i1, i2 = i1i2_list[o_index]
-                sl = slice(i1, i2)
-                #res = fitted_response[o_new_ind]
-                #wvl, s = np.array(wvl), np.array(s)
-                # mmm = np.isfinite(s[sl])
-
-                wvl_list_html.append(wvl[sl])
-                s_list_html.append(s[sl])
-                sn_list_html.append(sn[sl])
-                #s_std = window_stdev(s, 25)
-                #ax1.plot(wvl[sl], ni.median_filter(s[sl]/s_std[sl], 10), "g-")
-
-
-
-            if FIX_TELLURIC:
-                tgt_spec_cor = []
-                #for s, t in zip(s_list, telluric_cor):
-                for s, t in zip(tgt_spec, a0v_spec):
-
-                    st = s/t
-                    st[t<np.median(t)*threshold_a0v] = np.nan
-                    tgt_spec_cor.append(st)
-            else:
-                tgt_spec_cor = tgt_spec
-
-            # wvl_list_html, s_list_html, sn_list_html = [], [], []
-
-
-            if FIX_TELLURIC:
-
-                for wvl, s, t in zip(wvl_solutions,
-                                     tgt_spec_cor,
-                                     telluric_cor):
-
-                    ax2a.plot(wvl, t, "0.8", zorder=0.5)
-                    ax2b.plot(wvl, s, zorder=0.5)
-
-
-
-            # ymax = 1.1*np.nanmax(tgt_spec[12])
-            # ax1.set_ylim(0, ymax)
-
-            # pixel_per_res_element = 3.7
-            # ymax = 1.2*(s_list[12][1024]/v_list[12][1024]**.5*pixel_per_res_element**.5)
-            # ax2.set_ylim(0, ymax)
             ax1a.set_ylabel("Counts [DN]")
             ax1b.set_ylabel("S/N per Res. Element")
             ax1b.set_xlabel("Wavelength [um]")
 
+            ax1a.set_title(objname)
+
+
+        if FIX_TELLURIC:
+
+            fig2 = Figure(figsize=(12,6))
+            fig_list.append(fig2)
+
+            ax2a = fig2.add_subplot(211)
+            ax2b = fig2.add_subplot(212, sharex=ax2a)
+
+            #from libs.stddev_filter import window_stdev
+
+            tgt_spec_cor = []
+            #for s, t in zip(s_list, telluric_cor):
+            for s, t, t2 in zip(tgt_spec, a0v_spec, telluric_cor):
+
+                st = s/t
+                #print np.percentile(t[np.isfinite(t)], 95), threshold_a0v
+                t0 = np.percentile(t[np.isfinite(t)], 95)*threshold_a0v
+                st[t<t0] = np.nan
+
+                st[t2 < threshold_a0v] = np.nan
+
+                tgt_spec_cor.append(st)
+
+
+            for wvl, s, t in zip(wvl_solutions,
+                                 tgt_spec_cor,
+                                 telluric_cor):
+
+                ax2a.plot(wvl, t, "0.8", zorder=0.5)
+                ax2b.plot(wvl, s, zorder=0.5)
+
+            s_max_list = []
+            s_min_list = []
+            for s in tgt_spec_cor[3:-3]:
+                s_max_list.append(np.nanmax(s))
+                s_min_list.append(np.nanmin(s))
+            s_max = np.max(s_max_list)
+            s_min = np.min(s_min_list)
+            ds_pad = 0.05 * (s_max - s_min)
+
             ax2a.set_ylabel("A0V flattened")
+            ax2a.set_ylim(-0.05, 1.1)
             ax2b.set_ylabel("Target / A0V")
             ax2b.set_xlabel("Wavelength [um]")
 
-            ax1a.set_title(objname)
+            ax2b.set_ylim(s_min-ds_pad, s_max+ds_pad)
             ax2a.set_title(objname)
+
 
 
     # save figures
@@ -286,9 +276,23 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
         figlist_to_pngs(figout, fig_list)
 
     # save html
-    if 1:
-        #from libs.qa_helper import figlist_to_json
-        #figlist_to_json(figout, fig_list)
+
+    if html_output:
+
+        wvl_list_html, s_list_html, sn_list_html = [], [], []
+
+        for o_index, wvl, s, sn in zip(order_indices,
+                                       wvl_solutions,
+                                       tgt_spec, tgt_sn):
+
+            i1, i2 = i1i2_list[o_index]
+            sl = slice(i1, i2)
+
+            wvl_list_html.append(wvl[sl])
+            s_list_html.append(s[sl])
+            sn_list_html.append(sn[sl])
+
+
         dirname = config.get_value('HTML_PATH', utdate)
         objroot = "%04d" % (master_obsid,)
         save_for_html(dirname, objroot, band, orders_w_solutions,
@@ -307,118 +311,6 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
     if do_interactive_figure:
         import matplotlib.pyplot as plt
         plt.show()
-
-if 0:
-    import matplotlib.pyplot as plt
-    fig1 = plt.figure(2)
-    ax = fig1.axes[0]
-    for lam in [2.22112, 2.22328, 2.22740, 2.23106]:
-        ax.axvline(lam)
-    ax.set_title(objname)
-    ax.set_xlim(2.211, 2.239)
-    ax.set_ylim(0.69, 1.09)
-
-
-if 0:
-
-
-            def check_lsf(bins, lsf_list):
-                from matplotlib.figure import Figure
-                fig = Figure()
-                ax = fig.add_subplot(111)
-
-                xx = 0.5*(bins[1:]+bins[:-1])
-                for hh0 in lsf_list:
-                    peak1, peak2 = max(hh0), -min(hh0)
-                    ax.plot(xx, hh0/(peak1+peak2),
-                            "-", color="0.5")
-
-                hh0 = np.sum(lsf_list, axis=0)
-                peak1, peak2 = max(hh0), -min(hh0)
-                ax.plot(0.5*(bins[1:]+bins[:-1]), hh0/(peak1+peak2),
-                        "-", color="k")
-
-                return fig
-
-
-            def fit_lsf(bins, lsf_list):
-
-                xx = 0.5*(bins[1:]+bins[:-1])
-                hh0 = np.sum(lsf_list, axis=0)
-                peak_ind1, peak_ind2 = np.argmax(hh0), np.argmin(hh0)
-                # peak1, peak2 =
-
-
-
-# if __name__ == "__main__":
-
-#     from libs.recipes import load_recipe_list, make_recipe_dict
-#     from libs.products import PipelineProducts, ProductPath, ProductDB
-
-
-#     if 0:
-#         utdate = "20140316"
-#         # log_today = dict(flat_off=range(2, 4),
-#         #                  flat_on=range(4, 7),
-#         #                  thar=range(1, 2))
-#     elif 1:
-#         utdate = "20140713"
-
-#     band = "K"
-#     igr_path = IGRINSPath(utdate)
-
-#     igrins_files = IGRINSFiles(igr_path)
-
-#     fn = "%s.recipes" % utdate
-#     recipe_list = load_recipe_list(fn)
-#     recipe_dict = make_recipe_dict(recipe_list)
-
-#     # igrins_log = IGRINSLog(igr_path, log_today)
-
-
-
-#     if 0:
-#         recipe = "A0V_AB"
-
-#         DO_STD = True
-#         FIX_TELLURIC=False
-
-#     if 0:
-#         recipe = "STELLAR_AB"
-
-#         DO_STD = False
-#         FIX_TELLURIC=True
-
-#     if 1:
-#         recipe = "EXTENDED_AB"
-
-#         DO_STD = False
-#         FIX_TELLURIC=True
-
-#     if 0:
-#         recipe = "EXTENDED_ONOFF"
-
-#         DO_STD = False
-#         FIX_TELLURIC=True
-
-
-#     abba_list = recipe_dict[recipe]
-
-#     do_interactive_figure=False
-
-# if 1:
-#     #abba  = abba_list[7] # GSS 30
-#     #abba  = abba_list[11] # GSS 32
-#     #abba  = abba_list[14] # Serpens 2
-#     abba  = abba_list[6] # Serpens 15
-#     do_interactive_figure=True
-
-# for abba in abba_list:
-
-#     objname = abba[-1][0]
-#     print objname
-#     obsids = abba[0]
-#     frametypes = abba[1]
 
 
 
@@ -487,19 +379,3 @@ def save_for_html(dir, name, band, orders, wvl_sol, s_list1, s_list2):
     f.write('second_filename = "%s";\n' % igrins_spec_output2)
 
     f.close()
-
-if __name__ == "__main__":
-    import sys
-
-    utdate = sys.argv[1]
-    bands = "HK"
-    starting_obsids = None
-
-    if len(sys.argv) >= 3:
-        bands = sys.argv[2]
-
-    if len(sys.argv) >= 4:
-        starting_obsids = sys.argv[3]
-
-    a0v_ab(utdate, refdate="20140316", bands=bands,
-           starting_obsids=starting_obsids)
