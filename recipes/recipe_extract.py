@@ -1,35 +1,29 @@
 import os
 import numpy as np
 
-#from libs.process_flat import FlatOff, FlatOn
-
-
-from libs.path_info import IGRINSPath, IGRINSFiles
+from libs.path_info import IGRINSPath
 import astropy.io.fits as pyfits
 
 from libs.products import PipelineProducts
-from libs.apertures import Apertures
-
-#from libs.products import PipelineProducts
 
 
 def a0v_ab(utdate, refdate="20140316", bands="HK",
            starting_obsids=None,
-           interactive=False,
+           #interactive=False,
            config_file="recipe.config"):
     recipe = "A0V_AB"
     abba_all(recipe, utdate, refdate=refdate, bands=bands,
-             starting_obsids=starting_obsids, interactive=interactive,
+             starting_obsids=starting_obsids, #interactive=interactive,
              config_file=config_file)
 
 def stellar_ab(utdate, refdate="20140316", bands="HK",
                starting_obsids=None,
-               interactive=False,
+               #interactive=False,
                config_file="recipe.config"):
     recipe = "STELLAR_AB"
     abba_all(recipe, utdate, refdate=refdate, bands=bands,
              starting_obsids=starting_obsids,
-             interactive=interactive,
+             #interactive=interactive,
              config_file=config_file)
 
 def extended_ab(utdate, refdate="20140316", bands="HK",
@@ -51,7 +45,7 @@ def extended_onoff(utdate, refdate="20140316", bands="HK",
 
 
 def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
-             starting_obsids=None, interactive=False,
+             starting_obsids=None, #interactive=False,
              config_file="recipe.config"):
 
     from libs.igrins_config import IGRINSConfig
@@ -80,12 +74,10 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
         for band in bands:
             process_abba_band(recipe_name, band,
                               obsids, frametypes,
-                              do_interactive_figure=interactive)
-            # process_abba_band(recipe_name, utdate, refdate, band,
-            #                   obsids, frametypes, config,
-            #                   do_interactive_figure=interactive)
+                              #do_interactive_figure=interactive
+                              )
 
-from libs.products import ProductPath, ProductDB, PipelineStorage
+from libs.products import ProductDB, PipelineStorage
 
 class ProcessABBABand(object):
     def __init__(self, utdate, refdate, config):
@@ -98,12 +90,7 @@ class ProcessABBABand(object):
         self.igr_storage = PipelineStorage(self.igr_path)
 
 
-    def process(self, recipe, band, obsids, frametypes,
-                do_interactive_figure=False):
-
-        # utdate = self.utdate
-        # refdate = self.refdate
-        # config = self.config
+    def process(self, recipe, band, obsids, frametypes):
 
         igr_path = self.igr_path
         igr_storage = self.igr_storage
@@ -111,22 +98,22 @@ class ProcessABBABand(object):
         if recipe == "A0V_AB":
 
             DO_STD = True
-            FIX_TELLURIC=False
+            #FIX_TELLURIC=False
 
         elif recipe == "STELLAR_AB":
 
             DO_STD = False
-            FIX_TELLURIC=True
+            #FIX_TELLURIC=True
 
         elif recipe == "EXTENDED_AB":
 
             DO_STD = False
-            FIX_TELLURIC=True
+            #FIX_TELLURIC=True
 
         elif recipe == "EXTENDED_ONOFF":
 
             DO_STD = False
-            FIX_TELLURIC=True
+            #FIX_TELLURIC=True
 
 
         if 1:
@@ -162,8 +149,8 @@ class ProcessABBABand(object):
 
             # to get basenames
             db_types = ["flat_off", "flat_on", "thar", "sky"]
-            if FIX_TELLURIC:
-                db_types.append("a0v")
+            # if FIX_TELLURIC:
+            #     db_types.append("a0v")
 
             for db_type in db_types:
                 basenames[db_type] = db[db_type].query(band, master_obsid)
@@ -192,42 +179,11 @@ class ProcessABBABand(object):
                                 raw_spec_products[ONED_SPEC_JSON_DESC]["orders"],
                                 orders_w_solutions)
 
-            # load_aperture2(igr_storage, band, master_obsid, flaton_db,
-            #                orders, orders_w_solutions)
-            # _o_s = dict(zip(raw_spec_products["orders"], bottomup_solutions))
-            # ap =  Apertures(orders_w_solutions,
-            #                 [_o_s[o] for o in orders_w_solutions])
-
 
             # This should be saved somewhere and loaded, instead of making it every time.
             order_map = ap.make_order_map()
             slitpos_map = ap.make_slitpos_map()
             order_map2 = ap.make_order_map(mask_top_bottom=True)
-
-        # telluric
-        if FIX_TELLURIC:
-            A0V_basename = db["a0v"].query(band, master_obsid)
-
-            from libs.storage_descriptions import SPEC_FITS_FLATTENED_DESC
-            telluric_cor_ = igr_storage.load([SPEC_FITS_FLATTENED_DESC],
-                                             A0V_basename)[SPEC_FITS_FLATTENED_DESC]
-
-            #A0V_path = ProductPath(igr_path, A0V_basename)
-            #fn = A0V_path.get_secondary_path("spec_flattened.fits")
-            telluric_cor = list(telluric_cor_.data)
-
-
-            from libs.storage_descriptions import SPEC_FITS_DESC
-            a0v_spec_ = igr_storage.load([SPEC_FITS_DESC],
-                                             A0V_basename)[SPEC_FITS_DESC]
-
-            #A0V_path = ProductPath(igr_path, A0V_basename)
-            #fn = A0V_path.get_secondary_path("spec_flattened.fits")
-            a0v_spec = list(a0v_spec_.data)
-
-            # fn = A0V_path.get_secondary_path("spec.fits")
-            # telluric_cor = list(pyfits.open(fn)[0].data)
-            #print fn
 
 
         if 1:
@@ -296,7 +252,7 @@ class ProcessABBABand(object):
             if 1:
                 #ab_names = ab_names_list[0]
 
-                master_hdu = pyfits.open(a_name_list[0])[0]
+                # master_hdu = pyfits.open(a_name_list[0])[0]
 
                 a_list = [pyfits.open(name)[0].data \
                           for name in a_name_list]
@@ -357,6 +313,8 @@ class ProcessABBABand(object):
                 ss = np.ma.median(mm, axis=0)
                 variance_ = variance_ - ss
 
+                # iterate over fixed number of times.
+                # need to be improved.
                 for i in range(5):
                     st = np.nanstd(variance_, axis=0)
                     variance_[np.abs(variance_) > 3*st] = np.nan
@@ -456,11 +414,6 @@ class ProcessABBABand(object):
                                                     data_minus_flattened,
                                                     slitoffset_map=slitoffset_map)
 
-                # s_list_r, v_list = ap.extract_stellar(ordermap_bpixed, profile_map,
-                #                                       variance_map2,
-                #                                       data_minus_flattened,
-                #                                       slitoffset_map=None)
-
 
             else: # if extended source
                 from scipy.interpolate import UnivariateSpline
@@ -481,7 +434,7 @@ class ProcessABBABand(object):
                 profile_map = ap.make_profile_map(order_map, slitpos_map, lsf)
 
                 # we need to update the variance map by rejecting
-                # exteneded sources, but it is not clear how we do this
+                # cosmicray sources, but it is not clear how we do this
                 # for extended source.
                 variance_map2 = variance_map
                 s_list, v_list = ap.extract_stellar(ordermap_bpixed,
@@ -492,88 +445,12 @@ class ProcessABBABand(object):
                                                     )
 
 
-                # # make synth_spec : profile * spectra
-                # synth_map = ap.make_synth_map(order_map, slitpos_map,
-                #                               lsf, s_list,
-                #                               slitoffset_map=slitoffset_map)
 
-            if 1: # save the product
-                from libs.storage_descriptions import (COMBINED_IMAGE_DESC,
-                                                       VARIANCE_MAP_DESC)
-                from libs.products import PipelineImage
-
-                r = PipelineProducts("1d specs")
-
-                r.add(COMBINED_IMAGE_DESC, PipelineImage([],
-                                                         data_minus_flattened))
-                r.add(VARIANCE_MAP_DESC, PipelineImage([],
-                                                       variance_map2))
-
-                # r.add(VARIANCE_MAP_DESC, PipelineImage([],
-                #                                        variance_map.data))
-
-                igr_storage.store(r,
-                                  mastername=obj_filenames[0],
-                                  masterhdu=None)
-
-                #                      combined_image_raw=data_minus0,
-                #                      combined_image=data_minus_flattened,
-                #                      variance_map=variance_map2
-                #                      )
-                # VARIANCE_MAP_DESC
-
-                # SPECPARAM_MAP_DESC = ("OUTDATA_PATH", "", ".spec_params.json")
-                # r.add(SPECPARAM_MAP_DESC,
-                #       PipelineDict())
-
-
-                # fn = obj_path.get_secondary_path("spec_params")
-                # r.save(fn, masterhdu=master_hdu)
-
-
-            from libs.storage_descriptions import ORDER_FLAT_JSON_DESC
-            prod = igr_storage.load([ORDER_FLAT_JSON_DESC],
-                                    basenames["flat_on"])[ORDER_FLAT_JSON_DESC]
-
-            new_orders = prod["orders"]
-            # fitted_response = orderflat_products["fitted_responses"]
-            i1i2_list = prod["i1i2_list"]
-
-            fig_list = []
             if 1:
-
-
-                if do_interactive_figure:
-                    from matplotlib.pyplot import figure as Figure
-                else:
-                    from matplotlib.figure import Figure
-                fig1 = Figure(figsize=(12,6))
-                fig_list.append(fig1)
-
-                fig1b = Figure(figsize=(12,6))
-                fig_list.append(fig1b)
-
-                ax1 = fig1.add_subplot(111)
-                ax2 = fig1b.add_subplot(111)
-                #from libs.stddev_filter import window_stdev
-
-                order_indices = []
-
-                for o in ap.orders:
-                    o_new_ind = np.searchsorted(new_orders, o)
-                    order_indices.append(o_new_ind)
-
-                for o_index, s in zip(order_indices, s_list):
-
-                    m = order_flat_meanspec[o_index]
-                    s[m < 0.1] = np.nan
-
-
                 # calculate S/N per resolution
                 sn_list = []
-                for o_index, wvl, s, v in zip(order_indices,
-                                              wvl_solutions,
-                                              s_list, v_list):
+                for wvl, s, v in zip(wvl_solutions,
+                                     s_list, v_list):
 
                     dw = np.gradient(wvl)
                     pixel_per_res_element = (wvl/40000.)/dw
@@ -583,155 +460,30 @@ class ProcessABBABand(object):
 
                     sn_list.append(sn)
 
-                    #ax1.plot(wvl, s, "0.5")
-                    ax2.plot(wvl, sn)
 
 
-                if FIX_TELLURIC:
-                    s_list_cor = []
-                    #for s, t in zip(s_list, telluric_cor):
-                    for s, t in zip(s_list, a0v_spec):
+        if 1: # save the product
+            from libs.storage_descriptions import (COMBINED_IMAGE_DESC,
+                                                   VARIANCE_MAP_DESC)
+            from libs.products import PipelineImage
 
-                        st = s/t
-                        st[t<np.median(t)*0.1] = np.nan
-                        s_list_cor.append(st)
-                else:
-                    s_list_cor = s_list
+            r = PipelineProducts("1d specs")
 
-                # wvl_list_html, s_list_html, sn_list_html = [], [], []
+            r.add(COMBINED_IMAGE_DESC, PipelineImage([],
+                                                     data_minus_flattened))
+            r.add(VARIANCE_MAP_DESC, PipelineImage([],
+                                                   variance_map2))
 
+            # r.add(VARIANCE_MAP_DESC, PipelineImage([],
+            #                                        variance_map.data))
 
-                if FIX_TELLURIC:
-
-                    for o_index, wvl, s, t in zip(order_indices,
-                                                  wvl_solutions,
-                                                  s_list_cor,
-                                                  telluric_cor):
-
-                        #i1, i2 = i1i2_list[o_index]
-                        #sl = slice(i1, i2)
-                        #wvl, s = np.array(wvl), np.array(s)
-                        #mmm = np.isfinite(s[sl])
-                        #ax1.plot(wvl[sl][mmm], s[sl][mmm], "0.8", zorder=0.5)
-
-
-                        ax1.plot(wvl, t, "0.8", zorder=0.5)
-                        ax1.plot(wvl, s, zorder=0.5)
+            igr_storage.store(r,
+                              mastername=obj_filenames[0],
+                              masterhdu=None)
 
 
 
-                ymax = 1.1*np.nanmax(s_list[12])
-                ax1.set_ylim(0, ymax)
-                pixel_per_res_element = 3.7
-                ymax = 1.2*(s_list[12][1024]/v_list[12][1024]**.5*pixel_per_res_element**.5)
-                ax2.set_ylim(0, ymax)
-                ax2.set_ylabel("S/N per Res. Element")
-
-
-            if IF_POINT_SOURCE: # if point source, try simple telluric factor for A0V
-                # new_orders = orderflat_products["orders"]
-                # # fitted_response = orderflat_products["fitted_responses"]
-                # i1i2_list = orderflat_products["i1i2_list"]
-
-                fig2 = Figure(figsize=(12,8))
-                fig_list.append(fig2)
-
-                ax1 = fig2.add_subplot(211)
-                for o_index, wvl, s in zip(order_indices,
-                                           wvl_solutions, s_list):
-                    i1, i2 = i1i2_list[o_index]
-                    sl = slice(i1, i2)
-                    # res = fitted_response[o_new_ind]
-                    #ax1.plot(wvl[sl], (s/res)[sl])
-
-                from libs.master_calib import get_master_calib_abspath
-                fn = get_master_calib_abspath("A0V/vegallpr25.50000resam5")
-                d = np.genfromtxt(fn)
-
-                wvl, flux, cont = (d[:,i] for i in [0, 1, 2])
-                ax2 = fig2.add_subplot(212, sharex=ax1)
-                wvl = wvl/1000.
-                if band == "H":
-                    mask_wvl1, mask_wvl2 = 1.450, 1.850
-                else:
-                    mask_wvl1, mask_wvl2 = 1.850, 2.550
-
-                mask_H = (mask_wvl1 < wvl) & (wvl < mask_wvl2)
-
-                fn = get_master_calib_abspath("telluric/LBL_A15_s0_w050_R0060000_T.fits")
-                telluric = pyfits.open(fn)[1].data
-                telluric_lam = telluric["lam"]
-                tel_mask_H = (mask_wvl1 < telluric_lam) & (telluric_lam < mask_wvl2)
-                #plot(telluric_lam[tel_mask_H], telluric["trans"][tel_mask_H])
-                from scipy.interpolate import interp1d, UnivariateSpline
-                spl = UnivariateSpline(telluric_lam[tel_mask_H],
-                                       telluric["trans"][tel_mask_H],
-                                       k=1,s=0)
-
-                spl = interp1d(telluric_lam[tel_mask_H],
-                               telluric["trans"][tel_mask_H],
-                               bounds_error=False
-                               )
-
-                trans = spl(wvl[mask_H])
-                ax1.plot(wvl[mask_H], flux[mask_H]/cont[mask_H]*trans,
-                         color="0.5", zorder=0.5)
-
-
-                trans_m = ni.maximum_filter(trans, 128)
-                trans_mg = ni.gaussian_filter(trans_m, 32)
-
-                zzz0 = flux[mask_H]/cont[mask_H]
-                zzz = zzz0*trans
-                mmm = trans/trans_mg > 0.95
-                zzz[~mmm] = np.nan
-                wvl_zzz = wvl[mask_H]
-                #ax2.plot(, zzz)
-
-                #ax2 = subplot(212)
-                if DO_STD:
-                    telluric_cor = []
-
-                for o_index, wvl, s in zip(order_indices, wvl_solutions, s_list):
-
-                    i1, i2 = i1i2_list[o_index]
-                    sl = slice(i1, i2)
-                    wvl1, wvl2 = wvl[i1], wvl[i2]
-                    #wvl1, wvl2 = wvl[0], wvl[-1]
-                    z_m = (wvl1 < wvl_zzz) & (wvl_zzz < wvl2)
-
-                    ss = interp1d(wvl, s)
-
-                    s_interped = ss(wvl_zzz[z_m])
-
-                    xxx, yyy = wvl_zzz[z_m], s_interped/zzz[z_m]
-
-                    from astropy.modeling import models, fitting
-                    p_init = models.Chebyshev1D(domain=[xxx[0], xxx[-1]],
-                                                degree=6)
-                    fit_p = fitting.LinearLSQFitter()
-                    x_m = np.isfinite(yyy)
-                    p = fit_p(p_init, xxx[x_m], yyy[x_m])
-                    #ax2.plot(xxx, yyy)
-                    #ax2.plot(xxx, p(xxx))
-
-                    res_ = p(wvl)
-
-                    z_interp = interp1d(xxx, zzz0[z_m], bounds_error=False)
-                    A0V = z_interp(wvl)
-                    res_[res_<0.3*res_.max()] = np.nan
-                    ax1.plot(wvl[sl], (s/res_)[sl])
-                    ax2.plot(wvl[sl], (s/res_/A0V)[sl])
-
-                    if DO_STD:
-                        telluric_cor.append((s/res_)/A0V)
-
-                ax1.axhline(1, color="0.5")
-                ax2.axhline(1, color="0.5")
-
-            # save html
-
-        if 1:
+        if 1: # save spectra, variance, sn
             from libs.storage_descriptions import SKY_WVLSOL_FITS_DESC
             fn = igr_storage.get_path(SKY_WVLSOL_FITS_DESC,
                                       basenames["sky"])
@@ -767,9 +519,136 @@ class ProcessABBABand(object):
             f.writeto(fout, clobber=True)
 
 
+
+
+        if 1: #
+            from libs.storage_descriptions import ORDER_FLAT_JSON_DESC
+            prod = igr_storage.load([ORDER_FLAT_JSON_DESC],
+                                    basenames["flat_on"])[ORDER_FLAT_JSON_DESC]
+
+            new_orders = prod["orders"]
+            # fitted_response = orderflat_products["fitted_responses"]
+            i1i2_list = prod["i1i2_list"]
+
+
+
+            order_indices = []
+
+            for o in ap.orders:
+                o_new_ind = np.searchsorted(new_orders, o)
+                order_indices.append(o_new_ind)
+
+
             if DO_STD:
-                d = np.array(telluric_cor)
-                d[~np.isfinite(d)] = 0.
+                # a quick and dirty flattening for A0V stars
+
+                from libs.master_calib import get_master_calib_abspath
+                fn = get_master_calib_abspath("A0V/vegallpr25.50000resam5")
+                d = np.genfromtxt(fn)
+
+                wvl_a0v, flux_a0v, cont_a0v = (d[:,i] for i in [0, 1, 2])
+                wvl_a0v = wvl_a0v/1000.
+
+                wvl_limits = []
+                for wvl_ in wvl_solutions:
+                    wvl_limits.extend([wvl_[0], wvl_[-1]])
+
+                dwvl = abs(wvl_[0] - wvl_[-1])*0.1 # padding
+
+                mask_wvl1 = min(wvl_limits) - dwvl
+                mask_wvl2 = max(wvl_limits) + dwvl
+
+                #print mask_wvl1, mask_wvl2
+
+                # if band == "H":
+                #     mask_wvl1, mask_wvl2 = 1.450, 1.850
+                # else:
+                #     mask_wvl1, mask_wvl2 = 1.850, 2.550
+
+                mask_igr = (mask_wvl1 < wvl_a0v) & (wvl_a0v < mask_wvl2)
+
+                fn = get_master_calib_abspath("telluric/LBL_A15_s0_w050_R0060000_T.fits")
+                telluric = pyfits.open(fn)[1].data
+                telluric_lam = telluric["lam"]
+                tel_mask_igr = (mask_wvl1 < telluric_lam) & (telluric_lam < mask_wvl2)
+                #plot(telluric_lam[tel_mask_H], telluric["trans"][tel_mask_H])
+                from scipy.interpolate import interp1d, UnivariateSpline
+                # spl = UnivariateSpline(telluric_lam[tel_mask_igr],
+                #                        telluric["trans"][tel_mask_igr],
+                #                        k=1,s=0)
+
+                spl = interp1d(telluric_lam[tel_mask_igr],
+                               telluric["trans"][tel_mask_igr],
+                               bounds_error=False
+                               )
+
+                trans = spl(wvl_a0v[mask_igr])
+                # ax1.plot(wvl_a0v[mask_igr], flux[mask_igr]/cont[mask_igr]*trans,
+                #          color="0.5", zorder=0.5)
+
+
+                trans_m = ni.maximum_filter(trans, 128)
+                trans_mg = ni.gaussian_filter(trans_m, 32)
+
+                zzz0 = (flux_a0v/cont_a0v)[mask_igr]
+                zzz = zzz0*trans
+                mmm = trans/trans_mg > 0.95
+                zzz[~mmm] = np.nan
+
+                wvl_zzz = wvl_a0v[mask_igr]
+                #ax2.plot(, zzz)
+
+                # #ax2 = subplot(212)
+                # if DO_STD:
+                #     telluric_cor = []
+
+
+                a0v_flattened = []
+
+                for o_index, wvl, s in zip(order_indices, wvl_solutions, s_list):
+
+                    i1, i2 = i1i2_list[o_index]
+                    #sl = slice(i1, i2)
+                    wvl1, wvl2 = wvl[i1], wvl[i2]
+                    #wvl1, wvl2 = wvl[0], wvl[-1]
+                    z_m = (wvl1 < wvl_zzz) & (wvl_zzz < wvl2)
+
+                    wvl1, wvl2 = min(wvl), max(wvl)
+                    z_m2 = (wvl1 < wvl_zzz) & (wvl_zzz < wvl2)
+
+                    #z_m = z_m2
+
+                    ss = interp1d(wvl, s)
+
+                    s_interped = ss(wvl_zzz[z_m])
+
+                    xxx, yyy = wvl_zzz[z_m], s_interped/zzz[z_m]
+
+                    from astropy.modeling import models, fitting
+                    p_init = models.Chebyshev1D(domain=[xxx[0], xxx[-1]],
+                                                degree=6)
+                    fit_p = fitting.LinearLSQFitter()
+                    x_m = np.isfinite(yyy)
+                    p = fit_p(p_init, xxx[x_m], yyy[x_m])
+                    #ax2.plot(xxx, yyy)
+                    #ax2.plot(xxx, p(xxx))
+
+                    res_ = p(wvl)
+
+
+                    z_interp = interp1d(wvl_zzz[z_m], zzz0[z_m],
+                                        bounds_error=False)
+                    A0V = z_interp(wvl)
+                    #res_[res_<0.3*res_.max()] = np.nan
+
+                    s_f = (s/res_)/A0V
+                    s_f[:i1] = np.nan
+                    s_f[i2:] = np.nan
+                    a0v_flattened.append(s_f)
+
+
+                d = np.array(a0v_flattened)
+                #d[~np.isfinite(d)] = 0.
                 f[0].data = d.astype("f32")
 
                 from libs.storage_descriptions import SPEC_FITS_FLATTENED_DESC
@@ -779,137 +658,3 @@ class ProcessABBABand(object):
                 f.writeto(fout, clobber=True)
 
                 db["a0v"].update(band, tgt_basename)
-
-
-        if do_interactive_figure:
-            import matplotlib.pyplot as plt
-            plt.show()
-
-if 0:
-    import matplotlib.pyplot as plt
-    fig1 = plt.figure(2)
-    ax = fig1.axes[0]
-    for lam in [2.22112, 2.22328, 2.22740, 2.23106]:
-        ax.axvline(lam)
-    ax.set_title(objname)
-    ax.set_xlim(2.211, 2.239)
-    ax.set_ylim(0.69, 1.09)
-
-
-if 0:
-
-
-            def check_lsf(bins, lsf_list):
-                from matplotlib.figure import Figure
-                fig = Figure()
-                ax = fig.add_subplot(111)
-
-                xx = 0.5*(bins[1:]+bins[:-1])
-                for hh0 in lsf_list:
-                    peak1, peak2 = max(hh0), -min(hh0)
-                    ax.plot(xx, hh0/(peak1+peak2),
-                            "-", color="0.5")
-
-                hh0 = np.sum(lsf_list, axis=0)
-                peak1, peak2 = max(hh0), -min(hh0)
-                ax.plot(0.5*(bins[1:]+bins[:-1]), hh0/(peak1+peak2),
-                        "-", color="k")
-
-                return fig
-
-
-            def fit_lsf(bins, lsf_list):
-
-                xx = 0.5*(bins[1:]+bins[:-1])
-                hh0 = np.sum(lsf_list, axis=0)
-                peak_ind1, peak_ind2 = np.argmax(hh0), np.argmin(hh0)
-                # peak1, peak2 =
-
-
-
-# if __name__ == "__main__":
-
-#     from libs.recipes import load_recipe_list, make_recipe_dict
-#     from libs.products import PipelineProducts, ProductPath, ProductDB
-
-
-#     if 0:
-#         utdate = "20140316"
-#         # log_today = dict(flat_off=range(2, 4),
-#         #                  flat_on=range(4, 7),
-#         #                  thar=range(1, 2))
-#     elif 1:
-#         utdate = "20140713"
-
-#     band = "K"
-#     igr_path = IGRINSPath(utdate)
-
-#     igrins_files = IGRINSFiles(igr_path)
-
-#     fn = "%s.recipes" % utdate
-#     recipe_list = load_recipe_list(fn)
-#     recipe_dict = make_recipe_dict(recipe_list)
-
-#     # igrins_log = IGRINSLog(igr_path, log_today)
-
-
-
-#     if 0:
-#         recipe = "A0V_AB"
-
-#         DO_STD = True
-#         FIX_TELLURIC=False
-
-#     if 0:
-#         recipe = "STELLAR_AB"
-
-#         DO_STD = False
-#         FIX_TELLURIC=True
-
-#     if 1:
-#         recipe = "EXTENDED_AB"
-
-#         DO_STD = False
-#         FIX_TELLURIC=True
-
-#     if 0:
-#         recipe = "EXTENDED_ONOFF"
-
-#         DO_STD = False
-#         FIX_TELLURIC=True
-
-
-#     abba_list = recipe_dict[recipe]
-
-#     do_interactive_figure=False
-
-# if 1:
-#     #abba  = abba_list[7] # GSS 30
-#     #abba  = abba_list[11] # GSS 32
-#     #abba  = abba_list[14] # Serpens 2
-#     abba  = abba_list[6] # Serpens 15
-#     do_interactive_figure=True
-
-# for abba in abba_list:
-
-#     objname = abba[-1][0]
-#     print objname
-#     obsids = abba[0]
-#     frametypes = abba[1]
-
-
-if __name__ == "__main__":
-    import sys
-
-    utdate = sys.argv[1]
-    bands = "HK"
-    starting_obsids = None
-
-    if len(sys.argv) >= 3:
-        bands = sys.argv[2]
-
-    if len(sys.argv) >= 4:
-        starting_obsids = sys.argv[3]
-
-    a0v_ab(utdate, refdate="20140316", bands=bands,
-           starting_obsids=starting_obsids)
