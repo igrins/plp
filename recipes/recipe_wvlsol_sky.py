@@ -317,8 +317,8 @@ def process_wvlsol_band(utdate, refdate, band, obsids, config):
             c = pyfits.Card(k, v)
             cards.append(c)
         if remainder > 0:
-            i = num_line+1
-            k = "WAT2_%03d" % (i,)
+            i = num_line
+            k = "WAT2_%03d" % (i+1,)
             v = wat[char_per_line*i:]
             #print k, v
             c = pyfits.Card(k, v)
