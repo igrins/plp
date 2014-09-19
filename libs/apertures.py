@@ -200,6 +200,7 @@ class Apertures(object):
     def extract_stellar(self, ordermap_bpixed, profile_map, variance_map,
                         data, slitoffset_map=None):
 
+        # TODO: the profile needs to be renormalized
 
         map_weighted_spectra = (profile_map*data)/variance_map
         map_weights = profile_map**2/variance_map
@@ -209,40 +210,47 @@ class Apertures(object):
         iy, ix = np.indices(data.shape)
 
         if slitoffset_map is not None:
-            ix = ix - slitoffset_map
+            from correct_distortion import ShiftX
+            shiftx = ShiftX(slitoffset_map)
 
-        bins = np.arange(-0.5, 2048.5)
+            map_weighted_spectra[~msk1] = 0.
+            map_weights[~msk1] = 0.
+            profile_map[~msk1] = 0.
+
+            msk1 = shiftx(msk1)
+            map_weighted_spectra = shiftx(map_weighted_spectra)/msk1
+            map_weights = shiftx(map_weights)
+            profile_map = shiftx(profile_map)
+
+
+        #bins = np.arange(-0.5, 2048.5)
 
         s_list = []
         v_list = []
         slices = ni.find_objects(ordermap_bpixed)
         for o in self.orders:
             sl = slices[o-1][0], slice(0, 2048)
-            msk = (ordermap_bpixed[sl] == o) & msk1[sl]
+            msk = (ordermap_bpixed[sl] == o) #& msk1[sl]
 
-            x_pos = ix[sl][msk]
+            map_weighted_spectra1 = map_weighted_spectra[sl].copy()
+            map_weighted_spectra1[~msk] = 0.
 
-            d = map_weighted_spectra[sl][msk]
+            map_weights1 = map_weights[sl].copy()
+            map_weights1[~msk] = 0.
+
+            profile_map1 = profile_map[sl].copy()
+            profile_map1[~msk] = 0.
+
+            sum_weighted_spectra1 = map_weighted_spectra1.sum(axis=0)
+            sum_weights1 = map_weights1.sum(axis=0)
+            sum_profile1 = np.abs(profile_map1).sum(axis=0)
 
 
-            sum_weighted_spectra = np.histogram(x_pos,
-                                                weights=d, bins=bins,
-                                                )
-            d = map_weights[sl][msk]
-            sum_weights = np.histogram(x_pos,
-                                       weights=d, bins=bins,
-                                       )
-
-            sum_profile = np.histogram(x_pos,
-                                       weights=np.abs(profile_map[sl][msk]),
-                                       bins=bins,
-                                       )
-
-            s = sum_weighted_spectra[0] / sum_weights[0]
+            s = sum_weighted_spectra1 / sum_weights1
 
             s_list.append(s)
 
-            v = sum_profile[0] / sum_weights[0]
+            v = sum_profile1 / sum_weights1
 
             v_list.append(v)
 
