@@ -13,7 +13,7 @@ def a0v_ab(utdate, refdate="20140316", bands="HK",
            frac_slit=None):
     recipe = "A0V_AB"
     abba_all(recipe, utdate, refdate=refdate, bands=bands,
-             starting_obsids=starting_obsids, interactive=interactive,
+             starting_obsids=starting_obsids,
              config_file=config_file,
              frac_slit=frac_slit)
 
