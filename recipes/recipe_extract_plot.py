@@ -145,7 +145,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
                             basenames["flat_on"])[ORDER_FLAT_JSON_DESC]
 
     new_orders = prod["orders"]
-    i1i2_list = prod["i1i2_list"]
+    i1i2_list_ = prod["i1i2_list"]
 
 
     order_indices = []
@@ -154,6 +154,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
         o_new_ind = np.searchsorted(new_orders, o)
         order_indices.append(o_new_ind)
 
+    i1i2_list = get_fixed_i1i2_list(order_indices, i1i2_list_)
 
 
     from libs.storage_descriptions import (SPEC_FITS_DESC,
@@ -250,25 +251,19 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
                 a0v_interp1d = a0v_model.get_flux_interp1d(1.3, 2.5,
                                                            flatten=True,
                                                            smooth_pixel=32)
-
-                for wvl, s, t in zip(wvl_solutions,
-                                     tgt_spec_cor,
-                                     telluric_cor):
-
-                    ax2a.plot(wvl, t, "0.8", zorder=0.5)
+                for wvl, s in zip(wvl_solutions,
+                                  tgt_spec_cor):
 
                     aa = a0v_interp1d(wvl)
+                    s *= aa
 
-                    ax2b.plot(wvl, s*aa, zorder=0.5)
 
-            else:
-                for wvl, s, t in zip(wvl_solutions,
-                                     tgt_spec_cor,
-                                     telluric_cor):
+            for wvl, s, t in zip(wvl_solutions,
+                                 tgt_spec_cor,
+                                 telluric_cor):
 
-                    ax2a.plot(wvl, t, "0.8", zorder=0.5)
-
-                    ax2b.plot(wvl, s, zorder=0.5)
+                ax2a.plot(wvl, t, "0.8", zorder=0.5)
+                ax2b.plot(wvl, s, zorder=0.5)
 
 
             s_max_list = []
@@ -305,14 +300,44 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
     # save html
 
     if html_output:
+        dirname = config.get_value('HTML_PATH', utdate)
+        objroot = "%04d" % (master_obsid,)
+        html_save(utdate, dirname, objroot, band,
+                  orders_w_solutions, wvl_solutions,
+                  tgt_spec, tgt_sn, i1i2_list)
+
+        if FIX_TELLURIC:
+            objroot = "%04dA0V" % (master_obsid,)
+            html_save(utdate, dirname, objroot, band,
+                      orders_w_solutions, wvl_solutions,
+                      telluric_cor, tgt_spec_cor, i1i2_list,
+                      spec_js_name="jj_a0v.js")
+
+
+    if do_interactive_figure:
+        import matplotlib.pyplot as plt
+        plt.show()
+
+
+def get_fixed_i1i2_list(order_indices, i1i2_list):
+    i1i2_list2 = []
+    for o_index in order_indices:
+
+        i1i2_list2.append(i1i2_list[o_index])
+    return i1i2_list2
+
+
+def html_save(utdate, dirname, objroot, band,
+              orders_w_solutions, wvl_solutions,
+              tgt_spec, tgt_sn, i1i2_list,
+              spec_js_name="jj.js"):
 
         wvl_list_html, s_list_html, sn_list_html = [], [], []
 
-        for o_index, wvl, s, sn in zip(order_indices,
-                                       wvl_solutions,
-                                       tgt_spec, tgt_sn):
+        for wvl, s, sn, (i1, i2) in zip(wvl_solutions,
+                                        tgt_spec, tgt_sn,
+                                        i1i2_list):
 
-            i1, i2 = i1i2_list[o_index]
             sl = slice(i1, i2)
 
             wvl_list_html.append(wvl[sl])
@@ -320,24 +345,23 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
             sn_list_html.append(sn[sl])
 
 
-        dirname = config.get_value('HTML_PATH', utdate)
-        objroot = "%04d" % (master_obsid,)
-        save_for_html(dirname, objroot, band, orders_w_solutions,
+        save_for_html(dirname, objroot, band,
+                      orders_w_solutions,
                       wvl_list_html, s_list_html, sn_list_html)
 
         from jinja2 import Environment, FileSystemLoader
         env = Environment(loader=FileSystemLoader('jinja_templates'))
         spec_template = env.get_template('spec.html')
 
-        jsname = "igrins_spec_%04d_%s.js" % (master_obsid, band)
-        ss = spec_template.render(utdate=utdate, jsname=jsname)
-        htmlname = "igrins_spec_%04d_%s.html" % (master_obsid, band)
+        master_root = "igrins_spec_%s_%s" % (objroot, band)
+        jsname = master_root + ".js"
+        ss = spec_template.render(utdate=utdate,
+                                  jsname=jsname,
+                                  spec_js_name=spec_js_name)
+        htmlname = master_root + ".html"
         open(os.path.join(dirname, htmlname), "w").write(ss)
 
 
-    if do_interactive_figure:
-        import matplotlib.pyplot as plt
-        plt.show()
 
 
 

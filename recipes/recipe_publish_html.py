@@ -29,6 +29,11 @@ def make_html(utdate, dirname, config_file="recipe.config"):
                 if os.path.exists(os.path.join(dirname, p)):
                     s["url_%s" % band] = p
 
+            for band in "HK":
+                p = "igrins_spec_%04dA0V_%s.html" % (obsids[0], band)
+                if os.path.exists(os.path.join(dirname, p)):
+                    s["url_%s_A0V" % band] = p
+
             sources.append(s)
 
             # jsname = "igrins_spec_%04d_H.js" % obsids[0]

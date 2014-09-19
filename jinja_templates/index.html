@@ -38,7 +38,8 @@
    <th># of exp</td>
    <th>Obsids</td>
    <th>Frametypes</td>
-   <th>Bands</td>
+   <th>Raw Specs.</td>
+   <th>Specs/A0V</td>
   </tr>
 {% for src in sources %}
   <tr>
@@ -58,6 +59,14 @@
        <a href="{{ src.url_K }}">K</a>
      {% else %}
        K
+     {% endif %}
+   </td>
+   <td>
+     {% if src.url_H_A0V is defined %}
+       <a href="{{ src.url_H_A0V }}">H</a>
+     {% endif %}
+     {% if src.url_K_A0V is defined %}
+       <a href="{{ src.url_K_A0V }}">K</a>
      {% endif %}
    </td>
   </tr>
