@@ -9,44 +9,50 @@ from libs.products import PipelineProducts
 
 def a0v_ab(utdate, refdate="20140316", bands="HK",
            starting_obsids=None,
-           #interactive=False,
-           config_file="recipe.config"):
+           config_file="recipe.config",
+           frac_slit=None):
     recipe = "A0V_AB"
     abba_all(recipe, utdate, refdate=refdate, bands=bands,
-             starting_obsids=starting_obsids, #interactive=interactive,
-             config_file=config_file)
+             starting_obsids=starting_obsids, interactive=interactive,
+             config_file=config_file,
+             frac_slit=frac_slit)
 
 def stellar_ab(utdate, refdate="20140316", bands="HK",
                starting_obsids=None,
-               #interactive=False,
-               config_file="recipe.config"):
+               config_file="recipe.config",
+               frac_slit=None):
     recipe = "STELLAR_AB"
     abba_all(recipe, utdate, refdate=refdate, bands=bands,
              starting_obsids=starting_obsids,
-             #interactive=interactive,
-             config_file=config_file)
+             config_file=config_file,
+             frac_slit=frac_slit)
 
 def extended_ab(utdate, refdate="20140316", bands="HK",
                 starting_obsids=None,
-                config_file="recipe.config"):
+                config_file="recipe.config",
+                frac_slit=None):
     recipe = "EXTENDED_AB"
     abba_all(recipe, utdate, refdate=refdate, bands=bands,
              starting_obsids=starting_obsids,
-             config_file=config_file)
+             config_file=config_file,
+             frac_slit=frac_slit)
 
 def extended_onoff(utdate, refdate="20140316", bands="HK",
                    starting_obsids=None,
-                   config_file="recipe.config"):
+                   config_file="recipe.config",
+                   frac_slit=None):
     recipe = "EXTENDED_ONOFF"
     abba_all(recipe, utdate, refdate=refdate, bands=bands,
              starting_obsids=starting_obsids,
-             config_file=config_file)
+             config_file=config_file,
+             frac_slit=frac_slit)
 
 
 
 def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
-             starting_obsids=None, #interactive=False,
-             config_file="recipe.config"):
+             starting_obsids=None, interactive=False,
+             config_file="recipe.config",
+             frac_slit=None):
 
     from libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
@@ -65,7 +71,14 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
     if not selected:
         print "no recipe of with matching arguments is found"
 
-    process_abba_band = ProcessABBABand(utdate, refdate, config).process
+    if frac_slit is not None:
+        frac_slit = map(float, frac_slit.split(","))
+        if len(frac_slit) !=2:
+            raise ValueError("frac_slit must be two floats separated by comma")
+
+    process_abba_band = ProcessABBABand(utdate, refdate,
+                                        config,
+                                        frac_slit=frac_slit).process
 
     for s in selected:
         obsids = s[0]
@@ -80,7 +93,7 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
 from libs.products import ProductDB, PipelineStorage
 
 class ProcessABBABand(object):
-    def __init__(self, utdate, refdate, config):
+    def __init__(self, utdate, refdate, config, frac_slit=None):
         self.utdate = utdate
         self.refdate = refdate
         self.config = config
@@ -88,6 +101,8 @@ class ProcessABBABand(object):
         self.igr_path = IGRINSPath(config, utdate)
 
         self.igr_storage = PipelineStorage(self.igr_path)
+
+        self.frac_slit = frac_slit
 
 
     def process(self, recipe, band, obsids, frametypes):
@@ -385,6 +400,13 @@ class ProcessABBABand(object):
                 # make weight map
                 profile_map = ap.make_profile_map(order_map, slitpos_map, lsf)
 
+                # try to select portion of the slit to extract
+
+                if self.frac_slit is not None:
+                    frac1, frac2 = min(self.frac_slit), max(self.frac_slit)
+                    slitpos_msk = (slitpos_map < frac1) | (slitpos_map > frac2)
+                    profile_map[slitpos_msk] = np.nan
+
                 # extract spec
 
                 s_list, v_list = ap.extract_stellar(ordermap_bpixed,
@@ -406,6 +428,9 @@ class ProcessABBABand(object):
                 variance_map_r = variance_map0 + np.abs(synth_map)/gain
                 variance_map2 = np.max([variance_map, variance_map_r], axis=0)
                 variance_map2[np.abs(sig_map) > 100] = np.nan
+
+                # masking this out will affect the saved combined image.
+                data_minus_flattened[np.abs(sig_map) > 100] = np.nan
 
                 # extract spec
 
@@ -433,8 +458,14 @@ class ProcessABBABand(object):
 
                 profile_map = ap.make_profile_map(order_map, slitpos_map, lsf)
 
+
+                if self.frac_slit is not None:
+                    frac1, frac2 = min(self.frac_slit), max(self.frac_slit)
+                    slitpos_msk = (slitpos_map < frac1) | (slitpos_map > frac2)
+                    profile_map[slitpos_msk] = np.nan
+
                 # we need to update the variance map by rejecting
-                # cosmicray sources, but it is not clear how we do this
+                # cosmic rays, but it is not clear how we do this
                 # for extended source.
                 variance_map2 = variance_map
                 s_list, v_list = ap.extract_stellar(ordermap_bpixed,
