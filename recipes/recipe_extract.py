@@ -528,124 +528,38 @@ class ProcessABBABand(object):
 
             new_orders = prod["orders"]
             # fitted_response = orderflat_products["fitted_responses"]
-            i1i2_list = prod["i1i2_list"]
+            i1i2_list_ = prod["i1i2_list"]
 
-
-
-            order_indices = []
+            #order_indices = []
+            i1i2_list = []
 
             for o in ap.orders:
                 o_new_ind = np.searchsorted(new_orders, o)
-                order_indices.append(o_new_ind)
+                #order_indices.append(o_new_ind)
+                i1i2_list.append(i1i2_list_[o_new_ind])
 
 
             if DO_STD:
-                # a quick and dirty flattening for A0V stars
-
-                from libs.master_calib import get_master_calib_abspath
-                fn = get_master_calib_abspath("A0V/vegallpr25.50000resam5")
-                d = np.genfromtxt(fn)
-
-                wvl_a0v, flux_a0v, cont_a0v = (d[:,i] for i in [0, 1, 2])
-                wvl_a0v = wvl_a0v/1000.
+                from libs.a0v_spec import (A0VSpec, TelluricTransmission,
+                                           get_a0v, get_flattend)
+                a0v_spec = A0VSpec()
+                tel_trans = TelluricTransmission()
 
                 wvl_limits = []
                 for wvl_ in wvl_solutions:
                     wvl_limits.extend([wvl_[0], wvl_[-1]])
 
-                dwvl = abs(wvl_[0] - wvl_[-1])*0.1 # padding
+                dwvl = abs(wvl_[0] - wvl_[-1])*0.2 # padding
 
-                mask_wvl1 = min(wvl_limits) - dwvl
-                mask_wvl2 = max(wvl_limits) + dwvl
+                wvl1 = min(wvl_limits) - dwvl
+                wvl2 = max(wvl_limits) + dwvl
 
-                #print mask_wvl1, mask_wvl2
+                a0v_wvl, a0v_tel_trans, a0v_tel_trans_masked = get_a0v(a0v_spec, wvl1, wvl2, tel_trans)
 
-                # if band == "H":
-                #     mask_wvl1, mask_wvl2 = 1.450, 1.850
-                # else:
-                #     mask_wvl1, mask_wvl2 = 1.850, 2.550
-
-                mask_igr = (mask_wvl1 < wvl_a0v) & (wvl_a0v < mask_wvl2)
-
-                fn = get_master_calib_abspath("telluric/LBL_A15_s0_w050_R0060000_T.fits")
-                telluric = pyfits.open(fn)[1].data
-                telluric_lam = telluric["lam"]
-                tel_mask_igr = (mask_wvl1 < telluric_lam) & (telluric_lam < mask_wvl2)
-                #plot(telluric_lam[tel_mask_H], telluric["trans"][tel_mask_H])
-                from scipy.interpolate import interp1d, UnivariateSpline
-                # spl = UnivariateSpline(telluric_lam[tel_mask_igr],
-                #                        telluric["trans"][tel_mask_igr],
-                #                        k=1,s=0)
-
-                spl = interp1d(telluric_lam[tel_mask_igr],
-                               telluric["trans"][tel_mask_igr],
-                               bounds_error=False
-                               )
-
-                trans = spl(wvl_a0v[mask_igr])
-                # ax1.plot(wvl_a0v[mask_igr], flux[mask_igr]/cont[mask_igr]*trans,
-                #          color="0.5", zorder=0.5)
-
-
-                trans_m = ni.maximum_filter(trans, 128)
-                trans_mg = ni.gaussian_filter(trans_m, 32)
-
-                zzz0 = (flux_a0v/cont_a0v)[mask_igr]
-                zzz = zzz0*trans
-                mmm = trans/trans_mg > 0.95
-                zzz[~mmm] = np.nan
-
-                wvl_zzz = wvl_a0v[mask_igr]
-                #ax2.plot(, zzz)
-
-                # #ax2 = subplot(212)
-                # if DO_STD:
-                #     telluric_cor = []
-
-
-                a0v_flattened = []
-
-                for o_index, wvl, s in zip(order_indices, wvl_solutions, s_list):
-
-                    i1, i2 = i1i2_list[o_index]
-                    #sl = slice(i1, i2)
-                    wvl1, wvl2 = wvl[i1], wvl[i2]
-                    #wvl1, wvl2 = wvl[0], wvl[-1]
-                    z_m = (wvl1 < wvl_zzz) & (wvl_zzz < wvl2)
-
-                    wvl1, wvl2 = min(wvl), max(wvl)
-                    z_m2 = (wvl1 < wvl_zzz) & (wvl_zzz < wvl2)
-
-                    #z_m = z_m2
-
-                    ss = interp1d(wvl, s)
-
-                    s_interped = ss(wvl_zzz[z_m])
-
-                    xxx, yyy = wvl_zzz[z_m], s_interped/zzz[z_m]
-
-                    from astropy.modeling import models, fitting
-                    p_init = models.Chebyshev1D(domain=[xxx[0], xxx[-1]],
-                                                degree=6)
-                    fit_p = fitting.LinearLSQFitter()
-                    x_m = np.isfinite(yyy)
-                    p = fit_p(p_init, xxx[x_m], yyy[x_m])
-                    #ax2.plot(xxx, yyy)
-                    #ax2.plot(xxx, p(xxx))
-
-                    res_ = p(wvl)
-
-
-                    z_interp = interp1d(wvl_zzz[z_m], zzz0[z_m],
-                                        bounds_error=False)
-                    A0V = z_interp(wvl)
-                    #res_[res_<0.3*res_.max()] = np.nan
-
-                    s_f = (s/res_)/A0V
-                    s_f[:i1] = np.nan
-                    s_f[i2:] = np.nan
-                    a0v_flattened.append(s_f)
-
+                a0v_flattened = get_flattend(a0v_spec,
+                                             a0v_wvl, a0v_tel_trans_masked,
+                                             wvl_solutions, s_list,
+                                             i1i2_list=i1i2_list)
 
                 d = np.array(a0v_flattened)
                 #d[~np.isfinite(d)] = 0.

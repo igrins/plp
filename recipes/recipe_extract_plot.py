@@ -9,6 +9,7 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
               recipe_name = "ALL_RECIPES",
               config_file="recipe.config",
               threshold_a0v=0.2,
+              multiply_model_a0v=False,
               html_output=False):
 
     from libs.igrins_config import IGRINSConfig
@@ -45,6 +46,7 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
                               do_interactive_figure=interactive,
                               threshold_a0v=threshold_a0v,
                               objname=objname,
+                              multiply_model_a0v=multiply_model_a0v,
                               html_output=html_output)
 
 
@@ -53,6 +55,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
                       do_interactive_figure=False,
                       threshold_a0v=0.1,
                       objname="",
+                      multiply_model_a0v=False,
                       html_output=False):
 
     from libs.products import ProductDB, PipelineStorage
@@ -223,6 +226,8 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
 
             #from libs.stddev_filter import window_stdev
 
+
+
             tgt_spec_cor = []
             #for s, t in zip(s_list, telluric_cor):
             for s, t, t2 in zip(tgt_spec, a0v_spec, telluric_cor):
@@ -237,12 +242,34 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
                 tgt_spec_cor.append(st)
 
 
-            for wvl, s, t in zip(wvl_solutions,
-                                 tgt_spec_cor,
-                                 telluric_cor):
+            if multiply_model_a0v:
+                # multiply by A0V model
+                from libs.a0v_spec import A0VSpec
+                a0v_model = A0VSpec()
 
-                ax2a.plot(wvl, t, "0.8", zorder=0.5)
-                ax2b.plot(wvl, s, zorder=0.5)
+                a0v_interp1d = a0v_model.get_flux_interp1d(1.3, 2.5,
+                                                           flatten=True,
+                                                           smooth_pixel=32)
+
+                for wvl, s, t in zip(wvl_solutions,
+                                     tgt_spec_cor,
+                                     telluric_cor):
+
+                    ax2a.plot(wvl, t, "0.8", zorder=0.5)
+
+                    aa = a0v_interp1d(wvl)
+
+                    ax2b.plot(wvl, s*aa, zorder=0.5)
+
+            else:
+                for wvl, s, t in zip(wvl_solutions,
+                                     tgt_spec_cor,
+                                     telluric_cor):
+
+                    ax2a.plot(wvl, t, "0.8", zorder=0.5)
+
+                    ax2b.plot(wvl, s, zorder=0.5)
+
 
             s_max_list = []
             s_min_list = []
