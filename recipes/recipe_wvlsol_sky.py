@@ -727,29 +727,49 @@ def process_distortion_sky_band(utdate, refdate, band, obsids, config):
     if 1:
         p2_dict = dict(zip(orders, p2_list))
 
+        # save order_map, etc
+
         order_map = ap.make_order_map()
         slitpos_map = ap.make_slitpos_map()
+        order_map2 = ap.make_order_map(mask_top_bottom=True)
 
         slitoffset_map = np.empty_like(slitpos_map)
         slitoffset_map.fill(np.nan)
-        for o in ap.orders:
+
+        wavelength_map = np.empty_like(slitpos_map)
+        wavelength_map.fill(np.nan)
+
+        from scipy.interpolate import interp1d
+        for o, wvl in zip(ap.orders, wvl_solutions):
             xi = np.arange(0, 2048)
             xl, yl = np.meshgrid(xi, xi)
             msk = order_map == o
-            slitoffset_map[msk] = p2_dict[o](xl[msk], slitpos_map[msk])
 
-        # import astropy.io.fits as pyfits
-        # fn = sky_path.get_secondary_path("slitoffset_map.fits")
-        # pyfits.PrimaryHDU(data=slitoffset_map).writeto(fn, clobber=True)
+            xl_msk = xl[msk]
+            slitoffset_map_msk = p2_dict[o](xl_msk, slitpos_map[msk])
+            slitoffset_map[msk] = slitoffset_map_msk
 
-        from libs.storage_descriptions import SLITOFFSET_FITS_DESC
+            wvl_interp1d = interp1d(xi, wvl, bounds_error=False)
+            wavelength_map[msk] = wvl_interp1d(xl_msk - slitoffset_map_msk)
+
+
+        from libs.storage_descriptions import (ORDERMAP_FITS_DESC,
+                                               SLITPOSMAP_FITS_DESC,
+                                               SLITOFFSET_FITS_DESC,
+                                               WAVELENGTHMAP_FITS_DESC,
+                                               ORDERMAP_MASKED_FITS_DESC)
         from libs.products import PipelineImage, PipelineProducts
-        distortion_products = PipelineProducts("Distortion map")
-        distortion_products.add(SLITOFFSET_FITS_DESC,
-                                PipelineImage([],
-                                              slitoffset_map))
+        products = PipelineProducts("Distortion map")
 
-        igr_storage.store(distortion_products,
+        for desc, im in [(ORDERMAP_FITS_DESC, order_map),
+                         (SLITPOSMAP_FITS_DESC, slitpos_map),
+                         (SLITOFFSET_FITS_DESC, slitoffset_map),
+                         (WAVELENGTHMAP_FITS_DESC,wavelength_map),
+                         (ORDERMAP_MASKED_FITS_DESC, order_map2)]:
+            products.add(desc,
+                         PipelineImage([], im))
+
+        igr_storage.store(products,
                           mastername=sky_filenames[0],
                           masterhdu=None)
 

@@ -85,6 +85,9 @@ class PipelineStorage(object):
             #self.save_one(fn, v, masterhdu)
         return r
 
+    def load1(self, product_desc, mastername):
+        return self.load([product_desc], mastername)[product_desc]
+
     def store(self, products, mastername, masterhdu=None, cache=True):
         mastername, ext_ = os.path.splitext(mastername)
 
