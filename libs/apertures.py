@@ -198,54 +198,68 @@ class Apertures(object):
 
 
     def extract_stellar(self, ordermap_bpixed, profile_map, variance_map,
-                        data, slitoffset_map=None):
+                        data, slitoffset_map=None, weight_thresh=0.05,
+                        remove_negative=False):
 
-        # TODO: the profile needs to be renormalized
+        msk1 = np.isfinite(data) & np.isfinite(variance_map)
 
-        map_weighted_spectra = (profile_map*data)/variance_map
-        map_weights = profile_map**2/variance_map
-
-        msk1 = np.isfinite(map_weighted_spectra) & np.isfinite(map_weights)
-
-        iy, ix = np.indices(data.shape)
-
+        # it would be easier if shift data before all this?
         if slitoffset_map is not None:
             from correct_distortion import ShiftX
             shiftx = ShiftX(slitoffset_map)
 
-            map_weighted_spectra[~msk1] = 0.
-            map_weights[~msk1] = 0.
-            profile_map[~msk1] = 0.
+            data, variance_map = data.copy(), variance_map.copy()
+            data[~msk1] = 0
+            variance_map[~msk1] = 0
 
-            msk1 = shiftx(msk1)
-            map_weighted_spectra = shiftx(map_weighted_spectra)/msk1
-            map_weights = shiftx(map_weights)
-            profile_map = shiftx(profile_map)
+            msk10 = shiftx(msk1)
 
+            profile_map = profile_map*msk10
+            data = shiftx(data)#/msk10
+            variance_map = shiftx(variance_map)#/msk10#/msk10 #**2
 
-        #bins = np.arange(-0.5, 2048.5)
+            msk1 = (msk10 > 0) & (variance_map > 0) #& (msk10 > 0.2)
 
         s_list = []
         v_list = []
         slices = ni.find_objects(ordermap_bpixed)
         for o in self.orders:
             sl = slices[o-1][0], slice(0, 2048)
-            msk = (ordermap_bpixed[sl] == o) #& msk1[sl]
-
-            map_weighted_spectra1 = map_weighted_spectra[sl].copy()
-            map_weighted_spectra1[~msk] = 0.
-
-            map_weights1 = map_weights[sl].copy()
-            map_weights1[~msk] = 0.
+            msk = (ordermap_bpixed[sl] == o) & msk1[sl]
 
             profile_map1 = profile_map[sl].copy()
             profile_map1[~msk] = 0.
 
+            profile_map1[np.abs(profile_map1) < 0.02] = np.nan
+
+            profile_map1[~np.isfinite(profile_map1)] = 0.
+
+
+            # normalize profile
+            #profile_map1 /= np.abs(profile_map1).sum(axis=0)
+
+
+            variance_map1 = variance_map[sl]
+            map_weighted_spectra1 = (profile_map1*data[sl])/variance_map1
+            map_weights1 = profile_map1**2/variance_map1
+
+            map_weighted_spectra1[~msk] = 0.
+            map_weights1[~msk] = 0.
+
+            #profile_map1 = profile_map[sl].copy()
+            #profile_map1[~msk] = 0.
+
             sum_weighted_spectra1 = map_weighted_spectra1.sum(axis=0)
+
+            # mask out range where sum_weighted_spectra1 < 0
+            if remove_negative:
+                sum_weighted_spectra1[sum_weighted_spectra1<0] = np.nan
+
             sum_weights1 = map_weights1.sum(axis=0)
             sum_profile1 = np.abs(profile_map1).sum(axis=0)
 
-
+            # weight_thresh = 0.01 safe enough?
+            sum_weights1[sum_weights1<np.nanmax(sum_weights1)*weight_thresh] = np.nan
             s = sum_weighted_spectra1 / sum_weights1
 
             s_list.append(s)

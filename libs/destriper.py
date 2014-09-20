@@ -19,7 +19,9 @@ class Destriper(object):
         dd = np.vstack([np.polyval(p, iy) for p in p_list])
         return d - dd.T
 
-    def get_stripe_pattern64(self, d, mask=None, concatenate=True):
+    def get_stripe_pattern64(self, d, mask=None,
+                             concatenate=True,
+                             remove_vertical=True):
         """
         if concatenate is True, return 2048x2048 array.
         Otherwise, 128x2048 array.
@@ -29,7 +31,8 @@ class Destriper(object):
         dy_slices = [slice(iy*dy, (iy+1)*dy) for iy in range(2048/dy)]
         from itertools import cycle
         if mask is not None:
-            d = self._remove_vertical_smooth_bg(d, mask=mask)
+            if remove_vertical:
+                d = self._remove_vertical_smooth_bg(d, mask=mask)
             alt_sign = cycle([1, -1])
             dd = [d[sl][::next(alt_sign)] for sl in dy_slices]
             alt_sign = cycle([1, -1])
@@ -106,7 +109,8 @@ class Destriper(object):
 
         return ddm
 
-    def get_destriped(self, d, mask=None, hori=None, pattern=128):
+    def get_destriped(self, d, mask=None, hori=None, pattern=128,
+                      remove_vertical=True):
         # if hori:
         #     s_hori = np.median(d, axis=0)
         #     d = d - s_hori
@@ -115,7 +119,8 @@ class Destriper(object):
                 hori = True
 
         if pattern == 64:
-            ddm = self.get_stripe_pattern64(d, mask=mask, concatenate=True)
+            ddm = self.get_stripe_pattern64(d, mask=mask, concatenate=True,
+                                            remove_vertical=remove_vertical)
             d_ddm = d - ddm
         elif pattern == 128:
             ddm = self.get_stripe_pattern128(d, mask=mask, concatenate=True)

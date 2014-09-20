@@ -29,13 +29,13 @@ class ShiftX(object):
 
 
 if __name__ == "__main__":
-    d = pyfits.open("../outdata/20140525/SDCK_20140525_0029.combined_image.fits")[0].data
+    d = pyfits.open("../outdata/20140525/SDCH_20140525_0016.combined_image.fits")[0].data
 
-    msk = np.isfinite(pyfits.open("../outdata/20140525/SDCK_20140525_0042.combined_image.fits")[0].data)
+    msk = np.isfinite(pyfits.open("../outdata/20140525/SDCH_20140525_0042.combined_image.fits")[0].data)
 
     d[~msk] = np.nan
 
-    slitoffset = pyfits.open("../calib/primary/20140525/SKY_SDCK_20140525_0029.slitoffset_map.fits")[0].data
+    slitoffset = pyfits.open("../calib/primary/20140525/SKY_SDCH_20140525_0029.slitoffset_map.fits")[0].data
 
     d[~np.isfinite(slitoffset)] = np.nan
 

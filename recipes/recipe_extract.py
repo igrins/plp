@@ -10,22 +10,26 @@ from libs.products import PipelineProducts
 def a0v_ab(utdate, refdate="20140316", bands="HK",
            starting_obsids=None,
            config_file="recipe.config",
-           frac_slit=None):
+           frac_slit=None,
+           cr_rejection_thresh=100):
     recipe = "A0V_AB"
     abba_all(recipe, utdate, refdate=refdate, bands=bands,
              starting_obsids=starting_obsids,
              config_file=config_file,
-             frac_slit=frac_slit)
+             frac_slit=frac_slit,
+             cr_rejection_thresh=cr_rejection_thresh)
 
 def stellar_ab(utdate, refdate="20140316", bands="HK",
                starting_obsids=None,
                config_file="recipe.config",
-               frac_slit=None):
+               frac_slit=None,
+               cr_rejection_thresh=100):
     recipe = "STELLAR_AB"
     abba_all(recipe, utdate, refdate=refdate, bands=bands,
              starting_obsids=starting_obsids,
              config_file=config_file,
-             frac_slit=frac_slit)
+             frac_slit=frac_slit,
+             cr_rejection_thresh=cr_rejection_thresh)
 
 def extended_ab(utdate, refdate="20140316", bands="HK",
                 starting_obsids=None,
@@ -52,7 +56,8 @@ def extended_onoff(utdate, refdate="20140316", bands="HK",
 def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
              starting_obsids=None, interactive=False,
              config_file="recipe.config",
-             frac_slit=None):
+             frac_slit=None,
+             cr_rejection_thresh=100.):
 
     from libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
@@ -78,7 +83,8 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
 
     process_abba_band = ProcessABBABand(utdate, refdate,
                                         config,
-                                        frac_slit=frac_slit).process
+                                        frac_slit=frac_slit,
+                                        cr_rejection_thresh=cr_rejection_thresh).process
 
     for s in selected:
         obsids = s[0]
@@ -93,7 +99,9 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
 from libs.products import ProductDB, PipelineStorage
 
 class ProcessABBABand(object):
-    def __init__(self, utdate, refdate, config, frac_slit=None):
+    def __init__(self, utdate, refdate, config,
+                 frac_slit=None,
+                 cr_rejection_thresh=100):
         self.utdate = utdate
         self.refdate = refdate
         self.config = config
@@ -103,7 +111,7 @@ class ProcessABBABand(object):
         self.igr_storage = PipelineStorage(self.igr_path)
 
         self.frac_slit = frac_slit
-
+        self.cr_rejection_thresh = cr_rejection_thresh
 
     def process(self, recipe, band, obsids, frametypes):
 
@@ -195,11 +203,14 @@ class ProcessABBABand(object):
                                 orders_w_solutions)
 
 
-            # This should be saved somewhere and loaded, instead of making it every time.
-            order_map = ap.make_order_map()
-            slitpos_map = ap.make_slitpos_map()
-            order_map2 = ap.make_order_map(mask_top_bottom=True)
+            from libs.storage_descriptions import (ORDERMAP_FITS_DESC,
+                                                   SLITPOSMAP_FITS_DESC)
 
+            order_map = igr_storage.load1(ORDERMAP_FITS_DESC, sky_basename).data
+            slitpos_map = igr_storage.load1(SLITPOSMAP_FITS_DESC, sky_basename).data
+            #order_map = ap.make_order_map()
+            #slitpos_map = ap.make_slitpos_map()
+            order_map2 = ap.make_order_map(mask_top_bottom=True)
 
         if 1:
 
@@ -297,11 +308,9 @@ class ProcessABBABand(object):
                 #data_minus0 = data_minus
 
                 from libs.destriper import destriper
-                if 1:
-
-                    data_minus = destriper.get_destriped(data_minus,
-                                                         ~np.isfinite(data_minus),
-                                                         pattern=64)
+                data_minus = destriper.get_destriped(data_minus,
+                                                     ~np.isfinite(data_minus),
+                                                     pattern=64)
 
                 data_minus_flattened = data_minus / orderflat
                 data_minus_flattened[~flat_mask.data] = np.nan
@@ -317,45 +326,10 @@ class ProcessABBABand(object):
                 from libs import instrument_parameters
                 gain =  instrument_parameters.gain[band]
 
-                # random noise
-                variance0 = data_minus
+                from libs.variance_map import get_variance_map
+                variance_map = get_variance_map(data_plus, data_minus,
+                                                bias_mask2, pix_mask, gain)
 
-                variance_ = variance0.copy()
-                variance_[bias_mask2] = np.nan
-                variance_[pix_mask] = np.nan
-
-                mm = np.ma.array(variance0, mask=~np.isfinite(variance0))
-                ss = np.ma.median(mm, axis=0)
-                variance_ = variance_ - ss
-
-                # iterate over fixed number of times.
-                # need to be improved.
-                for i in range(5):
-                    st = np.nanstd(variance_, axis=0)
-                    variance_[np.abs(variance_) > 3*st] = np.nan
-                    #st = np.nanstd(variance_, axis=0)
-
-                variance = destriper.get_destriped(variance0,
-                                                    ~np.isfinite(variance_),
-                                                   pattern=64)
-
-                variance_ = variance.copy()
-                variance_[bias_mask2] = np.nan
-                variance_[pix_mask] = np.nan
-
-                st = np.nanstd(variance_)
-                st = np.nanstd(variance_[np.abs(variance_) < 3*st])
-
-                variance_[np.abs(variance_-ss) > 3*st] = np.nan
-
-                x_std = ni.median_filter(np.nanstd(variance_, axis=0), 11)
-
-                variance_map0 = np.zeros_like(variance) + x_std**2
-
-
-
-                variance_map = variance_map0 + np.abs(data_plus)/gain # add poison noise in ADU
-                # we ignore effect of flattening
 
                 # now estimate lsf
 
@@ -368,6 +342,8 @@ class ProcessABBABand(object):
 
 
             if IF_POINT_SOURCE: # if point source
+
+
 
                 x1, x2 = 800, 1200
                 bins, lsf_list = ap.extract_lsf(ordermap_bpixed, slitpos_map,
@@ -407,37 +383,62 @@ class ProcessABBABand(object):
                     slitpos_msk = (slitpos_map < frac1) | (slitpos_map > frac2)
                     profile_map[slitpos_msk] = np.nan
 
+
+
+                profile_map_shft = profile_map
+
+                data_minus_flattened_shft = (data_minus_flattened)
+                variance_map_shft = (variance_map)
+
+
                 # extract spec
 
                 s_list, v_list = ap.extract_stellar(ordermap_bpixed,
-                                                    profile_map,
-                                                    variance_map,
-                                                    data_minus_flattened,
-                                                    slitoffset_map=slitoffset_map)
+                                                    profile_map_shft,
+                                                    variance_map_shft,
+                                                    data_minus_flattened_shft,
+                                                    slitoffset_map=slitoffset_map,
+                                                    remove_negative=True
+                                                    )
 
                 # make synth_spec : profile * spectra
                 synth_map = ap.make_synth_map(order_map, slitpos_map,
                                               profile_map, s_list,
-                                              slitoffset_map=slitoffset_map)
+                                              slitoffset_map=slitoffset_map
+                                              )
 
                 sig_map = (data_minus_flattened - synth_map)**2/variance_map
                 ## mark sig_map > 100 as cosmicay. The threshold need to be fixed.
 
 
                 # reextract with new variance map and CR is rejected
-                variance_map_r = variance_map0 + np.abs(synth_map)/gain
-                variance_map2 = np.max([variance_map, variance_map_r], axis=0)
-                variance_map2[np.abs(sig_map) > 100] = np.nan
+                variance_map_r = variance_map + np.abs(synth_map)/gain
+                variance_map = np.max([variance_map, variance_map_r], axis=0)
+
+                cr_mask = np.abs(sig_map) > self.cr_rejection_thresh
+                variance_map[cr_mask] = np.nan
 
                 # masking this out will affect the saved combined image.
-                data_minus_flattened[np.abs(sig_map) > 100] = np.nan
+                data_minus_flattened[cr_mask] = np.nan
+
+
+                profile_map_shft = profile_map
+
+                data_minus_flattened_shft = (data_minus_flattened)
+                variance_map_shft = (variance_map)
+
+
 
                 # extract spec
 
-                s_list, v_list = ap.extract_stellar(ordermap_bpixed, profile_map,
-                                                    variance_map2,
-                                                    data_minus_flattened,
-                                                    slitoffset_map=slitoffset_map)
+                s_list, v_list = ap.extract_stellar(ordermap_bpixed,
+                                                    profile_map_shft,
+                                                    variance_map_shft,
+                                                    data_minus_flattened_shft,
+                                                    slitoffset_map=slitoffset_map,
+                                                    remove_negative=True
+
+                                                    )
 
 
             else: # if extended source
@@ -467,10 +468,10 @@ class ProcessABBABand(object):
                 # we need to update the variance map by rejecting
                 # cosmic rays, but it is not clear how we do this
                 # for extended source.
-                variance_map2 = variance_map
+                #variance_map2 = variance_map
                 s_list, v_list = ap.extract_stellar(ordermap_bpixed,
                                                     profile_map,
-                                                    variance_map2,
+                                                    variance_map,
                                                     data_minus_flattened,
                                                     slitoffset_map=slitoffset_map
                                                     )
@@ -503,7 +504,7 @@ class ProcessABBABand(object):
             r.add(COMBINED_IMAGE_DESC, PipelineImage([],
                                                      data_minus_flattened))
             r.add(VARIANCE_MAP_DESC, PipelineImage([],
-                                                   variance_map2))
+                                                   variance_map))
 
             # r.add(VARIANCE_MAP_DESC, PipelineImage([],
             #                                        variance_map.data))
