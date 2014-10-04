@@ -46,7 +46,7 @@ SKY_WVLSOL_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".wvlsol_v1.fits")
 
 ORDERMAP_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".order_map.fits")
 ORDERMAP_MASKED_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".order_map_masked.fits")
-SLITPOSMAP_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".slitpo_map.fits")
+SLITPOSMAP_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".slitpos_map.fits")
 SLITOFFSET_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".slitoffset_map.fits")
 WAVELENGTHMAP_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".wavelength_map.fits")
 
