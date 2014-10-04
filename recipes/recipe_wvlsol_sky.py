@@ -335,7 +335,7 @@ def process_wvlsol_band(utdate, refdate, band, obsids, config):
             from libs.products import PipelineImage
             oh_sol_products.add(SKY_WVLSOL_FITS_DESC,
                                 PipelineImage([],
-                                              np.array([]).reshape((0,0))))
+                                              np.array(wvl_sol)))
 
             igr_storage.store(oh_sol_products,
                               mastername=sky_filenames[0],
