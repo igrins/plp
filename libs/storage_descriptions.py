@@ -28,6 +28,8 @@ ORDER_FLAT_JSON_DESC = ("PRIMARY_CALIB_PATH", "ORDERFLAT_", ".json")
 # image related descriptions
 
 COMBINED_IMAGE_DESC = ("OUTDATA_PATH", "", ".combined_image.fits")
+COMBINED_IMAGE_A_DESC = ("OUTDATA_PATH", "", ".combined_image_a.fits")
+COMBINED_IMAGE_B_DESC = ("OUTDATA_PATH", "", ".combined_image_b.fits")
 ONED_SPEC_JSON_DESC = ("PRIMARY_CALIB_PATH", "", ".oned_spec.json")
 
 # THAR related descriptions
@@ -58,3 +60,5 @@ VARIANCE_FITS_DESC = ("OUTDATA_PATH", "", ".variance.fits")
 SN_FITS_DESC = ("OUTDATA_PATH", "", ".sn.fits")
 
 VARIANCE_MAP_DESC = ("OUTDATA_PATH", "", ".variance_map.fits")
+
+SLIT_PROFILE_JSON_DESC = ("OUTDATA_PATH", "", ".slit_profile.json")

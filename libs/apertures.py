@@ -171,12 +171,227 @@ class Apertures(object):
 
         return mask_to_estimate_bg_pattern
 
-    def extract_lsf(self, order_map, slitpos_map, data, x1, x2, bins=None):
+
+    def get_shifted_images(self, profile_map, variance_map,
+                           data, slitoffset_map=None):
+
+        msk1 = np.isfinite(data) & np.isfinite(variance_map)
+
+        # it would be easier if shift data before all this?
+        if slitoffset_map is not None:
+            from correct_distortion import ShiftX
+            shiftx = ShiftX(slitoffset_map)
+
+            data, variance_map = data.copy(), variance_map.copy()
+            data[~msk1] = 0
+            variance_map[~msk1] = 0
+
+            msk10 = shiftx(msk1)
+
+            profile_map = profile_map*msk10
+            data = shiftx(data)#/msk10
+            variance_map = shiftx(variance_map)#/msk10#/msk10 #**2
+
+            msk1 = (msk10 > 0) & (variance_map > 0) #& (msk10 > 0.2)
+
+        return data, variance_map, profile_map, msk1
+
+    def extract_stellar_from_shifted(self, ordermap_bpixed,
+                                     profile_map, variance_map,
+                                     data, msk1,
+                                     weight_thresh=0.05,
+                                     remove_negative=False):
+
+        s_list = []
+        v_list = []
+        slices = ni.find_objects(ordermap_bpixed)
+
+        SAVE_PROFILE = True
+        if SAVE_PROFILE:
+            import astropy.io.fits as pyfits
+            hl = pyfits.HDUList()
+            hl.append(pyfits.PrimaryHDU())
+
+        for o in self.orders:
+            sl = slices[o-1][0], slice(0, 2048)
+            msk = (ordermap_bpixed[sl] == o) & msk1[sl]
+
+            profile_map1 = profile_map[sl].copy()
+
+            profile_map1[~msk] = 0.
+
+            #profile_map1[np.abs(profile_map1) < 0.02] = np.nan
+
+            profile_map1[~np.isfinite(profile_map1)] = 0.
+
+            # normalize profile
+            #profile_map1 /= np.abs(profile_map1).sum(axis=0)
+
+
+            variance_map1 = variance_map[sl]
+            map_weighted_spectra1 = (profile_map1*data[sl])/variance_map1
+            map_weights1 = profile_map1**2/variance_map1
+
+            map_weighted_spectra1[~msk] = 0.
+            map_weights1[~msk] = 0.
+
+            mmm = np.isfinite(map_weighted_spectra1) & np.isfinite(map_weights1) & np.isfinite(profile_map1)
+            map_weighted_spectra1[~mmm] = 0.
+            map_weights1[~mmm] = 0.
+            profile_map1[~mmm] = 0.
+
+            #profile_map1 = profile_map[sl].copy()
+            #profile_map1[~msk] = 0.
+
+            sum_weighted_spectra1 = map_weighted_spectra1.sum(axis=0)
+
+            # mask out range where sum_weighted_spectra1 < 0
+            if remove_negative:
+               sum_weighted_spectra1[sum_weighted_spectra1<0] = np.nan
+
+            sum_weights1 = map_weights1.sum(axis=0)
+            sum_profile1 = np.abs(profile_map1).sum(axis=0)
+
+            # weight_thresh = 0.01 safe enough?
+            #thresh_msk = sum_profile1 < 0.1
+            thresh_msk = ni.binary_dilation(sum_profile1 < 0.1, iterations=5)
+            sum_weights1[thresh_msk] = np.nan
+
+            #sum_variance1 = variance_map1.sum(axis=0)
+            #sum_weights1[sum_variance1 < 0.1*np.nanmax(sum_variance1)] = np.nan
+
+            s = sum_weighted_spectra1 / sum_weights1
+
+            s_list.append(s)
+
+            v = sum_profile1 / sum_weights1
+
+            v_list.append(v)
+
+            if SAVE_PROFILE:
+                hl.append(pyfits.ImageHDU(np.array([sum_weighted_spectra1,
+                                                    sum_weights1,
+                                                    sum_profile1,
+                                                    ])))
+
+
+
+        if SAVE_PROFILE:
+            hl.writeto("test_profile.fits", clobber=True)
+        return s_list, v_list
+
+
+    def extract_extended_from_shifted(self, ordermap_bpixed,
+                                      profile_map, variance_map,
+                                      data, msk1,
+                                      weight_thresh=0.05,
+                                      remove_negative=False):
+
+        s_list = []
+        v_list = []
+        slices = ni.find_objects(ordermap_bpixed)
+
+        SAVE_PROFILE = True
+        if SAVE_PROFILE:
+            import astropy.io.fits as pyfits
+            hl = pyfits.HDUList()
+            hl.append(pyfits.PrimaryHDU())
+
+        for o in self.orders:
+            sl = slices[o-1][0], slice(0, 2048)
+            msk = (ordermap_bpixed[sl] == o) & msk1[sl]
+
+            profile_map1 = profile_map[sl].copy()
+
+            profile_map1[~msk] = 0.
+
+            #profile_map1[np.abs(profile_map1) < 0.02] = np.nan
+
+            profile_map1[~np.isfinite(profile_map1)] = 0.
+
+            # normalize profile
+            #profile_map1 /= np.abs(profile_map1).sum(axis=0)
+
+
+            variance_map1 = variance_map[sl]
+            map_weighted_spectra1 = (profile_map1*data[sl])/variance_map1
+            map_weights1 = profile_map1**2/variance_map1
+
+            map_weighted_spectra1[~msk] = 0.
+            map_weights1[~msk] = 0.
+
+            mmm = np.isfinite(map_weighted_spectra1) & np.isfinite(map_weights1) & np.isfinite(profile_map1)
+            map_weighted_spectra1[~mmm] = 0.
+            map_weights1[~mmm] = 0.
+            profile_map1[~mmm] = 0.
+
+            #profile_map1 = profile_map[sl].copy()
+            #profile_map1[~msk] = 0.
+
+            sum_weighted_spectra1 = map_weighted_spectra1.sum(axis=0)
+
+            # mask out range where sum_weighted_spectra1 < 0
+            if remove_negative:
+               sum_weighted_spectra1[sum_weighted_spectra1<0] = np.nan
+
+            sum_weights1 = map_weights1.sum(axis=0)
+            sum_profile1 = np.abs(profile_map1).sum(axis=0)
+
+            # weight_thresh = 0.01 safe enough?
+            #thresh_msk = sum_profile1 < 0.1
+            thresh_msk = ni.binary_dilation(sum_profile1 < 0.1, iterations=5)
+            sum_weights1[thresh_msk] = np.nan
+
+            #sum_variance1 = variance_map1.sum(axis=0)
+            #sum_weights1[sum_variance1 < 0.1*np.nanmax(sum_variance1)] = np.nan
+
+            s = sum_weighted_spectra1 / sum_weights1
+
+            s_list.append(s)
+
+            v = sum_profile1 / sum_weights1
+
+            v_list.append(v)
+
+            if SAVE_PROFILE:
+                hl.append(pyfits.ImageHDU(np.array([sum_weighted_spectra1,
+                                                    sum_weights1,
+                                                    sum_profile1,
+                                                    ])))
+
+
+
+        if SAVE_PROFILE:
+            hl.writeto("test_profile.fits", clobber=True)
+        return s_list, v_list
+
+
+    def extract_stellar(self, ordermap_bpixed, profile_map, variance_map,
+                        data, slitoffset_map=None, weight_thresh=0.05,
+                        remove_negative=False):
+
+        _ = self.get_shifted_images(profile_map, variance_map,
+                                    data, slitoffset_map=slitoffset_map)
+
+        data, variance_map, profile_map, msk1 = _
+
+        _ = self.extract_stellar_from_shifted(ordermap_bpixed,
+                                              profile_map, variance_map,
+                                              data, msk1,
+                                              weight_thresh=weight_thresh,
+                                              remove_negative=remove_negative)
+        s_list, v_list = _
+
+        return s_list, v_list
+
+
+    def extract_slit_profile(self, order_map, slitpos_map, data,
+                             x1, x2, bins=None):
 
         x1, x2 = int(x1), int(x2)
 
         slices = ni.find_objects(order_map)
-        lsf_list = []
+        slit_profile_list = []
         if bins is None:
             bins = np.linspace(0., 1., 40)
 
@@ -192,12 +407,12 @@ class Apertures(object):
             hh = np.histogram(slitpos_map[sl][msk][finite_mask],
                               weights=d[finite_mask], bins=bins,
                               )
-            lsf_list.append(hh[0])
+            slit_profile_list.append(hh[0])
 
-        return bins, lsf_list
+        return bins, slit_profile_list
 
 
-    def extract_stellar(self, ordermap_bpixed, profile_map, variance_map,
+    def extract_stellar_orig(self, ordermap_bpixed, profile_map, variance_map,
                         data, slitoffset_map=None, weight_thresh=0.05,
                         remove_negative=False):
 
