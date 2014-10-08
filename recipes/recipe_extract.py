@@ -584,26 +584,9 @@ class ProcessABBABand(object):
                                                      profile_map_shft,
                                                      variance_map_shft,
                                                      data_shft, msk1_shft,
+                                                     slitpos_map,
                                                      remove_negative=True)
                 s_list, v_list = _
-
-                hdu_list = pyfits.HDUList()
-                hdu_list.append(pyfits.PrimaryHDU(data=data_shft))
-                hdu_list.append(pyfits.ImageHDU(data=variance_map_shft))
-                hdu_list.append(pyfits.ImageHDU(data=profile_map_shft))
-                hdu_list.append(pyfits.ImageHDU(data=ordermap_bpixed))
-                hdu_list.append(pyfits.ImageHDU(data=np.array(s_list)))
-                hdu_list.writeto("extended.fits", clobber=True)
-
-
-
-
-                # s_list, v_list = ap.extract_stellar(ordermap_bpixed,
-                #                                     profile_map,
-                #                                     variance_map,
-                #                                     data_minus_flattened,
-                #                                     slitoffset_map=slitoffset_map
-                #                                     )
 
 
 
@@ -685,6 +668,50 @@ class ProcessABBABand(object):
 
             f.writeto(fout, clobber=True)
 
+
+            if not IF_POINT_SOURCE: # if extended source
+                from libs.storage_descriptions import FLATCENTROID_SOL_JSON_DESC
+                cent = igr_storage.load1(FLATCENTROID_SOL_JSON_DESC,
+                                         basenames["flat_on"])
+
+                #cent = json.load(open("calib/primary/20140525/FLAT_SDCK_20140525_0074.centroid_solutions.json"))
+                bottom_up_solutions = cent["bottom_up_solutions"]
+
+                from libs.correct_distortion import get_flattened_2dspec
+                d0_shft_list, msk_shft_list = \
+                              get_flattened_2dspec(data_shft,
+                                                   ordermap_bpixed,
+                                                   bottom_up_solutions)
+
+
+                d = np.array(d0_shft_list) / np.array(msk_shft_list)
+                f[0].data = d.astype("f32")
+
+                from libs.storage_descriptions import SPEC2D_FITS_DESC
+
+                fout = igr_storage.get_path(SPEC2D_FITS_DESC,
+                                            tgt_basename)
+
+                f.writeto(fout, clobber=True)
+
+
+                # hdu_list = pyfits.HDUList()
+                # hdu_list.append(pyfits.PrimaryHDU(data=d))
+                # #hdu_list.append(pyfits.ImageHDU(data=variance_map_shft))
+                # #hdu_list.append(pyfits.ImageHDU(data=profile_map_shft))
+                # #hdu_list.append(pyfits.ImageHDU(data=ordermap_bpixed))
+                # #hdu_list.append(pyfits.ImageHDU(data=np.array(s_list)))
+                # hdu_list.writeto("extended.fits", clobber=True)
+
+
+
+
+                # s_list, v_list = ap.extract_stellar(ordermap_bpixed,
+                #                                     profile_map,
+                #                                     variance_map,
+                #                                     data_minus_flattened,
+                #                                     slitoffset_map=slitoffset_map
+                #                                     )
 
 
 

@@ -62,3 +62,5 @@ SN_FITS_DESC = ("OUTDATA_PATH", "", ".sn.fits")
 VARIANCE_MAP_DESC = ("OUTDATA_PATH", "", ".variance_map.fits")
 
 SLIT_PROFILE_JSON_DESC = ("OUTDATA_PATH", "", ".slit_profile.json")
+
+SPEC2D_FITS_DESC = ("OUTDATA_PATH", "", ".spec2d.fits")
