@@ -298,9 +298,11 @@ class ProcessABBABand(object):
 
                 from libs.destriper import destriper
                 if 1:
+                    destrip_mask = ~np.isfinite(data_minus)|bias_mask
 
                     data_minus = destriper.get_destriped(data_minus,
-                                                         ~np.isfinite(data_minus),
+                                                         destrip_mask,
+                                                         hori=True,
                                                          pattern=64)
 
                 data_minus_flattened = data_minus / orderflat
