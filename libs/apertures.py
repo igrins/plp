@@ -199,7 +199,7 @@ class Apertures(object):
     def extract_stellar_from_shifted(self, ordermap_bpixed,
                                      profile_map, variance_map,
                                      data, msk1,
-                                     slitpos_map,
+                                     #slitpos_map,
                                      weight_thresh=0.05,
                                      remove_negative=False):
 
