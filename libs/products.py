@@ -5,7 +5,7 @@ import numpy as np
 
 import astropy.io.fits as pyfits
 
-from pyfits import Card
+from astropy.io.fits import Card
 
 class PipelineImage(object):
     def __init__(self, header, data):

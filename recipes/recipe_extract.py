@@ -314,7 +314,8 @@ class ProcessABBABand(object):
 
                 data_minus = destriper.get_destriped(data_minus,
                                                      destrip_mask,
-                                                     pattern=64)
+                                                     pattern=64,
+                                                     hori=True)
                 if 1:
                     a_data = destriper.get_destriped(a_data,
                                                      destrip_mask,
@@ -423,10 +424,20 @@ class ProcessABBABand(object):
 
                 # extract spec
 
+
                 _ = ap.get_shifted_images(profile_map,
                                           variance_map,
                                           data_minus_flattened,
-                                          slitoffset_map=slitoffset_map)
+                                          slitoffset_map=slitoffset_map,
+                                          debug=True)
+
+
+                hdu_list = pyfits.HDUList()
+                hdu_list.append(pyfits.PrimaryHDU(data=data_minus_flattened))
+                hdu_list.append(pyfits.ImageHDU(data=variance_map))
+                hdu_list.append(pyfits.ImageHDU(data=profile_map))
+                hdu_list.append(pyfits.ImageHDU(data=ordermap_bpixed))
+                #hdu_list.writeto("test_input.fits", clobber=True)
 
                 data_shft, variance_map_shft, profile_map_shft, msk1_shft = _
 
@@ -442,7 +453,8 @@ class ProcessABBABand(object):
                 hdu_list.append(pyfits.ImageHDU(data=variance_map_shft))
                 hdu_list.append(pyfits.ImageHDU(data=profile_map_shft))
                 hdu_list.append(pyfits.ImageHDU(data=ordermap_bpixed))
-                hdu_list.append(pyfits.ImageHDU(data=np.array(s_list)))
+                #hdu_list.append(pyfits.ImageHDU(data=msk1_shft.astype("i")))
+                #hdu_list.append(pyfits.ImageHDU(data=np.array(s_list)))
                 hdu_list.writeto("test0.fits", clobber=True)
 
 
@@ -576,9 +588,19 @@ class ProcessABBABand(object):
                 _ = ap.get_shifted_images(profile_map,
                                           variance_map,
                                           data_minus_flattened,
-                                          slitoffset_map=slitoffset_map)
+                                          slitoffset_map=slitoffset_map,
+                                          debug=True)
 
                 data_shft, variance_map_shft, profile_map_shft, msk1_shft = _
+
+                hdu_list = pyfits.HDUList()
+                hdu_list.append(pyfits.PrimaryHDU(data=data_shft))
+                hdu_list.append(pyfits.ImageHDU(data=variance_map_shft))
+                hdu_list.append(pyfits.ImageHDU(data=profile_map_shft))
+                hdu_list.append(pyfits.ImageHDU(data=ordermap_bpixed))
+                #hdu_list.append(pyfits.ImageHDU(data=msk1_shft.astype("i")))
+                #hdu_list.append(pyfits.ImageHDU(data=np.array(s_list)))
+                hdu_list.writeto("test0.fits", clobber=True)
 
                 _ = ap.extract_extended_from_shifted(ordermap_bpixed,
                                                      profile_map_shft,

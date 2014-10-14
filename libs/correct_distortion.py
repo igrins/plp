@@ -18,9 +18,10 @@ class ShiftX(object):
 
         d0_acc = np.add.accumulate(d0, axis=self.AXIS)
 
+        # Do not use assume_sorted, it results in incorrect interpolation.
         d0_acc_shft = np.array([interp1d(xx, dd,
                                          bounds_error=False,
-                                         assume_sorted=False)(self.ix0) \
+                                         )(self.ix0) \
                                 for xx, dd in zip(self.ix, d0_acc)])
 
         d0_shft = np.empty_like(d0_acc_shft)
@@ -48,9 +49,9 @@ def get_flattened_2dspec(data, order_map, bottom_up_solutions):
         yy = np.arange(ny)
         xx = np.arange(0, nx)
 
+        # Do not use assume_sorted, it results in incorrect interpolation.
         d0_acc_interp = [interp1d(yy, dd,
-                                  bounds_error=False,
-                                  assume_sorted=False) \
+                                  bounds_error=False) \
                          for dd in acc_data.T]
 
         bottom_up_list = []
@@ -58,8 +59,9 @@ def get_flattened_2dspec(data, order_map, bottom_up_solutions):
         for c in bottom_up_solutions:
             bottom = Polynomial(c[0][1])(xx)
             up = Polynomial(c[1][1])(xx)
+            dh = (up - bottom) * 0.05
 
-            bottom_up = zip(bottom, up)
+            bottom_up = zip(bottom - dh, up + dh)
             bottom_up_list.append(bottom_up)
 
             height = up - bottom

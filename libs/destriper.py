@@ -136,7 +136,7 @@ class Destriper(object):
             d_ddm = d_ddm - s_hori
 
 
-        return d_ddm
+        return np.array(d_ddm)
 
     def get_destriped_naive(self, d):
         """
