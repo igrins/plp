@@ -574,6 +574,16 @@ def subtract_bg_pattern(d, bottomup_solutions, flat_mask, bpix_mask):
 #         #p = fit_p(p_init, x[300:-300], s[300:-300])
 #         #p = fit_p(p_init, x[210:1890], s[210:1890])
 
+def get_finite_boundary_indices(s1):
+    # select finite number only. This may happen when orders go out of
+    # chip boundary.
+    s1 = np.array(s1)
+    #k1, k2 = np.nonzero(np.isfinite(s1))[0][[0, -1]]
+    k1, k2 = np.nonzero(s1>0.)[0][[0, -1]]
+    k1 = max(k1, 4)
+    k2 = min(k2, 2047-4)
+    return k1, k2
+#s = s1[k1:k2+1]
 
 def get_order_boundary_indices(s1, s0=None):
     #x = np.arange(len(s))
