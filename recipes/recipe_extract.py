@@ -642,13 +642,14 @@ class ProcessABBABand(object):
 
             r = PipelineProducts("1d specs")
 
-            r.add(COMBINED_IMAGE_DESC, PipelineImage([],
-                                                     data_minus_flattened,
-                                                     data_minus_flattened_orig,
-                                                     synth_map,
-                                                     sig_map,
-                                                     cr_map,
-                                                     ))
+            image_list = [data_minus_flattened]
+            if IF_POINT_SOURCE: # if point source
+                image_list.extend([data_minus_flattened_orig,
+                                   synth_map,
+                                   sig_map,
+                                   cr_mask,
+                                   ])
+            r.add(COMBINED_IMAGE_DESC, PipelineImage([], *image_list))
             r.add(COMBINED_IMAGE_A_DESC, PipelineImage([],
                                                        a_data))
             r.add(COMBINED_IMAGE_B_DESC, PipelineImage([],
