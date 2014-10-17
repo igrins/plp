@@ -8,29 +8,45 @@ import astropy.io.fits as pyfits
 from pyfits import Card
 
 class PipelineImage(object):
-    def __init__(self, header, data):
+    def __init__(self, header, *data_list):
         self.header = header
-        self.data = data
+        self.data_list = data_list
+        self.data = data_list[0]
 
     def store(self, fn, masterhdu=None):
-        d = self.data
+        d_list = self.data_list
 
-        if d.dtype.kind == "b":
-            d = d.astype("uint8")
+        d_list2 = []
+        for d in d_list:
+            if d.dtype.kind == "b":
+                d = d.astype("uint8")
 
-        if hasattr(d, "filled"): # if masked array
-            if d.dtype.kind in  "ui": # "u" or "i"
-                d = d.filled(0) # not sure if this is safe
-            elif d.dtype.kind == "f":
-                d = d.astype("d").filled(np.nan)
-            else:
-                raise ValueError("unsupported dtype :  %s" % str(d.dtype))
+            if hasattr(d, "filled"): # if masked array
+                if d.dtype.kind in  "ui": # "u" or "i"
+                    d = d.filled(0) # not sure if this is safe
+                elif d.dtype.kind == "f":
+                    d = d.astype("d").filled(np.nan)
+                else:
+                    raise ValueError("unsupported dtype :  %s" % str(d.dtype))
+            d_list2.append(d)
 
         if masterhdu is not None:
-            hdu = pyfits.PrimaryHDU(header=masterhdu.header,
-                                    data=d)
+            def get_primary_hdu(d, header=masterhdu.header):
+                return pyfits.PrimaryHDU(header=header,
+                                         data=d)
+            def get_image_hdu(d, header=masterhdu.header):
+                return pyfits.ImageHDU(header=header,
+                                       data=d)
         else:
-            hdu = pyfits.PrimaryHDU(data=d)
+            def get_primary_hdu(d):
+                return pyfits.PrimaryHDU(data=d)
+            def get_image_hdu(d):
+                return pyfits.ImageHDU(data=d)
+
+        hdu0 = get_primary_hdu(d_list2[0])
+        hdu_rest = [get_image_hdu(d_) for d_ in d_list2[1:]]
+
+        hdu = pyfits.HDUList([hdu0] + hdu_rest)
 
         #fn0 = "".join([fn, ".fits"])
         hdu.writeto(fn, clobber=True)

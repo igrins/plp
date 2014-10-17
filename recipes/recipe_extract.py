@@ -10,22 +10,26 @@ from libs.products import PipelineProducts
 def a0v_ab(utdate, refdate="20140316", bands="HK",
            starting_obsids=None,
            config_file="recipe.config",
-           frac_slit=None):
+           frac_slit=None,
+           rejection_thresh=100):
     recipe = "A0V_AB"
     abba_all(recipe, utdate, refdate=refdate, bands=bands,
              starting_obsids=starting_obsids,
              config_file=config_file,
-             frac_slit=frac_slit)
+             frac_slit=frac_slit,
+             rejection_thresh=rejection_thresh)
 
 def stellar_ab(utdate, refdate="20140316", bands="HK",
                starting_obsids=None,
                config_file="recipe.config",
-               frac_slit=None):
+               frac_slit=None,
+               rejection_thresh=100):
     recipe = "STELLAR_AB"
     abba_all(recipe, utdate, refdate=refdate, bands=bands,
              starting_obsids=starting_obsids,
              config_file=config_file,
-             frac_slit=frac_slit)
+             frac_slit=frac_slit,
+             rejection_thresh=rejection_thresh)
 
 def extended_ab(utdate, refdate="20140316", bands="HK",
                 starting_obsids=None,
@@ -52,7 +56,8 @@ def extended_onoff(utdate, refdate="20140316", bands="HK",
 def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
              starting_obsids=None, interactive=False,
              config_file="recipe.config",
-             frac_slit=None):
+             frac_slit=None,
+             rejection_thresh=100):
 
     from libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
@@ -93,7 +98,11 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
 from libs.products import ProductDB, PipelineStorage
 
 class ProcessABBABand(object):
-    def __init__(self, utdate, refdate, config, frac_slit=None):
+    def __init__(self, utdate, refdate, config,
+                 frac_slit=None, rejection_thresh=100.):
+        """
+        rejection_thresh : pixels that deviate significantly from the profile are excluded.
+        """
         self.utdate = utdate
         self.refdate = refdate
         self.config = config
@@ -103,6 +112,7 @@ class ProcessABBABand(object):
         self.igr_storage = PipelineStorage(self.igr_path)
 
         self.frac_slit = frac_slit
+        self.rejection_thresh = rejection_thresh
 
 
     def process(self, recipe, band, obsids, frametypes):
@@ -421,20 +431,24 @@ class ProcessABBABand(object):
                                               slitoffset_map=slitoffset_map)
 
                 sig_map = (data_minus_flattened - synth_map)**2/variance_map
-                ## mark sig_map > 100 as cosmicay. The threshold need to be fixed.
 
 
                 # reextract with new variance map and CR is rejected
                 variance_map_r = variance_map0 + np.abs(synth_map)/gain
                 variance_map2 = np.max([variance_map, variance_map_r], axis=0)
-                variance_map2[np.abs(sig_map) > 100] = np.nan
 
+                ## mark sig_map > 100 as cosmicay. The threshold need to be fixed.
+                cr_map = np.abs(sig_map) > self.rejection_thresh
+
+                variance_map2[cr_map] = np.nan
                 # masking this out will affect the saved combined image.
-                data_minus_flattened[np.abs(sig_map) > 100] = np.nan
+                data_minus_flattened_orig = data_minus_flattened.copy()
+                data_minus_flattened[cr_map] = np.nan
 
                 # extract spec
 
-                s_list, v_list = ap.extract_stellar(ordermap_bpixed, profile_map,
+                s_list, v_list = ap.extract_stellar(ordermap_bpixed,
+                                                    profile_map,
                                                     variance_map2,
                                                     data_minus_flattened,
                                                     slitoffset_map=slitoffset_map)
@@ -501,7 +515,12 @@ class ProcessABBABand(object):
             r = PipelineProducts("1d specs")
 
             r.add(COMBINED_IMAGE_DESC, PipelineImage([],
-                                                     data_minus_flattened))
+                                                     data_minus_flattened,
+                                                     data_minus_flattened_orig,
+                                                     synth_map,
+                                                     sig_map,
+                                                     cr_map,
+                                                     ))
             r.add(VARIANCE_MAP_DESC, PipelineImage([],
                                                    variance_map2))
 
