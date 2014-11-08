@@ -281,7 +281,8 @@ class ProcessABBABand(object):
             if 1:
                 #ab_names = ab_names_list[0]
 
-                # master_hdu = pyfits.open(a_name_list[0])[0]
+                f_obj = pyfits.open(obj_filenames[0])
+
 
                 a_list = [pyfits.open(name)[0].data \
                           for name in a_name_list]
@@ -674,8 +675,10 @@ class ProcessABBABand(object):
             # fn = sky_path.get_secondary_path("wvlsol_v1.fits")
             f = pyfits.open(fn)
 
+            f_obj[0].header.extend(f[0].header)
+
             d = np.array(s_list)
-            f[0].data = d.astype("f32")
+            f_obj[0].data = d.astype("f32")
 
             from libs.storage_descriptions import (SPEC_FITS_DESC,
                                                    VARIANCE_FITS_DESC,
@@ -684,22 +687,25 @@ class ProcessABBABand(object):
             fout = igr_storage.get_path(SPEC_FITS_DESC,
                                         tgt_basename)
 
-            f.writeto(fout, clobber=True)
+            hdu_wvl = pyfits.ImageHDU(data=f[0].data, header=f[0].header)
+            f_obj.append(hdu_wvl)
+
+            f_obj.writeto(fout, clobber=True)
 
 
             d = np.array(v_list)
-            f[0].data = d.astype("f32")
+            f_obj.data = d.astype("f32")
             fout = igr_storage.get_path(VARIANCE_FITS_DESC,
                                         tgt_basename)
 
-            f.writeto(fout, clobber=True)
+            f_obj.writeto(fout, clobber=True)
 
             d = np.array(sn_list)
-            f[0].data = d.astype("f32")
+            f_obj[0].data = d.astype("f32")
             fout = igr_storage.get_path(SN_FITS_DESC,
                                         tgt_basename)
 
-            f.writeto(fout, clobber=True)
+            f_obj.writeto(fout, clobber=True)
 
 
             if not IF_POINT_SOURCE: # if extended source
@@ -718,7 +724,7 @@ class ProcessABBABand(object):
 
 
                 d = np.array(d0_shft_list) / np.array(msk_shft_list)
-                f[0].data = d.astype("f32")
+                f_obj[0].data = d.astype("f32")
 
                 from libs.storage_descriptions import SPEC2D_FITS_DESC
 
