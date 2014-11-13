@@ -81,7 +81,6 @@ def sv_iter(s1m, maxiter=30, pad=8, winsize1=15, winsize2=11,
             break
         else:
             mm_old = mm
-            print i
 
         s1m[mm] = interp1d(xi[~mm], f12[~mm])(xi[mm])
 
