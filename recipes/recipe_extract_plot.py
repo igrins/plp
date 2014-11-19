@@ -65,7 +65,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
 
         FIX_TELLURIC=False
 
-    elif recipe == "A0V_AB":
+    elif recipe == "A0V_ONOFF":
 
         FIX_TELLURIC=False
 
