@@ -19,12 +19,36 @@ def a0v_ab(utdate, refdate="20140316", bands="HK",
              frac_slit=frac_slit,
              cr_rejection_thresh=cr_rejection_thresh)
 
+def a0v_onoff(utdate, refdate="20140316", bands="HK",
+           starting_obsids=None,
+           config_file="recipe.config",
+           frac_slit=None,
+           cr_rejection_thresh=100):
+    recipe = "A0V_ONOFF"
+    abba_all(recipe, utdate, refdate=refdate, bands=bands,
+             starting_obsids=starting_obsids,
+             config_file=config_file,
+             frac_slit=frac_slit,
+             cr_rejection_thresh=cr_rejection_thresh)
+
 def stellar_ab(utdate, refdate="20140316", bands="HK",
                starting_obsids=None,
                config_file="recipe.config",
                frac_slit=None,
                cr_rejection_thresh=100):
     recipe = "STELLAR_AB"
+    abba_all(recipe, utdate, refdate=refdate, bands=bands,
+             starting_obsids=starting_obsids,
+             config_file=config_file,
+             frac_slit=frac_slit,
+             cr_rejection_thresh=cr_rejection_thresh)
+
+def stellar_onoff(utdate, refdate="20140316", bands="HK",
+               starting_obsids=None,
+               config_file="recipe.config",
+               frac_slit=None,
+               cr_rejection_thresh=100):
+    recipe = "STELLAR_ONOFF"
     abba_all(recipe, utdate, refdate=refdate, bands=bands,
              starting_obsids=starting_obsids,
              config_file=config_file,
@@ -121,14 +145,29 @@ class ProcessABBABand(object):
         igr_path = self.igr_path
         igr_storage = self.igr_storage
 
+        DO_AB = True # assume abba for default
+
         if recipe == "A0V_AB":
 
             DO_STD = True
             #FIX_TELLURIC=False
 
+        elif recipe == "A0V_ONOFF":
+
+            DO_STD = True
+            DO_AB = False
+            #FIX_TELLURIC=True
+
+
         elif recipe == "STELLAR_AB":
 
             DO_STD = False
+            #FIX_TELLURIC=True
+
+        elif recipe == "STELLAR_ONOFF":
+
+            DO_STD = False
+            DO_AB = False
             #FIX_TELLURIC=True
 
         elif recipe == "EXTENDED_AB":
@@ -271,7 +310,7 @@ class ProcessABBABand(object):
             a_name_list = filter_abba_names(abba_names, frametypes, "A")
             b_name_list = filter_abba_names(abba_names, frametypes, "B")
 
-            if recipe in ["A0V_AB", "STELLAR_AB"]:
+            if recipe.startswith("A0V") or recipe.startswith("STELLAR"):
                 IF_POINT_SOURCE = True
             elif recipe in ["EXTENDED_AB", "EXTENDED_ONOFF"]:
                 IF_POINT_SOURCE = False
@@ -370,9 +409,14 @@ class ProcessABBABand(object):
 
 
                 hh0 = np.sum(slit_profile_list, axis=0)
-                peak1, peak2 = max(hh0), -min(hh0)
-                profile_x = 0.5*(bins[1:]+bins[:-1])
-                profile_y = hh0/(peak1+peak2)
+                if DO_AB:
+                    peak1, peak2 = max(hh0), -min(hh0)
+                    profile_x = 0.5*(bins[1:]+bins[:-1])
+                    profile_y = hh0/(peak1+peak2)
+                else:
+                    peak1 = max(hh0)
+                    profile_x = 0.5*(bins[1:]+bins[:-1])
+                    profile_y = hh0/peak1
 
                 ## save profile
                 r = PipelineProducts("slit profile for point source")
@@ -393,16 +437,20 @@ class ProcessABBABand(object):
                 from scipy.interpolate import UnivariateSpline
                 profile_ = UnivariateSpline(profile_x, profile_y, k=3, s=0,
                                             bbox=[0, 1])
-                roots = list(profile_.roots())
-                #assert(len(roots) == 1)
-                integ_list = []
-                from itertools import izip, cycle
-                for ss, int_r1, int_r2 in izip(cycle([1, -1]),
-                                                      [0] + roots,
-                                                      roots + [1]):
-                    #print ss, int_r1, int_r2
-                    integ_list.append(profile_.integral(int_r1, int_r2))
-                integ = np.abs(np.sum(integ_list))
+
+                if DO_AB:
+                    roots = list(profile_.roots())
+                    #assert(len(roots) == 1)
+                    integ_list = []
+                    from itertools import izip, cycle
+                    for ss, int_r1, int_r2 in izip(cycle([1, -1]),
+                                                   [0] + roots,
+                                                   roots + [1]):
+                        #print ss, int_r1, int_r2
+                        integ_list.append(profile_.integral(int_r1, int_r2))
+                    integ = np.abs(np.sum(integ_list))
+                else:
+                    integ = profile_.integral(0, 1)
 
                 def profile(o, x, slitpos):
                     return profile_(slitpos) / integ

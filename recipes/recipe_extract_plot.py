@@ -37,6 +37,7 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
         objname = s[2]["OBJNAME"].strip()
 
         if recipe_name not in ["A0V_AB", "STELLAR_AB",
+                               "A0V_ONOFF", "STELLAR_ONOFF",
                                "EXTENDED_AB", "EXTENDED_ONOFF"]:
             continue
 
@@ -64,7 +65,15 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
 
         FIX_TELLURIC=False
 
+    elif recipe == "A0V_AB":
+
+        FIX_TELLURIC=False
+
     elif recipe == "STELLAR_AB":
+
+        FIX_TELLURIC=True
+
+    elif recipe == "STELLAR_ONOFF":
 
         FIX_TELLURIC=True
 
