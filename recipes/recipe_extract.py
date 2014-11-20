@@ -725,24 +725,14 @@ class ProcessABBABand(object):
 
             f_obj[0].header.extend(f[0].header)
 
-            d = np.array(s_list)
-            f_obj[0].data = d.astype("f32")
-
             from libs.storage_descriptions import (SPEC_FITS_DESC,
                                                    VARIANCE_FITS_DESC,
                                                    SN_FITS_DESC)
 
-            fout = igr_storage.get_path(SPEC_FITS_DESC,
-                                        tgt_basename)
-
-            hdu_wvl = pyfits.ImageHDU(data=f[0].data, header=f[0].header)
-            f_obj.append(hdu_wvl)
-
-            f_obj.writeto(fout, clobber=True)
 
 
             d = np.array(v_list)
-            f_obj.data = d.astype("f32")
+            f_obj[0].data = d.astype("f32")
             fout = igr_storage.get_path(VARIANCE_FITS_DESC,
                                         tgt_basename)
 
@@ -752,6 +742,17 @@ class ProcessABBABand(object):
             f_obj[0].data = d.astype("f32")
             fout = igr_storage.get_path(SN_FITS_DESC,
                                         tgt_basename)
+
+            f_obj.writeto(fout, clobber=True)
+
+            d = np.array(s_list)
+            f_obj[0].data = d.astype("f32")
+
+            fout = igr_storage.get_path(SPEC_FITS_DESC,
+                                        tgt_basename)
+
+            hdu_wvl = pyfits.ImageHDU(data=f[0].data, header=f[0].header)
+            f_obj.append(hdu_wvl)
 
             f_obj.writeto(fout, clobber=True)
 
