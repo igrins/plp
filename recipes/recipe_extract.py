@@ -779,7 +779,7 @@ class ProcessABBABand(object):
                 fout = igr_storage.get_path(SPEC2D_FITS_DESC,
                                             tgt_basename)
 
-                f.writeto(fout, clobber=True)
+                f_obj.writeto(fout, clobber=True)
 
 
                 # hdu_list = pyfits.HDUList()
