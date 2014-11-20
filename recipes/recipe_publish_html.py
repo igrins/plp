@@ -18,6 +18,8 @@ def make_html(utdate, dirname, config_file="recipe.config"):
         if r in ["A0V_AB", "STELLAR_AB",
                  "EXTENDED_AB",
                  "EXTENDED_ONOFF",
+                 "A0V_ONOFF",
+                 "STELLAR_ONOFF",
                  ]:
             s = dict(zip(["name", "obj", "grp1", "grp2", "exptime", "recipe", "obsids", "frametypes"],
                          desc))
