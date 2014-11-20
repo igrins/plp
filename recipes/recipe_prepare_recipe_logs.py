@@ -86,7 +86,7 @@ def prepare_recipe_logs(utdate, config_file="recipe.config"):
 
     fout = open(fn_out, "w")
     fout.write(", ".join(headers) + "\n")
-    fout.write("# Avaiable recipes : FLAT, THAR, SKY_WVLSOL, A0V_AB, STELLAR_AB, EXTENDED_AB, EXTENDED_ONOFF\n")
+    fout.write("# Avaiable recipes : FLAT, THAR, SKY, A0V_AB, A0V_ONOFF, STELLAR_AB, STELLAR_ONOFF, EXTENDED_AB, EXTENDED_ONOFF\n")
 
     fout.writelines(s_list)
     fout.close()
