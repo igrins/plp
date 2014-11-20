@@ -414,15 +414,15 @@ class ProcessABBABand(object):
                                           variance_map,
                                           data_minus_flattened,
                                           slitoffset_map=slitoffset_map,
-                                          debug=True)
+                                          debug=self.debug_output)
 
 
-                hdu_list = pyfits.HDUList()
-                hdu_list.append(pyfits.PrimaryHDU(data=data_minus_flattened))
-                hdu_list.append(pyfits.ImageHDU(data=variance_map))
-                hdu_list.append(pyfits.ImageHDU(data=profile_map))
-                hdu_list.append(pyfits.ImageHDU(data=ordermap_bpixed))
-                #hdu_list.writeto("test_input.fits", clobber=True)
+                # hdu_list = pyfits.HDUList()
+                # hdu_list.append(pyfits.PrimaryHDU(data=data_minus_flattened))
+                # hdu_list.append(pyfits.ImageHDU(data=variance_map))
+                # hdu_list.append(pyfits.ImageHDU(data=profile_map))
+                # hdu_list.append(pyfits.ImageHDU(data=ordermap_bpixed))
+                # #hdu_list.writeto("test_input.fits", clobber=True)
 
                 data_shft, variance_map_shft, profile_map_shft, msk1_shft = _
 
@@ -433,14 +433,15 @@ class ProcessABBABand(object):
                                                     remove_negative=True)
                 s_list, v_list = _
 
-                hdu_list = pyfits.HDUList()
-                hdu_list.append(pyfits.PrimaryHDU(data=data_shft))
-                hdu_list.append(pyfits.ImageHDU(data=variance_map_shft))
-                hdu_list.append(pyfits.ImageHDU(data=profile_map_shft))
-                hdu_list.append(pyfits.ImageHDU(data=ordermap_bpixed))
-                #hdu_list.append(pyfits.ImageHDU(data=msk1_shft.astype("i")))
-                #hdu_list.append(pyfits.ImageHDU(data=np.array(s_list)))
-                hdu_list.writeto("test0.fits", clobber=True)
+                if self.debug_output:
+                    hdu_list = pyfits.HDUList()
+                    hdu_list.append(pyfits.PrimaryHDU(data=data_shft))
+                    hdu_list.append(pyfits.ImageHDU(data=variance_map_shft))
+                    hdu_list.append(pyfits.ImageHDU(data=profile_map_shft))
+                    hdu_list.append(pyfits.ImageHDU(data=ordermap_bpixed))
+                    #hdu_list.append(pyfits.ImageHDU(data=msk1_shft.astype("i")))
+                    #hdu_list.append(pyfits.ImageHDU(data=np.array(s_list)))
+                    hdu_list.writeto("test0.fits", clobber=True)
 
 
 
@@ -509,29 +510,6 @@ class ProcessABBABand(object):
                 s_list, v_list = _
 
 
-                # hdu_list = pyfits.HDUList()
-                # hdu_list.append(pyfits.PrimaryHDU(data=data_minus_flattened_shft))
-                # hdu_list.append(pyfits.ImageHDU(data=synth_map))
-                # hdu_list.append(pyfits.ImageHDU(data=variance_map_shft))
-                # hdu_list.append(pyfits.ImageHDU(data=profile_map_shft))
-                # hdu_list.writeto("test.fits", clobber=True)
-
-                # _ = ap.extract_stellar_from_shifted(ordermap_bpixed,
-                #                                     profile_map, variance_map,
-                #                                     data, msk1,
-                #                                     slitoffset_map=slitoffset_map,
-                #                                     remove_negative=True)
-                # s_list, v_list = _
-
-
-                # s_list, v_list = ap.extract_stellar(ordermap_bpixed,
-                #                                     profile_map_shft,
-                #                                     variance_map_shft,
-                #                                     data_minus_flattened_shft,
-                #                                     slitoffset_map=slitoffset_map,
-                #                                     remove_negative=True
-
-                #                                     )
                 if 0: # save aux files
                     synth_map = ap.make_synth_map(order_map, slitpos_map,
                                                   profile_map, s_list,
@@ -580,14 +558,15 @@ class ProcessABBABand(object):
 
                 data_shft, variance_map_shft, profile_map_shft, msk1_shft = _
 
-                hdu_list = pyfits.HDUList()
-                hdu_list.append(pyfits.PrimaryHDU(data=data_shft))
-                hdu_list.append(pyfits.ImageHDU(data=variance_map_shft))
-                hdu_list.append(pyfits.ImageHDU(data=profile_map_shft))
-                hdu_list.append(pyfits.ImageHDU(data=ordermap_bpixed))
-                #hdu_list.append(pyfits.ImageHDU(data=msk1_shft.astype("i")))
-                #hdu_list.append(pyfits.ImageHDU(data=np.array(s_list)))
-                hdu_list.writeto("test0.fits", clobber=True)
+                if self.debug_output:
+                    hdu_list = pyfits.HDUList()
+                    hdu_list.append(pyfits.PrimaryHDU(data=data_shft))
+                    hdu_list.append(pyfits.ImageHDU(data=variance_map_shft))
+                    hdu_list.append(pyfits.ImageHDU(data=profile_map_shft))
+                    hdu_list.append(pyfits.ImageHDU(data=ordermap_bpixed))
+                    #hdu_list.append(pyfits.ImageHDU(data=msk1_shft.astype("i")))
+                    #hdu_list.append(pyfits.ImageHDU(data=np.array(s_list)))
+                    hdu_list.writeto("test0.fits", clobber=True)
 
                 _ = ap.extract_extended_from_shifted(ordermap_bpixed,
                                                      profile_map_shft,
@@ -717,25 +696,6 @@ class ProcessABBABand(object):
                                             tgt_basename)
 
                 f_obj.writeto(fout, clobber=True)
-
-
-                # hdu_list = pyfits.HDUList()
-                # hdu_list.append(pyfits.PrimaryHDU(data=d))
-                # #hdu_list.append(pyfits.ImageHDU(data=variance_map_shft))
-                # #hdu_list.append(pyfits.ImageHDU(data=profile_map_shft))
-                # #hdu_list.append(pyfits.ImageHDU(data=ordermap_bpixed))
-                # #hdu_list.append(pyfits.ImageHDU(data=np.array(s_list)))
-                # hdu_list.writeto("extended.fits", clobber=True)
-
-
-
-
-                # s_list, v_list = ap.extract_stellar(ordermap_bpixed,
-                #                                     profile_map,
-                #                                     variance_map,
-                #                                     data_minus_flattened,
-                #                                     slitoffset_map=slitoffset_map
-                #                                     )
 
 
 
