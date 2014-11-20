@@ -6,74 +6,29 @@ import astropy.io.fits as pyfits
 
 from libs.products import PipelineProducts
 
-
-def a0v_ab(utdate, refdate="20140316", bands="HK",
-           starting_obsids=None,
-           config_file="recipe.config",
-           frac_slit=None,
-           cr_rejection_thresh=100):
-    recipe = "A0V_AB"
-    abba_all(recipe, utdate, refdate=refdate, bands=bands,
-             starting_obsids=starting_obsids,
-             config_file=config_file,
-             frac_slit=frac_slit,
-             cr_rejection_thresh=cr_rejection_thresh)
-
-def a0v_onoff(utdate, refdate="20140316", bands="HK",
-           starting_obsids=None,
-           config_file="recipe.config",
-           frac_slit=None,
-           cr_rejection_thresh=100):
-    recipe = "A0V_ONOFF"
-    abba_all(recipe, utdate, refdate=refdate, bands=bands,
-             starting_obsids=starting_obsids,
-             config_file=config_file,
-             frac_slit=frac_slit,
-             cr_rejection_thresh=cr_rejection_thresh)
-
-def stellar_ab(utdate, refdate="20140316", bands="HK",
-               starting_obsids=None,
-               config_file="recipe.config",
-               frac_slit=None,
-               cr_rejection_thresh=100):
-    recipe = "STELLAR_AB"
-    abba_all(recipe, utdate, refdate=refdate, bands=bands,
-             starting_obsids=starting_obsids,
-             config_file=config_file,
-             frac_slit=frac_slit,
-             cr_rejection_thresh=cr_rejection_thresh)
-
-def stellar_onoff(utdate, refdate="20140316", bands="HK",
-               starting_obsids=None,
-               config_file="recipe.config",
-               frac_slit=None,
-               cr_rejection_thresh=100):
-    recipe = "STELLAR_ONOFF"
-    abba_all(recipe, utdate, refdate=refdate, bands=bands,
-             starting_obsids=starting_obsids,
-             config_file=config_file,
-             frac_slit=frac_slit,
-             cr_rejection_thresh=cr_rejection_thresh)
-
-def extended_ab(utdate, refdate="20140316", bands="HK",
+def extractor_factory(recipe_name):
+    def extract(utdate, refdate="20140316", bands="HK",
                 starting_obsids=None,
                 config_file="recipe.config",
-                frac_slit=None):
-    recipe = "EXTENDED_AB"
-    abba_all(recipe, utdate, refdate=refdate, bands=bands,
-             starting_obsids=starting_obsids,
-             config_file=config_file,
-             frac_slit=frac_slit)
+                frac_slit=None,
+                cr_rejection_thresh=100,
+                debug_output=False):
+        abba_all(recipe_name, utdate, refdate=refdate, bands=bands,
+                 starting_obsids=starting_obsids,
+                 config_file=config_file,
+                 frac_slit=frac_slit,
+                 cr_rejection_thresh=cr_rejection_thresh,
+                 debug_output=debug_output)
 
-def extended_onoff(utdate, refdate="20140316", bands="HK",
-                   starting_obsids=None,
-                   config_file="recipe.config",
-                   frac_slit=None):
-    recipe = "EXTENDED_ONOFF"
-    abba_all(recipe, utdate, refdate=refdate, bands=bands,
-             starting_obsids=starting_obsids,
-             config_file=config_file,
-             frac_slit=frac_slit)
+    extract.__name__ = recipe_name.lower()
+    return extract
+
+a0v_ab = extractor_factory("A0V_AB")
+a0v_onoff = extractor_factory("A0V_ONOFF")
+stellar_ab = extractor_factory("STELLAR_AB")
+stellar_onoff = extractor_factory("STELLAR_ONOFF")
+extended_ab = extractor_factory("EXTENDED_AB")
+extended_onoff = extractor_factory("EXTENDED_ONOFF")
 
 
 
@@ -81,7 +36,8 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
              starting_obsids=None, interactive=False,
              config_file="recipe.config",
              frac_slit=None,
-             cr_rejection_thresh=100.):
+             cr_rejection_thresh=100.,
+             debug_output=False):
 
     from libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
@@ -108,7 +64,11 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
     process_abba_band = ProcessABBABand(utdate, refdate,
                                         config,
                                         frac_slit=frac_slit,
-                                        cr_rejection_thresh=cr_rejection_thresh).process
+                                        cr_rejection_thresh=cr_rejection_thresh,
+                                        debug_output=debug_output).process
+
+    if len(selected) == 0:
+        print "No entry with given recipe is found : %s" % recipe_name
 
     for s in selected:
         obsids = s[0]
@@ -125,7 +85,8 @@ from libs.products import ProductDB, PipelineStorage
 class ProcessABBABand(object):
     def __init__(self, utdate, refdate, config,
                  frac_slit=None,
-                 cr_rejection_thresh=100):
+                 cr_rejection_thresh=100,
+                 debug_output=False):
         """
         cr_rejection_thresh : pixels that deviate significantly from the profile are excluded.
         """
@@ -139,47 +100,25 @@ class ProcessABBABand(object):
 
         self.frac_slit = frac_slit
         self.cr_rejection_thresh = cr_rejection_thresh
+        self.debug_output = debug_output
 
     def process(self, recipe, band, obsids, frametypes):
 
         igr_path = self.igr_path
         igr_storage = self.igr_storage
 
-        DO_AB = True # assume abba for default
 
-        if recipe == "A0V_AB":
+        target_type, nodding_type = recipe.split("_")
 
-            DO_STD = True
-            #FIX_TELLURIC=False
+        if target_type in ["A0V", "STELLAR"]:
+            IF_POINT_SOURCE = True
+        elif target_type in ["EXTENDED"]:
+            IF_POINT_SOURCE = False
+        else:
+            raise ValueError("Unknown recipe : %s" % recipe)
 
-        elif recipe == "A0V_ONOFF":
-
-            DO_STD = True
-            DO_AB = False
-            #FIX_TELLURIC=True
-
-
-        elif recipe == "STELLAR_AB":
-
-            DO_STD = False
-            #FIX_TELLURIC=True
-
-        elif recipe == "STELLAR_ONOFF":
-
-            DO_STD = False
-            DO_AB = False
-            #FIX_TELLURIC=True
-
-        elif recipe == "EXTENDED_AB":
-
-            DO_STD = False
-            #FIX_TELLURIC=True
-
-        elif recipe == "EXTENDED_ONOFF":
-
-            DO_STD = False
-            #FIX_TELLURIC=True
-
+        DO_STD = (target_type == "A0V")
+        DO_AB = (nodding_type == "AB")
 
         if 1:
 
@@ -311,13 +250,6 @@ class ProcessABBABand(object):
             a_name_list = filter_abba_names(abba_names, frametypes, "A")
             b_name_list = filter_abba_names(abba_names, frametypes, "B")
 
-            if recipe.startswith("A0V") or recipe.startswith("STELLAR"):
-                IF_POINT_SOURCE = True
-            elif recipe in ["EXTENDED_AB", "EXTENDED_ONOFF"]:
-                IF_POINT_SOURCE = False
-            else:
-                print "Unknown recipe : %s" % recipe
-
             if 1:
                 #ab_names = ab_names_list[0]
 
@@ -337,10 +269,11 @@ class ProcessABBABand(object):
 
                 # dx = 100
 
-                if IF_POINT_SOURCE: # if point source
+                if DO_AB:
                     # for point sources, variance estimation becomes wrong
                     # if lenth of two is different,
-                    assert len(a_list) == len(b_list)
+                    if len(a_list) != len(b_list):
+                        raise RuntimeError("For AB nodding, number of A and B should match!")
 
                 # a_b != 1 for the cases when len(a) != len(b)
                 a_b = float(len(a_list)) / len(b_list)
@@ -359,7 +292,7 @@ class ProcessABBABand(object):
                                                      destrip_mask,
                                                      pattern=64,
                                                      hori=True)
-                if 1:
+                if self.debug_output:
                     a_data = destriper.get_destriped(a_data,
                                                      destrip_mask,
                                                      pattern=64)
