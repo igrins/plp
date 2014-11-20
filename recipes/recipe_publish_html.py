@@ -64,5 +64,10 @@ def publish_html(utdate, config_file="recipe.config"):
     template = env.get_template('index.html')
 
     sources = make_html(utdate, dirname)
+    from libs.json_helper import json_dump
+    json_dump(dict(utdate=utdate,
+                   sources=sources),
+              open(os.path.join(dirname, "summary.json"), "w"))
+
     s = template.render(utdate=utdate, sources=sources)
     open(os.path.join(dirname, "index.html"), "w").write(s)

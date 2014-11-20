@@ -353,7 +353,6 @@ class ProcessABBABand(object):
                 data_minus = a_data - a_b*b_data
                 #data_minus0 = data_minus
 
-                #destrip_mask = ~np.isfinite(data_minus)|flat_mask.data
                 destrip_mask = ~np.isfinite(data_minus)|bias_mask
 
                 data_minus = destriper.get_destriped(data_minus,

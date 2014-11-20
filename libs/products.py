@@ -4,7 +4,6 @@ import json
 import numpy as np
 
 import astropy.io.fits as pyfits
-
 from astropy.io.fits import Card
 
 class PipelineImage(object):
