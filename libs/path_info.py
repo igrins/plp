@@ -14,8 +14,7 @@ class IGRINSPath(object):
     # IGRINS_OUTDATA_PATH="outdata"
     # IGRINS_QA_PATH="outdata/qa"
 
-    sections_names = ["INDATA_PATH",
-                      "OUTDATA_PATH",
+    sections_names = ["OUTDATA_PATH",
                       "PRIMARY_CALIB_PATH",
                       "SECONDARY_CALIB_PATH",
                       "QA_PATH",
