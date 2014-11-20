@@ -14,11 +14,14 @@ class IGRINSPath(object):
     # IGRINS_OUTDATA_PATH="outdata"
     # IGRINS_QA_PATH="outdata/qa"
 
-    sections_names = ["OUTDATA_PATH",
+    sections_names = ["INDATA_PATH",
+                      "OUTDATA_PATH",
                       "PRIMARY_CALIB_PATH",
                       "SECONDARY_CALIB_PATH",
                       "QA_PATH",
                       "HTML_PATH"]
+
+    sections_names_no_ensuredir = ["INDATA_PATH"]
 
     def __init__(self, config, utdate):
 
@@ -29,8 +32,9 @@ class IGRINSPath(object):
         for n in self.sections_names:
             self.sections[n] = self.config.get_value(n, utdate)
 
-        for d in self.sections.values():
-            ensure_dir(d)
+        for k, d in self.sections.items():
+            if k not in self.sections_names_no_ensuredir:
+                ensure_dir(d)
 
 
         # filename pattern for input files
