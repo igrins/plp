@@ -239,9 +239,10 @@ class ProcessABBABand(object):
 
             from recipe_wvlsol_sky import load_aperture2
 
+            old_orders = raw_spec_products[ONED_SPEC_JSON_DESC]["orders"]
             ap = load_aperture2(igr_storage, band, master_obsid,
                                 db["flat_on"],
-                                raw_spec_products[ONED_SPEC_JSON_DESC]["orders"],
+                                old_orders,
                                 orders_w_solutions)
 
 
@@ -763,13 +764,16 @@ class ProcessABBABand(object):
                                          basenames["flat_on"])
 
                 #cent = json.load(open("calib/primary/20140525/FLAT_SDCK_20140525_0074.centroid_solutions.json"))
-                bottom_up_solutions = cent["bottom_up_solutions"]
+                _bottom_up_solutions = cent["bottom_up_solutions"]
+                old_orders
+                _o_s = dict(zip(old_orders, _bottom_up_solutions))
+                new_bottom_up_solutions = [_o_s[o] for o in orders_w_solutions]
 
                 from libs.correct_distortion import get_flattened_2dspec
                 d0_shft_list, msk_shft_list = \
                               get_flattened_2dspec(data_shft,
                                                    ordermap_bpixed,
-                                                   bottom_up_solutions)
+                                                   new_bottom_up_solutions)
 
 
                 d = np.array(d0_shft_list) / np.array(msk_shft_list)
