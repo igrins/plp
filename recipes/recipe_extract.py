@@ -233,7 +233,7 @@ class ProcessABBABand(object):
                                          basenames["flat_on"])[FLAT_MASK_DESC]
             bias_mask = flat_mask.data & (order_map2 > 0)
 
-            SLITOFFSET_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".slitoffset_map.fits")
+            from libs.storage_descriptions import SLITOFFSET_FITS_DESC
             prod_ = igr_storage.load([SLITOFFSET_FITS_DESC],
                                      basenames["sky"])[SLITOFFSET_FITS_DESC]
             #fn = sky_path.get_secondary_path("slitoffset_map.fits")
