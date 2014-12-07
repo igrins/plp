@@ -164,21 +164,21 @@ class ProcessABBABand(object):
         if 1: # make aperture
             from libs.storage_descriptions import SKY_WVLSOL_JSON_DESC
 
-            sky_basename = db["sky"].query(band, master_obsid)
-            wvlsol_products = igr_storage.load([SKY_WVLSOL_JSON_DESC],
-                                               sky_basename)[SKY_WVLSOL_JSON_DESC]
+            sky_basename = basenames["sky"]
+            wvlsol_products = igr_storage.load1(SKY_WVLSOL_JSON_DESC,
+                                                sky_basename)
 
             orders_w_solutions = wvlsol_products["orders"]
             wvl_solutions = map(np.array, wvlsol_products["wvl_sol"])
 
             from libs.storage_descriptions import ONED_SPEC_JSON_DESC
 
-            raw_spec_products = igr_storage.load([ONED_SPEC_JSON_DESC],
-                                                 sky_basename)
+            raw_spec_products = igr_storage.load1(ONED_SPEC_JSON_DESC,
+                                                  sky_basename)
 
             from recipe_wvlsol_sky import load_aperture2
 
-            old_orders = raw_spec_products[ONED_SPEC_JSON_DESC]["orders"]
+            old_orders = raw_spec_products["orders"]
             ap = load_aperture2(igr_storage, band, master_obsid,
                                 db["flat_on"],
                                 old_orders,
@@ -202,11 +202,11 @@ class ProcessABBABand(object):
                                                    ORDER_FLAT_JSON_DESC,
                                                    FLAT_MASK_DESC)
 
-            hotpix_mask = igr_storage.load([HOTPIX_MASK_DESC],
-                                           basenames["flat_off"])[HOTPIX_MASK_DESC]
+            hotpix_mask = igr_storage.load1(HOTPIX_MASK_DESC,
+                                            basenames["flat_off"])
 
-            deadpix_mask = igr_storage.load([DEADPIX_MASK_DESC],
-                                            basenames["flat_on"])[DEADPIX_MASK_DESC]
+            deadpix_mask = igr_storage.load1(DEADPIX_MASK_DESC,
+                                             basenames["flat_on"])
 
             pix_mask  = hotpix_mask.data | deadpix_mask.data
 
@@ -215,27 +215,26 @@ class ProcessABBABand(object):
             # aperture_solution_products = PipelineProducts.load(aperture_solutions_name)
 
 
-            orderflat_ = igr_storage.load([ORDER_FLAT_IM_DESC],
-                                         basenames["flat_on"])[ORDER_FLAT_IM_DESC]
-
+            orderflat_ = igr_storage.load1(ORDER_FLAT_IM_DESC,
+                                           basenames["flat_on"])
 
             orderflat = orderflat_.data
             orderflat[pix_mask] = np.nan
 
-            orderflat_json = igr_storage.load([ORDER_FLAT_JSON_DESC],
-                                              basenames["flat_on"])[ORDER_FLAT_JSON_DESC]
+            orderflat_json = igr_storage.load1(ORDER_FLAT_JSON_DESC,
+                                              basenames["flat_on"])
             order_flat_meanspec = np.array(orderflat_json["mean_order_specs"])
 
             # flat_normed = igr_storage.load([FLAT_NORMED_DESC],
             #                                basenames["flat_on"])[FLAT_NORMED_DESC]
 
-            flat_mask = igr_storage.load([FLAT_MASK_DESC],
-                                         basenames["flat_on"])[FLAT_MASK_DESC]
+            flat_mask = igr_storage.load1(FLAT_MASK_DESC,
+                                          basenames["flat_on"])
             bias_mask = flat_mask.data & (order_map2 > 0)
 
             from libs.storage_descriptions import SLITOFFSET_FITS_DESC
-            prod_ = igr_storage.load([SLITOFFSET_FITS_DESC],
-                                     basenames["sky"])[SLITOFFSET_FITS_DESC]
+            prod_ = igr_storage.load1(SLITOFFSET_FITS_DESC,
+                                      basenames["sky"])
             #fn = sky_path.get_secondary_path("slitoffset_map.fits")
             slitoffset_map = prod_.data
 
@@ -701,8 +700,8 @@ class ProcessABBABand(object):
 
         if 1: #
             from libs.storage_descriptions import ORDER_FLAT_JSON_DESC
-            prod = igr_storage.load([ORDER_FLAT_JSON_DESC],
-                                    basenames["flat_on"])[ORDER_FLAT_JSON_DESC]
+            prod = igr_storage.load1(ORDER_FLAT_JSON_DESC,
+                                     basenames["flat_on"])
 
             new_orders = prod["orders"]
             # fitted_response = orderflat_products["fitted_responses"]
