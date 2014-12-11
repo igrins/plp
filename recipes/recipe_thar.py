@@ -5,7 +5,7 @@ import os
 from libs.path_info import IGRINSPath, IGRINSFiles
 import astropy.io.fits as pyfits
 
-from libs.products import PipelineProducts
+from libs.products import PipelineProducts, PipelineImage
 from libs.apertures import Apertures
 
 from libs.recipe_base import RecipeBase
