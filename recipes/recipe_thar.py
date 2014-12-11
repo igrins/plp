@@ -184,6 +184,7 @@ def process_thar_band(utdate, refdate, band, obsids, config):
 
         orders = thar_products[ONED_SPEC_JSON_DESC]["orders"]
         order_map = ap.make_order_map()
+        order_map2 = ap.make_order_map(mask_top_bottom=True)
         #slitpos_map = ap.make_slitpos_map()
 
 
@@ -205,6 +206,19 @@ def process_thar_band(utdate, refdate, band, obsids, config):
         #order_flat_products.save(fn, masterhdu=hdu)
 
         igr_storage.store(order_flat_products,
+                          mastername=flaton_basename,
+                          masterhdu=hdu)
+
+        flat_mask = igr_storage.load1(FLAT_MASK_DESC,
+                                      flaton_basename)
+        bias_mask = flat_mask.data & (order_map2 > 0)
+
+        pp = PipelineProducts("")
+        from libs.storage_descriptions import BIAS_MASK_DESC
+        pp.add(BIAS_MASK_DESC,
+               PipelineImage([], bias_mask))
+
+        igr_storage.store(pp,
                           mastername=flaton_basename,
                           masterhdu=hdu)
 
