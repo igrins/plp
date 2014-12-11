@@ -26,30 +26,9 @@ def get_ref_list(ohlines, line_indices_list,
     return ref_wvl_list, ref_pixel_list
 
 
-def fit_ohlines2(ohlines, line_indices_list,
-                orders_w_solution, wvl_solutions, s_list):
-    ref_wvl_list = []
-    ref_pixel_list = []
-    for o, wvl, s in  zip(orders_w_solution,
-                          wvl_solutions, s_list):
-        line_indices = line_indices_list[o]
-        x = np.arange(len(s))
-        um2pixel = interp1d(wvl, x, bounds_error=False)
-
-        ref_wvl = [ohlines.um[l] for l in line_indices]
-        ref_pixel = [um2pixel(w) for w in ref_wvl]
-
-        nan_filter = [np.all(np.isfinite(p)) for p in ref_pixel]
-
-        # there could be cases when the ref lines fall out of bounds,
-        # resulting nans.
-        ref_wvl_list.append([r for r, m in zip(ref_wvl, nan_filter) if m])
-        ref_pixel_list.append([r for r, m in zip(ref_pixel, nan_filter) if m])
-
-    return ref_wvl_list, ref_pixel_list
-
 def fit_ohlines_parameters(ohlines, line_indices_list,
-                           orders_w_solution, wvl_solutions, s_list):
+                           orders_w_solution, wvl_solutions, s_list,
+                           nan_for_bad_fits=True):
 
     ref_wvl_list, ref_pixel_list = \
                   get_ref_list(ohlines, line_indices_list,
@@ -61,21 +40,23 @@ def fit_ohlines_parameters(ohlines, line_indices_list,
 
 
     # check fit status and replace with nan when fit is not successful.
-    for r in fit_results:
-        for r1 in r[0]:
-            if r1[2] < 0:
-                r1[0][:] = np.nan
+    if nan_for_bad_fits:
+        for r in fit_results:
+            for r1 in r[0]:
+                if r1[2] < 0:
+                    r1[0][:] = np.nan
 
-    return ref_wvl_list, fit_results
+    return ref_wvl_list, ref_pixel_list, fit_results
 
 
 def fit_ohlines(ohlines, line_indices_list,
                 orders_w_solution, wvl_solutions, s_list):
 
-    ref_wvl_list, fit_results = \
+    ref_wvl_list, ref_pixel_list, fit_results = \
                   fit_ohlines_parameters(ohlines, line_indices_list,
                                          orders_w_solution,
-                                         wvl_solutions, s_list)
+                                         wvl_solutions, s_list,
+                                         nan_for_bad_fits=False)
 
     fitted_positions = retrieve_positions_from_fit(fit_results)
 
@@ -84,7 +65,7 @@ def fit_ohlines(ohlines, line_indices_list,
         reidentified_lines.append((positions,
                                    np.array(map(np.mean, ref_wvl))))
 
-    return ref_wvl_list, reidentified_lines
+    return ref_pixel_list, reidentified_lines
 
 
 def fit_ohlines_pixel(s_list, ref_pixel_list):
