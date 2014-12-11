@@ -15,14 +15,19 @@ class TelluricTransmission(object):
         self.trans = self.telluric["trans"]
         self.wvl = self.telluric["lam"]
 
-    def get_telluric_trans_interp1d(self, wvl1, wvl2):
+    def get_telluric_trans_interp1d(self, wvl1, wvl2, gw=None):
         mask = (wvl1 < self.wvl) & (self.wvl < wvl2)
         # spl = UnivariateSpline(telluric_lam[tel_mask_igr],
         #                        telluric["trans"][tel_mask_igr],
         #                        k=1,s=0)
 
+        if gw is not None:
+            from scipy.ndimage import gaussian_filter1d
+            trans = gaussian_filter1d(self.trans[mask], gw)
+        else:
+            trans = self.trans[mask]
         spl = interp1d(self.wvl[mask],
-                       self.trans[mask],
+                       trans,
                        bounds_error=False
                        )
 
