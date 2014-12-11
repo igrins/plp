@@ -1,3 +1,4 @@
+import astropy.io.fits as pyfits
 
 default_header_str = """WCSDIM  =                    3
 CTYPE1  = 'MULTISPE'
@@ -13,7 +14,7 @@ WAT0_001= 'system=multispec'
 WAT1_001= 'wtype=multispec label=Wavelength units=angstroms'
 WAT3_001= 'wtype=linear'
 BANDID1 = 'spectrum - background median, weights variance, clean no'
-""".split("\n")
+""".strip().split("\n")
 
 def get_wat_spec(orders, wvl_sol):
     """
@@ -55,7 +56,70 @@ def get_wat_spec(orders, wvl_sol):
         s = '%s = "%s %s"' % (specN, specN_str, function_i)
 
         specN_list.append(s)
+
     return specN_list
+
+
+def get_wat2_spec_cards(wat_list):
+
+    wat = "wtype=multispec " + " ".join(wat_list)
+    char_per_line = 68
+    num_line, remainder = divmod(len(wat), char_per_line)
+    cards = []
+    for i in range(num_line):
+        k = "WAT2_%03d" % (i+1,)
+        v = wat[char_per_line*i:char_per_line*(i+1)]
+        #print k, v
+        c = pyfits.Card(k, v)
+        cards.append(c)
+
+    if remainder > 0:
+        i = num_line
+        k = "WAT2_%03d" % (i+1,)
+        v = wat[char_per_line*i:]
+        #print k, v
+        c = pyfits.Card(k, v)
+        cards.append(c)
+
+    return cards
+
+
+def invert_order(header):
+    """
+    """
+
+    import re
+    p = re.compile(r"\s*spec\d+\s*")
+
+    new_cards = []
+
+    wat_s_list = []
+    for c in header.cards:
+        if c.keyword.startswith("WAT2"):
+            wat_s_list.append((c.keyword, c.value))
+        else:
+            new_cards.append(c)
+
+    wat_s_list.sort()
+
+    def pad68(s):
+        return s+" "*max(68 - len(s), 0)
+
+    wat_str = "".join(pad68(v) for k, v in wat_s_list)
+    wat_str = wat_str.replace("wtype=multispec","").strip()
+
+    wat_spec_list = p.split(wat_str)
+
+    wat_list_r = ["spec%d %s" % (i+1, s) for i, s in enumerate(wat_spec_list[::-1]) if s.strip()]
+
+
+    cards = get_wat2_spec_cards(wat_list_r)
+
+    new_cards.extend(cards)
+
+    return type(header)(new_cards)
+
+
 
 if __name__ == "__main__":
 
@@ -70,3 +134,5 @@ if __name__ == "__main__":
     p = fit_p(p_init, xxx, yyy)
 
     wat_list = get_wat_spec([111], [p])
+
+    f= pyfits.open("outdata/20140525/SDCK_20140525_0016.spec.fits")

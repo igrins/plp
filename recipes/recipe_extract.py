@@ -12,13 +12,15 @@ def extractor_factory(recipe_name):
                 config_file="recipe.config",
                 frac_slit=None,
                 cr_rejection_thresh=100,
-                debug_output=False):
+                debug_output=False,
+                wavelength_increasing_order=False):
         abba_all(recipe_name, utdate, refdate=refdate, bands=bands,
                  starting_obsids=starting_obsids,
                  config_file=config_file,
                  frac_slit=frac_slit,
                  cr_rejection_thresh=cr_rejection_thresh,
-                 debug_output=debug_output)
+                 debug_output=debug_output,
+                 wavelength_increasing_order=wavelength_increasing_order)
 
     extract.__name__ = recipe_name.lower()
     return extract
@@ -37,7 +39,8 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
              config_file="recipe.config",
              frac_slit=None,
              cr_rejection_thresh=100.,
-             debug_output=False):
+             debug_output=False,
+             wavelength_increasing_order=False):
 
     from libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
@@ -61,11 +64,14 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
         if len(frac_slit) !=2:
             raise ValueError("frac_slit must be two floats separated by comma")
 
+    kwargs = dict(frac_slit=frac_slit,
+                  cr_rejection_thresh=cr_rejection_thresh,
+                  debug_output=debug_output,
+                  wavelength_increasing_order=wavelength_increasing_order)
+
     process_abba_band = ProcessABBABand(utdate, refdate,
                                         config,
-                                        frac_slit=frac_slit,
-                                        cr_rejection_thresh=cr_rejection_thresh,
-                                        debug_output=debug_output).process
+                                        **kwargs).process
 
     if len(selected) == 0:
         print "No entry with given recipe is found : %s" % recipe_name
@@ -86,7 +92,8 @@ class ProcessABBABand(object):
     def __init__(self, utdate, refdate, config,
                  frac_slit=None,
                  cr_rejection_thresh=100,
-                 debug_output=False):
+                 debug_output=False,
+                 wavelength_increasing_order=False):
         """
         cr_rejection_thresh : pixels that deviate significantly from the profile are excluded.
         """
@@ -101,6 +108,7 @@ class ProcessABBABand(object):
         self.frac_slit = frac_slit
         self.cr_rejection_thresh = cr_rejection_thresh
         self.debug_output = debug_output
+        self.wavelength_increasing_order = wavelength_increasing_order
 
     def process(self, recipe, band, obsids, frametypes):
 
@@ -219,6 +227,7 @@ class ProcessABBABand(object):
                                            basenames["flat_on"])
 
             orderflat = orderflat_.data
+            orderflat[~np.isfinite(orderflat)] = 1
             orderflat[pix_mask] = np.nan
 
             orderflat_json = igr_storage.load1(ORDER_FLAT_JSON_DESC,
@@ -300,7 +309,8 @@ class ProcessABBABand(object):
                                                      pattern=64)
 
                 data_minus_flattened = data_minus / orderflat
-                data_minus_flattened[~flat_mask.data] = np.nan
+                #data_minus_flattened[~flat_mask.data] = np.nan
+
                 #data_minus_flattened[order_flat_meanspec<0.1*order_flat_meanspec.max()] = np.nan
 
 
@@ -399,7 +409,6 @@ class ProcessABBABand(object):
                     profile_map[slitpos_msk] = np.nan
 
 
-
                 #profile_map_shft = profile_map
 
                 #data_minus_flattened_shft = (data_minus_flattened)
@@ -425,18 +434,23 @@ class ProcessABBABand(object):
 
                 data_shft, variance_map_shft, profile_map_shft, msk1_shft = _
 
+                # for khjeong
+                weight_thresh = None
+                remove_negative = False
+
                 _ = ap.extract_stellar_from_shifted(ordermap_bpixed,
                                                     profile_map_shft,
                                                     variance_map_shft,
                                                     data_shft, msk1_shft,
-                                                    remove_negative=True)
+                                                    weight_thresh=weight_thresh,
+                                                    remove_negative=remove_negative)
                 s_list, v_list = _
 
                 if self.debug_output:
                     hdu_list = pyfits.HDUList()
-                    hdu_list.append(pyfits.PrimaryHDU(data=data_shft))
-                    hdu_list.append(pyfits.ImageHDU(data=variance_map_shft))
-                    hdu_list.append(pyfits.ImageHDU(data=profile_map_shft))
+                    hdu_list.append(pyfits.PrimaryHDU(data=data_minus))
+                    hdu_list.append(pyfits.ImageHDU(data=orderflat))
+                    hdu_list.append(pyfits.ImageHDU(data=profile_map))
                     hdu_list.append(pyfits.ImageHDU(data=ordermap_bpixed))
                     #hdu_list.append(pyfits.ImageHDU(data=msk1_shft.astype("i")))
                     #hdu_list.append(pyfits.ImageHDU(data=np.array(s_list)))
@@ -505,7 +519,8 @@ class ProcessABBABand(object):
                                                     profile_map_shft,
                                                     variance_map_shft,
                                                     data_shft, msk1_shft,
-                                                    remove_negative=True)
+                                                    weight_thresh=weight_thresh,
+                                                    remove_negative=remove_negative)
                 s_list, v_list = _
 
 
@@ -572,7 +587,7 @@ class ProcessABBABand(object):
                                                      variance_map_shft,
                                                      data_shft, msk1_shft,
                                                      slitpos_map,
-                                                     remove_negative=True)
+                                                     remove_negative=False)
                 s_list, v_list = _
 
 
@@ -634,7 +649,15 @@ class ProcessABBABand(object):
             # fn = sky_path.get_secondary_path("wvlsol_v1.fits")
             f = pyfits.open(fn)
 
-            f_obj[0].header.extend(f[0].header)
+            if self.wavelength_increasing_order:
+                import libs.iraf_helper as iraf_helper
+                header = iraf_helper.invert_order(f[0].header)
+                convert_data = lambda d: d[::-1]
+            else:
+                header = f[0].header
+                convert_data = lambda d: d
+
+            f_obj[0].header.extend(header)
 
             from libs.storage_descriptions import (SPEC_FITS_DESC,
                                                    VARIANCE_FITS_DESC,
@@ -643,26 +666,27 @@ class ProcessABBABand(object):
 
 
             d = np.array(v_list)
-            f_obj[0].data = d.astype("f32")
+            f_obj[0].data = convert_data(d.astype("f32"))
             fout = igr_storage.get_path(VARIANCE_FITS_DESC,
                                         tgt_basename)
 
             f_obj.writeto(fout, clobber=True)
 
             d = np.array(sn_list)
-            f_obj[0].data = d.astype("f32")
+            f_obj[0].data = convert_data(d.astype("f32"))
             fout = igr_storage.get_path(SN_FITS_DESC,
                                         tgt_basename)
 
             f_obj.writeto(fout, clobber=True)
 
             d = np.array(s_list)
-            f_obj[0].data = d.astype("f32")
+            f_obj[0].data = convert_data(d.astype("f32"))
 
             fout = igr_storage.get_path(SPEC_FITS_DESC,
                                         tgt_basename)
 
-            hdu_wvl = pyfits.ImageHDU(data=f[0].data, header=f[0].header)
+            hdu_wvl = pyfits.ImageHDU(data=convert_data(f[0].data),
+                                      header=header)
             f_obj.append(hdu_wvl)
 
             f_obj.writeto(fout, clobber=True)
@@ -687,7 +711,7 @@ class ProcessABBABand(object):
 
 
                 d = np.array(d0_shft_list) / np.array(msk_shft_list)
-                f_obj[0].data = d.astype("f32")
+                f_obj[0].data = convert_data(d.astype("f32"))
 
                 from libs.storage_descriptions import SPEC2D_FITS_DESC
 
@@ -740,12 +764,12 @@ class ProcessABBABand(object):
 
                 d = np.array(a0v_flattened)
                 #d[~np.isfinite(d)] = 0.
-                f[0].data = d.astype("f32")
+                f_obj[0].data = convert_data(d.astype("f32"))
 
                 from libs.storage_descriptions import SPEC_FITS_FLATTENED_DESC
                 fout = igr_storage.get_path(SPEC_FITS_FLATTENED_DESC,
                                             tgt_basename)
 
-                f.writeto(fout, clobber=True)
+                f_obj.writeto(fout, clobber=True)
 
                 db["a0v"].update(band, tgt_basename)

@@ -317,8 +317,8 @@ def make_order_flat(flaton_products, orders, order_map):
 
     # make flat
     x = np.arange(len(s))
-    flat_im = np.empty(flat_normed.shape, "d")
-    flat_im.fill(np.nan)
+    flat_im = np.ones(flat_normed.shape, "d")
+    #flat_im.fill(np.nan)
 
     fitted_responses = []
 
@@ -326,10 +326,13 @@ def make_order_flat(flaton_products, orders, order_map):
         sl = (slices[o-1][0], slice(0, 2048))
         d_sl = flat_normed[sl].copy()
         msk = (order_map[sl] == o)
-        d_sl[~msk] = np.nan
+        #d_sl[~msk] = np.nan
 
         px = p(x)
-        flat_im[sl][msk] = (d_sl / px)[msk]
+        d_div = d_sl / px
+        px2d = px * np.ones_like(d_div) # better way to broadcast px?
+        d_div[px2d < 0.05*px.max()] = 1.
+        flat_im[sl][msk] = ()[msk]
         fitted_responses.append(px)
 
     flat_im[flat_im < 0.5] = np.nan

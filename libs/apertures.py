@@ -263,8 +263,11 @@ class Apertures(object):
 
             # weight_thresh = 0.01 safe enough?
             #thresh_msk = sum_profile1 < 0.1
-            thresh_msk = ni.binary_dilation(sum_profile1 < 0.1, iterations=5)
-            sum_weights1[thresh_msk] = np.nan
+
+            if weight_thresh is not None:
+                thresh_msk = ni.binary_dilation(sum_profile1 < weight_thresh,
+                                                iterations=5)
+                sum_weights1[thresh_msk] = np.nan
 
             #sum_variance1 = variance_map1.sum(axis=0)
             #sum_weights1[sum_variance1 < 0.1*np.nanmax(sum_variance1)] = np.nan
@@ -522,6 +525,7 @@ class Apertures(object):
 
             profile1 = np.zeros(profile_map[sl].shape, "d")
             profile1[msk] = lsf(o, ix[sl][msk], slitpos_map[sl][msk])
+            # TODO :make sure that renormalization is good thing to do.
             profile_sum = np.abs(profile1).sum(axis=0)
             profile1 /= profile_sum
 
