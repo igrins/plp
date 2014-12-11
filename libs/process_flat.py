@@ -312,8 +312,12 @@ def make_order_flat(flaton_products, orders, order_map):
     s_list = [get_smoothed_order_spec(s) for s in mean_order_specs]
     i1i2_list = [get_order_boundary_indices(s, s0) \
                  for s, s0 in zip(mean_order_specs, s_list)]
-    p_list = [get_order_flat1d(s, i1, i2) for s, (i1, i2) \
-              in zip(s_list, i1i2_list)]
+    #p_list = [get_order_flat1d(s, i1, i2) for s, (i1, i2) \
+    #          in zip(s_list, i1i2_list)]
+    from smooth_continuum import get_smooth_continuum
+    s2_list = [get_smooth_continuum(s) for s, (i1, i2) \
+               in zip(s_list, i1i2_list)]
+
 
     # make flat
     x = np.arange(len(s))
@@ -322,17 +326,16 @@ def make_order_flat(flaton_products, orders, order_map):
 
     fitted_responses = []
 
-    for o, p in zip(orders, p_list):
+    for o, px in zip(orders, s2_list):
         sl = (slices[o-1][0], slice(0, 2048))
         d_sl = flat_normed[sl].copy()
         msk = (order_map[sl] == o)
         #d_sl[~msk] = np.nan
 
-        px = p(x)
         d_div = d_sl / px
         px2d = px * np.ones_like(d_div) # better way to broadcast px?
         d_div[px2d < 0.05*px.max()] = 1.
-        flat_im[sl][msk] = ()[msk]
+        flat_im[sl][msk] = (d_sl / px)[msk]
         fitted_responses.append(px)
 
     flat_im[flat_im < 0.5] = np.nan
@@ -369,16 +372,21 @@ def check_order_flat(order_flat_products):
     s_list = [get_smoothed_order_spec(s) for s in mean_order_specs]
     i1i2_list = [get_order_boundary_indices(s, s0) \
                  for s, s0 in zip(mean_order_specs, s_list)]
-    p_list = [get_order_flat1d(s, i1, i2) for s, (i1, i2) \
-              in zip(s_list, i1i2_list)]
+    # p_list = [get_order_flat1d(s, i1, i2) for s, (i1, i2) \
+    #           in zip(s_list, i1i2_list)]
+
+    from smooth_continuum import get_smooth_continuum
+    s2_list = [get_smooth_continuum(s) for s, (i1, i2) \
+               in zip(s_list, i1i2_list)]
 
     fig_list, ax_list = prepare_order_trace_plot(s_list)
     x = np.arange(2048)
     for s, i1i2, ax in zip(mean_order_specs, i1i2_list, ax_list):
         check_order_trace1(ax, x, s, i1i2)
 
-    for s, p, ax in zip(mean_order_specs, p_list, ax_list):
-        check_order_trace2(ax, x, p)
+    for s, s2, ax in zip(mean_order_specs, s2_list, ax_list):
+        ax.plot(x, s2)
+        #check_order_trace2(ax, x, p)
 
     return fig_list
 
