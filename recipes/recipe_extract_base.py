@@ -3,7 +3,18 @@ from libs.recipe_base import get_pr
 import astropy.io.fits as pyfits
 import scipy.ndimage as ni
 
-class RecipeExtractBase(object):
+def lazyprop(fn):
+    attr_name = '_lazy_' + fn.__name__
+    @property
+    def _lazyprop(self):
+        if not hasattr(self, attr_name):
+            setattr(self, attr_name, fn(self))
+        return getattr(self, attr_name)
+    return _lazyprop
+
+
+
+class RecipeExtractPR(object):
     @property
     def igr_storage(self):
         return self.pr.igr_storage
@@ -26,76 +37,138 @@ class RecipeExtractBase(object):
         gain =  instrument_parameters.gain[self.band]
         return gain
 
-    def __init__(self, utdate, band, obsids, frametypes,
-                 ab_mode=True):
-        """
-        ab_mode : True if nodding tye is 'ABBA' or its variation.
-        """
-        self.ab_mode = ab_mode
+    @lazyprop
+    def _orders_and_wvl_solutions(self):
+        from libs.storage_descriptions import SKY_WVLSOL_JSON_DESC
+
+        sky_basename = self.basenames["sky"]
+        wvlsol_products = self.igr_storage.load1(SKY_WVLSOL_JSON_DESC,
+                                                 sky_basename)
+
+        orders_w_solutions = wvlsol_products["orders"]
+        wvl_solutions = map(np.array, wvlsol_products["wvl_sol"])
+
+        return orders_w_solutions, wvl_solutions
+
+    @property
+    def wvl_solutions(self):
+        return self._orders_and_wvl_solutions[1]
+
+    @property
+    def orders_w_solutions(self):
+        return self._orders_and_wvl_solutions[0]
+
+    @lazyprop
+    def orderflat(self):
+
+        from libs.storage_descriptions import ORDER_FLAT_IM_DESC
+
+        orderflat_ = self.igr_storage.load1(ORDER_FLAT_IM_DESC,
+                                            self.basenames["flat_on"])
+
+        orderflat = orderflat_.data
+        orderflat[self.pix_mask] = np.nan
+
+        return orderflat
+
+
+    @lazyprop
+    def ordermap(self):
+
+        sky_basename = self.basenames["sky"]
+
+        from libs.storage_descriptions import ORDERMAP_FITS_DESC
+
+        ordermap = self.igr_storage.load1(ORDERMAP_FITS_DESC,
+                                          sky_basename).data
+
+        return ordermap
+
+    @lazyprop
+    def ordermap_bpixed(self):
+
+        ordermap_bpixed = self.ordermap.copy()
+        ordermap_bpixed[self.pix_mask] = 0
+        ordermap_bpixed[~np.isfinite(self.orderflat)] = 0
+
+        return ordermap_bpixed
+
+
+    @lazyprop
+    def pix_mask(self):
+        from libs.storage_descriptions import (HOTPIX_MASK_DESC,
+                                               DEADPIX_MASK_DESC)
+
+        hotpix_mask = self.igr_storage.load1(HOTPIX_MASK_DESC,
+                                             self.basenames["flat_off"])
+
+        deadpix_mask = self.igr_storage.load1(DEADPIX_MASK_DESC,
+                                              self.basenames["flat_on"])
+
+        pix_mask  = hotpix_mask.data | deadpix_mask.data
+
+        return pix_mask
+
+
+    @lazyprop
+    def slitpos_map(self):
+        sky_basename = self.basenames["sky"]
+
+        from libs.storage_descriptions import SLITPOSMAP_FITS_DESC
+
+        slitpos_map = self.igr_storage.load1(SLITPOSMAP_FITS_DESC,
+                                             sky_basename).data
+
+        return slitpos_map
+
+    @lazyprop
+    def slitoffset_map(self):
+        from libs.storage_descriptions import SLITOFFSET_FITS_DESC
+        prod_ = self.igr_storage.load1(SLITOFFSET_FITS_DESC,
+                                       self.basenames["sky"])
+
+        slitoffset_map = prod_.data
+        return slitoffset_map
+
+
+    @lazyprop
+    def destripe_mask(self):
+        from libs.storage_descriptions import BIAS_MASK_DESC
+        bias_mask = self.igr_storage.load1(BIAS_MASK_DESC,
+                                           self.basenames["flat_on"]).data
+        bias_mask[-100:,:] = False
+        bias_mask[self.pix_mask] = True
+        bias_mask[:4] = True
+        bias_mask[-4:] = True
+
+        destripe_mask = bias_mask
+        return destripe_mask
+
+
+    def __init__(self, utdate, band, obsids, frametypes):
         self.pr = get_pr(utdate=utdate)
         self.pr.prepare(band, obsids, frametypes) #[32], ["A"])
         self.band = band
 
         self.frametypes = frametypes
 
-        igr_storage = self.igr_storage
-        basenames = self.basenames
-
-        from libs.storage_descriptions import SLITOFFSET_FITS_DESC
-        prod_ = igr_storage.load1(SLITOFFSET_FITS_DESC,
-                                  basenames["sky"])
-
-        self.slitoffset_map = prod_.data
 
 
-        from libs.storage_descriptions import (HOTPIX_MASK_DESC,
-                                               DEADPIX_MASK_DESC,
-                                               ORDER_FLAT_IM_DESC)
-
-        hotpix_mask = igr_storage.load1(HOTPIX_MASK_DESC,
-                                        basenames["flat_off"])
-
-        deadpix_mask = igr_storage.load1(DEADPIX_MASK_DESC,
-                                         basenames["flat_on"])
-
-        self.pix_mask  = hotpix_mask.data | deadpix_mask.data
+class RecipeExtractBase(RecipeExtractPR):
 
 
-        orderflat_ = igr_storage.load1(ORDER_FLAT_IM_DESC,
-                                       basenames["flat_on"])
-
-        orderflat = orderflat_.data
-        orderflat[self.pix_mask] = np.nan
-
-        self.orderflat = orderflat
 
 
-        from libs.storage_descriptions import SKY_WVLSOL_JSON_DESC
+    def __init__(self, utdate, band, obsids, frametypes,
+                 ab_mode=True):
+        """
+        ab_mode : True if nodding tye is 'ABBA' or its variation.
+        """
 
-        sky_basename = self.basenames["sky"]
-        wvlsol_products = igr_storage.load1(SKY_WVLSOL_JSON_DESC,
-                                            sky_basename)
+        RecipeExtractPR.__init__(self,
+                                 utdate, band, obsids, frametypes)
 
-        orders_w_solutions = wvlsol_products["orders"]
-        self.orders_w_solutions = orders_w_solutions
-        self.wvl_solutions = map(np.array, wvlsol_products["wvl_sol"])
-
-
-        from libs.storage_descriptions import (ORDERMAP_FITS_DESC,
-                                               SLITPOSMAP_FITS_DESC)
-
-        order_map = igr_storage.load1(ORDERMAP_FITS_DESC,
-                                      sky_basename).data
-
-        ordermap_bpixed = order_map.copy()
-        ordermap_bpixed[self.pix_mask] = 0
-        ordermap_bpixed[~np.isfinite(orderflat)] = 0
-        self.ordermap = order_map
-        self.ordermap_bpixed = ordermap_bpixed
-
-
-        self.slitpos_map = igr_storage.load1(SLITPOSMAP_FITS_DESC,
-                                             sky_basename).data
+        self.ab_mode = ab_mode
 
         from libs.correct_distortion import ShiftX
         self.shiftx = ShiftX(self.slitoffset_map)
@@ -103,17 +176,6 @@ class RecipeExtractBase(object):
         #orderflat_json = igr_storage.load1(ORDER_FLAT_JSON_DESC,
         #                                   basenames["flat_on"])
         #fitted_response = orderflat_json["fitted_responses"]
-
-
-        from libs.storage_descriptions import BIAS_MASK_DESC
-        bias_mask = igr_storage.load1(BIAS_MASK_DESC,
-                                      basenames["flat_on"]).data
-        bias_mask[-100:,:] = False
-        bias_mask[self.pix_mask] = True
-        bias_mask[:4] = True
-        bias_mask[-4:] = True
-
-        self.destripe_mask = bias_mask
 
 
     def get_data_variance(self,

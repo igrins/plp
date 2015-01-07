@@ -48,6 +48,36 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
                               html_output=html_output)
 
 
+def lazyprop(fn):
+    attr_name = '_lazy_' + fn.__name__
+    @property
+    def _lazyprop(self):
+        if not hasattr(self, attr_name):
+            setattr(self, attr_name, fn(self))
+        return getattr(self, attr_name)
+    return _lazyprop
+
+class OnedSpecHelper(object):
+    def __init__(self, igr_storage, basename):
+        self.basename = basename
+        self.igr_storage = igr_storage
+
+    @lazyprop
+    def spec(self):
+        from libs.storage_descriptions import SPEC_FITS_DESC
+        spec_ = self.igr_storage.load1(SPEC_FITS_DESC,
+                                       self.basename)
+        spec = list(spec_.data)
+        return spec
+
+    @lazyprop
+    def sn(self):
+        from libs.storage_descriptions import SN_FITS_DESC
+        sn_ = self.igr_storage.load1(SN_FITS_DESC,
+                                     self.basename)
+        sn = list(sn_.data)
+        return sn
+
 def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
                       config,
                       do_interactive_figure=False,
@@ -67,60 +97,33 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
 
 
     if 1:
-        from libs.recipe_base import get_pr
+        from recipe_extract_base import RecipeExtractPR
+        extractor = RecipeExtractPR(utdate, band,
+                                    obsids, frametypes)
 
-        pr = get_pr(utdate=utdate)
-        pr.prepare(band, obsids, frametypes,
-                   load_a0v_db=False) #[32], ["A"])
+        igr_storage = extractor.igr_storage
+        db = extractor.db
+        #basenames = extractor.basenames
+        tgt_basename = extractor.pr.tgt_basename
+        master_obsid = extractor.pr.master_obsid
+        igr_path = extractor.pr.igr_path
 
-        igr_storage = pr.igr_storage
-        db = pr.db
-        basenames = pr.basenames
-        tgt_basename = pr.tgt_basename
-        master_obsid = pr.master_obsid
-        igr_path = pr.igr_path
-
-    if 1: # make aperture
-        from libs.storage_descriptions import SKY_WVLSOL_JSON_DESC
-
-        sky_basename = db["sky"].query(band, master_obsid)
-        wvlsol_products = igr_storage.load1(SKY_WVLSOL_JSON_DESC,
-                                           sky_basename)
-
-        orders_w_solutions = wvlsol_products["orders"]
-        wvl_solutions = map(np.array, wvlsol_products["wvl_sol"])
-
-
+    orders_w_solutions = extractor.orders_w_solutions
+    wvl_solutions = extractor.wvl_solutions
 
     # prepare i1i2_list
-    from libs.storage_descriptions import ORDER_FLAT_JSON_DESC
-    prod = igr_storage.load1(ORDER_FLAT_JSON_DESC,
-                             basenames["flat_on"])
-
-    new_orders = prod["orders"]
-    i1i2_list_ = prod["i1i2_list"]
+    i1i2_list = get_i1i2_list(extractor)
 
 
-    order_indices = []
+    tgt = OnedSpecHelper(igr_storage, tgt_basename)
+    # if 1: # load target spectrum
+    #     tgt_spec_ = igr_storage.load1(SPEC_FITS_DESC,
+    #                                   tgt_basename)
+    #     tgt_spec = list(tgt_spec_.data)
 
-    for o in orders_w_solutions:
-        o_new_ind = np.searchsorted(new_orders, o)
-        order_indices.append(o_new_ind)
-
-    i1i2_list = get_fixed_i1i2_list(order_indices, i1i2_list_)
-
-
-    from libs.storage_descriptions import (SPEC_FITS_DESC,
-                                           SN_FITS_DESC)
-
-    if 1: # load target spectrum
-        tgt_spec_ = igr_storage.load1(SPEC_FITS_DESC,
-                                      tgt_basename)
-        tgt_spec = list(tgt_spec_.data)
-
-        tgt_sn_ = igr_storage.load1(SN_FITS_DESC,
-                                    tgt_basename)
-        tgt_sn = list(tgt_sn_.data)
+    #     tgt_sn_ = igr_storage.load1(SN_FITS_DESC,
+    #                                 tgt_basename)
+    #     tgt_sn = list(tgt_sn_.data)
 
     fig_list = []
 
@@ -137,10 +140,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
         telluric_cor = list(telluric_cor_.data)
 
 
-        a0v_spec_ = igr_storage.load1(SPEC_FITS_DESC,
-                                      A0V_basename)
-
-        a0v_spec = list(a0v_spec_.data)
+        a0v = OnedSpecHelper(igr_storage, A0V_basename)
 
 
         if 1:
@@ -156,7 +156,8 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
             ax1a = fig1.add_subplot(211)
             ax1b = fig1.add_subplot(212, sharex=ax1a)
 
-            for wvl, s, sn in zip(wvl_solutions, tgt_spec, tgt_sn):
+            for wvl, s, sn in zip(extractor.wvl_solutions,
+                                  tgt.spec, tgt.sn):
                 #s[s<0] = np.nan
                 #sn[sn<0] = np.nan
 
@@ -168,6 +169,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
             ax1b.set_xlabel("Wavelength [um]")
 
             ax1a.set_title(objname)
+
 
 
         if FIX_TELLURIC:
@@ -184,7 +186,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
 
             tgt_spec_cor = []
             #for s, t in zip(s_list, telluric_cor):
-            for s, t, t2 in zip(tgt_spec, a0v_spec, telluric_cor):
+            for s, t, t2 in zip(tgt.spec, a0v.spec, telluric_cor):
 
                 st = s/t
                 #print np.percentile(t[np.isfinite(t)], 95), threshold_a0v
@@ -257,7 +259,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
         objroot = "%04d" % (master_obsid,)
         html_save(utdate, dirname, objroot, band,
                   orders_w_solutions, wvl_solutions,
-                  tgt_spec, tgt_sn, i1i2_list)
+                  tgt.spec, tgt.sn, i1i2_list)
 
         if FIX_TELLURIC:
             objroot = "%04dA0V" % (master_obsid,)
@@ -279,6 +281,23 @@ def get_fixed_i1i2_list(order_indices, i1i2_list):
         i1i2_list2.append(i1i2_list[o_index])
     return i1i2_list2
 
+
+def get_i1i2_list(extractor):
+    from libs.storage_descriptions import ORDER_FLAT_JSON_DESC
+    prod = extractor.igr_storage.load1(ORDER_FLAT_JSON_DESC,
+                                       extractor.basenames["flat_on"])
+
+    new_orders = prod["orders"]
+    i1i2_list_ = prod["i1i2_list"]
+
+    order_indices = []
+
+    for o in extractor.orders_w_solutions:
+        o_new_ind = np.searchsorted(new_orders, o)
+        order_indices.append(o_new_ind)
+
+    i1i2_list = get_fixed_i1i2_list(order_indices, i1i2_list_)
+    return i1i2_list
 
 def html_save(utdate, dirname, objroot, band,
               orders_w_solutions, wvl_solutions,
