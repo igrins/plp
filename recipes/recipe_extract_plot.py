@@ -1,9 +1,6 @@
 import os
 import numpy as np
 
-from libs.path_info import IGRINSPath
-
-
 def plot_spec(utdate, refdate="20140316", bands="HK",
               starting_obsids=None, interactive=False,
               recipe_name = "ALL_RECIPES",
@@ -59,89 +56,36 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
                       multiply_model_a0v=False,
                       html_output=False):
 
-    from libs.products import ProductDB, PipelineStorage
+    target_type, nodding_type = recipe.split("_")
 
-    if recipe == "A0V_AB":
-
+    if target_type in ["A0V"]:
         FIX_TELLURIC=False
-
-    elif recipe == "A0V_ONOFF":
-
-        FIX_TELLURIC=False
-
-    elif recipe == "STELLAR_AB":
-
+    elif target_type in ["STELLAR", "EXTENDED"]:
         FIX_TELLURIC=True
-
-    elif recipe == "STELLAR_ONOFF":
-
-        FIX_TELLURIC=True
-
-    elif recipe == "EXTENDED_AB":
-
-        FIX_TELLURIC=True
-
-    elif recipe == "EXTENDED_ONOFF":
-
-        FIX_TELLURIC=True
-
     else:
-        raise ValueError("Unsupported Recipe : %s" % recipe)
+        raise ValueError("Unknown recipe : %s" % recipe)
+
 
     if 1:
+        from libs.recipe_base import get_pr
 
-        igr_path = IGRINSPath(config, utdate)
+        pr = get_pr(utdate=utdate)
+        pr.prepare(band, obsids, frametypes,
+                   load_a0v_db=False) #[32], ["A"])
 
-        igr_storage = PipelineStorage(igr_path)
-
-        obj_filenames = igr_path.get_filenames(band, obsids)
-
-        master_obsid = obsids[0]
-
-        tgt_basename = os.path.splitext(os.path.basename(obj_filenames[0]))[0]
-
-        db = {}
-        basenames = {}
-
-        db_types = ["flat_off", "flat_on", "thar", "sky"]
-
-        for db_type in db_types:
-
-            db_name = igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
-                                                        "%s.db" % db_type,
-                                                        )
-            db[db_type] = ProductDB(db_name)
-
-        # db on output path
-        db_types = ["a0v"]
-
-        for db_type in db_types:
-
-            db_name = igr_path.get_section_filename_base("OUTDATA_PATH",
-                                                        "%s.db" % db_type,
-                                                        )
-            db[db_type] = ProductDB(db_name)
-
-
-        # to get basenames
-        db_types = ["flat_off", "flat_on", "thar", "sky"]
-        if FIX_TELLURIC:
-            db_types.append("a0v")
-
-        for db_type in db_types:
-            basenames[db_type] = db[db_type].query(band, master_obsid)
-
-
-
-
-
+        igr_storage = pr.igr_storage
+        db = pr.db
+        basenames = pr.basenames
+        tgt_basename = pr.tgt_basename
+        master_obsid = pr.master_obsid
+        igr_path = pr.igr_path
 
     if 1: # make aperture
         from libs.storage_descriptions import SKY_WVLSOL_JSON_DESC
 
         sky_basename = db["sky"].query(band, master_obsid)
-        wvlsol_products = igr_storage.load([SKY_WVLSOL_JSON_DESC],
-                                           sky_basename)[SKY_WVLSOL_JSON_DESC]
+        wvlsol_products = igr_storage.load1(SKY_WVLSOL_JSON_DESC,
+                                           sky_basename)
 
         orders_w_solutions = wvlsol_products["orders"]
         wvl_solutions = map(np.array, wvlsol_products["wvl_sol"])
@@ -150,8 +94,8 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
 
     # prepare i1i2_list
     from libs.storage_descriptions import ORDER_FLAT_JSON_DESC
-    prod = igr_storage.load([ORDER_FLAT_JSON_DESC],
-                            basenames["flat_on"])[ORDER_FLAT_JSON_DESC]
+    prod = igr_storage.load1(ORDER_FLAT_JSON_DESC,
+                             basenames["flat_on"])
 
     new_orders = prod["orders"]
     i1i2_list_ = prod["i1i2_list"]
@@ -170,12 +114,12 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
                                            SN_FITS_DESC)
 
     if 1: # load target spectrum
-        tgt_spec_ = igr_storage.load([SPEC_FITS_DESC],
-                                     tgt_basename)[SPEC_FITS_DESC]
+        tgt_spec_ = igr_storage.load1(SPEC_FITS_DESC,
+                                      tgt_basename)
         tgt_spec = list(tgt_spec_.data)
 
-        tgt_sn_ = igr_storage.load([SN_FITS_DESC],
-                                   tgt_basename)[SN_FITS_DESC]
+        tgt_sn_ = igr_storage.load1(SN_FITS_DESC,
+                                    tgt_basename)
         tgt_sn = list(tgt_sn_.data)
 
     fig_list = []
@@ -185,16 +129,16 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
         A0V_basename = db["a0v"].query(band, master_obsid)
 
         from libs.storage_descriptions import SPEC_FITS_FLATTENED_DESC
-        telluric_cor_ = igr_storage.load([SPEC_FITS_FLATTENED_DESC],
-                                         A0V_basename)[SPEC_FITS_FLATTENED_DESC]
+        telluric_cor_ = igr_storage.load1(SPEC_FITS_FLATTENED_DESC,
+                                          A0V_basename)
 
         #A0V_path = ProductPath(igr_path, A0V_basename)
         #fn = A0V_path.get_secondary_path("spec_flattened.fits")
         telluric_cor = list(telluric_cor_.data)
 
 
-        a0v_spec_ = igr_storage.load([SPEC_FITS_DESC],
-                                     A0V_basename)[SPEC_FITS_DESC]
+        a0v_spec_ = igr_storage.load1(SPEC_FITS_DESC,
+                                      A0V_basename)
 
         a0v_spec = list(a0v_spec_.data)
 

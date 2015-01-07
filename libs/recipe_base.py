@@ -62,7 +62,7 @@ class ProcessBase(object):
         self.igr_storage = PipelineStorage(self.igr_path)
 
 
-    def prepare(self, band, obsids, frametypes):
+    def prepare(self, band, obsids, frametypes, load_a0v_db=True):
 
         igr_path = self.igr_path
 
@@ -98,8 +98,8 @@ class ProcessBase(object):
 
         # to get basenames
         db_types = ["flat_off", "flat_on", "thar", "sky"]
-        # if FIX_TELLURIC:
-        #     db_types.append("a0v")
+        if load_a0v_db:
+            db_types.append("a0v")
 
         for db_type in db_types:
             self.basenames[db_type] = self.db[db_type].query(band,
@@ -107,7 +107,7 @@ class ProcessBase(object):
 
 def get_pr(utdate, config_file="recipe.config"):
     from libs.igrins_config import IGRINSConfig
-    from jj_recipe_base import ProcessBase
+    #from jj_recipe_base import ProcessBase
     config = IGRINSConfig(config_file)
     refdate = config.get_value("REFDATE", None)
     pr = ProcessBase(utdate, refdate, config)
