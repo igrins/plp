@@ -100,8 +100,15 @@ class PipelineStorage(object):
             #self.save_one(fn, v, masterhdu)
         return r
 
-    def load1(self, product_desc, mastername):
-        return self.load([product_desc], mastername)[product_desc]
+    def load1(self, product_desc, mastername,
+              return_hdu_list=False):
+        product1 = self.load([product_desc], mastername)[product_desc]
+        if not return_hdu_list and isinstance(product1,
+                                              pyfits.HDUList):
+            return product1[0]
+        else:
+            return product1
+
 
     def store(self, products, mastername, masterhdu=None, cache=True):
         mastername, ext_ = os.path.splitext(mastername)
@@ -127,7 +134,7 @@ class PipelineStorage(object):
             hdu = pyfits.open(fn)[0]
             return PipelineImage(hdu, hdu.data.astype(bool))
         elif fn.endswith("fits"):
-            hdu = pyfits.open(fn)[0]
+            hdu = pyfits.open(fn)
             return hdu
         else:
             raise RuntimeError("Unknown file extension")
