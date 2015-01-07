@@ -63,12 +63,22 @@ class OnedSpecHelper(object):
         self.igr_storage = igr_storage
 
     @lazyprop
-    def spec(self):
+    def _spec_hdu_list(self):
         from libs.storage_descriptions import SPEC_FITS_DESC
-        spec_ = self.igr_storage.load1(SPEC_FITS_DESC,
-                                       self.basename)
-        spec = list(spec_.data)
+        spec_hdu_list = self.igr_storage.load1(SPEC_FITS_DESC,
+                                               self.basename,
+                                               return_hdu_list=True)
+        return spec_hdu_list
+
+    @lazyprop
+    def spec(self):
+        spec = list(self._spec_hdu_list[0].data)
         return spec
+
+    @lazyprop
+    def um(self):
+        um = list(self._spec_hdu_list[1].data)
+        return um
 
     @lazyprop
     def sn(self):
@@ -77,6 +87,20 @@ class OnedSpecHelper(object):
                                      self.basename)
         sn = list(sn_.data)
         return sn
+
+    @lazyprop
+    def flattened(self):
+
+        from libs.storage_descriptions import SPEC_FITS_FLATTENED_DESC
+        telluric_cor_ = self.igr_storage.load1(SPEC_FITS_FLATTENED_DESC,
+                                               self.basename)
+
+        #A0V_path = ProductPath(igr_path, A0V_basename)
+        #fn = A0V_path.get_secondary_path("spec_flattened.fits")
+        flattened = list(telluric_cor_.data)
+        return flattened
+
+
 
 def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
                       config,
@@ -96,147 +120,108 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
         raise ValueError("Unknown recipe : %s" % recipe)
 
 
-    if 1:
-        from recipe_extract_base import RecipeExtractPR
-        extractor = RecipeExtractPR(utdate, band,
-                                    obsids, frametypes)
+    from recipe_extract_base import RecipeExtractPR
+    extractor = RecipeExtractPR(utdate, band,
+                                obsids, frametypes)
 
-        igr_storage = extractor.igr_storage
-        db = extractor.db
-        #basenames = extractor.basenames
-        tgt_basename = extractor.pr.tgt_basename
-        master_obsid = extractor.pr.master_obsid
-        igr_path = extractor.pr.igr_path
-
-    orders_w_solutions = extractor.orders_w_solutions
-    wvl_solutions = extractor.wvl_solutions
-
-    # prepare i1i2_list
-    i1i2_list = get_i1i2_list(extractor)
+    igr_storage = extractor.igr_storage
+    db = extractor.db
+    tgt_basename = extractor.pr.tgt_basename
+    master_obsid = extractor.pr.master_obsid
+    igr_path = extractor.pr.igr_path
 
 
     tgt = OnedSpecHelper(igr_storage, tgt_basename)
-    # if 1: # load target spectrum
-    #     tgt_spec_ = igr_storage.load1(SPEC_FITS_DESC,
-    #                                   tgt_basename)
-    #     tgt_spec = list(tgt_spec_.data)
 
-    #     tgt_sn_ = igr_storage.load1(SN_FITS_DESC,
-    #                                 tgt_basename)
-    #     tgt_sn = list(tgt_sn_.data)
+    orders_w_solutions = extractor.orders_w_solutions
 
-    fig_list = []
+    if tgt.um[0][0] < tgt.um[-1][0]:
+        # if orders are sorted in increasing order of wavelength
+        orders_w_solutions = orders_w_solutions[::-1]
 
-    # telluric
-    if 1: #FIX_TELLURIC:
+    if FIX_TELLURIC:
+
         A0V_basename = db["a0v"].query(band, master_obsid)
-
-        from libs.storage_descriptions import SPEC_FITS_FLATTENED_DESC
-        telluric_cor_ = igr_storage.load1(SPEC_FITS_FLATTENED_DESC,
-                                          A0V_basename)
-
-        #A0V_path = ProductPath(igr_path, A0V_basename)
-        #fn = A0V_path.get_secondary_path("spec_flattened.fits")
-        telluric_cor = list(telluric_cor_.data)
-
 
         a0v = OnedSpecHelper(igr_storage, A0V_basename)
 
 
-        if 1:
+        tgt_spec_cor = get_tgt_spec_cor(tgt, a0v,
+                                        threshold_a0v,
+                                        multiply_model_a0v)
 
-
-            if do_interactive_figure:
-                from matplotlib.pyplot import figure as Figure
-            else:
-                from matplotlib.figure import Figure
-            fig1 = Figure(figsize=(12,6))
-            fig_list.append(fig1)
-
-            ax1a = fig1.add_subplot(211)
-            ax1b = fig1.add_subplot(212, sharex=ax1a)
-
-            for wvl, s, sn in zip(extractor.wvl_solutions,
-                                  tgt.spec, tgt.sn):
-                #s[s<0] = np.nan
-                #sn[sn<0] = np.nan
-
-                ax1a.plot(wvl, s)
-                ax1b.plot(wvl, sn)
-
-            ax1a.set_ylabel("Counts [DN]")
-            ax1b.set_ylabel("S/N per Res. Element")
-            ax1b.set_xlabel("Wavelength [um]")
-
-            ax1a.set_title(objname)
+    # prepare i1i2_list
+    i1i2_list = get_i1i2_list(extractor,
+                              orders_w_solutions)
 
 
 
-        if FIX_TELLURIC:
 
-            fig2 = Figure(figsize=(12,6))
-            fig_list.append(fig2)
-
-            ax2a = fig2.add_subplot(211)
-            ax2b = fig2.add_subplot(212, sharex=ax2a)
-
-            #from libs.stddev_filter import window_stdev
+    fig_list = []
 
 
+    if 1:
 
-            tgt_spec_cor = []
-            #for s, t in zip(s_list, telluric_cor):
-            for s, t, t2 in zip(tgt.spec, a0v.spec, telluric_cor):
+        if do_interactive_figure:
+            from matplotlib.pyplot import figure as Figure
+        else:
+            from matplotlib.figure import Figure
+        fig1 = Figure(figsize=(12,6))
+        fig_list.append(fig1)
 
-                st = s/t
-                #print np.percentile(t[np.isfinite(t)], 95), threshold_a0v
-                t0 = np.percentile(t[np.isfinite(t)], 95)*threshold_a0v
-                st[t<t0] = np.nan
+        ax1a = fig1.add_subplot(211)
+        ax1b = fig1.add_subplot(212, sharex=ax1a)
 
-                st[t2 < threshold_a0v] = np.nan
+        for wvl, s, sn in zip(tgt.um,
+                              tgt.spec, tgt.sn):
+            #s[s<0] = np.nan
+            #sn[sn<0] = np.nan
 
-                tgt_spec_cor.append(st)
+            ax1a.plot(wvl, s)
+            ax1b.plot(wvl, sn)
 
+        ax1a.set_ylabel("Counts [DN]")
+        ax1b.set_ylabel("S/N per Res. Element")
+        ax1b.set_xlabel("Wavelength [um]")
 
-            if multiply_model_a0v:
-                # multiply by A0V model
-                from libs.a0v_spec import A0VSpec
-                a0v_model = A0VSpec()
-
-                a0v_interp1d = a0v_model.get_flux_interp1d(1.3, 2.5,
-                                                           flatten=True,
-                                                           smooth_pixel=32)
-                for wvl, s in zip(wvl_solutions,
-                                  tgt_spec_cor):
-
-                    aa = a0v_interp1d(wvl)
-                    s *= aa
+        ax1a.set_title(objname)
 
 
-            for wvl, s, t in zip(wvl_solutions,
-                                 tgt_spec_cor,
-                                 telluric_cor):
 
-                ax2a.plot(wvl, t, "0.8", zorder=0.5)
-                ax2b.plot(wvl, s, zorder=0.5)
+    if FIX_TELLURIC:
+
+        fig2 = Figure(figsize=(12,6))
+        fig_list.append(fig2)
+
+        ax2a = fig2.add_subplot(211)
+        ax2b = fig2.add_subplot(212, sharex=ax2a)
+
+        #from libs.stddev_filter import window_stdev
+
+        for wvl, s, t in zip(tgt.um,
+                             tgt_spec_cor,
+                             a0v.flattened):
+
+            ax2a.plot(wvl, t, "0.8", zorder=0.5)
+            ax2b.plot(wvl, s, zorder=0.5)
 
 
-            s_max_list = []
-            s_min_list = []
-            for s in tgt_spec_cor[3:-3]:
-                s_max_list.append(np.nanmax(s))
-                s_min_list.append(np.nanmin(s))
-            s_max = np.max(s_max_list)
-            s_min = np.min(s_min_list)
-            ds_pad = 0.05 * (s_max - s_min)
+        s_max_list = []
+        s_min_list = []
+        for s in tgt_spec_cor[3:-3]:
+            s_max_list.append(np.nanmax(s))
+            s_min_list.append(np.nanmin(s))
+        s_max = np.max(s_max_list)
+        s_min = np.min(s_min_list)
+        ds_pad = 0.05 * (s_max - s_min)
 
-            ax2a.set_ylabel("A0V flattened")
-            ax2a.set_ylim(-0.05, 1.1)
-            ax2b.set_ylabel("Target / A0V")
-            ax2b.set_xlabel("Wavelength [um]")
+        ax2a.set_ylabel("A0V flattened")
+        ax2a.set_ylim(-0.05, 1.1)
+        ax2b.set_ylabel("Target / A0V")
+        ax2b.set_xlabel("Wavelength [um]")
 
-            ax2b.set_ylim(s_min-ds_pad, s_max+ds_pad)
-            ax2a.set_title(objname)
+        ax2b.set_ylim(s_min-ds_pad, s_max+ds_pad)
+        ax2a.set_title(objname)
 
 
 
@@ -258,14 +243,14 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
         dirname = config.get_value('HTML_PATH', utdate)
         objroot = "%04d" % (master_obsid,)
         html_save(utdate, dirname, objroot, band,
-                  orders_w_solutions, wvl_solutions,
+                  orders_w_solutions, tgt.um,
                   tgt.spec, tgt.sn, i1i2_list)
 
         if FIX_TELLURIC:
             objroot = "%04dA0V" % (master_obsid,)
             html_save(utdate, dirname, objroot, band,
-                      orders_w_solutions, wvl_solutions,
-                      telluric_cor, tgt_spec_cor, i1i2_list,
+                      orders_w_solutions, tgt.um,
+                      a0v.flattened, tgt_spec_cor, i1i2_list,
                       spec_js_name="jj_a0v.js")
 
 
@@ -282,7 +267,7 @@ def get_fixed_i1i2_list(order_indices, i1i2_list):
     return i1i2_list2
 
 
-def get_i1i2_list(extractor):
+def get_i1i2_list(extractor, orders_w_solutions):
     from libs.storage_descriptions import ORDER_FLAT_JSON_DESC
     prod = extractor.igr_storage.load1(ORDER_FLAT_JSON_DESC,
                                        extractor.basenames["flat_on"])
@@ -292,7 +277,7 @@ def get_i1i2_list(extractor):
 
     order_indices = []
 
-    for o in extractor.orders_w_solutions:
+    for o in orders_w_solutions:
         o_new_ind = np.searchsorted(new_orders, o)
         order_indices.append(o_new_ind)
 
@@ -402,3 +387,38 @@ def save_for_html(dir, name, band, orders, wvl_sol, s_list1, s_list2):
     f.write('second_filename = "%s";\n' % igrins_spec_output2)
 
     f.close()
+
+
+def get_tgt_spec_cor(tgt, a0v, threshold_a0v, multiply_model_a0v):
+    tgt_spec_cor = []
+    #for s, t in zip(s_list, telluric_cor):
+    for s, t, t2 in zip(tgt.spec,
+                        a0v.spec,
+                        a0v.flattened):
+
+        st = s/t
+        #print np.percentile(t[np.isfinite(t)], 95), threshold_a0v
+        t0 = np.percentile(t[np.isfinite(t)], 95)*threshold_a0v
+        st[t<t0] = np.nan
+
+        st[t2 < threshold_a0v] = np.nan
+
+        tgt_spec_cor.append(st)
+
+
+    if multiply_model_a0v:
+        # multiply by A0V model
+        from libs.a0v_spec import A0VSpec
+        a0v_model = A0VSpec()
+
+        a0v_interp1d = a0v_model.get_flux_interp1d(1.3, 2.5,
+                                                   flatten=True,
+                                                   smooth_pixel=32)
+        for wvl, s in zip(tgt.um,
+                          tgt_spec_cor):
+
+            aa = a0v_interp1d(wvl)
+            s *= aa
+
+
+    return tgt_spec_cor
