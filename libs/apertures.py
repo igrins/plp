@@ -215,7 +215,7 @@ class Apertures(object):
         v_list = []
         slices = ni.find_objects(ordermap_bpixed)
 
-        SAVE_PROFILE = True
+        SAVE_PROFILE = False
         if SAVE_PROFILE:
             import astropy.io.fits as pyfits
             hl = pyfits.HDUList()
@@ -303,7 +303,7 @@ class Apertures(object):
         v_list = []
         slices = ni.find_objects(ordermap_bpixed)
 
-        SAVE_PROFILE = True
+        SAVE_PROFILE = False
         if SAVE_PROFILE:
             import astropy.io.fits as pyfits
             hl = pyfits.HDUList()

@@ -1,3 +1,8 @@
+import os
+from libs.path_info import IGRINSPath
+#from libs.products import PipelineProducts
+from libs.products import ProductDB, PipelineStorage
+
 class RecipeBase(object):
     """ The derived mus define RECIPE_NAME attribute and must implement
         run_selected_bands method.
@@ -40,3 +45,71 @@ class RecipeBase(object):
         selected = recipes.select(self.RECIPE_NAME, starting_obsids_parsed)
 
         self.run_selected_bands(utdate, selected, bands)
+
+
+
+class ProcessBase(object):
+    def __init__(self, utdate, refdate, config):
+        """
+        cr_rejection_thresh : pixels that deviate significantly from the profile are excluded.
+        """
+        self.utdate = utdate
+        self.refdate = refdate
+        self.config = config
+
+        self.igr_path = IGRINSPath(config, utdate)
+
+        self.igr_storage = PipelineStorage(self.igr_path)
+
+
+    def prepare(self, band, obsids, frametypes):
+
+        igr_path = self.igr_path
+
+        self.obj_filenames = igr_path.get_filenames(band, obsids)
+
+        self.master_obsid = obsids[0]
+
+        self.tgt_basename = os.path.splitext(os.path.basename(self.obj_filenames[0]))[0]
+
+        self.db = {}
+        self.basenames = {}
+
+
+        db_types_calib = ["flat_off", "flat_on", "thar", "sky"]
+
+        for db_type in db_types_calib:
+
+            db_name = igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
+                                                         "%s.db" % db_type,
+                                                         )
+            self.db[db_type] = ProductDB(db_name)
+
+
+        # db on output path
+        db_types = ["a0v"]
+
+        for db_type in db_types:
+
+            db_name = igr_path.get_section_filename_base("OUTDATA_PATH",
+                                                         "%s.db" % db_type,
+                                                         )
+            self.db[db_type] = ProductDB(db_name)
+
+        # to get basenames
+        db_types = ["flat_off", "flat_on", "thar", "sky"]
+        # if FIX_TELLURIC:
+        #     db_types.append("a0v")
+
+        for db_type in db_types:
+            self.basenames[db_type] = self.db[db_type].query(band,
+                                                             self.master_obsid)
+
+def get_pr(utdate, config_file="recipe.config"):
+    from libs.igrins_config import IGRINSConfig
+    from jj_recipe_base import ProcessBase
+    config = IGRINSConfig(config_file)
+    refdate = config.get_value("REFDATE", None)
+    pr = ProcessBase(utdate, refdate, config)
+
+    return pr
