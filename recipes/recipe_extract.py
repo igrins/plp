@@ -266,7 +266,7 @@ class ProcessABBABand(object):
 
             else: # if extended source
                 from scipy.interpolate import UnivariateSpline
-                if recipe in ["EXTENDED_AB", "EXTENDED_ABBA"]:
+                if DO_AB:
                     delta = 0.01
                     profile_ = UnivariateSpline([0, 0.5-delta, 0.5+delta, 1],
                                                 [1., 1., -1., -1.],
@@ -298,13 +298,23 @@ class ProcessABBABand(object):
 
                 # extract spec
 
-                _ = ap.get_shifted_images(profile_map,
-                                          variance_map,
-                                          data_minus_flattened,
-                                          slitoffset_map=slitoffset_map,
-                                          debug=False)
+                shifted = extractor.get_shifted_all(ap,
+                                                    profile_map,
+                                                    variance_map,
+                                                    data_minus_flattened,
+                                                    slitoffset_map,
+                                                    debug=self.debug_output)
 
-                data_shft, variance_map_shft, profile_map_shft, msk1_shft = _
+                # for khjeong
+                weight_thresh = None
+                remove_negative = False
+
+                _ = extractor.extract_spec_stellar(ap, shifted,
+                                                   weight_thresh,
+                                                   remove_negative)
+
+
+                s_list, v_list = _
 
                 if self.debug_output:
                     hdu_list = pyfits.HDUList()
@@ -316,13 +326,7 @@ class ProcessABBABand(object):
                     #hdu_list.append(pyfits.ImageHDU(data=np.array(s_list)))
                     hdu_list.writeto("test0.fits", clobber=True)
 
-                _ = ap.extract_extended_from_shifted(ordermap_bpixed,
-                                                     profile_map_shft,
-                                                     variance_map_shft,
-                                                     data_shft, msk1_shft,
-                                                     slitpos_map,
-                                                     remove_negative=False)
-                s_list, v_list = _
+
 
 
 
@@ -359,9 +363,15 @@ class ProcessABBABand(object):
                           extractor,
                           v_list, sn_list, s_list)
 
-        if not IF_POINT_SOURCE: # if extended source
-            self.store_2dspec(igr_storage,
-                              mastername)
+        if not IF_POINT_SOURCE: # if point source
+            cr_mask = None
+
+        self.store_2dspec(igr_storage,
+                          extractor,
+                          shifted["data"],
+                          ordermap_bpixed,
+                          cr_mask=cr_mask)
+
 
         if DO_STD:
 
@@ -525,7 +535,8 @@ class ProcessABBABand(object):
     def store_2dspec(self, igr_storage,
                      extractor,
                      data_shft,
-                     ordermap_bpixed):
+                     ordermap_bpixed,
+                     cr_mask=None):
 
         wvl_header, wvl_data, convert_data = \
                     self.get_wvl_header_data(igr_storage,
@@ -539,13 +550,14 @@ class ProcessABBABand(object):
 
         from libs.storage_descriptions import FLATCENTROID_SOL_JSON_DESC
         cent = igr_storage.load1(FLATCENTROID_SOL_JSON_DESC,
-                                 self.basenames["flat_on"])
+                                 extractor.basenames["flat_on"])
 
         #cent = json.load(open("calib/primary/20140525/FLAT_SDCK_20140525_0074.centroid_solutions.json"))
         _bottom_up_solutions = cent["bottom_up_solutions"]
-        old_orders = self.get_old_orders()
+        old_orders = extractor.get_old_orders()
         _o_s = dict(zip(old_orders, _bottom_up_solutions))
-        new_bottom_up_solutions = [_o_s[o] for o in self.orders_w_solutions]
+        new_bottom_up_solutions = [_o_s[o] for o in \
+                                   extractor.orders_w_solutions]
 
         from libs.correct_distortion import get_flattened_2dspec
         d0_shft_list, msk_shft_list = \
