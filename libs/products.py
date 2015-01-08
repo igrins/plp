@@ -72,6 +72,18 @@ class PipelineStorage(object):
         self.igr_path = igr_path
         self._cache = {}
 
+    @classmethod
+    def from_utdate(cls, utdate, config=None):
+        from libs.path_info import IGRINSPath
+
+        if config is None:
+            from libs.igrins_config import IGRINSConfig
+            config = IGRINSConfig()
+
+        igr_path = IGRINSPath(config, utdate)
+        igr_storage = cls(igr_path)
+        return igr_storage
+
     def get_path(self, desc, mastername):
         section, prefix, ext = desc
         fn0 = prefix + os.path.basename(mastername) + ext

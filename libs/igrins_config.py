@@ -1,5 +1,16 @@
 import ConfigParser
+import warnings
 
+default_config_content = """[DEFAULT]
+REFDATE=20140316
+INDATA_PATH=indata/%(UTDATE)s
+OUTDATA_PATH=outdata/%(UTDATE)s
+PRIMARY_CALIB_PATH=calib/primary/%(UTDATE)s
+SECONDARY_CALIB_PATH=calib/secondary/%(UTDATE)s
+QA_PATH=%(OUTDATA_PATH)s/qa
+HTML_PATH=html/%(UTDATE)s
+RECIPE_LOG_PATH=recipe_logs/%(UTDATE)s.recipes
+"""
 
 class IGRINSConfig(object):
     def __init__(self, config_file=None):
@@ -9,7 +20,15 @@ class IGRINSConfig(object):
         self.config_file = config_file
 
         self.config = ConfigParser.ConfigParser()
-        self.config.read(config_file)
+
+        import StringIO
+
+        fp = StringIO.StringIO(default_config_content)
+        self.config.readfp(fp)
+
+        read_file = self.config.read(config_file)
+        if not read_file:
+            warnings.warn("no recipe.config is found. Internal default will be used.")
 
     def get_value(self, option, utdate):
         return self.config.get("DEFAULT", option, 0, dict(UTDATE=utdate))

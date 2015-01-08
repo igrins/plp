@@ -12,7 +12,6 @@ def lazyprop(fn):
     return _lazyprop
 
 import os
-from libs.path_info import IGRINSPath
 from libs.products import ProductDB, PipelineStorage
 
 class ProcessBase(object):
@@ -24,10 +23,9 @@ class ProcessBase(object):
         self.refdate = refdate
         self.config = config
 
-        self.igr_path = IGRINSPath(config, utdate)
-
-        self.igr_storage = PipelineStorage(self.igr_path)
-
+        self.igr_storage = PipelineStorage.from_utdate(utdate,
+                                                       config=config)
+        self.igr_path = self.igr_storage.igr_path
 
     def prepare(self, band, obsids, frametypes, load_a0v_db=True):
 
