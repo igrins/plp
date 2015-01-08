@@ -48,60 +48,6 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
                               html_output=html_output)
 
 
-def lazyprop(fn):
-    attr_name = '_lazy_' + fn.__name__
-    @property
-    def _lazyprop(self):
-        if not hasattr(self, attr_name):
-            setattr(self, attr_name, fn(self))
-        return getattr(self, attr_name)
-    return _lazyprop
-
-class OnedSpecHelper(object):
-    def __init__(self, igr_storage, basename):
-        self.basename = basename
-        self.igr_storage = igr_storage
-
-    @lazyprop
-    def _spec_hdu_list(self):
-        from libs.storage_descriptions import SPEC_FITS_DESC
-        spec_hdu_list = self.igr_storage.load1(SPEC_FITS_DESC,
-                                               self.basename,
-                                               return_hdu_list=True)
-        return spec_hdu_list
-
-    @lazyprop
-    def spec(self):
-        spec = list(self._spec_hdu_list[0].data)
-        return spec
-
-    @lazyprop
-    def um(self):
-        um = list(self._spec_hdu_list[1].data)
-        return um
-
-    @lazyprop
-    def sn(self):
-        from libs.storage_descriptions import SN_FITS_DESC
-        sn_ = self.igr_storage.load1(SN_FITS_DESC,
-                                     self.basename)
-        sn = list(sn_.data)
-        return sn
-
-    @lazyprop
-    def flattened(self):
-
-        from libs.storage_descriptions import SPEC_FITS_FLATTENED_DESC
-        telluric_cor_ = self.igr_storage.load1(SPEC_FITS_FLATTENED_DESC,
-                                               self.basename)
-
-        #A0V_path = ProductPath(igr_path, A0V_basename)
-        #fn = A0V_path.get_secondary_path("spec_flattened.fits")
-        flattened = list(telluric_cor_.data)
-        return flattened
-
-
-
 def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
                       config,
                       do_interactive_figure=False,
@@ -124,14 +70,11 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
     extractor = RecipeExtractPR(utdate, band,
                                 obsids, frametypes)
 
-    igr_storage = extractor.igr_storage
-    db = extractor.db
-    tgt_basename = extractor.pr.tgt_basename
     master_obsid = extractor.pr.master_obsid
     igr_path = extractor.pr.igr_path
 
 
-    tgt = OnedSpecHelper(igr_storage, tgt_basename)
+    tgt = extractor.get_oned_spec_helper()
 
     orders_w_solutions = extractor.orders_w_solutions
 
@@ -143,7 +86,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
     if FIX_TELLURIC:
 
         A0V_basename = extractor.basenames["a0v"]
-        a0v = OnedSpecHelper(igr_storage, A0V_basename)
+        a0v = extractor.get_oned_spec_helper(A0V_basename)
 
 
         tgt_spec_cor = get_tgt_spec_cor(tgt, a0v,
@@ -230,6 +173,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
         for fig in fig_list:
             fig.tight_layout()
 
+        tgt_basename = extractor.pr.tgt_basename
         figout = igr_path.get_section_filename_base("QA_PATH",
                                                     "spec_"+tgt_basename,
                                                     "spec_"+tgt_basename)
