@@ -135,14 +135,14 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
 
     orders_w_solutions = extractor.orders_w_solutions
 
+    # if wavelengths list are sorted in increasing order of
+    # wavelength, recerse the order list
     if tgt.um[0][0] < tgt.um[-1][0]:
-        # if orders are sorted in increasing order of wavelength
         orders_w_solutions = orders_w_solutions[::-1]
 
     if FIX_TELLURIC:
 
-        A0V_basename = db["a0v"].query(band, master_obsid)
-
+        A0V_basename = extractor.basenames["a0v"]
         a0v = OnedSpecHelper(igr_storage, A0V_basename)
 
 
