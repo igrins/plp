@@ -159,9 +159,9 @@ def trace_orders(flaton_products):
                                       FLATON_JSON_DESC)
 
 
-    flat_normed = flaton_products[FLAT_NORMED_DESC].data
-    flat_bpixed = flaton_products[FLAT_BPIXED_DESC].data
-    flat_mask = flaton_products[FLAT_MASK_DESC].data
+    flat_normed = flaton_products[FLAT_NORMED_DESC][0].data
+    flat_bpixed = flaton_products[FLAT_BPIXED_DESC][0].data
+    flat_mask = flaton_products[FLAT_MASK_DESC][0].data
     bg_std_normed = flaton_products[FLATON_JSON_DESC]["bg_std_normed"]
 
     #deadpix_mask=deadpix_mask)
@@ -281,7 +281,7 @@ def make_order_flat(flaton_products, orders, order_map):
     from storage_descriptions import (FLAT_NORMED_DESC,
                                       FLAT_MASK_DESC)
 
-    flat_normed  = flaton_products[FLAT_NORMED_DESC].data
+    flat_normed  = flaton_products[FLAT_NORMED_DESC][0].data
     flat_mask = flaton_products[FLAT_MASK_DESC].data
 
     import scipy.ndimage as ni

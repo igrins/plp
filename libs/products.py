@@ -9,8 +9,12 @@ from astropy.io.fits import Card
 class PipelineImage(object):
     def __init__(self, header, *data_list):
         self.header = header
+        self.header_list = [header] * len(data_list)
         self.data_list = data_list
         self.data = data_list[0]
+
+    def __getitem__(self, i):
+        return type(self)(self.header_list[i], self.data_list[i])
 
     def store(self, fn, masterhdu=None):
         d_list = self.data_list

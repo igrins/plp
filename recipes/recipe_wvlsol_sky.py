@@ -518,7 +518,7 @@ def process_distortion_sky_band(utdate, refdate, band, obsids, config):
         slice_down = [(slit_slice[i_center-i-1], slit_slice[i_center-i]) \
                       for i in range(n_slice_one_direction)]
 
-        d = raw_spec_products[COMBINED_IMAGE_DESC].data
+        d = raw_spec_products[COMBINED_IMAGE_DESC][0].data
         s_center = ap.extract_spectra_v2(d, slice_center[0], slice_center[1])
 
         s_up, s_down = [], []
