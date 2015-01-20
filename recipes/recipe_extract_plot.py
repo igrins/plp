@@ -33,9 +33,10 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
         recipe_name = s[2]["RECIPE"].strip()
         objname = s[2]["OBJNAME"].strip()
 
-        if recipe_name not in ["A0V_AB", "STELLAR_AB",
-                               "A0V_ONOFF", "STELLAR_ONOFF",
-                               "EXTENDED_AB", "EXTENDED_ONOFF"]:
+        target_type = recipe_name.split("_")[0]
+
+        if target_type not in ["A0V", "STELLAR", "EXTENDED"]:
+            print "Unsupported recipe : %s" % recipe_name
             continue
 
         for band in bands:

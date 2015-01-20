@@ -115,13 +115,19 @@ class ProcessABBABand(object):
         igr_storage = self.igr_storage
 
 
-        target_type, nodding_type = recipe.split("_")
+        if "_" in recipe:
+            target_type, nodding_type = recipe.split("_")
+        else:
+            raise ValueError("Unknown recipe : %s" % recipe)
 
         if target_type in ["A0V", "STELLAR"]:
             IF_POINT_SOURCE = True
         elif target_type in ["EXTENDED"]:
             IF_POINT_SOURCE = False
         else:
+            raise ValueError("Unknown recipe : %s" % recipe)
+
+        if nodding_type not in ["AB", "ONOFF"]:
             raise ValueError("Unknown recipe : %s" % recipe)
 
         DO_STD = (target_type == "A0V")
