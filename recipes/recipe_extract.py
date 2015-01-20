@@ -574,6 +574,10 @@ class ProcessABBABand(object):
         fout = igr_storage.get_path(SPEC2D_FITS_DESC,
                                     tgt_basename)
 
+        hdu_wvl = pyfits.ImageHDU(data=convert_data(wvl_data),
+                                  header=wvl_header)
+        f_obj.append(hdu_wvl)
+
         f_obj.writeto(fout, clobber=True)
 
     def get_a0v_flattened(self, igr_storage, extractor, ap,
