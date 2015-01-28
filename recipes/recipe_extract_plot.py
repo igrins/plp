@@ -27,6 +27,7 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
     if not selected:
         print "no recipe of with matching arguments is found"
 
+    selected.sort()
     for s in selected:
         obsids = s[0]
         frametypes = s[1]
@@ -69,7 +70,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
 
     from recipe_extract_base import RecipeExtractPR
     extractor = RecipeExtractPR(utdate, band,
-                                obsids, frametypes)
+                                obsids, frametypes, config)
 
     master_obsid = extractor.pr.master_obsid
     igr_path = extractor.pr.igr_path

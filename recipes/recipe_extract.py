@@ -139,6 +139,7 @@ class ProcessABBABand(object):
 
         extractor = RecipeExtractBase(self.utdate, band,
                                       obsids, frametypes,
+                                      self.config,
                                       ab_mode=DO_AB)
 
         _ = extractor.get_data_variance(destripe_pattern=64,

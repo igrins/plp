@@ -212,9 +212,15 @@ class RecipeExtractPR(object):
         return destripe_mask
 
 
-    def __init__(self, utdate, band, obsids, frametypes):
-        self.pr = get_pr(utdate=utdate)
-        self.pr.prepare(band, obsids, frametypes) #[32], ["A"])
+    def __init__(self, utdate, band, obsids, frametypes,
+                 config,
+                 load_a0v_db=True):
+        #self.pr = get_pr(utdate=utdate, config=config)
+
+        refdate = config.get_value("REFDATE", None)
+        self.pr = ProcessBase(utdate, refdate, config)
+        self.pr.prepare(band, obsids, frametypes,
+                        load_a0v_db=load_a0v_db) #[32], ["A"])
         self.band = band
 
         self.frametypes = frametypes
@@ -236,13 +242,16 @@ class RecipeExtractBase(RecipeExtractPR):
 
 
     def __init__(self, utdate, band, obsids, frametypes,
-                 ab_mode=True):
+                 config,
+                 ab_mode=True, load_a0v_db=False):
         """
         ab_mode : True if nodding tye is 'ABBA' or its variation.
         """
 
         RecipeExtractPR.__init__(self,
-                                 utdate, band, obsids, frametypes)
+                                 utdate, band, obsids, frametypes,
+                                 config,
+                                 load_a0v_db=load_a0v_db)
 
         self.ab_mode = ab_mode
 
