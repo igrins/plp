@@ -18,6 +18,8 @@ def make_html(utdate, dirname, config_file="recipe.config"):
         if r in ["A0V_AB", "STELLAR_AB",
                  "EXTENDED_AB",
                  "EXTENDED_ONOFF",
+                 "A0V_ONOFF",
+                 "STELLAR_ONOFF",
                  ]:
             s = dict(zip(["name", "obj", "grp1", "grp2", "exptime", "recipe", "obsids", "frametypes"],
                          desc))
@@ -62,5 +64,10 @@ def publish_html(utdate, config_file="recipe.config"):
     template = env.get_template('index.html')
 
     sources = make_html(utdate, dirname)
+    from libs.json_helper import json_dump
+    json_dump(dict(utdate=utdate,
+                   sources=sources),
+              open(os.path.join(dirname, "summary.json"), "w"))
+
     s = template.render(utdate=utdate, sources=sources)
     open(os.path.join(dirname, "index.html"), "w").write(s)

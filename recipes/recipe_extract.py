@@ -6,53 +6,38 @@ import astropy.io.fits as pyfits
 
 from libs.products import PipelineProducts
 
-
-def a0v_ab(utdate, refdate="20140316", bands="HK",
-           starting_obsids=None,
-           config_file="recipe.config",
-           frac_slit=None):
-    recipe = "A0V_AB"
-    abba_all(recipe, utdate, refdate=refdate, bands=bands,
-             starting_obsids=starting_obsids,
-             config_file=config_file,
-             frac_slit=frac_slit)
-
-def stellar_ab(utdate, refdate="20140316", bands="HK",
-               starting_obsids=None,
-               config_file="recipe.config",
-               frac_slit=None):
-    recipe = "STELLAR_AB"
-    abba_all(recipe, utdate, refdate=refdate, bands=bands,
-             starting_obsids=starting_obsids,
-             config_file=config_file,
-             frac_slit=frac_slit)
-
-def extended_ab(utdate, refdate="20140316", bands="HK",
+def extractor_factory(recipe_name):
+    def extract(utdate, refdate="20140316", bands="HK",
                 starting_obsids=None,
                 config_file="recipe.config",
-                frac_slit=None):
-    recipe = "EXTENDED_AB"
-    abba_all(recipe, utdate, refdate=refdate, bands=bands,
-             starting_obsids=starting_obsids,
-             config_file=config_file,
-             frac_slit=frac_slit)
+                frac_slit=None,
+                cr_rejection_thresh=100,
+                debug_output=False):
+        abba_all(recipe_name, utdate, refdate=refdate, bands=bands,
+                 starting_obsids=starting_obsids,
+                 config_file=config_file,
+                 frac_slit=frac_slit,
+                 cr_rejection_thresh=cr_rejection_thresh,
+                 debug_output=debug_output)
 
-def extended_onoff(utdate, refdate="20140316", bands="HK",
-                   starting_obsids=None,
-                   config_file="recipe.config",
-                   frac_slit=None):
-    recipe = "EXTENDED_ONOFF"
-    abba_all(recipe, utdate, refdate=refdate, bands=bands,
-             starting_obsids=starting_obsids,
-             config_file=config_file,
-             frac_slit=frac_slit)
+    extract.__name__ = recipe_name.lower()
+    return extract
+
+a0v_ab = extractor_factory("A0V_AB")
+a0v_onoff = extractor_factory("A0V_ONOFF")
+stellar_ab = extractor_factory("STELLAR_AB")
+stellar_onoff = extractor_factory("STELLAR_ONOFF")
+extended_ab = extractor_factory("EXTENDED_AB")
+extended_onoff = extractor_factory("EXTENDED_ONOFF")
 
 
 
 def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
              starting_obsids=None, interactive=False,
              config_file="recipe.config",
-             frac_slit=None):
+             frac_slit=None,
+             cr_rejection_thresh=100.,
+             debug_output=False):
 
     from libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
@@ -78,7 +63,12 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
 
     process_abba_band = ProcessABBABand(utdate, refdate,
                                         config,
-                                        frac_slit=frac_slit).process
+                                        frac_slit=frac_slit,
+                                        cr_rejection_thresh=cr_rejection_thresh,
+                                        debug_output=debug_output).process
+
+    if len(selected) == 0:
+        print "No entry with given recipe is found : %s" % recipe_name
 
     for s in selected:
         obsids = s[0]
@@ -93,7 +83,13 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
 from libs.products import ProductDB, PipelineStorage
 
 class ProcessABBABand(object):
-    def __init__(self, utdate, refdate, config, frac_slit=None):
+    def __init__(self, utdate, refdate, config,
+                 frac_slit=None,
+                 cr_rejection_thresh=100,
+                 debug_output=False):
+        """
+        cr_rejection_thresh : pixels that deviate significantly from the profile are excluded.
+        """
         self.utdate = utdate
         self.refdate = refdate
         self.config = config
@@ -103,33 +99,26 @@ class ProcessABBABand(object):
         self.igr_storage = PipelineStorage(self.igr_path)
 
         self.frac_slit = frac_slit
-
+        self.cr_rejection_thresh = cr_rejection_thresh
+        self.debug_output = debug_output
 
     def process(self, recipe, band, obsids, frametypes):
 
         igr_path = self.igr_path
         igr_storage = self.igr_storage
 
-        if recipe == "A0V_AB":
 
-            DO_STD = True
-            #FIX_TELLURIC=False
+        target_type, nodding_type = recipe.split("_")
 
-        elif recipe == "STELLAR_AB":
+        if target_type in ["A0V", "STELLAR"]:
+            IF_POINT_SOURCE = True
+        elif target_type in ["EXTENDED"]:
+            IF_POINT_SOURCE = False
+        else:
+            raise ValueError("Unknown recipe : %s" % recipe)
 
-            DO_STD = False
-            #FIX_TELLURIC=True
-
-        elif recipe == "EXTENDED_AB":
-
-            DO_STD = False
-            #FIX_TELLURIC=True
-
-        elif recipe == "EXTENDED_ONOFF":
-
-            DO_STD = False
-            #FIX_TELLURIC=True
-
+        DO_STD = (target_type == "A0V")
+        DO_AB = (nodding_type == "AB")
 
         if 1:
 
@@ -189,17 +178,21 @@ class ProcessABBABand(object):
 
             from recipe_wvlsol_sky import load_aperture2
 
+            old_orders = raw_spec_products[ONED_SPEC_JSON_DESC]["orders"]
             ap = load_aperture2(igr_storage, band, master_obsid,
                                 db["flat_on"],
-                                raw_spec_products[ONED_SPEC_JSON_DESC]["orders"],
+                                old_orders,
                                 orders_w_solutions)
 
 
-            # This should be saved somewhere and loaded, instead of making it every time.
-            order_map = ap.make_order_map()
-            slitpos_map = ap.make_slitpos_map()
-            order_map2 = ap.make_order_map(mask_top_bottom=True)
+            from libs.storage_descriptions import (ORDERMAP_FITS_DESC,
+                                                   SLITPOSMAP_FITS_DESC)
 
+            order_map = igr_storage.load1(ORDERMAP_FITS_DESC, sky_basename).data
+            slitpos_map = igr_storage.load1(SLITPOSMAP_FITS_DESC, sky_basename).data
+            #order_map = ap.make_order_map()
+            #slitpos_map = ap.make_slitpos_map()
+            order_map2 = ap.make_order_map(mask_top_bottom=True)
 
         if 1:
 
@@ -257,17 +250,11 @@ class ProcessABBABand(object):
             a_name_list = filter_abba_names(abba_names, frametypes, "A")
             b_name_list = filter_abba_names(abba_names, frametypes, "B")
 
-            if recipe in ["A0V_AB", "STELLAR_AB"]:
-                IF_POINT_SOURCE = True
-            elif recipe in ["EXTENDED_AB", "EXTENDED_ONOFF"]:
-                IF_POINT_SOURCE = False
-            else:
-                print "Unknown recipe : %s" % recipe
-
             if 1:
                 #ab_names = ab_names_list[0]
 
-                # master_hdu = pyfits.open(a_name_list[0])[0]
+                f_obj = pyfits.open(obj_filenames[0])
+
 
                 a_list = [pyfits.open(name)[0].data \
                           for name in a_name_list]
@@ -282,10 +269,11 @@ class ProcessABBABand(object):
 
                 # dx = 100
 
-                if IF_POINT_SOURCE: # if point source
+                if DO_AB:
                     # for point sources, variance estimation becomes wrong
                     # if lenth of two is different,
-                    assert len(a_list) == len(b_list)
+                    if len(a_list) != len(b_list):
+                        raise RuntimeError("For AB nodding, number of A and B should match!")
 
                 # a_b != 1 for the cases when len(a) != len(b)
                 a_b = float(len(a_list)) / len(b_list)
@@ -293,17 +281,24 @@ class ProcessABBABand(object):
                 a_data = np.sum(a_list, axis=0)
                 b_data = np.sum(b_list, axis=0)
 
+                from libs.destriper import destriper
+
                 data_minus = a_data - a_b*b_data
                 #data_minus0 = data_minus
 
-                from libs.destriper import destriper
-                if 1:
-                    destrip_mask = ~np.isfinite(data_minus)|bias_mask
+                destrip_mask = ~np.isfinite(data_minus)|bias_mask
 
-                    data_minus = destriper.get_destriped(data_minus,
-                                                         destrip_mask,
-                                                         hori=True,
-                                                         pattern=64)
+                data_minus = destriper.get_destriped(data_minus,
+                                                     destrip_mask,
+                                                     pattern=64,
+                                                     hori=True)
+                if self.debug_output:
+                    a_data = destriper.get_destriped(a_data,
+                                                     destrip_mask,
+                                                     pattern=64)
+                    b_data = destriper.get_destriped(b_data,
+                                                     destrip_mask,
+                                                     pattern=64)
 
                 data_minus_flattened = data_minus / orderflat
                 data_minus_flattened[~flat_mask.data] = np.nan
@@ -319,45 +314,10 @@ class ProcessABBABand(object):
                 from libs import instrument_parameters
                 gain =  instrument_parameters.gain[band]
 
-                # random noise
-                variance0 = data_minus
+                from libs.variance_map import get_variance_map
+                variance_map = get_variance_map(data_plus, data_minus,
+                                                bias_mask2, pix_mask, gain)
 
-                variance_ = variance0.copy()
-                variance_[bias_mask2] = np.nan
-                variance_[pix_mask] = np.nan
-
-                mm = np.ma.array(variance0, mask=~np.isfinite(variance0))
-                ss = np.ma.median(mm, axis=0)
-                variance_ = variance_ - ss
-
-                # iterate over fixed number of times.
-                # need to be improved.
-                for i in range(5):
-                    st = np.nanstd(variance_, axis=0)
-                    variance_[np.abs(variance_) > 3*st] = np.nan
-                    #st = np.nanstd(variance_, axis=0)
-
-                variance = destriper.get_destriped(variance0,
-                                                    ~np.isfinite(variance_),
-                                                   pattern=64)
-
-                variance_ = variance.copy()
-                variance_[bias_mask2] = np.nan
-                variance_[pix_mask] = np.nan
-
-                st = np.nanstd(variance_)
-                st = np.nanstd(variance_[np.abs(variance_) < 3*st])
-
-                variance_[np.abs(variance_-ss) > 3*st] = np.nan
-
-                x_std = ni.median_filter(np.nanstd(variance_, axis=0), 11)
-
-                variance_map0 = np.zeros_like(variance) + x_std**2
-
-
-
-                variance_map = variance_map0 + np.abs(data_plus)/gain # add poison noise in ADU
-                # we ignore effect of flattening
 
                 # now estimate lsf
 
@@ -371,36 +331,66 @@ class ProcessABBABand(object):
 
             if IF_POINT_SOURCE: # if point source
 
+
+
                 x1, x2 = 800, 1200
-                bins, lsf_list = ap.extract_lsf(ordermap_bpixed, slitpos_map,
-                                                data_minus_flattened,
-                                                x1, x2, bins=None)
+                bins, slit_profile_list = \
+                      ap.extract_slit_profile(ordermap_bpixed,
+                                              slitpos_map,
+                                              data_minus_flattened,
+                                              x1, x2, bins=None)
 
 
-                hh0 = np.sum(lsf_list, axis=0)
-                peak1, peak2 = max(hh0), -min(hh0)
-                lsf_x = 0.5*(bins[1:]+bins[:-1])
-                lsf_y = hh0/(peak1+peak2)
+                hh0 = np.sum(slit_profile_list, axis=0)
+                if DO_AB:
+                    peak1, peak2 = max(hh0), -min(hh0)
+                    profile_x = 0.5*(bins[1:]+bins[:-1])
+                    profile_y = hh0/(peak1+peak2)
+                else:
+                    peak1 = max(hh0)
+                    profile_x = 0.5*(bins[1:]+bins[:-1])
+                    profile_y = hh0/peak1
+
+                ## save profile
+                r = PipelineProducts("slit profile for point source")
+                from libs.storage_descriptions import SLIT_PROFILE_JSON_DESC
+                from libs.products import PipelineDict
+                slit_profile_dict = PipelineDict(orders=ap.orders,
+                                                 slit_profile_list=slit_profile_list,
+                                                 profile_x=profile_x,
+                                                 profile_y=profile_y)
+                r.add(SLIT_PROFILE_JSON_DESC, slit_profile_dict)
+
+                igr_storage.store(r,
+                                  mastername=obj_filenames[0],
+                                  masterhdu=None)
+
+                #
 
                 from scipy.interpolate import UnivariateSpline
-                lsf_ = UnivariateSpline(lsf_x, lsf_y, k=3, s=0,
-                                        bbox=[0, 1])
-                roots = list(lsf_.roots())
-                #assert(len(roots) == 1)
-                integ_list = []
-                from itertools import izip, cycle
-                for ss, int_r1, int_r2 in izip(cycle([1, -1]),
-                                                      [0] + roots,
-                                                      roots + [1]):
-                    #print ss, int_r1, int_r2
-                    integ_list.append(lsf_.integral(int_r1, int_r2))
-                integ = np.abs(np.sum(integ_list))
+                profile_ = UnivariateSpline(profile_x, profile_y, k=3, s=0,
+                                            bbox=[0, 1])
 
-                def lsf(o, x, slitpos):
-                    return lsf_(slitpos) / integ
+                if DO_AB:
+                    roots = list(profile_.roots())
+                    #assert(len(roots) == 1)
+                    integ_list = []
+                    from itertools import izip, cycle
+                    for ss, int_r1, int_r2 in izip(cycle([1, -1]),
+                                                   [0] + roots,
+                                                   roots + [1]):
+                        #print ss, int_r1, int_r2
+                        integ_list.append(profile_.integral(int_r1, int_r2))
+                    integ = np.abs(np.sum(integ_list))
+                else:
+                    integ = profile_.integral(0, 1)
+
+                def profile(o, x, slitpos):
+                    return profile_(slitpos) / integ
 
                 # make weight map
-                profile_map = ap.make_profile_map(order_map, slitpos_map, lsf)
+                profile_map = ap.make_profile_map(order_map, slitpos_map,
+                                                  profile)
 
                 # try to select portion of the slit to extract
 
@@ -409,56 +399,142 @@ class ProcessABBABand(object):
                     slitpos_msk = (slitpos_map < frac1) | (slitpos_map > frac2)
                     profile_map[slitpos_msk] = np.nan
 
+
+
+                #profile_map_shft = profile_map
+
+                #data_minus_flattened_shft = (data_minus_flattened)
+                #variance_map_shft = (variance_map)
+
+
                 # extract spec
 
-                s_list, v_list = ap.extract_stellar(ordermap_bpixed,
-                                                    profile_map,
-                                                    variance_map,
-                                                    data_minus_flattened,
-                                                    slitoffset_map=slitoffset_map)
+
+                _ = ap.get_shifted_images(profile_map,
+                                          variance_map,
+                                          data_minus_flattened,
+                                          slitoffset_map=slitoffset_map,
+                                          debug=self.debug_output)
+
+
+                # hdu_list = pyfits.HDUList()
+                # hdu_list.append(pyfits.PrimaryHDU(data=data_minus_flattened))
+                # hdu_list.append(pyfits.ImageHDU(data=variance_map))
+                # hdu_list.append(pyfits.ImageHDU(data=profile_map))
+                # hdu_list.append(pyfits.ImageHDU(data=ordermap_bpixed))
+                # #hdu_list.writeto("test_input.fits", clobber=True)
+
+                data_shft, variance_map_shft, profile_map_shft, msk1_shft = _
+
+                _ = ap.extract_stellar_from_shifted(ordermap_bpixed,
+                                                    profile_map_shft,
+                                                    variance_map_shft,
+                                                    data_shft, msk1_shft,
+                                                    remove_negative=True)
+                s_list, v_list = _
+
+                if self.debug_output:
+                    hdu_list = pyfits.HDUList()
+                    hdu_list.append(pyfits.PrimaryHDU(data=data_shft))
+                    hdu_list.append(pyfits.ImageHDU(data=variance_map_shft))
+                    hdu_list.append(pyfits.ImageHDU(data=profile_map_shft))
+                    hdu_list.append(pyfits.ImageHDU(data=ordermap_bpixed))
+                    #hdu_list.append(pyfits.ImageHDU(data=msk1_shft.astype("i")))
+                    #hdu_list.append(pyfits.ImageHDU(data=np.array(s_list)))
+                    hdu_list.writeto("test0.fits", clobber=True)
+
+
+
+
+                # s_list, v_list = ap.extract_stellar(ordermap_bpixed,
+                #                                     profile_map_shft,
+                #                                     variance_map_shft,
+                #                                     data_minus_flattened_shft,
+                #                                     #slitoffset_map=slitoffset_map,
+                #                                     slitoffset_map=None,
+                #                                     remove_negative=True
+                #                                     )
+
+                ### save test1
+
+
+
 
                 # make synth_spec : profile * spectra
-                synth_map = ap.make_synth_map(order_map, slitpos_map,
+                synth_map = ap.make_synth_map(order_map,
+                                              slitpos_map,
                                               profile_map, s_list,
-                                              slitoffset_map=slitoffset_map)
+                                              slitoffset_map=slitoffset_map
+                                              )
 
                 sig_map = (data_minus_flattened - synth_map)**2/variance_map
-                ## mark sig_map > 100 as cosmicay. The threshold need to be fixed.
 
 
                 # reextract with new variance map and CR is rejected
-                variance_map_r = variance_map0 + np.abs(synth_map)/gain
-                variance_map2 = np.max([variance_map, variance_map_r], axis=0)
-                variance_map2[np.abs(sig_map) > 100] = np.nan
+                variance_map_r = variance_map + np.abs(synth_map)/gain
+                variance_map = np.max([variance_map, variance_map_r], axis=0)
+
+                cr_mask = np.abs(sig_map) > self.cr_rejection_thresh
+                variance_map[cr_mask] = np.nan
+
+                ## mark sig_map > 100 as cosmicay. The threshold need to be fixed.
 
                 # masking this out will affect the saved combined image.
-                data_minus_flattened[np.abs(sig_map) > 100] = np.nan
+                data_minus_flattened_orig = data_minus_flattened.copy()
+                data_minus_flattened[cr_mask] = np.nan
+
+
+                #profile_map_shft = profile_map
+
+                #data_minus_flattened_shft = (data_minus_flattened)
+                #variance_map_shft = (variance_map)
+
+
 
                 # extract spec
 
-                s_list, v_list = ap.extract_stellar(ordermap_bpixed, profile_map,
-                                                    variance_map2,
-                                                    data_minus_flattened,
-                                                    slitoffset_map=slitoffset_map)
+                # extract spec
+
+                _ = ap.get_shifted_images(profile_map,
+                                          variance_map,
+                                          data_minus_flattened,
+                                          slitoffset_map=slitoffset_map)
+
+                data_shft, variance_map_shft, profile_map_shft, msk1_shft = _
+
+                _ = ap.extract_stellar_from_shifted(ordermap_bpixed,
+                                                    profile_map_shft,
+                                                    variance_map_shft,
+                                                    data_shft, msk1_shft,
+                                                    remove_negative=True)
+                s_list, v_list = _
+
+
+                if 0: # save aux files
+                    synth_map = ap.make_synth_map(order_map, slitpos_map,
+                                                  profile_map, s_list,
+                                                  slitoffset_map=slitoffset_map
+                                                  )
 
 
             else: # if extended source
                 from scipy.interpolate import UnivariateSpline
                 if recipe in ["EXTENDED_AB", "EXTENDED_ABBA"]:
                     delta = 0.01
-                    lsf_ = UnivariateSpline([0, 0.5-delta, 0.5+delta, 1],
-                                            [1., 1., -1., -1.],
-                                            k=1, s=0,
-                                            bbox=[0, 1])
+                    profile_ = UnivariateSpline([0, 0.5-delta, 0.5+delta, 1],
+                                                [1., 1., -1., -1.],
+                                                k=1, s=0,
+                                                bbox=[0, 1])
                 else:
-                    lsf_ = UnivariateSpline([0, 1], [1., 1.],
-                                            k=1, s=0,
-                                            bbox=[0, 1])
+                    profile_ = UnivariateSpline([0, 1], [1., 1.],
+                                                k=1, s=0,
+                                                bbox=[0, 1])
 
-                def lsf(o, x, slitpos):
-                    return lsf_(slitpos)
+                def profile(o, x, slitpos):
+                    return profile_(slitpos)
 
-                profile_map = ap.make_profile_map(order_map, slitpos_map, lsf)
+                profile_map = ap.make_profile_map(order_map, slitpos_map,
+                                                  profile)
 
 
                 if self.frac_slit is not None:
@@ -469,13 +545,36 @@ class ProcessABBABand(object):
                 # we need to update the variance map by rejecting
                 # cosmic rays, but it is not clear how we do this
                 # for extended source.
-                variance_map2 = variance_map
-                s_list, v_list = ap.extract_stellar(ordermap_bpixed,
-                                                    profile_map,
-                                                    variance_map2,
-                                                    data_minus_flattened,
-                                                    slitoffset_map=slitoffset_map
-                                                    )
+                #variance_map2 = variance_map
+
+
+                # extract spec
+
+                _ = ap.get_shifted_images(profile_map,
+                                          variance_map,
+                                          data_minus_flattened,
+                                          slitoffset_map=slitoffset_map,
+                                          debug=True)
+
+                data_shft, variance_map_shft, profile_map_shft, msk1_shft = _
+
+                if self.debug_output:
+                    hdu_list = pyfits.HDUList()
+                    hdu_list.append(pyfits.PrimaryHDU(data=data_shft))
+                    hdu_list.append(pyfits.ImageHDU(data=variance_map_shft))
+                    hdu_list.append(pyfits.ImageHDU(data=profile_map_shft))
+                    hdu_list.append(pyfits.ImageHDU(data=ordermap_bpixed))
+                    #hdu_list.append(pyfits.ImageHDU(data=msk1_shft.astype("i")))
+                    #hdu_list.append(pyfits.ImageHDU(data=np.array(s_list)))
+                    hdu_list.writeto("test0.fits", clobber=True)
+
+                _ = ap.extract_extended_from_shifted(ordermap_bpixed,
+                                                     profile_map_shft,
+                                                     variance_map_shft,
+                                                     data_shft, msk1_shft,
+                                                     slitpos_map,
+                                                     remove_negative=True)
+                s_list, v_list = _
 
 
 
@@ -497,15 +596,27 @@ class ProcessABBABand(object):
 
         if 1: # save the product
             from libs.storage_descriptions import (COMBINED_IMAGE_DESC,
+                                                   COMBINED_IMAGE_A_DESC,
+                                                   COMBINED_IMAGE_B_DESC,
                                                    VARIANCE_MAP_DESC)
             from libs.products import PipelineImage
 
             r = PipelineProducts("1d specs")
 
-            r.add(COMBINED_IMAGE_DESC, PipelineImage([],
-                                                     data_minus_flattened))
+            image_list = [data_minus_flattened]
+            if IF_POINT_SOURCE: # if point source
+                image_list.extend([data_minus_flattened_orig,
+                                   synth_map,
+                                   sig_map,
+                                   cr_mask,
+                                   ])
+            r.add(COMBINED_IMAGE_DESC, PipelineImage([], *image_list))
+            r.add(COMBINED_IMAGE_A_DESC, PipelineImage([],
+                                                       a_data))
+            r.add(COMBINED_IMAGE_B_DESC, PipelineImage([],
+                                                       b_data))
             r.add(VARIANCE_MAP_DESC, PipelineImage([],
-                                                   variance_map2))
+                                                   variance_map))
 
             # r.add(VARIANCE_MAP_DESC, PipelineImage([],
             #                                        variance_map.data))
@@ -524,33 +635,67 @@ class ProcessABBABand(object):
             # fn = sky_path.get_secondary_path("wvlsol_v1.fits")
             f = pyfits.open(fn)
 
-            d = np.array(s_list)
-            f[0].data = d.astype("f32")
+            f_obj[0].header.extend(f[0].header)
 
             from libs.storage_descriptions import (SPEC_FITS_DESC,
                                                    VARIANCE_FITS_DESC,
                                                    SN_FITS_DESC)
 
-            fout = igr_storage.get_path(SPEC_FITS_DESC,
-                                        tgt_basename)
-
-            f.writeto(fout, clobber=True)
 
 
             d = np.array(v_list)
-            f[0].data = d.astype("f32")
+            f_obj[0].data = d.astype("f32")
             fout = igr_storage.get_path(VARIANCE_FITS_DESC,
                                         tgt_basename)
 
-            f.writeto(fout, clobber=True)
+            f_obj.writeto(fout, clobber=True)
 
             d = np.array(sn_list)
-            f[0].data = d.astype("f32")
+            f_obj[0].data = d.astype("f32")
             fout = igr_storage.get_path(SN_FITS_DESC,
                                         tgt_basename)
 
-            f.writeto(fout, clobber=True)
+            f_obj.writeto(fout, clobber=True)
 
+            d = np.array(s_list)
+            f_obj[0].data = d.astype("f32")
+
+            fout = igr_storage.get_path(SPEC_FITS_DESC,
+                                        tgt_basename)
+
+            hdu_wvl = pyfits.ImageHDU(data=f[0].data, header=f[0].header)
+            f_obj.append(hdu_wvl)
+
+            f_obj.writeto(fout, clobber=True)
+
+
+            if not IF_POINT_SOURCE: # if extended source
+                from libs.storage_descriptions import FLATCENTROID_SOL_JSON_DESC
+                cent = igr_storage.load1(FLATCENTROID_SOL_JSON_DESC,
+                                         basenames["flat_on"])
+
+                #cent = json.load(open("calib/primary/20140525/FLAT_SDCK_20140525_0074.centroid_solutions.json"))
+                _bottom_up_solutions = cent["bottom_up_solutions"]
+                old_orders
+                _o_s = dict(zip(old_orders, _bottom_up_solutions))
+                new_bottom_up_solutions = [_o_s[o] for o in orders_w_solutions]
+
+                from libs.correct_distortion import get_flattened_2dspec
+                d0_shft_list, msk_shft_list = \
+                              get_flattened_2dspec(data_shft,
+                                                   ordermap_bpixed,
+                                                   new_bottom_up_solutions)
+
+
+                d = np.array(d0_shft_list) / np.array(msk_shft_list)
+                f_obj[0].data = d.astype("f32")
+
+                from libs.storage_descriptions import SPEC2D_FITS_DESC
+
+                fout = igr_storage.get_path(SPEC2D_FITS_DESC,
+                                            tgt_basename)
+
+                f_obj.writeto(fout, clobber=True)
 
 
 
