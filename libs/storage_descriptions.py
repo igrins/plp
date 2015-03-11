@@ -73,3 +73,8 @@ VARIANCE_MAP_DESC = ("OUTDATA_PATH", "", ".variance_map.fits")
 SLIT_PROFILE_JSON_DESC = ("OUTDATA_PATH", "", ".slit_profile.json")
 
 SPEC2D_FITS_DESC = ("OUTDATA_PATH", "", ".spec2d.fits")
+
+
+#Added by Kyle Kaplan on Feb 25, 2015
+#Save variance map as straitened out 2D datacube like spec2d.fits
+VAR2D_FITS_DESC = ("OUTDATA_PATH", "", ".var2d.fits")

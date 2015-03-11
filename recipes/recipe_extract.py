@@ -464,6 +464,7 @@ class ProcessABBABand(object):
         self.store_2dspec(igr_storage,
                           extractor,
                           shifted["data"],
+                          shifted["variance_map"],
                           ordermap_bpixed,
                           cr_mask=cr_mask)
 
@@ -644,6 +645,7 @@ class ProcessABBABand(object):
     def store_2dspec(self, igr_storage,
                      extractor,
                      data_shft,
+                     variance_map_shft,
                      ordermap_bpixed,
                      cr_mask=None):
 
@@ -669,6 +671,7 @@ class ProcessABBABand(object):
                                    extractor.orders_w_solutions]
 
         from libs.correct_distortion import get_flattened_2dspec
+
         d0_shft_list, msk_shft_list = \
                       get_flattened_2dspec(data_shft,
                                            ordermap_bpixed,
@@ -688,6 +691,21 @@ class ProcessABBABand(object):
         f_obj.append(hdu_wvl)
 
         f_obj.writeto(fout, clobber=True)
+
+        #OUTPUT VAR2D, added by Kyle Kaplan Feb 25, 2015 to get variance map outputted as a datacube
+        d0_shft_list, msk_shft_list = \
+                      get_flattened_2dspec(variance_map_shft,
+                                           ordermap_bpixed,
+                                           new_bottom_up_solutions)
+        d = np.array(d0_shft_list) / np.array(msk_shft_list)
+        f_obj[0].data = d.astype("f32")
+        from libs.storage_descriptions import VAR2D_FITS_DESC
+        fout = igr_storage.get_path(VAR2D_FITS_DESC,
+                                    tgt_basename)
+        f_obj.writeto(fout, clobber=True)
+
+
+
 
     def get_a0v_flattened(self, igr_storage, extractor, ap,
                           s_list):
