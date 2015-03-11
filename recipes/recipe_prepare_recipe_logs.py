@@ -7,7 +7,13 @@ def prepare_recipe_logs(utdate, config_file="recipe.config"):
     config = IGRINSConfig(config_file)
 
     fn0 = config.get_value('INDATA_PATH', utdate)
-    fn = os.path.join(fn0, "IGRINS_DT_Log_%s-1_H.txt" % (utdate,))
+
+    # there could be two log files!
+    import glob
+    fn_list = glob.glob(os.path.join(fn0, "IGRINS_DT_Log_*-1_H.txt"))
+    print "loading DT log files:", fn_list
+
+    #fn = os.path.join(fn0, "IGRINS_DT_Log_%s-1_H.txt" % (utdate,))
 
     # p_end_comma = re.compile(r",\s$")
     # s = "".join(p_end_comma.sub(",\n", l) for l in lines)
@@ -42,12 +48,17 @@ def prepare_recipe_logs(utdate, config_file="recipe.config"):
 
     dtype_replace = dict(SEQID1="GROUP1", SEQID2="GROUP2")
 
-    lines = open(fn).readlines()
-    stripped_lines = [s1.strip() for s1 in lines[1].split(",")]
-    dtype = [(dtype_replace.get(s1, s1), dtype_map[s1]) for s1 in stripped_lines if s1]
+    def load_data(fn):
+        lines = open(fn).readlines()
+        stripped_lines = [s1.strip() for s1 in lines[1].split(",")]
+        dtype = [(dtype_replace.get(s1, s1), dtype_map[s1]) for s1 in stripped_lines if s1]
 
-    l = np.genfromtxt(fn,
-                      skip_header=2, delimiter=",", dtype=dtype)
+        l = np.genfromtxt(fn,
+                          skip_header=2, delimiter=",", dtype=dtype)
+        return l
+
+    l_list = [load_data(fn) for fn in fn_list]
+    l = np.concatenate(l_list)
 
     from itertools import groupby
 
@@ -86,7 +97,7 @@ def prepare_recipe_logs(utdate, config_file="recipe.config"):
 
     fout = open(fn_out, "w")
     fout.write(", ".join(headers) + "\n")
-    fout.write("# Avaiable recipes : FLAT, THAR, SKY_WVLSOL, A0V_AB, STELLAR_AB, EXTENDED_AB, EXTENDED_ONOFF\n")
+    fout.write("# Avaiable recipes : FLAT, THAR, SKY, A0V_AB, A0V_ONOFF, STELLAR_AB, STELLAR_ONOFF, EXTENDED_AB, EXTENDED_ONOFF\n")
 
     fout.writelines(s_list)
     fout.close()
