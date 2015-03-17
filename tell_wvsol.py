@@ -254,7 +254,7 @@ def fit_by_order(test_file):
 
     return orders, corrected_orders, original_pixels, order_numbers, tell_model
 
-def run(filename)
+def run(filename):
     orders, corrected_orders, original_pixels, order_numbers, tell_model = fit_by_order(filename)
     original_orders = [o.copy() for o in orders]
 
@@ -272,3 +272,9 @@ def run(filename)
         plt.plot(order[0], tell_model(order[0]), 'r-', alpha=0.6)
     plt.title('Final wavelength solution')
     plt.show()
+
+    # Output
+    outfilename = filename.replace('spec.fits', 'wave.fits')
+    wave_arr = np.array([o[0] for o in final_orders])
+    hdulist = fits.PrimaryHDU(wave_arr)
+    hdulist.writeto(outfilename)
