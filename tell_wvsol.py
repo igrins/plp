@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 import numpy as np
 from numpy.polynomial import chebyshev
@@ -8,7 +9,9 @@ from functools import partial
 from astropy.io import fits
 import readmultispec as multispec
 from astropy import units as u
-from scipy.signal import firwin, lfilter
+from astropy.modeling import models, fitting
+from scipy.signal import firwin, lfilter, argrelmin
+
 
 
 def Poly(pars, middle, low, high, x):
@@ -25,44 +28,138 @@ def Poly(pars, middle, low, high, x):
     # ## -----------------------------------------------
 
 
-def WavelengthErrorFunctionNew(pars, data, model, maxdiff=0.05):
+def wavelength_errorfcn(pars, data, model, maxdiff=0.05):
     """
     Cost function for the new wavelength fitter.
     Not meant to be called directly by the user!
     """
-    # xgrid = (data.x - np.median(data.x))/(data.x[-1] - data.x[0])
-    # dx = chebyshev.chebval(xgrid, pars)
-    dx = Poly(pars, np.median(data.x), min(data.x), max(data.x), data.x)
+    dx = Poly(pars, np.median(data[0]), min(data[0]), max(data[0]), data[0])
     penalty = np.sum(np.abs(dx[np.abs(dx) > maxdiff]))
-    retval = (data.y / data.cont - model(data.x + dx)) + penalty
+    retval = (data[1] - model(data[0] + dx)) + penalty
     return retval
 
 
     ### -----------------------------------------------
 
 
-def FitWavelengthNew(data_original, telluric, fitorder=3, be_safe=True):
+def fit_wavelength(data_original, modelfcn, fitorder=3, be_safe=True):
     """
-    This is a vastly simplified version of FitWavelength.
-    It takes the same inputs and returns the same thing,
-    so is a drop-in replacement for the old FitWavelength.
-
-    Instead of finding the lines, and generating a polynomial
-    to apply to the axis as x --> f(x), it fits a polynomial
-    to the delta-x. So, it fits the function for x --> x + f(x).
-    This way, we can automatically penalize large deviations in
-    the wavelength.
+    This code fits $\Delta \lambda$ as a function of pixel to a polynomial.
+    It returns a version of data_original with an updated wavelength axis.
     """
-    modelfcn = UnivariateSpline(telluric.x, telluric.y, s=0)
     pars = np.zeros(fitorder + 1)
     if be_safe:
         args = (data_original, modelfcn, 0.05)
     else:
         args = (data_original, modelfcn, 100)
-    output = leastsq(self.WavelengthErrorFunctionNew, pars, args=args, full_output=True, xtol=1e-12, ftol=1e-12)
+    output = leastsq(wavelength_errorfcn, pars, args=args, full_output=True, xtol=1e-12, ftol=1e-12)
     pars = output[0]
 
-    return partial(Poly, pars, np.median(data_original.x), min(data_original.x), max(data_original.x)), 0.0
+    dx = Poly(pars, np.median(data_original[0]), min(data_original[0]), max(data_original[0]), data_original[0])
+    data_original[0] += dx
+    return data_original
+
+
+
+def optimize_wavelength(data_original, modelfcn, fitorder=3, be_safe=True, N=3):
+    """
+    Runs fit_wavelength N times.
+    """
+    data = data_original.copy()
+    for i in range(N):
+        data = fit_wavelength(data.copy(), modelfcn, fitorder=fitorder, be_safe=be_safe)
+    return data
+
+
+
+def find_lines(spectrum, tol=0.99, linespacing = 5):
+  """
+  Function to find the spectral lines, given a model spectrum
+  spectrum:        A numpy array with the model spectrum - MUST be normalized
+  tol:             The line strength needed to count the line
+                      (0 is a strong line, 1 is weak)
+  linespacing:     The minimum spacing (in pixels) between two consecutive lines.
+                      find_lines will choose the strongest line if there are
+                      several too close.
+  """
+  # Run argrelmin
+  lines = list(argrelmin(spectrum[1], order=linespacing)[0])
+
+  #Check for lines that are too weak.
+  for i in range(len(lines)-1, -1, -1):
+    idx = lines[i]
+    xval = spectrum[0][idx]
+    yval = spectrum[1][idx]
+    if yval > tol:
+      lines.pop(i)
+
+  return np.array(lines)
+
+
+def fit_chip(original_orders, corrected_orders, pixels, order_nums, modelfcn):
+    """
+    Fit the entire chip to a 2D surface.
+    :param original_orders: The original orders, before blaze correction or anything (they have all pixels)
+    :param corrected_orders: The wavelength-corrected orders. They are blaze-corrected and have a smaller size
+    :param pixels: The correspondence between the two order arrays.
+                   If pixels[10][50] = 245, then pixel 50 of order 10 in corrected_orders corresponds to pixel 245
+                   or order 10 in original_orders.
+    :param order_nums: The echelle order number corresponding to each order.
+    :param modelfcn: The interpolated telluric model
+    """
+    # Make 3 big arrays for pixel, order number, and wavelength
+    # We will only use the pixels that have a telluric line (from the model)
+    pixel_list = []
+    ordernum_list = []
+    wavelength_list = []
+    for p, o, c in zip(pixels, order_nums, corrected_orders):
+        # Find the pixel locations of the telluric lines
+        modelspec = np.array((c[0], modelfcn(c[0])))
+        lines = find_lines(modelspec)
+
+        # Save the original pixels, order numbers, and wavelengths for the fitter.
+        pixel_list.append(p[lines])
+        ordernum_list.append(np.ones(lines.size)*o)
+        wavelength_list.append(c[0][lines])
+    pixels = np.hstack(pixel_list)
+    ordernums = np.hstack(ordernum_list)
+    wavelengths = np.hstack(wavelength_list)
+    weights = np.ones(pixels.size)
+
+    print pixels.shape
+    print ordernums.shape
+    print wavelengths.shape
+
+    # Prepare the 2D chebyshev fitter
+    p_init = models.Chebyshev2D(5, 4, x_domain=[0, 2048])
+    fit_p = fitting.LinearLSQFitter()
+    print "Fitting wavelength solution for entire chip with chebyshev polynomial"
+
+    # Perform the fit
+    p = fit_p(p_init, pixels, ordernums, wavelengths * ordernums, weights)
+
+    pred = p(pixels, ordernums) / ordernums
+    fig3d = plt.figure(2)
+    ax3d = fig3d.add_subplot(111, projection='3d')
+    ax3d.scatter3D(pixels, ordernums, wavelengths - pred, 'ro')
+
+    print('RMS Scatter = {}'.format(np.std(wavelengths - pred)))
+    plt.show()
+
+
+    # Assign the wavelength solution to each order
+    for i, order in enumerate(orders):
+        ord = ap2ord[i]
+        xgrid = np.arange(order.size(), dtype=np.float)
+        ord_arr = ord * np.ones(xgrid.size, dtype=np.float)
+        wave = p(xgrid, ord_arr) / ord_arr
+        if plot:
+            ax.plot(order.x, order.y / order.cont, 'k-', alpha=0.4)
+            ax.plot(wave, order.y / order.cont, 'g-', alpha=0.4)
+            ax.plot(wave, model_spline(wave), 'r-', alpha=0.6)
+        orders[i].x = wave
+
+
 
 
 
@@ -94,11 +191,19 @@ def read_data(filename, debug=False):
     # Compile all the orders
     numorders = retdict['flux'].shape[0]
     orders = []
+    wavefields = retdict['wavefields']
+    apertures = []
     for i in range(numorders):
         wave = retdict['wavelen'][i] * wave_factor
         flux = retdict['flux'][i]
         orders.append(np.array((wave, flux)))
-    return orders
+        order_number = int(wavefields[i][1])
+        apertures.append(order_number)
+
+    # Finally, get the echelle order number for each aperture from the wavefields
+    wavefields = retdict['wavefields']
+
+    return orders, apertures
 
 
 def interpolate_telluric_model(filename):
@@ -131,21 +236,31 @@ def remove_blaze(orders, telluric, N=200, freq=1e-2):
         # Filter the data
         filtered = lfilter(filt, 1.0, y)
         new_orders.append(np.array((o[0][idx][100:-100], (o[1][idx]/filtered[N:])[100:-100])))
-        original_pixels.append(new_orders[-1].shape[0] + N + 100)
+        original_pixels.append(np.arange(new_orders[-1].shape[1]) + N + 100)
     return new_orders, original_pixels
 
 
 
 if __name__ == '__main__':
-    test_file = 'data/SDCH_20141014_0242.spec.fits'
+    test_file = 'data/SDCK_20141014_0242.spec.fits'
     tell_file = 'data/TelluricModel.dat'
 
-    orders = read_data(test_file, debug=True)
+    orders, order_numbers = read_data(test_file, debug=False)
     tell_model = interpolate_telluric_model(tell_file)
 
     filtered_orders, original_pixels = remove_blaze(orders, tell_model)
 
+    corrected_orders = []
     for order in filtered_orders:
         plt.plot(order[0], order[1], 'k-', alpha=0.4)
         plt.plot(order[0], tell_model(order[0]), 'r-', alpha=0.6)
+
+        # Use the wavelength fit function to fit the wavelength.
+        new_order = optimize_wavelength(order.copy(), tell_model, fitorder=4)
+        plt.plot(new_order[0], new_order[1], 'g-', alpha=0.4)
+        corrected_orders.append(new_order)
+
     plt.show()
+
+    # Now, fit the entire chip to a surface
+    final_orders = fit_chip(orders, corrected_orders, original_pixels, order_numbers, tell_model)
