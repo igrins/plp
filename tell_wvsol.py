@@ -231,8 +231,8 @@ def remove_blaze(orders, telluric, N=200, freq=1e-2):
 
 
 
-def fit_by_order():
-    test_file = 'data/SDCK_20141014_0242.spec.fits'
+def fit_by_order(test_file):
+    #test_file = 'data/SDCK_20141014_0242.spec.fits'
     tell_file = 'data/TelluricModel.dat'
 
     orders, order_numbers = read_data(test_file, debug=False)
@@ -254,8 +254,8 @@ def fit_by_order():
 
     return orders, corrected_orders, original_pixels, order_numbers, tell_model
 
-if __name__ == '__main__':
-    orders, corrected_orders, original_pixels, order_numbers, tell_model = fit_by_order()
+def run(filename)
+    orders, corrected_orders, original_pixels, order_numbers, tell_model = fit_by_order(filename)
     original_orders = [o.copy() for o in orders]
 
     # Now, fit the entire chip to a surface
