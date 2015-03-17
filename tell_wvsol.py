@@ -112,7 +112,7 @@ def fit_chip(original_orders, corrected_orders, pixels, order_nums, modelfcn):
     pixel_list = []
     ordernum_list = []
     wavelength_list = []
-    for p, o, c in zip(pixels, order_nums, corrected_orders):
+    for p, o, c in zip(pixels[3:-3], order_nums[3:-3], corrected_orders[3:-3]):
         # Find the pixel locations of the telluric lines
         modelspec = np.array((c[0], modelfcn(c[0])))
         lines = find_lines(modelspec)
@@ -121,24 +121,35 @@ def fit_chip(original_orders, corrected_orders, pixels, order_nums, modelfcn):
         pixel_list.append(p[lines])
         ordernum_list.append(np.ones(lines.size)*o)
         wavelength_list.append(c[0][lines])
-    pixels = np.hstack(pixel_list)
-    ordernums = np.hstack(ordernum_list)
-    wavelengths = np.hstack(wavelength_list)
-    weights = np.ones(pixels.size)
+    pixels = np.hstack(pixel_list).astype(float)
+    ordernums = np.hstack(ordernum_list).astype(float)
+    wavelengths = np.hstack(wavelength_list).astype(float)
+    weights = np.ones(pixels.size).astype(float)
 
+    from libs.ecfit import fit_2dspec
+    p, m = fit_2dspec(pixels, ordernums, wavelengths*ordernums, x_degree=3, y_degree=4)
+    #print m
+    """
     print pixels.shape
     print ordernums.shape
     print wavelengths.shape
 
     # Prepare the 2D chebyshev fitter
-    p_init = models.Chebyshev2D(5, 4, x_domain=[0, 2048])
+    p_init = models.Chebyshev2D(x_degree=3, y_degree=4,
+                                x_domain=[0, 2048], y_domain=[min(ordernums)-2, max(ordernums)+2])
     fit_p = fitting.LinearLSQFitter()
     print "Fitting wavelength solution for entire chip with chebyshev polynomial"
+    for p, o, w in zip(pixels, ordernums, wavelengths):
+        print o, p, w
 
     # Perform the fit
     p = fit_p(p_init, pixels, ordernums, wavelengths * ordernums, weights)
+    #p = fit_p(p_init, pixels, ordernums, wavelengths)
+    """
 
     pred = p(pixels, ordernums) / ordernums
+    #pred = p(pixels, ordernums)
+    #pred = 0
     fig3d = plt.figure(2)
     ax3d = fig3d.add_subplot(111, projection='3d')
     ax3d.scatter3D(pixels, ordernums, wavelengths - pred, 'ro')
@@ -148,16 +159,14 @@ def fit_chip(original_orders, corrected_orders, pixels, order_nums, modelfcn):
 
 
     # Assign the wavelength solution to each order
-    for i, order in enumerate(orders):
-        ord = ap2ord[i]
-        xgrid = np.arange(order.size(), dtype=np.float)
-        ord_arr = ord * np.ones(xgrid.size, dtype=np.float)
-        wave = p(xgrid, ord_arr) / ord_arr
-        if plot:
-            ax.plot(order.x, order.y / order.cont, 'k-', alpha=0.4)
-            ax.plot(wave, order.y / order.cont, 'g-', alpha=0.4)
-            ax.plot(wave, model_spline(wave), 'r-', alpha=0.6)
-        orders[i].x = wave
+    new_orders = []
+    for i, order in enumerate(original_orders):
+        pixels = np.arange(order.shape[1])
+        ord = order_nums[i] * np.ones(pixels.size)
+        wave = p(pixels, ord) / ord
+        order[0] = wave
+        new_orders.append(order)
+    return original_orders
 
 
 
@@ -227,6 +236,7 @@ def remove_blaze(orders, telluric, N=200, freq=1e-2):
     for i, o in enumerate(orders):
         idx = ~np.isnan(o[1])
         y = o[1][idx] / telluric(o[0][idx])
+        first_nonnan = np.where(idx)[0][0]
 
         # Extend the array to account for edge effects
         firstvals = y[0] - np.abs( y[1:half_window+1][::-1] - y[0] )
@@ -236,12 +246,13 @@ def remove_blaze(orders, telluric, N=200, freq=1e-2):
         # Filter the data
         filtered = lfilter(filt, 1.0, y)
         new_orders.append(np.array((o[0][idx][100:-100], (o[1][idx]/filtered[N:])[100:-100])))
-        original_pixels.append(np.arange(new_orders[-1].shape[1]) + N + 100)
+        original_pixels.append(np.array([i for i, good in enumerate(idx) if good]))
+        #original_pixels.append(np.arange(new_orders[-1].shape[1]) + first_nonnan + 100)
     return new_orders, original_pixels
 
 
 
-if __name__ == '__main__':
+def fit_by_order():
     test_file = 'data/SDCK_20141014_0242.spec.fits'
     tell_file = 'data/TelluricModel.dat'
 
@@ -262,5 +273,18 @@ if __name__ == '__main__':
 
     plt.show()
 
+    return orders, corrected_orders, original_pixels, order_numbers, tell_model
+
+if __name__ == '__main__':
+    orders, corrected_orders, original_pixels, order_numbers, tell_model = fit_by_order()
+
     # Now, fit the entire chip to a surface
     final_orders = fit_chip(orders, corrected_orders, original_pixels, order_numbers, tell_model)
+
+    # Filter again just for plotting
+    final_filtered, _ = remove_blaze(final_orders, tell_model)
+    for order in final_filtered:
+        plt.plot(order[0], order[1], 'k-', alpha=0.4)
+        plt.plot(order[0], tell_model(order[0]), 'r-', alpha=0.6)
+    plt.title('Final wavelength solution')
+    plt.show()
