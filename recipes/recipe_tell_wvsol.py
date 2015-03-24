@@ -354,4 +354,4 @@ def tell_wvsol(utdate, refdate="20140316", bands="HK",
         for frame in framenos:
             if starting_obsids is not None and frame not in starting_obsids:
                 continue
-            run(datadir+'SDC'+band+'_'+date+'_'+frame+'.spec.fits', plot_dir=datadir+'qa/tell_wvsol/')
+            run(datadir+'SDC'+band+'_'+utdate+'_'+frame+'.spec.fits', plot_dir=datadir+'qa/tell_wvsol/')
