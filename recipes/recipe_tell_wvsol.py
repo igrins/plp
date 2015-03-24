@@ -317,7 +317,7 @@ def run(filename, plot_dir=None, tell_file='data/TelluricModel.dat'):
     outfilename = filename.replace('spec.fits', 'wave.fits')
     wave_arr = np.array([o[0] for o in final_orders])
     hdulist = fits.PrimaryHDU(wave_arr)
-    hdulist.writeto(outfilename)
+    hdulist.writeto(outfilename, clobber=True)
 
 
 
