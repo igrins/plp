@@ -11,7 +11,8 @@ import readmultispec as multispec
 from astropy import units as u
 from astropy.modeling import models, fitting
 from scipy.signal import firwin, lfilter, argrelmin
-
+import libs.recipes as recipes
+import os
 
 
 def Poly(pars, middle, low, high, x):
@@ -96,7 +97,7 @@ def find_lines(spectrum, tol=0.99, linespacing = 5):
   return np.array(lines)
 
 
-def fit_chip(original_orders, corrected_orders, pixels, order_nums, modelfcn):
+def fit_chip(original_orders, corrected_orders, pixels, order_nums, modelfcn, plot_file=None):
     """
     Fit the entire chip to a 2D surface.
     :param original_orders: The original orders, before blaze correction or anything (they have all pixels)
@@ -135,7 +136,11 @@ def fit_chip(original_orders, corrected_orders, pixels, order_nums, modelfcn):
     ax3d.scatter3D(pixels, ordernums, wavelengths - pred, 'ro')
 
     print('RMS Scatter = {} nm'.format(np.std(wavelengths - pred)))
-    plt.show()
+    if plot_file is None:
+        plt.show()
+    else:
+        plt.savefig(plot_file)
+        plt.clf()
 
     # Assign the wavelength solution to each order
     new_orders = []
@@ -148,9 +153,6 @@ def fit_chip(original_orders, corrected_orders, pixels, order_nums, modelfcn):
         order[0] = wave
         new_orders.append(order)
     return new_orders
-
-
-
 
 
 def read_data(filename, debug=False):
@@ -230,7 +232,7 @@ def remove_blaze(orders, telluric, N=200, freq=1e-2):
     return new_orders, original_pixels
 
 
-
+"""
 def fit_by_order(test_file):
     #test_file = 'data/SDCK_20141014_0242.spec.fits'
     tell_file = 'data/TelluricModel.dat'
@@ -253,17 +255,56 @@ def fit_by_order(test_file):
     plt.show()
 
     return orders, corrected_orders, original_pixels, order_numbers, tell_model
+"""
 
-def run(filename):
-    orders, corrected_orders, original_pixels, order_numbers, tell_model = fit_by_order(filename)
+def run(filename, plot_dir=None, tell_file='data/TelluricModel.dat'):
+    #orders, corrected_orders, original_pixels, order_numbers, tell_model = fit_by_order(filename)
+
+    orders, order_numbers = read_data(filename, debug=False)
+    tell_model = interpolate_telluric_model(tell_file)
+
+    filtered_orders, original_pixels = remove_blaze(orders, tell_model)
+
+    corrected_orders = []
+    for order in filtered_orders:
+        plt.plot(order[0], order[1], 'k-', alpha=0.4)
+        plt.plot(order[0], tell_model(order[0]), 'r-', alpha=0.6)
+
+        # Use the wavelength fit function to fit the wavelength.
+        new_order = optimize_wavelength(order.copy(), tell_model, fitorder=4)
+        plt.plot(new_order[0], new_order[1], 'g-', alpha=0.4)
+        corrected_orders.append(new_order)
+
+    if plot_dir is None:
+        plt.show()
+    else:
+        plt.savefig('{}{}-individual_fit.png'.format(plot_dir, filename.split('/')[-1]))
+        plt.clf()
+
     original_orders = [o.copy() for o in orders]
 
     # Now, fit the entire chip to a surface
-    final_orders = fit_chip(original_orders, corrected_orders, original_pixels, order_numbers, tell_model)
+    if plot_dir is not None:
+        plot_file = '{}{}-fullchip_fit.png'.format(plot_dir, filename.split('/')[-1])
+    else:
+        plot_file = None
+
+    final_orders = fit_chip(original_orders, 
+                            corrected_orders, 
+                            original_pixels, 
+                            order_numbers, 
+                            tell_model,
+                            plot_file=plot_file)
+
     for i, o in enumerate(final_orders):
         plt.plot(o[0], o[1], 'k-', alpha=0.4)
         plt.plot(orders[i][0], orders[i][1], 'r--', alpha=0.5)
-    plt.show()
+
+    if plot_dir is None:
+        plt.show()
+    else:
+        plt.savefig('{}{}-final_fit.png'.format(plot_dir, filename.split('/')[-1]))
+        plt.clf()
 
     # Filter again just for plotting
     final_filtered, _ = remove_blaze(final_orders, tell_model)
@@ -278,3 +319,39 @@ def run(filename):
     wave_arr = np.array([o[0] for o in final_orders])
     hdulist = fits.PrimaryHDU(wave_arr)
     hdulist.writeto(outfilename)
+
+
+
+def tell_wvsol(utdate, refdate="20140316", bands="HK",
+               starting_obsids=None,
+               config_file="recipe.config"):
+ 
+    # Get the directory the data is in
+    datadir = 'outdata/'+utdate+'/'
+
+    # Make a new directory in the qa subdirectory for my plots
+    if not os.path.exists(datadir + 'qa/tell_wvsol'):
+        os.makedirs(datadir + 'qa/tell_wvsol')
+
+    # Read the recipe log to get the A0V standards
+    night = recipes.Recipes('recipe_logs/'+utdate+'.recipes') #Load up table for a night
+    framenos = [] #Set up list to store numbers for first frame of each A0V standadr star
+    for found_a0v in night.recipe_dict['A0V_AB']: #Loop through dictionary7
+        framenos.append( '%.4d' % found_a0v[0][0]) #Append the first frame found for each A0V star in a night
+
+    # Get the list of bands
+    if bands=="HK":
+        bandlist = ["H", "K"]
+    elif bands=="H":
+        bandlist = ["H"]
+    elif bands=="K":
+        bandlist==["K"]
+    else:
+        raise ValueError
+
+    # Process each file separately
+    for band in bandlist:
+        for frame in framenos:
+            if starting_obsids is not None and frame not in starting_obsids:
+                continue
+            run(datadir+'SDC'+band+'_'+date+'_'+frame+'.spec.fits', plot_dir=datadir+'qa/tell_wvsol/')
