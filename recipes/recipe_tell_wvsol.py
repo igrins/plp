@@ -7,7 +7,7 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.optimize import leastsq
 from functools import partial
 from astropy.io import fits
-import readmultispec as multispec
+import libs.readmultispec as multispec
 from astropy import units as u
 from astropy.modeling import models, fitting
 from scipy.signal import firwin, lfilter, argrelmin
@@ -147,8 +147,6 @@ def fit_chip(original_orders, corrected_orders, pixels, order_nums, modelfcn, pl
     for i, order in enumerate(original_orders):
         pixels = np.arange(order.shape[1]).astype(float)
         ord = order_nums[i] * np.ones(pixels.size).astype(float)
-        print pixels
-        print ord
         wave = p(pixels, ord) / ord
         order[0] = wave
         new_orders.append(order)
@@ -300,19 +298,18 @@ def run(filename, plot_dir=None, tell_file='data/TelluricModel.dat'):
         plt.plot(o[0], o[1], 'k-', alpha=0.4)
         plt.plot(orders[i][0], orders[i][1], 'r--', alpha=0.5)
 
-    if plot_dir is None:
-        plt.show()
-    else:
-        plt.savefig('{}{}-final_fit.png'.format(plot_dir, filename.split('/')[-1]))
-        plt.clf()
-
     # Filter again just for plotting
     final_filtered, _ = remove_blaze(final_orders, tell_model)
     for order in final_filtered:
         plt.plot(order[0], order[1], 'k-', alpha=0.4)
         plt.plot(order[0], tell_model(order[0]), 'r-', alpha=0.6)
     plt.title('Final wavelength solution')
-    plt.show()
+    
+    if plot_dir is None:
+        plt.show()
+    else:
+        plt.savefig('{}{}-final_fit.png'.format(plot_dir, filename.split('/')[-1]))
+        plt.clf()
 
     # Output
     outfilename = filename.replace('spec.fits', 'wave.fits')
