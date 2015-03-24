@@ -261,14 +261,16 @@ def run(filename, plot_dir=None, tell_file='data/TelluricModel.dat'):
     orders, order_numbers = read_data(filename, debug=False)
     tell_model = interpolate_telluric_model(tell_file)
 
+    print 'Roughly removing blaze function for {}'.format(filename)
     filtered_orders, original_pixels = remove_blaze(orders, tell_model)
 
     corrected_orders = []
-    for order in filtered_orders:
+    for i, order in enumerate(filtered_orders):
         plt.plot(order[0], order[1], 'k-', alpha=0.4)
         plt.plot(order[0], tell_model(order[0]), 'r-', alpha=0.6)
 
         # Use the wavelength fit function to fit the wavelength.
+        print 'Optimizing wavelength for order {}/{}'.format(i+1, len(filtered_orders))
         new_order = optimize_wavelength(order.copy(), tell_model, fitorder=4)
         plt.plot(new_order[0], new_order[1], 'g-', alpha=0.4)
         corrected_orders.append(new_order)
