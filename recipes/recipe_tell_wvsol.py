@@ -12,6 +12,7 @@ from astropy import units as u
 from astropy.modeling import models, fitting
 from scipy.signal import firwin, lfilter, argrelmin
 import libs.recipes as recipes
+from libs.ecfit import fit_2dspec
 import os
 
 
@@ -127,15 +128,17 @@ def fit_chip(original_orders, corrected_orders, pixels, order_nums, modelfcn, pl
     wavelengths = np.hstack(wavelength_list).astype(float)
     weights = np.ones(pixels.size).astype(float)
 
-    from libs.ecfit import fit_2dspec
     p, m = fit_2dspec(pixels, ordernums, wavelengths*ordernums, x_degree=3, y_degree=4)
 
     pred = p(pixels, ordernums) / ordernums
     fig3d = plt.figure(2)
     ax3d = fig3d.add_subplot(111, projection='3d')
-    ax3d.scatter3D(pixels, ordernums, wavelengths - pred, 'ro')
+    ax3d.scatter3D(pixels[m], ordernums[m], wavelengths[m] - pred[m], 'ro')
+    ax3d.set_xlabel('Pixel')
+    ax3d.set_ylabel('Echelle order')
+    ax3d.set_zlabel(r'$\lambda$ - fit(pixel)')
 
-    print('RMS Scatter = {} nm'.format(np.std(wavelengths - pred)))
+    print('RMS Scatter = {} nm'.format(np.std(wavelengths[m] - pred[m])))
     if plot_file is None:
         plt.show()
     else:
@@ -195,6 +198,16 @@ def read_data(filename, debug=False):
 
     return orders, apertures
 
+def plot(x, y, style='k-', alpha=0.5, outfilename=None, normed=True):
+    plt.plot(x, y, style, alpha=alpha)
+    plt.xlabel('Wavelength (nm)')
+    plt.ylabel('Flux')
+    if normed:
+        plt.ylim((-0.1, 1.2))
+    if outfilename is not None:
+        plt.savefig(outfilename)
+    return
+
 
 def interpolate_telluric_model(filename):
     """
@@ -230,30 +243,6 @@ def remove_blaze(orders, telluric, N=200, freq=1e-2):
     return new_orders, original_pixels
 
 
-"""
-def fit_by_order(test_file):
-    #test_file = 'data/SDCK_20141014_0242.spec.fits'
-    tell_file = 'data/TelluricModel.dat'
-
-    orders, order_numbers = read_data(test_file, debug=False)
-    tell_model = interpolate_telluric_model(tell_file)
-
-    filtered_orders, original_pixels = remove_blaze(orders, tell_model)
-
-    corrected_orders = []
-    for order in filtered_orders:
-        plt.plot(order[0], order[1], 'k-', alpha=0.4)
-        plt.plot(order[0], tell_model(order[0]), 'r-', alpha=0.6)
-
-        # Use the wavelength fit function to fit the wavelength.
-        new_order = optimize_wavelength(order.copy(), tell_model, fitorder=4)
-        plt.plot(new_order[0], new_order[1], 'g-', alpha=0.4)
-        corrected_orders.append(new_order)
-
-    plt.show()
-
-    return orders, corrected_orders, original_pixels, order_numbers, tell_model
-"""
 
 def run(filename, plot_dir=None, tell_file='data/TelluricModel.dat'):
     #orders, corrected_orders, original_pixels, order_numbers, tell_model = fit_by_order(filename)
@@ -266,20 +255,22 @@ def run(filename, plot_dir=None, tell_file='data/TelluricModel.dat'):
 
     corrected_orders = []
     for i, order in enumerate(filtered_orders):
-        plt.plot(order[0], order[1], 'k-', alpha=0.4)
-        plt.plot(order[0], tell_model(order[0]), 'r-', alpha=0.6)
+        plot(order[0], order[1], 'k-', alpha=0.4)
+        plot(order[0], tell_model(order[0]), 'r-', alpha=0.6)
 
         # Use the wavelength fit function to fit the wavelength.
         print 'Optimizing wavelength for order {}/{}'.format(i+1, len(filtered_orders))
         new_order = optimize_wavelength(order.copy(), tell_model, fitorder=4)
-        plt.plot(new_order[0], new_order[1], 'g-', alpha=0.4)
+        plot(new_order[0], new_order[1], 'g-', alpha=0.4)
         corrected_orders.append(new_order)
+
+        if plot_dir is not None:
+            plt.title('Individual order fit')
+            plt.savefig('{}{}-individual_order{}.png'.format(plot_dir, filename.split('/')[-1], i+1))
+            plt.clf()
 
     if plot_dir is None:
         plt.show()
-    else:
-        plt.savefig('{}{}-individual_fit.png'.format(plot_dir, filename.split('/')[-1]))
-        plt.clf()
 
     original_orders = [o.copy() for o in orders]
 
@@ -296,22 +287,21 @@ def run(filename, plot_dir=None, tell_file='data/TelluricModel.dat'):
                             tell_model,
                             plot_file=plot_file)
 
-    for i, o in enumerate(final_orders):
-        plt.plot(o[0], o[1], 'k-', alpha=0.4)
-        plt.plot(orders[i][0], orders[i][1], 'r--', alpha=0.5)
-
     # Filter again just for plotting
     final_filtered, _ = remove_blaze(final_orders, tell_model)
-    for order in final_filtered:
-        plt.plot(order[0], order[1], 'k-', alpha=0.4)
-        plt.plot(order[0], tell_model(order[0]), 'r-', alpha=0.6)
+    for i, order in enumerate(final_filtered):
+        plot(order[0], order[1], 'k-', alpha=0.4)
+        plot(order[0], tell_model(order[0]), 'r-', alpha=0.6)
+
+        if plot_dir is not None:
+            plt.title('Final wavelength solution')
+            plt.savefig('{}{}-final_order{}.png'.format(plot_dir, filename.split('/')[-1], i+1))
+            plt.clf()
+
     plt.title('Final wavelength solution')
     
     if plot_dir is None:
         plt.show()
-    else:
-        plt.savefig('{}{}-final_fit.png'.format(plot_dir, filename.split('/')[-1]))
-        plt.clf()
 
     # Output
     outfilename = filename.replace('spec.fits', 'wave.fits')
@@ -353,4 +343,5 @@ def tell_wvsol(utdate, refdate="20140316", bands="HK",
         for frame in framenos:
             if starting_obsids is not None and frame not in starting_obsids:
                 continue
-            run(datadir+'SDC'+band+'_'+utdate+'_'+frame+'.spec.fits', plot_dir=datadir+'qa/tell_wvsol/')
+            run(datadir+'SDC'+band+'_'+utdate+'_'+frame+'.spec.fits',
+                plot_dir=datadir+'qa/tell_wvsol/')
