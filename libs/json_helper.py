@@ -22,3 +22,10 @@ def json_dump(obj, f, *kl, **kw):
         kw["default"] = encode_array
 
     json.dump(obj, f, *kl, **kw)
+
+
+def json_dumps(obj, *kl, **kw):
+    if "default" not in kw:
+        kw["default"] = encode_array
+
+    return json.dumps(obj, *kl, **kw)
