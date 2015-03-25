@@ -155,7 +155,11 @@ class ProcessABBABand(object):
 
         ordermap = extractor.ordermap
         slitpos_map = extractor.slitpos_map
+
+
         slitoffset_map = extractor.slitoffset_map
+        #slitoffset_map_extract = "none"
+        slitoffset_map_extract = slitoffset_map
 
         if 1:
 
@@ -196,7 +200,7 @@ class ProcessABBABand(object):
                                                     profile_map,
                                                     variance_map,
                                                     data_minus_flattened,
-                                                    slitoffset_map,
+                                                    slitoffset_map_extract,
                                                     debug=self.debug_output)
 
                 # for khjeong

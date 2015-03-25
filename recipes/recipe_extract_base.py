@@ -468,18 +468,27 @@ class RecipeExtractBase(RecipeExtractPR):
     def get_shifted_all(self, ap, profile_map, variance_map,
                         data_minus_flattened, slitoffset_map,
                         debug=False):
-        _ = ap.get_shifted_images(profile_map,
-                                  variance_map,
-                                  data_minus_flattened,
-                                  slitoffset_map=slitoffset_map,
-                                  debug=debug)
 
-        data_shft, variance_map_shft, profile_map_shft, msk1_shft = _
+        if slitoffset_map == "none":
+            msk1 = np.isfinite(data_minus_flattened) & np.isfinite(variance_map)
+            shifted = dict(data=data_minus_flattened,
+                           variance_map=variance_map,
+                           profile_map=profile_map,
+                           mask=msk1)
+        else:
+            _ = ap.get_shifted_images(profile_map,
+                                      variance_map,
+                                      data_minus_flattened,
+                                      slitoffset_map=slitoffset_map,
+                                      debug=debug)
 
-        shifted = dict(data=data_shft,
-                       variance_map=variance_map,
-                       profile_map=profile_map,
-                       mask=msk1_shft)
+            data_shft, variance_map_shft, profile_map_shft, msk1_shft = _
+
+            shifted = dict(data=data_shft,
+                           variance_map=variance_map_shft,
+                           profile_map=profile_map_shft,
+                           mask=msk1_shft)
+
 
         return shifted
 
@@ -503,9 +512,15 @@ class RecipeExtractBase(RecipeExtractPR):
 
         if ordermap is None:
             ordermap = self.ordermap
+
         if slitpos_map is None:
             slitpos_map = self.slitpos_map
-        if slitoffset_map is None:
+
+        if slitoffset_map == "none":
+            "do not use slit offset map"
+            slitoffset_map = None
+        elif slitoffset_map is None:
+            "use default slit offset map"
             slitoffset_map = self.slitoffset_map
 
         synth_map = ap.make_synth_map(ordermap,
