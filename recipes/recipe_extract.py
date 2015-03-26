@@ -44,7 +44,9 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
              frac_slit=None,
              cr_rejection_thresh=100.,
              debug_output=False,
-             wavelength_increasing_order=False):
+             wavelength_increasing_order=False,
+             lacosmics_thresh=0,
+             ):
 
     from libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
@@ -97,7 +99,8 @@ class ProcessABBABand(object):
                  frac_slit=None,
                  cr_rejection_thresh=100,
                  debug_output=False,
-                 wavelength_increasing_order=False):
+                 wavelength_increasing_order=False,
+                 lacosmics_thresh=0):
         """
         cr_rejection_thresh : pixels that deviate significantly from the profile are excluded.
         """
@@ -111,6 +114,7 @@ class ProcessABBABand(object):
 
         self.frac_slit = frac_slit
         self.cr_rejection_thresh = cr_rejection_thresh
+        self.lacosmics_thresh = lacosmics_thresh
         self.debug_output = debug_output
         self.wavelength_increasing_order = wavelength_increasing_order
 
@@ -219,8 +223,8 @@ class ProcessABBABand(object):
 
                 s_list, v_list = _
 
-                if self.debug_output:
-                    self.save_debug_output()
+                # if self.debug_output:
+                #     self.save_debug_output()
 
                 # make synth_spec : profile * spectra
                 synth_map = extractor.make_synth_map(\
@@ -322,6 +326,29 @@ class ProcessABBABand(object):
                 # for extended source.
                 #variance_map2 = variance_map
 
+                # detect CRs
+
+                if self.lacosmics_thresh > 0:
+
+                    from libs.cosmics import cosmicsimage
+
+                    cosmic_input = variance_map.copy()
+                    cosmic_input[~np.isfinite(data_minus_flattened)] = np.nan
+                    c = cosmicsimage(cosmic_input,
+                                     readnoise=self.lacosmics_thresh)
+                    c.run()
+                    cr_mask = c.getmask()
+
+                else:
+                    cr_mask = np.zeros(data_minus_flattened.shape,
+                                       dtype=bool)
+
+                #variance_map[cr_mask] = np.nan
+
+
+                data_minus_flattened_orig = data_minus_flattened
+                data_minus_flattened = data_minus_flattened_orig.copy()
+                data_minus_flattened[cr_mask] = np.nan
 
                 # extract spec
 
@@ -343,15 +370,15 @@ class ProcessABBABand(object):
 
                 s_list, v_list = _
 
-                if self.debug_output:
-                    hdu_list = pyfits.HDUList()
-                    hdu_list.append(pyfits.PrimaryHDU(data=data_shft))
-                    hdu_list.append(pyfits.ImageHDU(data=variance_map_shft))
-                    hdu_list.append(pyfits.ImageHDU(data=profile_map_shft))
-                    hdu_list.append(pyfits.ImageHDU(data=ordermap_bpixed))
-                    #hdu_list.append(pyfits.ImageHDU(data=msk1_shft.astype("i")))
-                    #hdu_list.append(pyfits.ImageHDU(data=np.array(s_list)))
-                    hdu_list.writeto("test0.fits", clobber=True)
+                # if self.debug_output:
+                #     hdu_list = pyfits.HDUList()
+                #     hdu_list.append(pyfits.PrimaryHDU(data=data_shft))
+                #     hdu_list.append(pyfits.ImageHDU(data=variance_map_shft))
+                #     hdu_list.append(pyfits.ImageHDU(data=profile_map_shft))
+                #     hdu_list.append(pyfits.ImageHDU(data=ordermap_bpixed))
+                #     #hdu_list.append(pyfits.ImageHDU(data=msk1_shft.astype("i")))
+                #     #hdu_list.append(pyfits.ImageHDU(data=np.array(s_list)))
+                #     hdu_list.writeto("test0.fits", clobber=True)
 
 
 
@@ -373,18 +400,29 @@ class ProcessABBABand(object):
 
 
 
-        image_list = [data_minus_flattened]
-        if IF_POINT_SOURCE: # if point source
-            image_list.extend([data_minus_flattened_orig,
-                               synth_map,
-                               sig_map,
-                               cr_mask,
-                               ])
         mastername = extractor.obj_filenames[0]
 
-        self.store_processed_inputs(igr_storage, mastername,
-                                    image_list,
-                                    variance_map)
+        if self.debug_output:
+            image_list = [data_minus_flattened,
+                          data_minus_flattened_orig,
+                          variance_map,
+                          cr_mask]
+
+            shifted_image_list = [shifted["data"],
+                                  shifted["variance_map"],
+                                  #shifted["mask"],
+                                  ]
+
+            if IF_POINT_SOURCE: # if point source
+                image_list.extend([sig_map,
+                                   synth_map,
+                                   ])
+            self.store_processed_inputs(igr_storage, mastername,
+                                        image_list,
+                                        variance_map,
+                                        shifted_image_list)
+
+
 
         self.store_1dspec(igr_storage,
                           extractor,
@@ -467,12 +505,15 @@ class ProcessABBABand(object):
     def store_processed_inputs(self, igr_storage,
                                mastername,
                                image_list,
-                               variance_map):
+                               variance_map,
+                               shifted_image_list):
 
         from libs.storage_descriptions import (COMBINED_IMAGE_DESC,
                                                # COMBINED_IMAGE_A_DESC,
                                                # COMBINED_IMAGE_B_DESC,
-                                               VARIANCE_MAP_DESC)
+                                               WVLCOR_IMAGE_DESC,
+                                               #VARIANCE_MAP_DESC
+                                               )
         from libs.products import PipelineImage
 
         r = PipelineProducts("1d specs")
@@ -482,8 +523,8 @@ class ProcessABBABand(object):
         #                                            a_data))
         # r.add(COMBINED_IMAGE_B_DESC, PipelineImage([],
         #                                            b_data))
-        r.add(VARIANCE_MAP_DESC, PipelineImage([],
-                                               variance_map))
+        #r.add(VARIANCE_MAP_DESC, PipelineImage([],
+        #                                       variance_map))
 
         # r.add(VARIANCE_MAP_DESC, PipelineImage([],
         #                                        variance_map.data))
@@ -491,6 +532,16 @@ class ProcessABBABand(object):
         igr_storage.store(r,
                           mastername=mastername,
                           masterhdu=None)
+
+
+        r = PipelineProducts("1d specs")
+
+        r.add(WVLCOR_IMAGE_DESC, PipelineImage([], *shifted_image_list))
+
+        igr_storage.store(r,
+                          mastername=mastername,
+                          masterhdu=None)
+
 
 
     def get_wvl_header_data(self, igr_storage, extractor):
