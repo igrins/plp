@@ -11,16 +11,20 @@ def extractor_factory(recipe_name):
                 starting_obsids=None,
                 config_file="recipe.config",
                 frac_slit=None,
-                cr_rejection_thresh=100,
+                cr_rejection_thresh=30,
                 debug_output=False,
-                wavelength_increasing_order=False):
+                wavelength_increasing_order=False,
+                lacosmics_thresh=0,
+                ):
         abba_all(recipe_name, utdate, refdate=refdate, bands=bands,
                  starting_obsids=starting_obsids,
                  config_file=config_file,
                  frac_slit=frac_slit,
                  cr_rejection_thresh=cr_rejection_thresh,
                  debug_output=debug_output,
-                 wavelength_increasing_order=wavelength_increasing_order)
+                 wavelength_increasing_order=wavelength_increasing_order,
+                 lacosmics_thresh=lacosmics_thresh,
+                 )
 
     extract.__name__ = recipe_name.lower()
     return extract
@@ -231,11 +235,23 @@ class ProcessABBABand(object):
                     variance_map, variance_map0, synth_map)
 
                 # get cosmicray mask
-                sig_map = (data_minus_flattened - synth_map)**2/variance_map
+                sig_map = np.abs(data_minus_flattened - synth_map)/variance_map**.5
 
                 cr_mask = np.abs(sig_map) > self.cr_rejection_thresh
 
-                variance_map[cr_mask] = np.nan
+                if self.lacosmics_thresh > 0:
+                    from libs.cosmics import cosmicsimage
+
+                    cosmic_input = variance_map.copy()
+                    cosmic_input[~np.isfinite(data_minus_flattened)] = np.nan
+                    c = cosmicsimage(cosmic_input,
+                                     readnoise=self.lacosmics_thresh)
+                    c.run()
+                    cr_mask_cosmics = c.getmask()
+
+                    cr_mask = cr_mask | cr_mask_cosmics
+
+                #variance_map[cr_mask] = np.nan
 
 
                 # masking this out will affect the saved combined image.
