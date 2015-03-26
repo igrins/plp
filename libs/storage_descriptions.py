@@ -32,6 +32,7 @@ ORDER_FLAT_JSON_DESC = ("PRIMARY_CALIB_PATH", "ORDERFLAT_", ".json")
 COMBINED_IMAGE_DESC = ("OUTDATA_PATH", "", ".combined_image.fits")
 COMBINED_IMAGE_A_DESC = ("OUTDATA_PATH", "", ".combined_image_a.fits")
 COMBINED_IMAGE_B_DESC = ("OUTDATA_PATH", "", ".combined_image_b.fits")
+WVLCOR_IMAGE_DESC = ("OUTDATA_PATH", "", ".wvlcor_image.fits")
 ONED_SPEC_JSON_DESC = ("PRIMARY_CALIB_PATH", "", ".oned_spec.json")
 
 # THAR related descriptions
