@@ -27,7 +27,7 @@ class ProcessBase(object):
                                                        config=config)
         self.igr_path = self.igr_storage.igr_path
 
-    def prepare(self, band, obsids, frametypes, load_a0v_db=True):
+    def prepare(self, band, obsids, load_a0v_db=True):
 
         igr_path = self.igr_path
 
@@ -85,6 +85,14 @@ class RecipeExtractPR(object):
     @property
     def igr_storage(self):
         return self.pr.igr_storage
+
+    @property
+    def igr_path(self):
+        return self.pr.igr_path
+
+    @property
+    def tgt_basename(self):
+        return self.pr.tgt_basename
 
     @property
     def basenames(self):
@@ -212,18 +220,16 @@ class RecipeExtractPR(object):
         return destripe_mask
 
 
-    def __init__(self, utdate, band, obsids, frametypes,
+    def __init__(self, utdate, band, obsids,
                  config,
                  load_a0v_db=True):
         #self.pr = get_pr(utdate=utdate, config=config)
 
         refdate = config.get_value("REFDATE", None)
         self.pr = ProcessBase(utdate, refdate, config)
-        self.pr.prepare(band, obsids, frametypes,
+        self.pr.prepare(band, obsids,
                         load_a0v_db=load_a0v_db) #[32], ["A"])
         self.band = band
-
-        self.frametypes = frametypes
 
 
     def get_oned_spec_helper(self, basename=None):
@@ -238,9 +244,6 @@ class RecipeExtractPR(object):
 
 class RecipeExtractBase(RecipeExtractPR):
 
-
-
-
     def __init__(self, utdate, band, obsids, frametypes,
                  config,
                  ab_mode=True, load_a0v_db=False):
@@ -249,9 +252,11 @@ class RecipeExtractBase(RecipeExtractPR):
         """
 
         RecipeExtractPR.__init__(self,
-                                 utdate, band, obsids, frametypes,
+                                 utdate, band, obsids,
                                  config,
                                  load_a0v_db=load_a0v_db)
+
+        self.frametypes = frametypes
 
         self.ab_mode = ab_mode
 
@@ -370,16 +375,15 @@ class RecipeExtractBase(RecipeExtractPR):
 
     def get_aperture(self):
 
-        orders_w_solutions = self.orders_w_solutions
-        old_orders = self.get_old_orders()
+        from recipe_wvlsol_sky import load_aperture_wvlsol
 
-        from recipe_wvlsol_sky import load_aperture2
+        # ap = load_aperture2(self.igr_storage, self.band,
+        #                     self.pr.master_obsid,
+        #                     self.db["flat_on"],
+        #                     old_orders,
+        #                     orders_w_solutions)
 
-        ap = load_aperture2(self.igr_storage, self.band,
-                            self.pr.master_obsid,
-                            self.db["flat_on"],
-                            old_orders,
-                            orders_w_solutions)
+        ap = load_aperture_wvlsol(self, self.band)
 
         return ap
 
