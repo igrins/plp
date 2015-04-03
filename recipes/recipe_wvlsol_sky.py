@@ -221,10 +221,13 @@ class ProcessSkyBand(object):
         _ = self.get_sky_spectra(extractor, ap, band, master_obsid)
         orders_w_solutions, wvl_solutions, s_list = _
 
-        _ = fit_oh_spectra(self.refdate, band,
-                           orders_w_solutions,
-                           wvl_solutions, s_list,
-                           )
+        fitter = SkyFitter(self.refdate)
+        _ = fitter.fit(band, orders_w_solutions, wvl_solutions, s_list)
+
+        # _ = fit_oh_spectra(self.refdate, band,
+        #                    orders_w_solutions,
+        #                    wvl_solutions, s_list,
+        #                    )
 
 
         orders_w_solutions, wvl_sol, reidentified_lines_map, p, m = _
@@ -799,26 +802,29 @@ class ProcessSkyBand(object):
 
 
 
+class WavelengthFitter(object):
+    pass
 
-def fit_oh_spectra(refdate, band,
-                   orders_w_solutions,
-                   wvl_solutions, s_list):
-    if 1:
+class SkyFitter(WavelengthFitter):
+    def get_refdata(self, band):
         from libs.master_calib import load_sky_ref_data
 
-        # ref_date = "20140316"
+        if band not in self._refdata:
+            sky_refdata = load_sky_ref_data(self.refdate, band)
+            self._refdata[band] = sky_refdata
 
-        #refdate = config.get_value("REFDATE", utdate)
-        sky_ref_data = load_sky_ref_data(refdate, band)
+        return self._refdata[band]
 
-    if 1:
-        # Now we fit with gaussian profile for matched positions.
+    def __init__(self, refdate):
+        self.refdate = refdate
+        self._refdata = {}
 
+    def fit_individual_orders(self, band,
+                              orders_w_solutions, wvl_solutions, s_list):
+
+        sky_ref_data = self.get_refdata(band)
         ohline_indices = sky_ref_data["ohline_indices"]
         ohlines_db = sky_ref_data["ohlines_db"]
-
-
-
 
         from libs.reidentify_ohlines import fit_ohlines
         ref_pixel_list, reidentified_lines = \
@@ -826,47 +832,56 @@ def fit_oh_spectra(refdate, band,
                                     orders_w_solutions,
                                     wvl_solutions, s_list)
 
+        return ref_pixel_list, reidentified_lines
 
-        # from scipy.interpolate import interp1d
-        # from reidentify import reidentify_lines_all
+    def update_K(self, reidentified_lines_map,
+                 wvl_solutions, s_list):
+        import libs.master_calib as master_calib
+        fn = "hitran_bootstrap_K_%s.json" % self.refdate
+        bootstrap_name = master_calib.get_master_calib_abspath(fn)
+        import json
+        bootstrap = json.load(open(bootstrap_name))
 
-        x = np.arange(2048)
+        import libs.hitran as hitran
+        r, ref_pixel_list = hitran.reidentify(wvl_solutions, s_list,
+                                              bootstrap)
+        # json_name = "hitran_reidentified_K_%s.json" % igrins_log.date
+        # r = json.load(open(json_name))
+        for i, s in r.items():
+            ss = reidentified_lines_map[int(i)]
+            ss0 = np.concatenate([ss[0], s["pixel"]])
+            ss1 = np.concatenate([ss[1], s["wavelength"]])
+            reidentified_lines_map[int(i)] = (ss0, ss1)
 
+        return reidentified_lines_map
 
-        # line_indices_list = [ref_ohline_indices[str(o)] for o in igrins_orders[band]]
+    def convert2wvlsol(self, p, orders_w_solutions):
 
+        # derive wavelengths.
+        xx = np.arange(2048)
+        wvl_sol = []
+        for o in orders_w_solutions:
+            oo = np.empty_like(xx)
+            oo.fill(o)
+            wvl = p(xx, oo) / o
+            wvl_sol.append(list(wvl))
 
+        return wvl_sol
 
-
-        ###### not fit identified lines
+    def fit(self, band, orders_w_solutions, wvl_solutions, s_list):
+        ref_pixel_list, reidentified_lines = \
+                            self.fit_individual_orders(band,
+                                                       orders_w_solutions,
+                                                       wvl_solutions, s_list)
 
         from libs.ecfit import get_ordered_line_data, fit_2dspec
-
-        # d_x_wvl = {}
-        # for order, z in echel.zdata.items():
-        #     xy_T = affine_tr.transform(np.array([z.x, z.y]).T)
-        #     x_T = xy_T[:,0]
-        #     d_x_wvl[order]=(x_T, z.wvl)
 
         reidentified_lines_map = dict(zip(orders_w_solutions,
                                           reidentified_lines))
 
         if band == "K":
-            import libs.master_calib as master_calib
-            fn = "hitran_bootstrap_K_%s.json" % refdate
-            bootstrap_name = master_calib.get_master_calib_abspath(fn)
-            import json
-            bootstrap = json.load(open(bootstrap_name))
-
-            import libs.hitran as hitran
-            r, ref_pixel_list = hitran.reidentify(wvl_solutions, s_list, bootstrap)
-            # json_name = "hitran_reidentified_K_%s.json" % igrins_log.date
-            # r = json.load(open(json_name))
-            for i, s in r.items():
-                ss = reidentified_lines_map[int(i)]
-                ss0 = np.concatenate([ss[0], s["pixel"]])
-                ss1 = np.concatenate([ss[1], s["wavelength"]])
-                reidentified_lines_map[int(i)] = (ss0, ss1)
+            self.update_K(reidentified_lines_map,
+                          wvl_solutions, s_list)
 
         xl, yl, zl = get_ordered_line_data(reidentified_lines_map)
         # xl : pixel
@@ -880,18 +895,102 @@ def fit_oh_spectra(refdate, band,
         p, m = fit_2dspec(xl, yl, zl, x_degree=x_degree, y_degree=y_degree,
                           x_domain=x_domain, y_domain=y_domain)
 
-
-        # derive wavelengths.
-        xx = np.arange(2048)
-        wvl_sol = []
-        for o in orders_w_solutions:
-            oo = np.empty_like(xx)
-            oo.fill(o)
-            wvl = p(xx, oo) / o
-            wvl_sol.append(list(wvl))
-
+        wvl_sol = self.convert2wvlsol(p, orders_w_solutions)
 
         return orders_w_solutions, wvl_sol, reidentified_lines_map, p, m
+
+
+def fit_oh_spectra(refdate, band,
+                   orders_w_solutions,
+                   wvl_solutions, s_list):
+
+    fitter = SkyFitter(self.refdate)
+    _ = fitter.fit(band, orders_w_solutions, wvl_solutions, s_list)
+
+    orders_w_solutions, wvl_sol, reidentified_lines_map, p, m = _
+
+    return orders_w_solutions, wvl_sol, reidentified_lines_map, p, m
+
+# def fit_oh_spectra(refdate, band,
+#                    orders_w_solutions,
+#                    wvl_solutions, s_list):
+#     if 1:
+#         from libs.master_calib import load_sky_ref_data
+
+#         # ref_date = "20140316"
+
+#         #refdate = config.get_value("REFDATE", utdate)
+#         sky_ref_data = load_sky_ref_data(refdate, band)
+
+#     if 1:
+#         # Now we fit with gaussian profile for matched positions.
+
+
+#         # from scipy.interpolate import interp1d
+#         # from reidentify import reidentify_lines_all
+
+#         x = np.arange(2048)
+
+
+#         # line_indices_list = [ref_ohline_indices[str(o)] for o in igrins_orders[band]]
+
+
+
+
+#         ###### not fit identified lines
+
+#         from libs.ecfit import get_ordered_line_data, fit_2dspec
+
+#         # d_x_wvl = {}
+#         # for order, z in echel.zdata.items():
+#         #     xy_T = affine_tr.transform(np.array([z.x, z.y]).T)
+#         #     x_T = xy_T[:,0]
+#         #     d_x_wvl[order]=(x_T, z.wvl)
+
+#         reidentified_lines_map = dict(zip(orders_w_solutions,
+#                                           reidentified_lines))
+
+#         if band == "K":
+#             import libs.master_calib as master_calib
+#             fn = "hitran_bootstrap_K_%s.json" % refdate
+#             bootstrap_name = master_calib.get_master_calib_abspath(fn)
+#             import json
+#             bootstrap = json.load(open(bootstrap_name))
+
+#             import libs.hitran as hitran
+#             r, ref_pixel_list = hitran.reidentify(wvl_solutions, s_list, bootstrap)
+#             # json_name = "hitran_reidentified_K_%s.json" % igrins_log.date
+#             # r = json.load(open(json_name))
+#             for i, s in r.items():
+#                 ss = reidentified_lines_map[int(i)]
+#                 ss0 = np.concatenate([ss[0], s["pixel"]])
+#                 ss1 = np.concatenate([ss[1], s["wavelength"]])
+#                 reidentified_lines_map[int(i)] = (ss0, ss1)
+
+#         xl, yl, zl = get_ordered_line_data(reidentified_lines_map)
+#         # xl : pixel
+#         # yl : order
+#         # zl : wvl * order
+
+#         x_domain = [0, 2047]
+#         y_domain = [orders_w_solutions[0]-2, orders_w_solutions[-1]+2]
+#         x_degree, y_degree = 4, 3
+#         #x_degree, y_degree = 3, 2
+#         p, m = fit_2dspec(xl, yl, zl, x_degree=x_degree, y_degree=y_degree,
+#                           x_domain=x_domain, y_domain=y_domain)
+
+
+#         # derive wavelengths.
+#         xx = np.arange(2048)
+#         wvl_sol = []
+#         for o in orders_w_solutions:
+#             oo = np.empty_like(xx)
+#             oo.fill(o)
+#             wvl = p(xx, oo) / o
+#             wvl_sol.append(list(wvl))
+
+
+#         return orders_w_solutions, wvl_sol, reidentified_lines_map, p, m
 
 
 
