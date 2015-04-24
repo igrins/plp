@@ -82,6 +82,15 @@ def get_pr(utdate, config_file="recipe.config"):
 
 
 class RecipeExtractPR(object):
+    def load1(self, db_name, description):
+        import libs.storage_descriptions
+        master_obsid = self.pr.master_obsid
+        basename = self.db[db_name].query(self.band, master_obsid)
+        desc = getattr(libs.storage_descriptions,
+                       description.upper() + "_DESC")
+        product = self.igr_storage.load1(desc,
+                                         basename)
+        return product
     @property
     def igr_storage(self):
         return self.pr.igr_storage
