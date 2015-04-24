@@ -206,14 +206,13 @@ class ProcessSkyBand(object):
 
     def process(self, band, obsids):
 
-        igr_storage = self.igr_storage
-
-
         from recipe_extract_base import RecipeExtractPR
 
         extractor = RecipeExtractPR(self.utdate, band,
                                     obsids,
                                     self.config)
+
+        self.save_db(extractor, band)
 
         master_obsid = obsids[0]
         ap = load_aperture(extractor, band, master_obsid)
@@ -241,7 +240,6 @@ class ProcessSkyBand(object):
         self.save_qa(extractor, orders_w_solutions,
                      reidentified_lines_map, p, m)
 
-        self.save_db(extractor, band)
 
 
     def save_wavelength_sol(self, extractor,
@@ -312,9 +310,9 @@ class ProcessSkyBand(object):
                                     data=np.array([]).reshape((0,0)))
 
             from libs.storage_descriptions import SKY_WVLSOL_FITS_DESC
-            from libs.products import PipelineImage
+            from libs.products import PipelineImageBase
             oh_sol_products.add(SKY_WVLSOL_FITS_DESC,
-                                PipelineImage([],
+                                PipelineImageBase([],
                                               np.array(wvl_sol)))
 
             igr_storage = extractor.igr_storage
@@ -707,7 +705,7 @@ class ProcessSkyBand(object):
                                                SLITOFFSET_FITS_DESC,
                                                WAVELENGTHMAP_FITS_DESC,
                                                ORDERMAP_MASKED_FITS_DESC)
-        from libs.products import PipelineImage, PipelineProducts
+        from libs.products import PipelineImageBase, PipelineProducts
         products = PipelineProducts("Distortion map")
 
         for desc, im in [(ORDERMAP_FITS_DESC, order_map),
@@ -716,7 +714,7 @@ class ProcessSkyBand(object):
                          (WAVELENGTHMAP_FITS_DESC,wavelength_map),
                          (ORDERMAP_MASKED_FITS_DESC, order_map2)]:
             products.add(desc,
-                         PipelineImage([], im))
+                         PipelineImageBase([], im))
 
         igr_storage = extractor.igr_storage
         igr_storage.store(products,

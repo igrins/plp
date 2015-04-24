@@ -402,21 +402,30 @@ class ProcessABBABand(object):
 
         mastername = extractor.obj_filenames[0]
 
+        from libs.products import PipelineImage as Image
         if self.debug_output:
-            image_list = [data_minus_flattened,
-                          data_minus_flattened_orig,
-                          variance_map,
-                          cr_mask]
+            image_list = [Image([("EXTNAME", "DATA_CORRECTED")],
+                                data_minus_flattened),
+                          Image([("EXTNAME", "DATA_UNCORRECTED")],
+                                data_minus_flattened_orig),
+                          Image([("EXTNAME", "VARIANCE_MAP")],
+                                variance_map),
+                          Image([("EXTNAME", "CR_MASK")],
+                                cr_mask)]
 
-            shifted_image_list = [shifted["data"],
-                                  shifted["variance_map"],
-                                  #shifted["mask"],
+            shifted_image_list = [Image([("EXTNAME", "DATA_CORRECTED")],
+                                        shifted["data"]),
+                                  Image([("EXTNAME", "VARIANCE_MAP")],
+                                        shifted["variance_map"]),
                                   ]
 
             if IF_POINT_SOURCE: # if point source
-                image_list.extend([sig_map,
-                                   synth_map,
+                image_list.extend([Image([("EXTNAME", "SIG_MAP")],
+                                         sig_map),
+                                   Image([("EXTNAME", "SYNTH_MAP")],
+                                         synth_map),
                                    ])
+
             self.store_processed_inputs(igr_storage, mastername,
                                         image_list,
                                         variance_map,
@@ -514,19 +523,20 @@ class ProcessABBABand(object):
                                                WVLCOR_IMAGE_DESC,
                                                #VARIANCE_MAP_DESC
                                                )
-        from libs.products import PipelineImage
+        from libs.products import PipelineImages #Base
 
         r = PipelineProducts("1d specs")
 
-        r.add(COMBINED_IMAGE_DESC, PipelineImage([], *image_list))
-        # r.add(COMBINED_IMAGE_A_DESC, PipelineImage([],
+        #r.add(COMBINED_IMAGE_DESC, PipelineImageBase([], *image_list))
+        r.add(COMBINED_IMAGE_DESC, PipelineImages(image_list))
+        # r.add(COMBINED_IMAGE_A_DESC, PipelineImageBase([],
         #                                            a_data))
-        # r.add(COMBINED_IMAGE_B_DESC, PipelineImage([],
+        # r.add(COMBINED_IMAGE_B_DESC, PipelineImageBase([],
         #                                            b_data))
-        #r.add(VARIANCE_MAP_DESC, PipelineImage([],
+        #r.add(VARIANCE_MAP_DESC, PipelineImageBase([],
         #                                       variance_map))
 
-        # r.add(VARIANCE_MAP_DESC, PipelineImage([],
+        # r.add(VARIANCE_MAP_DESC, PipelineImageBase([],
         #                                        variance_map.data))
 
         igr_storage.store(r,
@@ -536,7 +546,7 @@ class ProcessABBABand(object):
 
         r = PipelineProducts("1d specs")
 
-        r.add(WVLCOR_IMAGE_DESC, PipelineImage([], *shifted_image_list))
+        r.add(WVLCOR_IMAGE_DESC, PipelineImages(shifted_image_list))
 
         igr_storage.store(r,
                           mastername=mastername,

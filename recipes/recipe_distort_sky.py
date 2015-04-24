@@ -431,10 +431,10 @@ def process_distortion_sky_band(utdate, refdate, band, obsids, config):
         #pyfits.PrimaryHDU(data=slitoffset_map).writeto(fn, clobber=True)
 
         SLITOFFSET_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".slitoffset_map.fits")
-        from libs.products import PipelineImage, PipelineProducts
+        from libs.products import PipelineImageBase, PipelineProducts
         distortion_products = PipelineProducts("Distortion map")
         distortion_products.add(SLITOFFSET_FITS_DESC,
-                                PipelineImage([],
+                                PipelineImageBase([],
                                               slitoffset_map))
 
         igr_storage.store(distortion_products,

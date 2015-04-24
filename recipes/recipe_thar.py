@@ -5,7 +5,7 @@ import os
 from libs.path_info import IGRINSPath, IGRINSFiles
 import astropy.io.fits as pyfits
 
-from libs.products import PipelineProducts, PipelineImage
+from libs.products import PipelineProducts, PipelineImageBase
 from libs.apertures import Apertures
 
 from libs.recipe_base import RecipeBase
@@ -216,7 +216,7 @@ def process_thar_band(utdate, refdate, band, obsids, config):
         pp = PipelineProducts("")
         from libs.storage_descriptions import BIAS_MASK_DESC
         pp.add(BIAS_MASK_DESC,
-               PipelineImage([], bias_mask))
+               PipelineImageBase([], bias_mask))
 
         igr_storage.store(pp,
                           mastername=flaton_basename,

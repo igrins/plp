@@ -5,7 +5,7 @@ import astropy.io.fits as pyfits
 from stsci_helper import stsci_median
 
 #from products import PipelineProducts
-from products import PipelineImage, PipelineDict, PipelineProducts
+from products import PipelineImageBase, PipelineDict, PipelineProducts
 
 
 # FLAT_BPIXED_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_bpixed.fits")
@@ -44,7 +44,7 @@ def get_1d_median_specs(fits_names, ap):
 
     r = PipelineProducts("1d median specs")
     r.add(COMBINED_IMAGE_DESC,
-          PipelineImage([], data))
+          PipelineImageBase([], data))
     r.add(ONED_SPEC_JSON_DESC,
           PipelineDict(orders=ap.orders,
                        specs=s))

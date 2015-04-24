@@ -4,7 +4,9 @@ import scipy.ndimage as ni
 from stsci_helper import stsci_median
 import badpixel as bp
 from destriper import destriper
-from products import Card, PipelineImage, PipelineDict, PipelineProducts
+from products import PipelineImageBase, PipelineDict, PipelineProducts
+
+Card = tuple
 
 from igrins_detector import IGRINSDetector
 
@@ -24,7 +26,7 @@ class FlatOff(object):
 
         if destripe:
             flat_offs = destriper.get_destriped(flat_off)
-            flat_off_cards.append(Card("HISTORY", "IGR: image destriped."))
+            flat_off_cards.append(Card(("HISTORY", "IGR: image destriped.")))
 
         hotpix_mask = bp.badpixel_mask(flat_offs,
                                        sigma_clip1=sigma_clip1,
@@ -34,13 +36,13 @@ class FlatOff(object):
         bg_std = flat_offs[~hotpix_mask].std()
 
 
-        flat_off_cards.append(Card("BG_STD", bg_std,
-                                   "IGR: stddev of combined flat" ))
-        flat_off_image = PipelineImage(flat_off_cards,
-                                       flat_offs)
+        flat_off_cards.append(Card(("BG_STD", bg_std,
+                                    "IGR: stddev of combined flat")))
+        flat_off_image = PipelineImageBase(flat_off_cards,
+                                           flat_offs)
 
-        hotpix_mask_image = PipelineImage([],
-                                          hotpix_mask)
+        hotpix_mask_image = PipelineImageBase([],
+                                              hotpix_mask)
 
 
         from storage_descriptions import (FLAT_OFF_DESC,
@@ -131,10 +133,10 @@ class FlatOn(object):
 
         r = PipelineProducts("flat on products")
 
-        r.add(FLAT_NORMED_DESC, PipelineImage([], flat_normed))
-        r.add(FLAT_BPIXED_DESC, PipelineImage([], flat_bpixed))
-        r.add(FLAT_MASK_DESC, PipelineImage([], flat_mask))
-        r.add(DEADPIX_MASK_DESC, PipelineImage([], deadpix_mask))
+        r.add(FLAT_NORMED_DESC, PipelineImageBase([], flat_normed))
+        r.add(FLAT_BPIXED_DESC, PipelineImageBase([], flat_bpixed))
+        r.add(FLAT_MASK_DESC, PipelineImageBase([], flat_mask))
+        r.add(DEADPIX_MASK_DESC, PipelineImageBase([], deadpix_mask))
 
         r.add(FLATON_JSON_DESC,
               PipelineDict(bg_std_normed=bg_std_norm))
@@ -192,7 +194,7 @@ def trace_orders(flaton_products):
     from storage_descriptions import (FLAT_DERIV_DESC,
                                       FLATCENTROIDS_JSON_DESC)
 
-    r.add(FLAT_DERIV_DESC, PipelineImage([], flat_deriv))
+    r.add(FLAT_DERIV_DESC, PipelineImageBase([], flat_deriv))
     r.add(FLATCENTROIDS_JSON_DESC,
           PipelineDict(bottom_centroids=cent_bottom_list,
                          up_centroids=cent_up_list))
@@ -290,6 +292,8 @@ def make_order_flat(flaton_products, orders, order_map):
     mean_order_specs = []
     mask_list = []
     for o in orders:
+        # if slices[o-1] is None:
+        #     continue
         sl = (slices[o-1][0], slice(0, 2048))
         d_sl = flat_normed[sl].copy()
         d_sl[order_map[sl] != o] = np.nan
@@ -345,7 +349,7 @@ def make_order_flat(flaton_products, orders, order_map):
                                       ORDER_FLAT_JSON_DESC)
 
     r = PipelineProducts("order flat")
-    r.add(ORDER_FLAT_IM_DESC, PipelineImage([], flat_im))
+    r.add(ORDER_FLAT_IM_DESC, PipelineImageBase([], flat_im))
     r.add(ORDER_FLAT_JSON_DESC,
           PipelineDict(orders=orders,
                        fitted_responses=fitted_responses,

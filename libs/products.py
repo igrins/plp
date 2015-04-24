@@ -4,9 +4,16 @@ import json
 import numpy as np
 
 import astropy.io.fits as pyfits
-from astropy.io.fits import Card
+#from astropy.io.fits import Card
 
 class PipelineImage(object):
+    Header = pyfits.Header
+    def __init__(self, header, data):
+        self.header = self.Header(header)
+        self.data = data
+
+
+class PipelineImageBase(object):
     def __init__(self, header, *data_list):
         self.header = header
         self.header_list = [header] * len(data_list)
@@ -16,11 +23,15 @@ class PipelineImage(object):
     def __getitem__(self, i):
         return type(self)(self.header_list[i], self.data_list[i])
 
+    def iter_header_data(self):
+        for h, d in zip(self.header_list, self.data_list):
+            h = pyfits.Header()
+            yield h, d
+
     def store(self, fn, masterhdu=None):
-        d_list = self.data_list
 
         d_list2 = []
-        for d in d_list:
+        for h, d in self.iter_header_data():
             if d.dtype.kind == "b":
                 d = d.astype("uint8")
 
@@ -50,9 +61,23 @@ class PipelineImage(object):
         hdu_rest = [get_image_hdu(d_) for d_ in d_list2[1:]]
 
         hdu = pyfits.HDUList([hdu0] + hdu_rest)
+        from itertools import izip
+        for hdu1, (h, d) in izip(hdu, self.iter_header_data()):
+            hdu1.header.extend(h)
 
         #fn0 = "".join([fn, ".fits"])
         hdu.writeto(fn, clobber=True)
+
+
+class PipelineImages(PipelineImageBase):
+    def __init__(self, hdu_list):
+        #PipelineImageBase
+        self.hdu_list = hdu_list
+
+    def iter_header_data(self):
+        for hdu in self.hdu_list:
+            yield hdu.header, hdu.data
+
 
 
 class PipelineDict(dict):
@@ -148,7 +173,7 @@ class PipelineStorage(object):
             return json.load(open(fn))
         elif fn.endswith("mask.fits"):
             hdu = pyfits.open(fn)[0]
-            return PipelineImage(hdu, hdu.data.astype(bool))
+            return PipelineImageBase(hdu, hdu.data.astype(bool))
         elif fn.endswith("fits"):
             hdu = pyfits.open(fn)
             return hdu
@@ -264,6 +289,10 @@ class ProductDB(object):
 
     def query(self, band, obsid):
         import numpy as np
+        import os
+        if not os.path.exists(self.dbpath):
+            return ""
+
         with open(self.dbpath, "r") as myfile:
             obsid_list = []
             basename_list = []
