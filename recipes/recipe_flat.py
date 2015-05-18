@@ -108,12 +108,9 @@ def process_flat_band(utdate, refdate, band, obsids_off, obsids_on,
 
 
         from libs.process_flat import trace_solutions
-        trace_solution_products = trace_solutions(trace_products)
+        trace_solution_products, trace_solution_products_plot = \
+                                 trace_solutions(trace_products)
 
-
-        igr_storage.store(trace_solution_products,
-                          mastername=flat_on_filenames[0],
-                          masterhdu=flat_on_hdu_list[0])
 
 
     # plot qa figures.
@@ -121,13 +118,15 @@ def process_flat_band(utdate, refdate, band, obsids_off, obsids_on,
     if 1:
         from libs.process_flat import check_trace_order
         from matplotlib.figure import Figure
-        fig1 = Figure()
+        fig1 = Figure(figsize=[9, 4])
         check_trace_order(trace_products, fig1)
 
     if 1:
         from libs.process_flat import plot_trace_solutions
         fig2, fig3 = plot_trace_solutions(flaton_products,
-                                          trace_solution_products)
+                                          trace_solution_products,
+                                          trace_solution_products_plot,
+                                          )
 
     flatoff_basename = os.path.splitext(os.path.basename(flat_off_filenames[0]))[0]
     flaton_basename = os.path.splitext(os.path.basename(flat_on_filenames[0]))[0]
@@ -139,6 +138,17 @@ def process_flat_band(utdate, refdate, band, obsids_off, obsids_on,
                                                            "aperture_"+flaton_basename)
 
         figlist_to_pngs(aperture_figs, [fig1, fig2, fig3])
+
+
+
+    if 1: # now trace the orders
+
+        #del trace_solution_products["bottom_up_solutions"]
+        igr_storage.store(trace_solution_products,
+                          mastername=flat_on_filenames[0],
+                          masterhdu=flat_on_hdu_list[0])
+
+
 
     # save db
     if 1:

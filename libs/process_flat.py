@@ -252,11 +252,11 @@ def trace_solutions(trace_products):
                                   domain=[0, nx],
                                   ref_x=nx/2)
 
-    bottom_up_solutions, bottom_up_centroids = _
+    bottom_up_solutions_full, bottom_up_solutions, bottom_up_centroids = _
 
     from numpy.polynomial import Polynomial
     bottom_up_solutions_as_list = []
-    for b, d in bottom_up_solutions:
+    for b, d in bottom_up_solutions_full:
 
         bb, dd = b.convert(kind=Polynomial), d.convert(kind=Polynomial)
         bb_ = ("poly", bb.coef)
@@ -264,17 +264,26 @@ def trace_solutions(trace_products):
         bottom_up_solutions_as_list.append((bb_, dd_))
 
 
-    r = PipelineProducts("order trace solutions")
 
     from storage_descriptions import FLATCENTROID_SOL_JSON_DESC
 
+    r = PipelineProducts("order trace solutions")
     r.add(FLATCENTROID_SOL_JSON_DESC,
           PipelineDict(orders=[],
-                       bottom_up_centroids=bottom_up_centroids,
-                       bottom_up_solutions=bottom_up_solutions_as_list))
+                       #bottom_up_centroids=bottom_up_centroids,
+                       #bottom_up_solutions=bottom_up_solutions,
+                       bottom_up_solutions=bottom_up_solutions_as_list,
+                       ))
 
+    r2 = PipelineProducts("order trace solutions")
+    r2.add(FLATCENTROID_SOL_JSON_DESC,
+           PipelineDict(#orders=[],
+                        bottom_up_centroids=bottom_up_centroids,
+                        bottom_up_solutions=bottom_up_solutions,
+                        #bottom_up_solutions_full=bottom_up_solutions_as_list,
+                        ))
 
-    return r
+    return r, r2
 
 
 
@@ -402,14 +411,16 @@ def check_order_flat(order_flat_products):
     #     hd_spec = stsci_median(hd_list)
 
 
-def plot_trace_solutions(flaton_products, trace_solution_products):
+def plot_trace_solutions(flaton_products,
+                         trace_solution_products,
+                         trace_solution_products_plot
+                         ):
 
     from storage_descriptions import (FLAT_NORMED_DESC,
                                       FLATCENTROID_SOL_JSON_DESC)
 
     flat_normed = flaton_products[FLAT_NORMED_DESC].data
     _d = trace_solution_products[FLATCENTROID_SOL_JSON_DESC]
-    bottom_up_centroids= _d["bottom_up_centroids"]
     bottom_up_solutions_ = _d["bottom_up_solutions"]
 
     bottom_up_solutions = []
@@ -421,10 +432,13 @@ def plot_trace_solutions(flaton_products, trace_solution_products):
         dp = P.Polynomial(d[1])
         bottom_up_solutions.append((bp, dp))
 
-    from libs.trace_flat import plot_solutions
-    fig2, fig3 = plot_solutions(flat_normed,
-                                bottom_up_centroids,
-                                bottom_up_solutions)
+    from libs.trace_flat import plot_solutions1, plot_solutions2
+    fig2 = plot_solutions1(flat_normed,
+                           bottom_up_solutions)
+
+    _d = trace_solution_products_plot[FLATCENTROID_SOL_JSON_DESC]
+    fig3 = plot_solutions2(_d["bottom_up_centroids"],
+                           _d["bottom_up_solutions"])
 
     return fig2, fig3
 

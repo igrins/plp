@@ -251,8 +251,6 @@ def get_line_fiiter(order):
 
     return _f
 
-
-
 def trace_centroids_chevyshev(centroid_bottom_list,
                               centroid_up_list,
                               domain, ref_x=None):
@@ -261,23 +259,46 @@ def trace_centroids_chevyshev(centroid_bottom_list,
     if ref_x is None:
         ref_x = 0.5 * (domain[0] + domain[-1])
 
-    sol_bottom_list = trace_aperture_chebyshev(centroid_bottom_list,
-                                               domain=domain)
+    _ = trace_aperture_chebyshev(centroid_bottom_list,
+                                 domain=domain)
+    sol_bottom_list, sol_bottom_list_full = _
 
-    sol_up_list = trace_aperture_chebyshev(centroid_up_list,
-                                           domain=domain)
+    _ = trace_aperture_chebyshev(centroid_up_list,
+                                 domain=domain)
+    sol_up_list, sol_up_list_full = _
 
-    y0 = sol_bottom_list[0](ref_x) # lower-boundary of the bottom solution
-    yc_list = [s(ref_x) for s in sol_up_list] # upper-boundary list
+    yc_down_list = [s(ref_x) for s in sol_bottom_list_full] # lower-boundary list
+    #y0 = sol_bottom_list[1](ref_x) # lower-boundary of the bottom solution
+    #y0 = yc_down_list[1]
+    yc_up_list = [s(ref_x) for s in sol_up_list_full] # upper-boundary list
 
-    indx = np.searchsorted(yc_list, y0)
+    # yc_down_list[1] should be the 1st down-boundary that is not
+    # outside the detector
 
-    sol_bottom_up_list = zip(sol_bottom_list, sol_up_list[indx:])
+    indx_down_bottom = np.searchsorted(yc_down_list, yc_up_list[1])
+    indx_up_top = np.searchsorted(yc_up_list, yc_down_list[-2],
+                                  side="right")
 
-    centroid_bottom_up_list = zip(centroid_bottom_list,
-                                  centroid_up_list[indx:])
 
-    return sol_bottom_up_list, centroid_bottom_up_list
+    # indx_up_bottom = np.searchsorted(yc_up_list, yc_down_list[1])
+    # indx_down_top = np.searchsorted(yc_down_list, yc_up_list[-2],
+    #                                 side="right")
+
+    #print zip(yc_down_list[1:-1], yc_up_list[indx:])
+    print indx_down_bottom, indx_up_top
+    print yc_down_list
+    print yc_up_list
+    print zip(yc_down_list[indx_down_bottom-1:-1],
+              yc_up_list[1:indx_up_top+1])
+
+    sol_bottom_up_list_full = zip(sol_bottom_list_full[indx_down_bottom-1:-1],
+                                  sol_up_list_full[1:indx_up_top+1])
+
+    sol_bottom_up_list = sol_bottom_list, sol_up_list
+    centroid_bottom_up_list = centroid_bottom_list, centroid_up_list
+    #centroid_bottom_up_list = []
+
+    return sol_bottom_up_list_full, sol_bottom_up_list, centroid_bottom_up_list
 
 
 def trace_centroids(centroid_bottom_list,
@@ -395,12 +416,21 @@ def plot_solutions(flat,
     fig1 = Figure(figsize=(7,7))
 
     ax = fig1.add_subplot(111)
-    ax.imshow(flat, origin="lower", cmap="gray_r")
-    ax.set_autoscale_on(False)
+    ax.imshow(flat, origin="lower") #, cmap="gray_r")
+    #ax.set_autoscale_on(False)
 
     fig2 = Figure()
     ax21 = fig2.add_subplot(211)
     ax22 = fig2.add_subplot(212)
+
+    next_color = itertools.cycle("rg").next
+    for bottom_sol, up_sol in bottom_up_solutions:
+        y_bottom = bottom_sol(x_indices)
+        y_up = up_sol(x_indices)
+
+        c = next_color()
+        ax.plot(x_indices, y_bottom, "-", color=c)
+        ax.plot(x_indices, y_up, "-", color=c)
 
 
     next_color = itertools.cycle("rg").next
@@ -425,6 +455,65 @@ def plot_solutions(flat,
     ax22.set_ylim(-3, 3)
 
     return fig1, fig2
+
+
+
+def plot_solutions1(flat,
+                    bottom_up_solutions):
+
+
+    x_indices = np.arange(flat.shape[1])
+
+    from matplotlib.figure import Figure
+    fig1 = Figure(figsize=(7,7))
+
+    ax = fig1.add_subplot(111)
+    ax.imshow(flat, origin="lower") #, cmap="gray_r")
+    #ax.set_autoscale_on(False)
+
+    next_color = itertools.cycle("rg").next
+    for bottom_sol, up_sol in bottom_up_solutions:
+        y_bottom = bottom_sol(x_indices)
+        y_up = up_sol(x_indices)
+
+        c = next_color()
+        ax.plot(x_indices, y_bottom, "-", color=c)
+        ax.plot(x_indices, y_up, "-", color=c)
+
+
+    return fig1
+
+
+def plot_solutions2(cent_bottomup_list,
+                    bottom_up_solutions):
+
+
+    #x_indices = np.arange(flat.shape[1])
+
+    from matplotlib.figure import Figure
+    fig2 = Figure()
+    ax21 = fig2.add_subplot(211)
+    ax22 = fig2.add_subplot(212)
+
+    for bottom_sol, bottom_cent in \
+        zip(bottom_up_solutions[0], cent_bottomup_list[0]):
+
+        ax21.plot(bottom_cent[0],
+                  bottom_cent[1] - bottom_sol(bottom_cent[0]))
+
+    for up_sol, up_cent in \
+        zip(bottom_up_solutions[1], cent_bottomup_list[1]):
+
+        ax22.plot(up_cent[0],
+                  up_cent[1] - up_sol(up_cent[0]))
+
+    ax21.set_xlim(0, 2048)
+    ax22.set_xlim(0, 2048)
+
+    ax21.set_ylim(-3, 3)
+    ax22.set_ylim(-3, 3)
+
+    return fig2
 
 
 
@@ -579,7 +668,15 @@ def get_finite_boundary_indices(s1):
     # chip boundary.
     s1 = np.array(s1)
     #k1, k2 = np.nonzero(np.isfinite(s1))[0][[0, -1]]
-    k1, k2 = np.nonzero(s1>0.)[0][[0, -1]]
+
+    #k1, k2 = np.nonzero(s1>0.)[0][[0, -1]]
+    nonzero_indices = np.nonzero(s1>0.)[0] #[[0, -1]]
+
+   # # return meaningless indices if non-zero spectra is too short
+   #  if len(nonzero_indices) < 5:
+   #      return 4, 4
+
+    k1, k2 = nonzero_indices[[0, -1]]
     k1 = max(k1, 4)
     k2 = min(k2, 2047-4)
     return k1, k2
@@ -592,11 +689,16 @@ def get_order_boundary_indices(s1, s0=None):
     # chip boundary.
     s1 = np.array(s1)
     #k1, k2 = np.nonzero(np.isfinite(s1))[0][[0, -1]]
-    k1, k2 = np.nonzero(s1>0.05)[0][[0, -1]]
+    nonzero_indices = np.nonzero(s1>0.05)[0] #[[0, -1]]
+
+   # return meaningless indices if non-zero spectra is too short
+    if len(nonzero_indices) < 5:
+        return 4, 4
+
+    k1, k2 = nonzero_indices[[0, -1]]
     k1 = max(k1, 4)
     k2 = min(k2, 2047-4)
     s = s1[k1:k2+1]
-
 
     if s0 is None:
         s0 = get_smoothed_order_spec(s)

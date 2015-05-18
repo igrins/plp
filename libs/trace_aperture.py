@@ -71,13 +71,77 @@ def trace_aperture_chebyshev(xy_list, domain=None):
     # there should be an analitical way, here we refit the trace for
     # each order using the result of 2d fit.
 
-    f_list = []
-    for x, o in zip(x_list, o_list):
-        y_m = p(x, o)
-        f = cheb.Chebyshev.fit(x, y_m, x_degree, domain=domain)
-        f_list.append(f)
+    xx = np.arange(domain[0], domain[1])
+    oo = np.zeros_like(xx)
+    def _get_f(o0):
+        y_m = p(xx, oo+o0)
+        f = cheb.Chebyshev.fit(xx, y_m, x_degree, domain=domain)
+        return f
 
-    return f_list
+    f_list = []
+    ooo = [o[0] for o in o_list]
+    #for x, o in zip(x_list, o_list):
+    f_list = [_get_f(o0) for o0 in ooo]
+
+
+    def _get_f_old(next_orders, y_thresh):
+        oi = next_orders.pop(0)
+        y_m = p(xx, oo+oi)
+        f = cheb.Chebyshev.fit(xx, y_m, x_degree, domain=domain)
+        if next_orders: # if not the last order
+            if np.all(y_thresh(y_m)):
+                print "all negative at ", oi
+                next_orders = next_orders[:1]
+
+        return oi, f, next_orders
+
+    def _get_f(next_orders, y_thresh):
+        oi = next_orders.pop(0)
+        y_m = p(xx, oo+oi)
+        f = cheb.Chebyshev.fit(xx, y_m, x_degree, domain=domain)
+        if np.all(y_thresh(y_m)):
+            print "all negative at ", oi
+            next_orders = []
+
+        return oi, f, next_orders
+
+    # go down in order
+    f_list_down = []
+    o_list_down = []
+    go_down_orders = [ooo[0]-_oi for _oi in range(1, 5)]
+    while go_down_orders:
+        oi, f, go_down_orders = _get_f(go_down_orders,
+                                       y_thresh=lambda y_m: y_m < domain[0])
+        f_list_down.append(f)
+        o_list_down.append(oi)
+
+    f_list_up = []
+    o_list_up = []
+    go_up_orders = [ooo[-1]+_oi for _oi in range(1, 5)]
+    while go_up_orders:
+        oi, f, go_up_orders = _get_f(go_up_orders,
+                                     y_thresh=lambda y_m: y_m > domain[-1])
+        f_list_up.append(f)
+        o_list_up.append(oi)
+
+
+    if 0:
+        _get_f(next_orders)
+
+        oi = go_down_orders.pop(0)
+        y_m = p(xx, oo+ooo[0]-oi)
+        f = cheb.Chebyshev.fit(xx, y_m, x_degree, domain=domain)
+        if go_down_orders: # if not the last order
+            if np.all(y_m < domain[0]):
+                print "all negative at ", ooo[0]-oi
+                go_down_orders = [oi+1]
+            else:
+                f_list_down.append(f)
+        else:
+            f_list_down.append(f)
+
+    print o_list_down[::-1] + ooo + o_list_up
+    return f_list, f_list_down[::-1] + f_list + f_list_up
 
 
 def trace_aperture_chebyshev_old(xy_list, domain=None):

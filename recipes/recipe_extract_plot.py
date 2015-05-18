@@ -70,7 +70,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
 
     from recipe_extract_base import RecipeExtractPR
     extractor = RecipeExtractPR(utdate, band,
-                                obsids, frametypes, config)
+                                obsids, config)
 
     master_obsid = extractor.pr.master_obsid
     igr_path = extractor.pr.igr_path
