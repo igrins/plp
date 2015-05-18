@@ -123,6 +123,11 @@ def get_smooth_continuum(s, wvl=None):
 
     from libs.trace_flat import get_finite_boundary_indices
     k1, k2 = get_finite_boundary_indices(s)
+    if k1 == k2:
+        r = np.empty(len(s), dtype="d")
+        r.fill(np.nan)
+        return r
+
     sl = slice(k1, k2+1)
 
     #s1m = ni.median_filter(np.array(s1[sl]), 150)
@@ -139,11 +144,17 @@ def get_smooth_continuum(s, wvl=None):
             s1m[msk] = np.nan
 
 
-    f12 = sv_iter(s1m, winsize1=351, winsize2=91)
+    if len(s1m) > 351:
+        f12 = sv_iter(s1m, winsize1=351, winsize2=91)
+    elif len(s1m) > 25:
+        f12 = sv_iter(s1m, winsize1=25, winsize2=11)
+    else:
+        f12 = None
 
     r = np.empty(len(s), dtype="d")
     r.fill(np.nan)
-    r[sl] = f12
+    if f12 is not None:
+        r[sl] = f12
     return r
 
 
