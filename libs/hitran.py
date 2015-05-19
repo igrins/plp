@@ -205,7 +205,7 @@ def bootstrap(utdate):
 
 
 
-def reidentify(wvl_sol, s_list, bootstrap):
+def reidentify(orders_w_solutions, wvl_sol, s_list, bootstrap):
     """
     dict
     """
@@ -220,17 +220,24 @@ def reidentify(wvl_sol, s_list, bootstrap):
     # now get the pixel corrdinates from observed data.
 
     med_filter = hitran.get_median_filtered_spec
-    s_list_m = [med_filter(wvl_sol[i], s_list[i]) for i in range(5)]
-    s_list_dict = dict(zip(igrins_orders[band],
-                           s_list_m))
+    bootstrapped_order = range(72, 94)[:5]
+    s_list_dict = dict()
+    for o in bootstrapped_order:
+        if o in orders_w_solutions:
+            i = orders_w_solutions.index(o)
+            s = med_filter(wvl_sol[i], s_list[i])
+            s_list_dict[o] = s
+
+    # s_list_m = [med_filter(wvl_sol[i], s_list[i]) for i in range(5)]
+    # s_list_dict = dict(zip(orders_w_solutions, #igrins_orders[band],
+    #                        s_list_m))
 
     h_dict = dict((int(i), r) for i, r in bootstrap.items())
 
     ref_wvl_dict = dict((i, r["wavelength_grouped"]) for i, r \
                         in h_dict.items())
 
-    wvl_sol_dict = dict((igrins_orders[band][i], s) for i, s \
-                          in enumerate(wvl_sol))
+    wvl_sol_dict = dict(zip(orders_w_solutions, wvl_sol))
 
     ref_wvl_dict_v2, igr_sol, ref_pixel_list = fit_hitrans_wvl(s_list_dict,
                                                                wvl_sol_dict,

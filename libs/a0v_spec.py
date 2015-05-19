@@ -133,28 +133,34 @@ def get_flattend(a0v_spec,
 
         ss = interp1d(wvl, s)
 
-        s_interped = ss(a0v_wvl[z_m])
+        x_s = a0v_wvl[z_m]
+        if len(x_s):
 
-        xxx, yyy = a0v_wvl[z_m], s_interped/a0v_tel_trans_masked[z_m]
+            s_interped = ss(x_s)
 
-        p_init = models.Chebyshev1D(domain=[wvl1, wvl2],
-                                    degree=6)
-        fit_p = fitting.LinearLSQFitter()
-        x_m = np.isfinite(yyy)
-        p = fit_p(p_init, xxx[x_m], yyy[x_m])
+            xxx, yyy = a0v_wvl[z_m], s_interped/a0v_tel_trans_masked[z_m]
 
-        res_ = p(wvl)
+            p_init = models.Chebyshev1D(domain=[wvl1, wvl2],
+                                        degree=6)
+            fit_p = fitting.LinearLSQFitter()
+            x_m = np.isfinite(yyy)
+            p = fit_p(p_init, xxx[x_m], yyy[x_m])
 
-        s_f = s/res_
+            res_ = p(wvl)
 
-        # now divide by A0V
-        a0v = a0v_interp1d(wvl)
+            s_f = s/res_
+
+            # now divide by A0V
+            a0v = a0v_interp1d(wvl)
 
 
-        s_f = s_f/a0v
+            s_f = s_f/a0v
 
-        z_m = (wvl1 < wvl) & (wvl < wvl2)
-        s_f[~z_m] = np.nan
+            z_m = (wvl1 < wvl) & (wvl < wvl2)
+            s_f[~z_m] = np.nan
+
+        else:
+            s_f = s / np.nanmax(s)
 
         a0v_flattened.append(s_f)
 

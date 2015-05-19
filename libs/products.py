@@ -304,10 +304,13 @@ class ProductDB(object):
                 obsid_list.append(int(l1.strip().split("_")[-1]))
                 basename_list.append(l1.strip())
 
-            # return last one with minimum distance
-            obsid_dist = np.abs(np.array(obsid_list) - obsid)
-            i = np.where(obsid_dist == np.min(obsid_dist))[0][-1]
-            return basename_list[i]
+            if obsid_list:
+                # return last one with minimum distance
+                obsid_dist = np.abs(np.array(obsid_list) - obsid)
+                i = np.where(obsid_dist == np.min(obsid_dist))[0][-1]
+                return basename_list[i]
+            else:
+                return None
 
 
 def WavelenthSolutions(object):

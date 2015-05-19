@@ -210,7 +210,8 @@ class ProcessSkyBand(object):
 
         extractor = RecipeExtractPR(self.utdate, band,
                                     obsids,
-                                    self.config)
+                                    self.config,
+                                    load_a0v_db=False)
 
         self.save_db(extractor, band)
 
@@ -504,7 +505,8 @@ class ProcessSkyBand(object):
             bootstrap = json.load(open(bootstrap_name))
 
             import libs.hitran as hitran
-            r, ref_pixel_dict_hitrans = hitran.reidentify(wvl_solutions,
+            r, ref_pixel_dict_hitrans = hitran.reidentify(orders_w_solutions,
+                                                          wvl_solutions,
                                                           s_center,
                                                           bootstrap)
             # for i, s in r.items():
@@ -833,6 +835,7 @@ class SkyFitter(WavelengthFitter):
         return ref_pixel_list, reidentified_lines
 
     def update_K(self, reidentified_lines_map,
+                 orders_w_solutions,
                  wvl_solutions, s_list):
         import libs.master_calib as master_calib
         fn = "hitran_bootstrap_K_%s.json" % self.refdate
@@ -841,7 +844,8 @@ class SkyFitter(WavelengthFitter):
         bootstrap = json.load(open(bootstrap_name))
 
         import libs.hitran as hitran
-        r, ref_pixel_list = hitran.reidentify(wvl_solutions, s_list,
+        r, ref_pixel_list = hitran.reidentify(orders_w_solutions,
+                                              wvl_solutions, s_list,
                                               bootstrap)
         # json_name = "hitran_reidentified_K_%s.json" % igrins_log.date
         # r = json.load(open(json_name))
@@ -879,6 +883,7 @@ class SkyFitter(WavelengthFitter):
 
         if band == "K":
             self.update_K(reidentified_lines_map,
+                          orders_w_solutions,
                           wvl_solutions, s_list)
 
         xl, yl, zl = get_ordered_line_data(reidentified_lines_map)
