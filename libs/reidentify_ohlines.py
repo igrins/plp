@@ -9,6 +9,10 @@ def get_ref_list(ohlines, line_indices_list,
     ref_pixel_list = []
     for o, wvl, s in  zip(orders_w_solution,
                           wvl_solutions, s_list):
+        if o not in line_indices_list:
+            ref_wvl_list.append([])
+            ref_pixel_list.append([])
+            continue
         line_indices = line_indices_list[o]
         x = np.arange(len(s))
         um2pixel = interp1d(wvl, x, bounds_error=False)

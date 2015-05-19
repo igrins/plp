@@ -172,7 +172,8 @@ def process_thar_band(utdate, refdate, band, obsids, config):
         figlist_to_pngs(thar_figs, fig_list)
 
         thar_wvl_sol = get_wavelength_solutions(thar_aligned_echell_products,
-                                                echel)
+                                                echel,
+                                                new_orders)
 
         igr_storage.store(thar_wvl_sol,
                           mastername=thar_filenames[0],

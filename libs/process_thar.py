@@ -316,7 +316,11 @@ def check_thar_transorm(thar_products, thar_echell_products):
 
     return [fig2, fig3]
 
-def get_wavelength_solutions(thar_echellogram_products, echel):
+def get_wavelength_solutions(thar_echellogram_products, echel,
+                             new_orders):
+    """
+    new_orders : output orders
+    """
     from ecfit import get_ordered_line_data, fit_2dspec, check_fit
 
     from storage_descriptions import THAR_ALIGNED_JSON_DESC
@@ -337,7 +341,8 @@ def get_wavelength_solutions(thar_echellogram_products, echel):
     x_domain = [0, 2047]
     orders_band = sorted(echel.zdata.keys())
     #orders = igrins_orders[band]
-    y_domain = [orders_band[0]-2, orders_band[-1]+2]
+    #y_domain = [orders_band[0]-2, orders_band[-1]+2]
+    y_domain = [new_orders[0], new_orders[-1]]
     p, m = fit_2dspec(xl, yl, zl, x_degree=4, y_degree=3,
                       x_domain=x_domain, y_domain=y_domain)
 
@@ -350,7 +355,7 @@ def get_wavelength_solutions(thar_echellogram_products, echel):
 
     xx = np.arange(2048)
     wvl_sol = []
-    for o in orders_band:
+    for o in new_orders:
         oo = np.empty_like(xx)
         oo.fill(o)
         wvl = p(xx, oo) / o
@@ -365,7 +370,7 @@ def get_wavelength_solutions(thar_echellogram_products, echel):
 
     r = PipelineProducts("wavelength solution from ThAr")
     r.add(THAR_WVLSOL_JSON_DESC,
-          PipelineDict(orders=orders_band,
+          PipelineDict(orders=new_orders,
                        wvl_sol=wvl_sol))
 
     return r
