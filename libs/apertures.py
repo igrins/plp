@@ -563,8 +563,11 @@ class Apertures(object):
             sl = slices[o-1][0], slice(0, 2048)
             msk = (order_map[sl] == o)
 
-            from scipy.interpolate import UnivariateSpline
             msk_s = np.isfinite(s)
+            if np.sum(msk_s) < 2:
+                continue
+
+            from scipy.interpolate import UnivariateSpline
             s_spline = UnivariateSpline(xx[msk_s], s[msk_s], k=3, s=0,
                                         bbox=[0, 2047])
 

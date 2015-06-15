@@ -276,6 +276,33 @@ class RecipeExtractBase(RecipeExtractPR):
         #                                   basenames["flat_on"])
         #fitted_response = orderflat_json["fitted_responses"]
 
+    @lazyprop
+    def sky_mask(self):
+
+        msk_ = (self.ordermap_bpixed > 0) | self.destripe_mask
+
+        msk = msk_
+        msk[self.pix_mask] = True
+
+        msk[:4] = True
+        msk[-4:] = True
+        msk[:,:4] = True
+        msk[:,-4:] = True
+
+        return msk
+
+    def estimate_sky(self, data, msk, di=24, min_pixel=40):
+
+        from libs.estimate_sky import (estimate_background,
+                                       get_interpolated_cubic)
+
+        xc, yc, v, std = estimate_background(data, msk,
+                                             di=di, min_pixel=min_pixel)
+
+        nx = ny = 2048
+        ZI3 = get_interpolated_cubic(nx, ny, xc, yc, v)
+
+        return ZI3
 
     def get_data_variance(self,
                           destripe_pattern=64,
@@ -325,6 +352,8 @@ class RecipeExtractBase(RecipeExtractPR):
                                              destrip_mask,
                                              pattern=destripe_pattern,
                                              hori=sub_horizontal_median)
+
+        # remove sky
 
         # now estimate variance_map
 

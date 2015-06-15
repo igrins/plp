@@ -95,6 +95,8 @@ class FlatOn(object):
                                              bg_std, hotpix_mask)
 
         flat_normed = flat_on_off / norm_factor
+        flat_std_normed = ni.median_filter(np.std(self.data_list, axis=0) / norm_factor,
+                                           size=(3,3))
         bg_std_norm = bg_std/norm_factor
 
         # mask out bpix
@@ -111,12 +113,13 @@ class FlatOn(object):
                                          [smooth_size, smooth_size])
         #flat_smoothed[order_map==0] = np.nan
         flat_ratio = flat_normed/flat_smoothed
+        flat_std_mask = (flat_smoothed - flat_normed) > 5*flat_std_normed
 
         refpixel_mask = np.ones(flat_mask.shape, bool)
         # mask out outer boundaries
         refpixel_mask[4:-4,4:-4] = False
 
-        deadpix_mask = (flat_ratio<deadpix_thresh) & flat_mask & (~refpixel_mask)
+        deadpix_mask = (flat_ratio<deadpix_thresh) & flat_std_mask & flat_mask & (~refpixel_mask)
 
         if deadpix_mask_old is not None:
             deadpix_mask = deadpix_mask | deadpix_mask_old
