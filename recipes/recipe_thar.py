@@ -53,22 +53,30 @@ def thar(utdate, bands="HK",
 #             process_thar_band(utdate, refdate, band, obsids)
 
 
-def process_thar_band(utdate, refdate, band, obsids, config):
+from libs.products import ProductDB
 
-    from libs.products import ProductDB, PipelineStorage
+class RecipeHelper:
+    def __init__(self, utdate, refdate, config):
+        from libs.products import PipelineStorage
 
-    igr_path = IGRINSPath(config, utdate)
+        self.utdate = utdate
+        self.refdate = refdate
+        self.config = config
 
-    igr_storage = PipelineStorage(igr_path)
+        self.igr_path = IGRINSPath(config, utdate)
 
-    thar_filenames = igr_path.get_filenames(band, obsids)
+        self.igr_storage = PipelineStorage(self.igr_path)
 
-    thar_basename = os.path.splitext(os.path.basename(thar_filenames[0]))[0]
+    def get_filenames(self, band, obsids):
+        return self.igr_path.get_filenames(band, obsids)
 
 
-    thar_master_obsid = obsids[0]
+def get_bottom_up_solution(helper, band, thar_master_obsid):
+    """
+    aperture that only requires flat product. No order information.
+    """
 
-    flaton_db_name = igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
+    flaton_db_name = helper.igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
                                                         "flat_on.db",
                                                         )
     flaton_db = ProductDB(flaton_db_name)
@@ -79,8 +87,8 @@ def process_thar_band(utdate, refdate, band, obsids, config):
     from libs.storage_descriptions import FLATCENTROID_SOL_JSON_DESC
 
     desc_list = [FLATCENTROID_SOL_JSON_DESC]
-    products = igr_storage.load(desc_list,
-                                mastername=flaton_basename)
+    products = helper.igr_storage.load(desc_list,
+                                       mastername=flaton_basename)
 
     aperture_solution_products = products[FLATCENTROID_SOL_JSON_DESC]
 
@@ -91,56 +99,92 @@ def process_thar_band(utdate, refdate, band, obsids, config):
     if 1:
         bottomup_solutions = aperture_solution_products["bottom_up_solutions"]
 
+        return bottomup_solutions
+
+def get_simple_aperture(helper, band, thar_master_obsid, orders=None):
+
+    bottomup_solutions = get_bottom_up_solution(helper, band, thar_master_obsid)
+
+    if orders is None:
         orders = range(len(bottomup_solutions))
 
-        ap =  Apertures(orders, bottomup_solutions)
+    ap =  Apertures(orders, bottomup_solutions)
+
+    return ap
+
+def get_thar_products(helper, band, obsids):
+
+    thar_filenames = helper.get_filenames(band, obsids)
+    thar_basename = os.path.splitext(os.path.basename(thar_filenames[0]))[0]
+    thar_master_obsid = obsids[0]
+
+    ap = get_simple_aperture(helper, band, thar_master_obsid)
 
     if 1:
         from libs.process_thar import ThAr
 
+        thar_filenames = helper.get_filenames(band, obsids)
         thar = ThAr(thar_filenames)
 
         thar_products = thar.process_thar(ap)
 
-    if 1: # match order
+    return thar_products
+
+def get_orders_matching_ref_spec(helper, band, obsids, thar_products):
+    if 1:
         from libs.process_thar import match_order_thar
         from libs.master_calib import load_thar_ref_data
 
         #ref_date = "20140316"
 
-        thar_ref_data = load_thar_ref_data(refdate, band)
+        thar_ref_data = load_thar_ref_data(helper.refdate, band)
 
         new_orders = match_order_thar(thar_products, thar_ref_data)
 
         print thar_ref_data["orders"]
         print  new_orders
 
-        ap =  Apertures(new_orders, bottomup_solutions)
+    if 1:
 
         from libs.storage_descriptions import ONED_SPEC_JSON_DESC
         thar_products[ONED_SPEC_JSON_DESC]["orders"] = new_orders
 
-
-    if 1:
+        thar_filenames = helper.get_filenames(band, obsids)
 
         hdu = pyfits.open(thar_filenames[0])[0]
-        igr_storage.store(thar_products,
-                          mastername=thar_filenames[0],
-                          masterhdu=hdu)
+        helper.igr_storage.store(thar_products,
+                                 mastername=thar_filenames[0],
+                                 masterhdu=hdu)
+
+    return new_orders
+
+
+def identify_lines(helper, band, obsids, thar_products):
+    thar_filenames = helper.get_filenames(band, obsids)
 
     if 1:
-        # measure shift of thar lines from reference spectra
+        from libs.master_calib import load_thar_ref_data
 
-        # load spec
+        #ref_date = "20140316"
+
+        thar_ref_data = load_thar_ref_data(helper.refdate, band)
 
         from libs.process_thar import reidentify_ThAr_lines
         thar_reidentified_products = reidentify_ThAr_lines(thar_products,
                                                            thar_ref_data)
 
-        igr_storage.store(thar_reidentified_products,
-                          mastername=thar_filenames[0],
-                          masterhdu=hdu)
+        hdu = pyfits.open(thar_filenames[0])[0]
+        helper.igr_storage.store(thar_reidentified_products,
+                                 mastername=thar_filenames[0],
+                                 masterhdu=hdu)
 
+        return thar_reidentified_products
+
+
+def find_initial_wvlsol(helper, band, obsids,
+                        thar_products,
+                        thar_reidentified_products,
+                        new_orders):
     if 1:
 
         from libs.process_thar import (load_echelogram,
@@ -148,8 +192,18 @@ def process_thar_band(utdate, refdate, band, obsids, config):
                                        check_thar_transorm,
                                        get_wavelength_solutions)
 
+        from libs.master_calib import load_thar_ref_data
+
+        #ref_date = "20140316"
+
+        thar_ref_data = load_thar_ref_data(helper.refdate, band)
+
         ref_date = thar_ref_data["ref_date"]
         echel = load_echelogram(ref_date, band)
+
+        thar_master_obsid = obsids[0]
+        ap = get_simple_aperture(helper, band, thar_master_obsid,
+                                 orders=new_orders)
 
         thar_aligned_echell_products = \
              align_echellogram_thar(thar_reidentified_products,
@@ -161,11 +215,19 @@ def process_thar_band(utdate, refdate, band, obsids, config):
         #                   masterhdu=hdu)
 
 
+    # Make figures
+
+    thar_filenames = helper.get_filenames(band, obsids)
+    thar_basename = os.path.splitext(os.path.basename(thar_filenames[0]))[0]
+    thar_master_obsid = obsids[0]
+
+    if 1:
 
         fig_list = check_thar_transorm(thar_products,
                                        thar_aligned_echell_products)
 
         from libs.qa_helper import figlist_to_pngs
+        igr_path = helper.igr_path
         thar_figs = igr_path.get_section_filename_base("QA_PATH",
                                                        "thar",
                                                        "thar_"+thar_basename)
@@ -175,17 +237,25 @@ def process_thar_band(utdate, refdate, band, obsids, config):
                                                 echel,
                                                 new_orders)
 
-        igr_storage.store(thar_wvl_sol,
-                          mastername=thar_filenames[0],
-                          masterhdu=hdu)
+        hdu = pyfits.open(thar_filenames[0])[0]
+        helper.igr_storage.store(thar_wvl_sol,
+                                 mastername=thar_filenames[0],
+                                 masterhdu=hdu)
+
+def save_figures(helper, band, obsids, thar_products, new_orders):
+    thar_filenames = helper.get_filenames(band, obsids)
+    thar_basename = os.path.splitext(os.path.basename(thar_filenames[0]))[0]
+    thar_master_obsid = obsids[0]
 
     if 1: # make amp and order falt
+
+        ap = get_simple_aperture(helper, band, thar_master_obsid,
+                                 orders=new_orders)
 
         from libs.storage_descriptions import ONED_SPEC_JSON_DESC
 
         orders = thar_products[ONED_SPEC_JSON_DESC]["orders"]
         order_map = ap.make_order_map()
-        order_map2 = ap.make_order_map(mask_top_bottom=True)
         #slitpos_map = ap.make_slitpos_map()
 
 
@@ -196,8 +266,16 @@ def process_thar_band(utdate, refdate, band, obsids, config):
         from libs.storage_descriptions import (FLAT_NORMED_DESC,
                                                FLAT_MASK_DESC)
 
-        flaton_products = igr_storage.load([FLAT_NORMED_DESC, FLAT_MASK_DESC],
-                                           flaton_basename)
+        flaton_db_name = helper.igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
+                                                                   "flat_on.db",
+                                                                   )
+        flaton_db = ProductDB(flaton_db_name)
+
+        flaton_basename = flaton_db.query(band, thar_master_obsid)
+
+        flaton_products = helper.igr_storage.load([FLAT_NORMED_DESC,
+                                                   FLAT_MASK_DESC],
+                                                  flaton_basename)
 
         from libs.process_flat import make_order_flat, check_order_flat
         order_flat_products = make_order_flat(flaton_products,
@@ -206,12 +284,14 @@ def process_thar_band(utdate, refdate, band, obsids, config):
         #fn = thar_path.get_secondary_path("orderflat")
         #order_flat_products.save(fn, masterhdu=hdu)
 
-        igr_storage.store(order_flat_products,
-                          mastername=flaton_basename,
-                          masterhdu=hdu)
+        hdu = pyfits.open(thar_filenames[0])[0]
+        helper.igr_storage.store(order_flat_products,
+                                 mastername=flaton_basename,
+                                 masterhdu=hdu)
 
-        flat_mask = igr_storage.load1(FLAT_MASK_DESC,
-                                      flaton_basename)
+        flat_mask = helper.igr_storage.load1(FLAT_MASK_DESC,
+                                             flaton_basename)
+        order_map2 = ap.make_order_map(mask_top_bottom=True)
         bias_mask = flat_mask.data & (order_map2 > 0)
 
         pp = PipelineProducts("")
@@ -219,28 +299,87 @@ def process_thar_band(utdate, refdate, band, obsids, config):
         pp.add(BIAS_MASK_DESC,
                PipelineImageBase([], bias_mask))
 
-        igr_storage.store(pp,
-                          mastername=flaton_basename,
-                          masterhdu=hdu)
+        helper.igr_storage.store(pp,
+                                 mastername=flaton_basename,
+                                 masterhdu=hdu)
 
     if 1:
         fig_list = check_order_flat(order_flat_products)
 
         from libs.qa_helper import figlist_to_pngs
-        orderflat_figs = igr_path.get_section_filename_base("QA_PATH",
-                                                            "orderflat",
-                                                            "orderflat_"+thar_basename)
+        orderflat_figs = helper.igr_path.get_section_filename_base("QA_PATH",
+                                                                   "orderflat",
+                                                                   "orderflat_"+thar_basename)
         figlist_to_pngs(orderflat_figs, fig_list)
+
+
+def save_db(helper, band, obsids):
+    thar_filenames = helper.get_filenames(band, obsids)
+    thar_basename = os.path.splitext(os.path.basename(thar_filenames[0]))[0]
 
     if 1:
         from libs.products import ProductDB
-        thar_db_name = igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
-                                                          "thar.db",
-                                                          )
+        thar_db_name = helper.igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
+                                                                 "thar.db",
+                                                                 )
         thar_db = ProductDB(thar_db_name)
         # os.path.join(igr_path.secondary_calib_path,
         #                                  "thar.db"))
         thar_db.update(band, thar_basename)
+
+
+def process_thar_band(utdate, refdate, band, obsids, config):
+
+    helper = RecipeHelper(utdate, refdate, config)
+
+
+
+
+    # STEP 1 :
+    ## load simple-aperture (no order info; depends on
+    ## aperture trace from Flat)
+
+    # Step 2
+    ## extract 1-d spectra from ThAr
+
+
+    thar_products = get_thar_products(helper, band, obsids)
+
+    # Step 3:
+    ## compare to reference ThAr data to figure out orders of each strip
+    ##  -  simple correlation w/ clipping
+
+    new_orders = get_orders_matching_ref_spec(helper, band, obsids, thar_products)
+
+    # Step 4:
+
+
+    # step 5:
+    ##  - For each strip, measure x-displacement from the reference
+    ##    spec. Fit the displacement as a function of orders.
+    ##  - Using the estimated displacement, identify lines from the spectra.
+    thar_reidentified_products = identify_lines(helper, band, obsids,
+                                                thar_products)
+
+    # Step 6:
+
+    ## load the reference echellogram, and find the transform using
+    ## the identified lines.
+
+    find_initial_wvlsol(helper, band, obsids,
+                        thar_products,
+                        thar_reidentified_products,
+                        new_orders)
+
+
+    # Step 8:
+
+    ## make order_map and auxilary files.
+
+    save_figures(helper, band, obsids, thar_products, new_orders)
+
+    save_db(helper, band, obsids)
+
 
 
 if __name__ == "__main__":
