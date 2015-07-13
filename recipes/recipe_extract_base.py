@@ -59,7 +59,8 @@ class ProcessBase(object):
             db_name = igr_path.get_section_filename_base("OUTDATA_PATH",
                                                          "%s.db" % db_type,
                                                          )
-            self.db[db_type] = ProductDB(db_name)
+            if os.path.exists(db_name):
+                self.db[db_type] = ProductDB(db_name)
 
         # to get basenames
         db_types = ["flat_off", "flat_on", "thar", "sky"]
@@ -67,8 +68,9 @@ class ProcessBase(object):
             db_types.append("a0v")
 
         for db_type in db_types:
-            self.basenames[db_type] = self.db[db_type].query(band,
-                                                             self.master_obsid)
+            if db_type in self.db:
+                self.basenames[db_type] = self.db[db_type].query(band,
+                                                                 self.master_obsid)
 
 def get_pr(utdate, config_file="recipe.config"):
     from libs.igrins_config import IGRINSConfig
@@ -269,12 +271,15 @@ class RecipeExtractBase(RecipeExtractPR):
 
         self.ab_mode = ab_mode
 
-        from libs.correct_distortion import ShiftX
-        self.shiftx = ShiftX(self.slitoffset_map)
-
         #orderflat_json = igr_storage.load1(ORDER_FLAT_JSON_DESC,
         #                                   basenames["flat_on"])
         #fitted_response = orderflat_json["fitted_responses"]
+
+    @lazyprop
+    def shiftx(self):
+        from libs.correct_distortion import ShiftX
+        return ShiftX(self.slitoffset_map)
+
 
     @lazyprop
     def sky_mask(self):

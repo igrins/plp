@@ -163,11 +163,11 @@ class ProcessABBABand(object):
 
         data_minus, variance_map, variance_map0 = _
 
-        data_minus_sky = extractor.estimate_sky(data_minus,
-                                                extractor.sky_mask)
-
         if self.sky_subtract:
             print "### doing sky subtraction"
+            data_minus_sky = extractor.estimate_sky(data_minus,
+                                                    extractor.sky_mask)
+
             data_minus -= data_minus_sky
 
         data_minus_flattened = data_minus / extractor.orderflat

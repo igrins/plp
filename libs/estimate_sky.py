@@ -154,6 +154,7 @@ def get_interpolated_cubic(nx, ny, xc, yc, v,
     in_xy = np.array([xc, yc]).T
     out_xy = np.array([xi_r, yi_r]).T
     import scipy
+    import scipy.interpolate
     out_v = scipy.interpolate.griddata(in_xy, v, out_xy,
                                        method="cubic").reshape(XI.shape)
 
