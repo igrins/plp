@@ -11,12 +11,18 @@ def match_orders(orders, s_list_src, s_list_dst):
     center_s = s_list_src[center_indx]
 
     from scipy.signal import correlate
+    from scipy.ndimage import median_filter
+    #ss5 = ni.median_filter(ss, 25)
 
     # TODO : it is not clear if this is a right algorithm
 
     # we have to clip the spectra so that the correlation is not
     # sensitive to bright lines in the target spectra.
-    s_list_dst_clip = [np.clip(s, -10, 100) for s in s_list_dst]
+    s_list_dst_filtered = [s - median_filter(s, 55) for s in s_list_dst]
+    std_list = [np.nanstd(s) for s in s_list_dst_filtered]
+    #std_list = [100 for s in s_list_dst_filtered]
+    s_list_dst_clip = [np.clip(s, -0.1*s_std, s_std)/s_std for (s, s_std) \
+                       in zip(s_list_dst_filtered, std_list)]
     cor_list = [correlate(center_s, s, mode="same") for s in s_list_dst_clip]
     cor_max_list = [np.nanmax(cor) for cor in cor_list]
 
@@ -56,6 +62,8 @@ def get_offset_transform(thar_spec_src, thar_spec_dst):
     outliers_indices = xi[inliers == False]
     offsets2 = [o for o in offsets]
     for i in outliers_indices:
+        # reduce the search range for correlation peak using the model
+        # prediction.
         ym = int(model_robust.predict_y(i))
         x1 = max(0, (center - ym) - 20)
         x2 = min((center - ym) + 20 + 1, 2048)

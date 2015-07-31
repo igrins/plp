@@ -6,7 +6,13 @@ import astropy.io.fits as pyfits
 
 from libs.products import PipelineProducts
 
+import argh
+
 def extractor_factory(recipe_name):
+    @argh.arg("-s", "--starting-obsids", default=None)
+    @argh.arg("-c", "--config-file", default="recipe.config")
+    @argh.arg("--wavelength-increasing_order")
+    @argh.arg("--lacosmics-thresh")
     def extract(utdate, refdate="20140316", bands="HK",
                 starting_obsids=None,
                 config_file="recipe.config",
@@ -15,7 +21,7 @@ def extractor_factory(recipe_name):
                 debug_output=False,
                 wavelength_increasing_order=False,
                 lacosmics_thresh=0,
-                estimate_sky=False,
+                subtract_sky=False,
                 ):
         abba_all(recipe_name, utdate, refdate=refdate, bands=bands,
                  starting_obsids=starting_obsids,
@@ -25,7 +31,7 @@ def extractor_factory(recipe_name):
                  debug_output=debug_output,
                  wavelength_increasing_order=wavelength_increasing_order,
                  lacosmics_thresh=lacosmics_thresh,
-                 sky_subtract=estimate_sky,
+                 sky_subtract=subtract_sky,
                  )
 
     extract.__name__ = recipe_name.lower()

@@ -25,6 +25,10 @@ class RecipeBase(object):
         else:
             return None
 
+    def run_selected_bands_with_recipe(self, utdate, selected, bands, recipe):
+        # just ignore recipe
+        self.run_selected_bands(utdate, selected, bands)
+
     def __call__(self, utdate, bands="HK",
                  starting_obsids=None, config_file="recipe.config"):
 
@@ -39,6 +43,16 @@ class RecipeBase(object):
 
         starting_obsids_parsed = self.parse_starting_obsids(starting_obsids)
 
-        selected = recipes.select(self.RECIPE_NAME, starting_obsids_parsed)
+        if isinstance(self.RECIPE_NAME, str):
+            selected = recipes.select(self.RECIPE_NAME, starting_obsids_parsed)
 
-        self.run_selected_bands(utdate, selected, bands)
+            recipe_selected = [(self.RECIPE_NAME, selected)]
+
+        else:
+            selected_multi = recipes.select_multi(self.RECIPE_NAME,
+                                                  starting_obsids_parsed)
+            recipe_selected = zip(self.RECIPE_NAME, selected_multi)
+
+        for recipe_name, selected in recipe_selected:
+            self.run_selected_bands_with_recipe(utdate, selected,
+                                                bands, recipe_name)

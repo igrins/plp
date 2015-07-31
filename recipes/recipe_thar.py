@@ -55,20 +55,7 @@ def thar(utdate, bands="HK",
 
 from libs.products import ProductDB
 
-class RecipeHelper:
-    def __init__(self, utdate, refdate, config):
-        from libs.products import PipelineStorage
-
-        self.utdate = utdate
-        self.refdate = refdate
-        self.config = config
-
-        self.igr_path = IGRINSPath(config, utdate)
-
-        self.igr_storage = PipelineStorage(self.igr_path)
-
-    def get_filenames(self, band, obsids):
-        return self.igr_path.get_filenames(band, obsids)
+from libs.recipe_helper import RecipeHelper
 
 
 def get_bottom_up_solution(helper, band, thar_master_obsid):
@@ -135,7 +122,33 @@ def get_orders_matching_ref_spec(helper, band, obsids, thar_products):
         from libs.process_thar import match_order_thar
         from libs.master_calib import load_thar_ref_data
 
-        #ref_date = "20140316"
+        thar_ref_data = load_thar_ref_data(helper.refdate, band)
+
+        new_orders = match_order_thar(thar_products, thar_ref_data)
+
+        print thar_ref_data["orders"]
+        print  new_orders
+
+    if 1:
+
+        from libs.storage_descriptions import ONED_SPEC_JSON_DESC
+        thar_products[ONED_SPEC_JSON_DESC]["orders"] = new_orders
+
+        thar_filenames = helper.get_filenames(band, obsids)
+
+        hdu = pyfits.open(thar_filenames[0])[0]
+        helper.igr_storage.store(thar_products,
+                                 mastername=thar_filenames[0],
+                                 masterhdu=hdu)
+
+    return new_orders
+
+
+
+def get_orders_matching_ref_spec2(helper, band, obsids, thar_products):
+    if 1:
+        from libs.process_thar import match_order_thar
+        from libs.master_calib import load_thar_ref_data
 
         thar_ref_data = load_thar_ref_data(helper.refdate, band)
 
@@ -157,6 +170,8 @@ def get_orders_matching_ref_spec(helper, band, obsids, thar_products):
                                  masterhdu=hdu)
 
     return new_orders
+
+
 
 
 def identify_lines(helper, band, obsids, thar_products):
@@ -381,8 +396,7 @@ def process_thar_band(utdate, refdate, band, obsids, config):
     save_db(helper, band, obsids)
 
 
-
-if __name__ == "__main__":
+def main():
     import sys
 
     utdate = sys.argv[1]
@@ -397,6 +411,16 @@ if __name__ == "__main__":
 
     thar(utdate, refdate="20140316", bands=bands,
          starting_obsids=starting_obsids)
+
+
+if __name__ == "__main__":
+    utdate = "20150525"
+    band = "H"
+    obsids = [52]
+    refdate = "20140316"
+
+    from libs.igrins_config import IGRINSConfig
+    config = IGRINSConfig("recipe.config")
 
 
 # if __name__ == "__main__":

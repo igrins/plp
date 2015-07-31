@@ -74,6 +74,54 @@ def match_order_thar(thar_products, thar_ref_data):
     return orders_dst
 
 
+def match_order(src_spectra, ref_spectra):
+    import numpy as np
+
+    orders_ref = ref_spectra["orders"]
+    s_list_ref = ref_spectra["specs"]
+
+    s_list_ = src_spectra["specs"]
+    s_list = [np.array(s) for s in s_list_]
+
+    # match the orders of s_list_src & s_list_dst
+    from libs.reidentify_thar_lines import match_orders
+    delta_indx, orders = match_orders(orders_ref, s_list_ref,
+                                      s_list)
+
+    return orders
+
+
+def get_offset_treanform_between_2spec(ref_spec, tgt_spec):
+    import numpy as np
+
+    orders_ref = ref_spec["orders"]
+    s_list_ref = ref_spec["specs"]
+
+    orders_tgt = tgt_spec["orders"]
+    s_list_tgt = tgt_spec["specs"]
+
+    s_list_tgt = [np.array(s) for s in s_list_tgt]
+
+    orders_intersection = set(orders_ref).intersection(orders_tgt)
+    orders_intersection = sorted(orders_intersection)
+
+    def filter_order(orders, s_list, orders_intersection):
+        s_dict = dict(zip(orders, s_list))
+        s_list_filtered = [s_dict[o] for o in orders_intersection]
+        return s_list_filtered
+
+    s_list_ref_filtered = filter_order(orders_ref, s_list_ref,
+                                       orders_intersection)
+    s_list_tgt_filtered = filter_order(orders_tgt, s_list_tgt,
+                                       orders_intersection)
+
+    from reidentify_thar_lines import get_offset_transform
+    offset_transform = get_offset_transform(s_list_ref_filtered,
+                                            s_list_tgt_filtered)
+
+    return orders_intersection, offset_transform
+
+
 def reidentify_ThAr_lines(thar_products, thar_ref_data):
     import numpy as np
 
@@ -143,6 +191,7 @@ def load_echelogram(ref_date, band):
     echel = Echellogram.from_json_fitted_echellogram_sky(echel_name)
 
     return echel
+
 
 def align_echellogram_thar(thar_reidentified_products, echel, band, ap):
 
@@ -316,7 +365,7 @@ def check_thar_transorm(thar_products, thar_echell_products):
 
     return [fig2, fig3]
 
-def get_wavelength_solutions(thar_echellogram_products, echel,
+def get_wavelength_solutions_deprecated(thar_echellogram_products, echel,
                              new_orders):
     """
     new_orders : output orders
@@ -374,3 +423,75 @@ def get_wavelength_solutions(thar_echellogram_products, echel,
                        wvl_sol=wvl_sol))
 
     return r
+
+
+def get_wavelength_solutions(thar_echellogram_products, echelle,
+                             new_orders):
+
+    from storage_descriptions import THAR_ALIGNED_JSON_DESC
+
+    affine_tr = thar_echellogram_products[THAR_ALIGNED_JSON_DESC]["affine_tr"]
+
+    wvl_sol = get_wavelength_solutions2(affine_tr,
+                                        echelle.zdata,
+                                        new_orders)
+
+
+    from storage_descriptions import THAR_WVLSOL_JSON_DESC
+
+    r = PipelineProducts("wavelength solution from ThAr")
+    r.add(THAR_WVLSOL_JSON_DESC,
+          PipelineDict(orders=new_orders,
+                       wvl_sol=wvl_sol))
+
+    return r
+
+
+def get_wavelength_solutions2(affine_tr, zdata,
+                              new_orders):
+    """
+    new_orders : output orders
+    """
+    from ecfit import get_ordered_line_data, fit_2dspec, check_fit
+
+
+    d_x_wvl = {}
+    for order, z in zdata.items():
+        xy_T = affine_tr.transform(np.array([z.x, z.y]).T)
+        x_T = xy_T[:,0]
+        d_x_wvl[order]=(x_T, z.wvl)
+
+    xl, yl, zl = get_ordered_line_data(d_x_wvl)
+    # xl : pixel
+    # yl : order
+    # zl : wvl * order
+
+    x_domain = [0, 2047]
+    orders_band = sorted(zdata.keys())
+    #orders = igrins_orders[band]
+    #y_domain = [orders_band[0]-2, orders_band[-1]+2]
+    y_domain = [new_orders[0], new_orders[-1]]
+    p, m = fit_2dspec(xl, yl, zl, x_degree=4, y_degree=3,
+                      x_domain=x_domain, y_domain=y_domain)
+
+    if 0:
+        import matplotlib.pyplot as plt
+        fig = plt.figure(figsize=(12, 7))
+        check_fit(fig, xl, yl, zl, p, orders_band, d_x_wvl)
+        fig.tight_layout()
+
+
+    xx = np.arange(2048)
+    wvl_sol = []
+    for o in new_orders:
+        oo = np.empty_like(xx)
+        oo.fill(o)
+        wvl = p(xx, oo) / o
+        wvl_sol.append(list(wvl))
+
+    if 0:
+        json.dump(wvl_sol,
+                  open("wvl_sol_phase0_%s_%s.json" % \
+                       (band, igrins_log.date), "w"))
+
+    return wvl_sol

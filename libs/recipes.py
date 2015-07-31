@@ -25,6 +25,12 @@ class Recipes(object):
         self.recipe_list = load_recipe_list(fn)
         self.recipe_dict = make_recipe_dict(self.recipe_list)
 
+    def select_multi(self, recipe_names, starting_obsids=None):
+        selected_multi = []
+        for recipe_name in recipe_names:
+            _ = self.select(recipe_name, starting_obsids)
+            selected_multi.append(_)
+
     def select(self, recipe_name, starting_obsids=None):
         if recipe_name == "ALL_RECIPES":
             recipes_selected = []

@@ -20,6 +20,7 @@ FLAT_DERIV_DESC = ("SECONDARY_CALIB_PATH", "FLAT_", ".flat_deriv.fits")
 FLATCENTROIDS_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".centroids.json")
 
 FLATCENTROID_SOL_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".centroid_solutions.json")
+FLATCENTROID_ORDERS_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".orders.json")
 
 BIAS_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".bias_mask.fits")
 
@@ -40,9 +41,14 @@ ONED_SPEC_JSON_DESC = ("PRIMARY_CALIB_PATH", "", ".oned_spec.json")
 #COMBINED_IMAGE_DESC = ("OUTDATA_PATH", "", ".combined_image.fits")
 #ONED_SPEC_JSON_DESC = ("OUTDATA_PATH", "", ".oned_spec.json")
 
+IDENTIFIED_LINES_JSON_DESC = ("PRIMARY_CALIB_PATH", "", ".identified_lines.json")
+
 THAR_REID_JSON_DESC = ("PRIMARY_CALIB_PATH", "THAR_", ".thar_reid.json")
 THAR_ALIGNED_JSON_DESC = ("PRIMARY_CALIB_PATH", "THAR_", ".thar_aligned.json")
 THAR_WVLSOL_JSON_DESC = ("PRIMARY_CALIB_PATH", "THAR_", ".wvlsol_v0.json")
+
+ALIGNING_MATRIX_JSON_DESC = ("PRIMARY_CALIB_PATH", "", ".aligning_matrix.json")
+WVLSOL_V0_JSON_DESC = ("PRIMARY_CALIB_PATH", "", ".wvlsol_v0.json")
 
 # SKY
 

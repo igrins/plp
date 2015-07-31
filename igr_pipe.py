@@ -33,8 +33,17 @@ recipe_list = [recipes.recipe_flat.flat,
                prepare_recipe_logs
                ]
 
+import recipes.recipe_register
+subcommands = dict(register=recipes.recipe_register.get_recipe_list())
+
+
 parser = argh.ArghParser()
 parser.add_commands(recipe_list)
 
+for k, v in subcommands.items():
+    parser.add_commands(v, namespace=k)
+
 if __name__ == '__main__':
+    import numpy
+    numpy.seterr(all="ignore")
     argh.dispatch(parser)

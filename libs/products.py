@@ -14,11 +14,13 @@ class PipelineImage(object):
 
 
 class PipelineImageBase(object):
-    def __init__(self, header, *data_list):
+    def __init__(self, header, *data_list, **kwargs):
         self.header = header
         self.header_list = [header] * len(data_list)
         self.data_list = data_list
         self.data = data_list[0]
+
+        self.masterhdu = kwargs.get("masterhdu", None)
 
     def __getitem__(self, i):
         return type(self)(self.header_list[i], self.data_list[i])
@@ -29,6 +31,9 @@ class PipelineImageBase(object):
             yield h, d
 
     def store(self, fn, masterhdu=None):
+
+        if masterhdu is None:
+            masterhdu = self.masterhdu
 
         d_list2 = []
         for h, d in self.iter_header_data():
@@ -84,7 +89,7 @@ class PipelineDict(dict):
     def __init__(self, **kwargs):
         dict.__init__(self, **kwargs)
 
-    def store(self, fn, masterhdu):
+    def store(self, fn, masterhdu=None):
         json_dump(self, open(fn, "w"))
 
 class PipelineProducts(dict):
@@ -100,6 +105,7 @@ class PipelineStorage(object):
     def __init__(self, igr_path):
         self.igr_path = igr_path
         self._cache = {}
+        self._hdu_cache = self._cache
 
     @classmethod
     def from_utdate(cls, utdate, config=None):
@@ -121,6 +127,14 @@ class PipelineStorage(object):
         return fn
 
 
+    def get_masterhdu(self, mastername):
+        if mastername in self._hdu_cache:
+            return self._hdu_cache[mastername][0]
+        else:
+            hdu_list = pyfits.open(mastername)
+            self._hdu_cache[mastername] = hdu_list
+            return hdu_list[0]
+
     def load(self, product_descs, mastername):
         mastername, ext_ = os.path.splitext(mastername)
 
@@ -140,6 +154,57 @@ class PipelineStorage(object):
 
             #self.save_one(fn, v, masterhdu)
         return r
+
+    def get_item_path(self, product_desc, mastername):
+        mastername, ext_ = os.path.splitext(mastername)
+
+        section, prefix, ext = product_desc
+
+        fn0 = prefix + os.path.basename(mastername) + ext
+        fn = self.igr_path.get_section_filename_base(section, fn0)
+
+        return fn
+
+
+    def load_item_from_path(self, item_path):
+
+        fn = item_path
+
+        if fn in self._cache:
+            print "loading (cached)", fn
+            v = self._cache[fn]
+        else:
+            print "loading", fn
+            v = self.load_one(fn)
+            self._cache[fn] = v
+
+            #self.save_one(fn, v, masterhdu)
+        return v
+
+    def load_item(self, product_desc, mastername):
+
+        fn = self.get_item_path(product_desc, mastername)
+
+        if fn in self._cache:
+            print "loading (cached)", fn
+            v = self._cache[fn]
+        else:
+            print "loading", fn
+            v = self.load_one(fn)
+            self._cache[fn] = v
+
+            #self.save_one(fn, v, masterhdu)
+        return v
+
+    def store_item(self, product_desc, mastername, item):
+
+        fn = self.get_item_path(product_desc, mastername)
+        print "saving %s" % fn
+
+        item.store(fn)
+
+        self._cache[fn] = item
+
 
     def load1(self, product_desc, mastername,
               return_hdu_list=False):
@@ -161,11 +226,11 @@ class PipelineStorage(object):
             print "store", fn
             if cache:
                 self._cache[fn] = v
-            self.save_one(fn, v, masterhdu)
+            self.save_one(fn, v, masterhdu=masterhdu)
 
     def save_one(self, fn, v, masterhdu=None):
 
-        v.store(fn, masterhdu)
+        v.store(fn, masterhdu=masterhdu)
 
     def load_one(self, fn):
 
@@ -284,8 +349,14 @@ class ProductDB(object):
         self.dbpath = dbpath
 
     def update(self, band, basename):
-        with open(self.dbpath, "a") as myfile:
-            myfile.write("%s %s\n" % (band, basename))
+        if os.path.exists(self.dbpath):
+            mode = "a"
+        else:
+            mode = "w"
+
+        with open(self.dbpath, mode) as myfile:
+                myfile.write("%s %s\n" % (band, basename))
+
 
     def query(self, band, obsid):
         import numpy as np

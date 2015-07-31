@@ -11,7 +11,7 @@ def find_feature_mask_simple(s_msk, sigma=1, ax=None, x_values=None):
     #filtered_spec = ni.gaussian_filter1d(filtered_spec, 0.5)
     #smoothed_std = get_smoothed_std(filtered_spec,
     #                                rad=3, smooth_length=3)
-    std = filtered_spec.std()
+    std = np.nanstd(filtered_spec)
     for i in [0, 1]:
         std = filtered_spec[np.abs(filtered_spec)<3*std].std()
 

@@ -59,8 +59,8 @@ class ProcessBase(object):
             db_name = igr_path.get_section_filename_base("OUTDATA_PATH",
                                                          "%s.db" % db_type,
                                                          )
-            if os.path.exists(db_name):
-                self.db[db_type] = ProductDB(db_name)
+            #if os.path.exists(db_name):
+            self.db[db_type] = ProductDB(db_name)
 
         # to get basenames
         db_types = ["flat_off", "flat_on", "thar", "sky"]

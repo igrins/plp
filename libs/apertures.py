@@ -21,7 +21,8 @@ class ApCoeff(object):
 
 
 class Apertures(object):
-    def __init__(self, orders, bottomup_solutions):
+    def __init__(self, orders, bottomup_solutions,
+                 basename=""):
         self.orders = orders
 
         self.apcoeffs = {}
@@ -36,13 +37,15 @@ class Apertures(object):
         self.yi = np.arange(2048)
         self.xi = np.arange(2048)
 
+        self.basename = basename
+
 
     def __call__(self, order, pixels, frac=0.5):
         return self.apcoeffs[order](pixels, frac)
 
     def get_xy_list(self, pixels_list, nan_filter=None):
         """
-        ohlines_list : dict of tuples of (pixel coord list)
+        pixel_list : dict of tuples of (pixel coord list)
         """
 
         xy2 = []
@@ -133,6 +136,15 @@ class Apertures(object):
             order_map[m_up & m_down] = o
 
         return order_map
+
+
+    def extract_spectra_simple(self, data, mode="median"):
+        if mode == "median":
+            s = self.extract_spectra_v2(data)
+        else:
+            raise ValueError("unsupported mode value : mode = ", mode)
+
+        return s
 
     def extract_spectra_v2(self, data, f1=0., f2=1.):
 

@@ -29,8 +29,10 @@ class IGRINSPath(object):
         self.utdate = utdate
 
         self.sections = dict()
+
         for n in self.sections_names:
-            self.sections[n] = self.config.get_value(n, utdate)
+            d = self.config.get_value(n, utdate)
+            self.sections[n] = join(self.config.root_dir, d)
 
         for k, d in self.sections.items():
             if k not in self.sections_names_no_ensuredir:

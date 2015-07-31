@@ -1,5 +1,6 @@
 import ConfigParser
 import warnings
+import os
 
 default_config_content = """[DEFAULT]
 REFDATE=20140316
@@ -19,6 +20,10 @@ class IGRINSConfig(object):
             config_file = 'recipe.config'
         self.config_file = config_file
 
+        import os.path
+        #_ = os.path.abspath(config_file)
+        self.root_dir = os.path.dirname(config_file)
+
         self.config = ConfigParser.ConfigParser()
 
         import StringIO
@@ -30,14 +35,26 @@ class IGRINSConfig(object):
         if not read_file:
             warnings.warn("no recipe.config is found. Internal default will be used.")
 
+        self.master_cal_dir = os.path.join(self.root_dir,
+                                           self.config.get("DEFAULT",
+                                                           "MASTER_CAL_DIR",
+                                                           0))
+
+        import os
+        self.config.read(os.path.join(self.master_cal_dir,
+                                      "master_cal.config"))
+
     def get_value(self, option, utdate):
         return self.config.get("DEFAULT", option, 0, dict(UTDATE=utdate))
+
+    def get(self, section, kind, **kwargs):
+        return self.config.get(section, kind, 0, kwargs)
 
 
 if __name__ == "__main__":
 
-    igrins_config = IGRINSConfig()
-    print igrins_config.get_value('RECIPE_LOG_PATH', "20140525")
+    config = IGRINSConfig()
+    print config.get_value('RECIPE_LOG_PATH', "20140525")
 
     # print config.get("DEFAULT", 'INDATA_PATH', 0, dict(UTDATE="20140525"))
 

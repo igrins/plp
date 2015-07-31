@@ -112,6 +112,35 @@ def process_flat_band(utdate, refdate, band, obsids_off, obsids_on,
                                  trace_solutions(trace_products)
 
 
+    if 1:
+        trace_solution_products.keys()
+        from libs.storage_descriptions import FLATCENTROID_SOL_JSON_DESC
+
+        myproduct = trace_solution_products[FLATCENTROID_SOL_JSON_DESC]
+        bottomup_solutions = myproduct["bottom_up_solutions"]
+
+        orders = range(len(bottomup_solutions))
+
+        from libs.apertures import Apertures
+        ap =  Apertures(orders, bottomup_solutions)
+
+        from libs.storage_descriptions import FLAT_MASK_DESC
+        flat_mask = igr_storage.load1(FLAT_MASK_DESC,
+                                      flat_on_filenames[0])
+        order_map2 = ap.make_order_map(mask_top_bottom=True)
+        bias_mask = flat_mask.data & (order_map2 > 0)
+
+        from libs.products import PipelineImageBase, PipelineProducts
+        pp = PipelineProducts("")
+        from libs.storage_descriptions import BIAS_MASK_DESC
+        pp.add(BIAS_MASK_DESC,
+               PipelineImageBase([], bias_mask))
+
+        flaton_basename = flat_on_filenames[0]
+        igr_storage.store(pp,
+                          mastername=flaton_basename,
+                          masterhdu=hdu)
+
 
     # plot qa figures.
 
