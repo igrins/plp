@@ -11,7 +11,8 @@ import argh
 def extractor_factory(recipe_name):
     @argh.arg("-s", "--starting-obsids", default=None)
     @argh.arg("-c", "--config-file", default="recipe.config")
-    @argh.arg("--wavelength-increasing_order")
+    @argh.arg("--wavelength-increasing-order")
+    @argh.arg("--fill-nan")
     @argh.arg("--lacosmics-thresh")
     def extract(utdate, refdate="20140316", bands="HK",
                 starting_obsids=None,
@@ -20,6 +21,7 @@ def extractor_factory(recipe_name):
                 cr_rejection_thresh=30,
                 debug_output=False,
                 wavelength_increasing_order=False,
+                fill_nan=None,
                 lacosmics_thresh=0,
                 subtract_sky=False,
                 ):
@@ -30,6 +32,7 @@ def extractor_factory(recipe_name):
                  cr_rejection_thresh=cr_rejection_thresh,
                  debug_output=debug_output,
                  wavelength_increasing_order=wavelength_increasing_order,
+                 fill_nan=fill_nan,
                  lacosmics_thresh=lacosmics_thresh,
                  sky_subtract=subtract_sky,
                  )
@@ -53,6 +56,7 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
              cr_rejection_thresh=100.,
              debug_output=False,
              wavelength_increasing_order=False,
+             fill_nan=None,
              lacosmics_thresh=0,
              sky_subtract=False,
              ):
@@ -83,7 +87,8 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
                   cr_rejection_thresh=cr_rejection_thresh,
                   debug_output=debug_output,
                   wavelength_increasing_order=wavelength_increasing_order,
-                  sky_subtract=sky_subtract)
+                  sky_subtract=sky_subtract,
+                  fill_nan=fill_nan)
 
     process_abba_band = ProcessABBABand(utdate, refdate,
                                         config,
@@ -110,6 +115,7 @@ class ProcessABBABand(object):
                  cr_rejection_thresh=100,
                  debug_output=False,
                  wavelength_increasing_order=False,
+                 fill_nan=None,
                  lacosmics_thresh=0,
                  sky_subtract=False):
         """
@@ -127,6 +133,9 @@ class ProcessABBABand(object):
         self.cr_rejection_thresh = cr_rejection_thresh
         self.lacosmics_thresh = lacosmics_thresh
         self.debug_output = debug_output
+
+        self.fill_nan=fill_nan
+
         self.wavelength_increasing_order = wavelength_increasing_order
 
         self.sky_subtract = sky_subtract
@@ -755,63 +764,21 @@ class ProcessABBABand(object):
         a0v_interp1d = self.get_a0v_interp1d(extractor)
 
 
-        from libs.a0v_flatten import SpecFlattener, FlattenFailException
-
-        spec_flattener = SpecFlattener(tel_interp1d_f, a0v_interp1d)
-
-        dw_opt=0
-        gw_opt=3.
-
         orderflat_response = extractor.orderflat_json["fitted_responses"]
-
-        ccc = []
-        _interim_result = []
-
-
-        print "flattening ...",
-        for w1, s1_orig, of in zip(wvl, s_list, orderflat_response):
-
-            print "(%5.3f~%5.3f)" % (w1[0], w1[-1]),
-            s1_a0v = spec_flattener.get_s_a0v(w1, dw_opt)
-            tt1 = spec_flattener.get_tel_trans(w1, dw_opt, gw_opt)
-
-            try:
-                _ = spec_flattener.flatten(w1, s1_orig,
-                                           of, s1_a0v, tt1)
-            except FlattenFailException:
-                ccc.append((np.zeros_like(w1),
-                            np.ones_like(w1, dtype=bool),
-                            s1_a0v, tt1))
-
-            else:
-                _interim_result.append((w1, s1_orig, of, s1_a0v, tt1, _))
-                msk_i, msk_sv, fitted_continuum = _
-                ccc.append((fitted_continuum, msk_sv, s1_a0v, tt1))
-
-        print " - Done."
-
-        continuum_array = np.array([c for c, m, a, t in ccc])
-        mask_array = np.array([m for c, m, a, t in ccc])
-        a0v_array = np.array([a for c, m, a, t in ccc])
-        teltrans_array = np.array([t for c, m, a, t in ccc])
-
-        data_list = [("flattened_spec", s_list/continuum_array),
-                     ("wavelength", wvl),
-                     ("fitted_continuum", continuum_array),
-                     ("mask", mask_array),
-                     ("a0v_norm", a0v_array),
-                     ("model_teltrans", teltrans_array),
-                     ]
-
-
-        from libs.a0v_flatten import plot_flattend_a0v
 
         tgt_basename = extractor.pr.tgt_basename
         igr_path = extractor.igr_path
         figout = igr_path.get_section_filename_base("QA_PATH",
                                                     "flattened_"+tgt_basename) + ".pdf"
 
-        plot_flattend_a0v(spec_flattener, wvl, s_list, orderflat_response, data_list, fout=figout)
+        from libs.a0v_flatten import get_a0v_flattened
+        data_list = get_a0v_flattened(a0v_interp1d, tel_interp1d_f,
+                                      wvl, s_list, orderflat_response,
+                                      figout=figout)
+
+        if self.fill_nan is not None:
+            flattened_s = data_list[0][1]
+            flattened_s[~np.isfinite(flattened_s)] = self.fill_nan
 
         return data_list
 

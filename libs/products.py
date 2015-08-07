@@ -75,9 +75,10 @@ class PipelineImageBase(object):
 
 
 class PipelineImages(PipelineImageBase):
-    def __init__(self, hdu_list):
+    def __init__(self, hdu_list, **kwargs):
         #PipelineImageBase
         self.hdu_list = hdu_list
+        self.masterhdu = kwargs.get("masterhdu", None)
 
     def iter_header_data(self):
         for hdu in self.hdu_list:

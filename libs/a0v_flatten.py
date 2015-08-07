@@ -168,9 +168,14 @@ class SpecFlattener(object):
                             weight_func=None):
 
         if weight_func is None:
-            rad1 = 30
-            rad2 = 150.
-            frac = 0.1
+            finite_frac = 1 - np.mean(msk) #float(np.sum((msk)))/len(msk)
+            print finite_frac
+            finite_frac = np.clip(finite_frac , 0.1, 0.8)
+            rad1 = 15./ finite_frac
+            #rad1 = 150
+            rad2 = 160.
+            frac = 0.5 * (1. - finite_frac)
+            print "frac, rad1, A = %d, %3f, %3f" % (finite_frac, int(rad1), frac),
             def weight_func(dist, rad1=rad1, rad2=rad2):
                 return np.exp(-(dist/(2.*rad1))**2) + frac*np.exp(-(dist/(2.*rad2))**2)
 
@@ -185,7 +190,7 @@ class SpecFlattener(object):
 
             ii = np.searchsorted(indices, i)
 
-            dd = 15
+            dd = 25
             lower_indices = indices[max(0, ii-dd):ii]
             upper_indices = indices[ii:min(len(msk), ii+dd)]
 
@@ -249,6 +254,8 @@ class SpecFlattener(object):
         try:
             msk_sv = self.get_sv_mask(ratio_msk)
         except RuntimeError:
+            msk_sv = msk_i
+        except ValueError:
             msk_sv = msk_i
 
         lll = self.get_of_interpolated(ratio_msk, tt, of, msk_sv)
@@ -492,6 +499,79 @@ def plot_flattend_a0v(spec_flattener, w, s_orig, of_list, data_list,
 
 
 
+# def get_a0v_flattened(self, extractor, ap,
+#                       s_list, wvl):
+def get_a0v_flattened(a0v_interp1d, tel_interp1d_f,
+                      wvl, s_list, orderflat_response,
+                      figout=None):
+
+    # a0v_interp1d = self.get_a0v_interp1d(extractor)
+    # tel_interp1d_f = self.get_tel_interp1d_f(extractor, wvl)
+
+
+    # orderflat_response = extractor.orderflat_json["fitted_responses"]
+
+
+    #from libs.a0v_flatten import SpecFlattener, FlattenFailException
+    spec_flattener = SpecFlattener(tel_interp1d_f, a0v_interp1d)
+
+
+    dw_opt=0
+    gw_opt=3.
+
+    ccc = []
+    _interim_result = []
+
+
+    print "flattening ...",
+    for w1, s1_orig, of in zip(wvl, s_list, orderflat_response):
+
+        print "(%5.3f~%5.3f)" % (w1[0], w1[-1]),
+        s1_a0v = spec_flattener.get_s_a0v(w1, dw_opt)
+        tt1 = spec_flattener.get_tel_trans(w1, dw_opt, gw_opt)
+
+        try:
+            _ = spec_flattener.flatten(w1, s1_orig,
+                                       of, s1_a0v, tt1)
+        except FlattenFailException:
+            ccc.append((np.zeros_like(w1),
+                        np.ones_like(w1, dtype=bool),
+                        s1_a0v, tt1))
+
+        else:
+            _interim_result.append((w1, s1_orig, of, s1_a0v, tt1, _))
+            msk_i, msk_sv, fitted_continuum = _
+            ccc.append((fitted_continuum, msk_sv, s1_a0v, tt1))
+
+    print " - Done."
+
+    continuum_array = np.array([c for c, m, a, t in ccc])
+    mask_array = np.array([m for c, m, a, t in ccc])
+    a0v_array = np.array([a for c, m, a, t in ccc])
+    teltrans_array = np.array([t for c, m, a, t in ccc])
+
+    flattened_s = s_list/continuum_array
+    # if self.fill_nan is not None:
+    #     flattened_s[~np.isfinite(flattened_s)] = self.fill_nan
+
+    data_list = [("flattened_spec", flattened_s),
+                 ("wavelength", wvl),
+                 ("fitted_continuum", continuum_array),
+                 ("mask", mask_array),
+                 ("a0v_norm", a0v_array),
+                 ("model_teltrans", teltrans_array),
+                 ]
+
+
+    if figout is not None:
+        from libs.a0v_flatten import plot_flattend_a0v
+
+        plot_flattend_a0v(spec_flattener, wvl, s_list, orderflat_response, data_list, fout=figout)
+
+    return data_list
+
+
+
 if __name__ == "__main__":
 
 
@@ -529,53 +609,9 @@ if __name__ == "__main__":
         return tel_trans.get_telluric_trans_interp1d(w_min, w_max, gw)
 
 
-    spec_flattener = SpecFlattener(tel_interp1d_f, a0v_interp1d)
+    of_list = orderflat["fitted_responses"]
 
-    # try spec.flattener
-    if 1:
-        #sl = slice(7,10)
-        sl = slice(None)
-        #sl = slice(7, 8)
-        dw_opt=0
-        gw_opt=3.
-
-        #i=15
-        ccc = []
-        _interim_result = []
-
-        of_list = orderflat["fitted_responses"]
-
-        print "flattening ...",
-        for w1, s1_orig, of in zip(w, s_orig, of_list)[sl][:]:
-
-            print "(%5.3f~%5.3f)" % (w1[0], [-1]),
-            s1_a0v = spec_flattener.get_s_a0v(w1, dw_opt)
-            tt1 = spec_flattener.get_tel_trans(w1, dw_opt, gw_opt)
-
-            try:
-                _ = spec_flattener.flatten(w1, s1_orig,
-                                           of, s1_a0v, tt1)
-                #dw_opt, gw_opt)
-            except FlattenFailException:
-                ccc.append((np.zeros_like(w1),
-                            np.ones_like(w1, dtype=bool),
-                            s1_a0v, tt1))
-
-            else:
-                _interim_result.append((w1, s1_orig, of, s1_a0v, tt1, _))
-                msk_i, msk_sv, fitted_continuum = _
-                ccc.append((fitted_continuum, msk_sv, s1_a0v, tt1))
-
-        continuum_array = np.array([c for c, m, a, t in ccc])
-        mask_array = np.array([m for c, m, a, t in ccc])
-        a0v_array = np.array([a for c, m, a, t in ccc])
-        teltrans_array = np.array([t for c, m, a, t in ccc])
-        data_list = [("flattened_spec", s_orig/continuum_array),
-                     ("wavelength", w),
-                     ("fitted_continuum", continuum_array),
-                     ("mask", mask_array),
-                     ("a0v_norm", a0v_array),
-                     ("model_teltrans", teltrans_array),
-                     ]
-
-        plot_flattend_a0v(w, s_orig, of_list, data_list)
+    figout = "multi_page.pdf"
+    data_list = get_a0v_flattened(a0v_interp1d, tel_interp1d_f,
+                                  w, s_orig, of_list,
+                                  figout=figout)
