@@ -471,12 +471,20 @@ class ProcessABBABand(object):
 
         if DO_STD:
 
-            a0v_flattened = self.get_a0v_flattened(igr_storage,
-                                                   extractor, ap,
-                                                   s_list)
+            wvl = self.refine_wavelength_solution(extractor.wvl_solutions)
+
+            a0v_flattened_data = self.get_a0v_flattened(extractor, ap,
+                                                        s_list,
+                                                        wvl)
+
+            a0v_flattened = a0v_flattened_data[0][1]  #"flattened_spec"]
 
             self.store_a0v_results(igr_storage, extractor,
                                    a0v_flattened)
+
+
+    def refine_wavelength_solution(self, wvl_solutions):
+        return wvl_solutions
 
 
     def store_profile(self, igr_storage, mastername,
@@ -705,9 +713,110 @@ class ProcessABBABand(object):
         f_obj.writeto(fout, clobber=True)
 
 
+    def get_tel_interp1d_f(self, extractor, wvl_solutions):
+
+        from libs.master_calib import get_master_calib_abspath
+        #fn = get_master_calib_abspath("telluric/LBL_A15_s0_w050_R0060000_T.fits")
+        #self.telluric = pyfits.open(fn)[1].data
+
+        telfit_outname = "telluric/transmission-795.20-288.30-41.9-45.0-368.50-3.90-1.80-1.40.%s" % extractor.band
+        telfit_outname_npy = telfit_outname+".npy"
+        if 0:
+            dd = np.genfromtxt(telfit_outname)
+            np.save(open(telfit_outname_npy, "w"), dd[::10])
+
+        from libs.a0v_flatten import TelluricTransmission
+        _fn = get_master_calib_abspath(telfit_outname_npy)
+        tel_trans = TelluricTransmission(_fn)
+
+        wvl_solutions = np.array(wvl_solutions)
+
+        w_min = wvl_solutions.min()*0.9
+        w_max = wvl_solutions.max()*1.1
+        def tel_interp1d_f(gw=None):
+            return tel_trans.get_telluric_trans_interp1d(w_min, w_max, gw)
+
+        return tel_interp1d_f
+
+    def get_a0v_interp1d(self, extractor):
+
+        from libs.a0v_spec import A0VSpec
+        a0v_model = A0VSpec()
+        a0v_interp1d = a0v_model.get_flux_interp1d(1.3, 2.5,
+                                                   flatten=True,
+                                                   smooth_pixel=32)
+        return a0v_interp1d
 
 
-    def get_a0v_flattened(self, igr_storage, extractor, ap,
+    def get_a0v_flattened(self, extractor, ap,
+                          s_list, wvl):
+
+        tel_interp1d_f = self.get_tel_interp1d_f(extractor, wvl)
+        a0v_interp1d = self.get_a0v_interp1d(extractor)
+
+
+        from libs.a0v_flatten import SpecFlattener, FlattenFailException
+
+        spec_flattener = SpecFlattener(tel_interp1d_f, a0v_interp1d)
+
+        dw_opt=0
+        gw_opt=3.
+
+        orderflat_response = extractor.orderflat_json["fitted_responses"]
+
+        ccc = []
+        _interim_result = []
+
+
+        print "flattening ...",
+        for w1, s1_orig, of in zip(wvl, s_list, orderflat_response):
+
+            print "(%5.3f~%5.3f)" % (w1[0], w1[-1]),
+            s1_a0v = spec_flattener.get_s_a0v(w1, dw_opt)
+            tt1 = spec_flattener.get_tel_trans(w1, dw_opt, gw_opt)
+
+            try:
+                _ = spec_flattener.flatten(w1, s1_orig,
+                                           of, s1_a0v, tt1)
+            except FlattenFailException:
+                ccc.append((np.zeros_like(w1),
+                            np.ones_like(w1, dtype=bool),
+                            s1_a0v, tt1))
+
+            else:
+                _interim_result.append((w1, s1_orig, of, s1_a0v, tt1, _))
+                msk_i, msk_sv, fitted_continuum = _
+                ccc.append((fitted_continuum, msk_sv, s1_a0v, tt1))
+
+        print " - Done."
+
+        continuum_array = np.array([c for c, m, a, t in ccc])
+        mask_array = np.array([m for c, m, a, t in ccc])
+        a0v_array = np.array([a for c, m, a, t in ccc])
+        teltrans_array = np.array([t for c, m, a, t in ccc])
+
+        data_list = [("flattened_spec", s_list/continuum_array),
+                     ("wavelength", wvl),
+                     ("fitted_continuum", continuum_array),
+                     ("mask", mask_array),
+                     ("a0v_norm", a0v_array),
+                     ("model_teltrans", teltrans_array),
+                     ]
+
+
+        from libs.a0v_flatten import plot_flattend_a0v
+
+        tgt_basename = extractor.pr.tgt_basename
+        igr_path = extractor.igr_path
+        figout = igr_path.get_section_filename_base("QA_PATH",
+                                                    "flattened_"+tgt_basename) + ".pdf"
+
+        plot_flattend_a0v(spec_flattener, wvl, s_list, orderflat_response, data_list, fout=figout)
+
+        return data_list
+
+
+    def get_a0v_flattened_deprecated(self, igr_storage, extractor, ap,
                           s_list):
 
         from libs.storage_descriptions import ORDER_FLAT_JSON_DESC

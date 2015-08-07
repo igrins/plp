@@ -157,6 +157,16 @@ class RecipeExtractPR(object):
 
         return orderflat
 
+    @lazyprop
+    def orderflat_json(self):
+
+        from libs.storage_descriptions import ORDER_FLAT_JSON_DESC
+
+        orderflat = self.igr_storage.load1(ORDER_FLAT_JSON_DESC,
+                                           self.basenames["flat_on"])
+
+        return orderflat
+
 
     @lazyprop
     def ordermap(self):

@@ -40,8 +40,12 @@ class TelluricTransmission(object):
 class A0VSpec(object):
     def __init__(self):
         from libs.master_calib import get_master_calib_abspath
-        fn = get_master_calib_abspath("A0V/vegallpr25.50000resam5")
-        d = np.genfromtxt(fn)
+
+        #fn = get_master_calib_abspath("A0V/vegallpr25.50000resam5")
+        #d = np.genfromtxt(fn)
+
+        fn = get_master_calib_abspath("A0V/vegallpr25.50000resam5.npy")
+        d = np.load(fn)
 
         wvl, flux, cont = (d[:,i] for i in [0, 1, 2])
         wvl = wvl/1000.
@@ -168,6 +172,7 @@ def get_flattend(a0v_spec,
 
 
 if __name__ == "__main__":
+
     a0v_spec = A0VSpec()
     tel_trans = TelluricTransmission()
 

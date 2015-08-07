@@ -176,10 +176,11 @@ class ProcessSkyBand(object):
         # json_name_ = "SDC%s_%s_0003.median_spectra.wvlsol" % (band,
         #                                                      igrins_log.date)
 
-        from libs.storage_descriptions import THAR_WVLSOL_JSON_DESC
+        #from libs.storage_descriptions import THAR_WVLSOL_JSON_DESC
+        from libs.storage_descriptions import WVLSOL_V0_JSON_DESC
         thar_basename = extractor.db["thar"].query(band, master_obsid)
-        thar_wvl_sol = igr_storage.load([THAR_WVLSOL_JSON_DESC],
-                                        thar_basename)[THAR_WVLSOL_JSON_DESC]
+        thar_wvl_sol = igr_storage.load([WVLSOL_V0_JSON_DESC],
+                                        thar_basename)[WVLSOL_V0_JSON_DESC]
         #print thar_wvl_sol.keys()
         #["wvl_sol"]
 

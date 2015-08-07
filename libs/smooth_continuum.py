@@ -72,6 +72,8 @@ def sv_iter(s1m, maxiter=30, pad=8, winsize1=15, winsize2=11,
     s1m[mm] = interp1d(xi[~mm], s1m[~mm])(xi[mm])
 
     for i in range(maxiter):
+        if len(s1m) < winsize1:
+            break
         f12, f1_std = sg_filter(s1m, winsize1=winsize1, winsize2=winsize2)
         mm = (s1m - f12) < -2*f1_std
         mm[:pad] = False
@@ -84,15 +86,18 @@ def sv_iter(s1m, maxiter=30, pad=8, winsize1=15, winsize2=11,
 
         s1m[mm] = interp1d(xi[~mm], f12[~mm])(xi[mm])
 
-    if return_mask:
-        f12, f1_std = sg_filter(s1m, winsize1=winsize1, winsize2=winsize2)
-        mm = (s1m_orig - f12)# < -2*f1_std
-        return f12, mm
-    else:
-        return f12
 
+    try:
+        if return_mask:
+            f12, f1_std = sg_filter(s1m, winsize1=winsize1, winsize2=winsize2)
+            mm = (s1m_orig - f12)# < -2*f1_std
+            r = f12, mm
+        else:
+            r = f12
+    except UnboundLocalError:
+        raise RuntimeError("no sv fit is made")
 
-
+    return r
 
 
 
