@@ -8,9 +8,13 @@ def prepare_recipe_logs(utdate, config_file="recipe.config"):
 
     fn0 = config.get_value('INDATA_PATH', utdate)
 
+    if not os.path.exists(fn0):
+        raise RuntimeError("directory {} does not exist.".format(fn0))
+
     # there could be two log files!
     import glob
     fn_list = glob.glob(os.path.join(fn0, "IGRINS_DT_Log_*-1_H.txt"))
+    fn_list.sort()
     print "loading DT log files:", fn_list
 
     #fn = os.path.join(fn0, "IGRINS_DT_Log_%s-1_H.txt" % (utdate,))

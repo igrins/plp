@@ -76,7 +76,8 @@ def get_pr(utdate, config_file="recipe.config"):
     from libs.igrins_config import IGRINSConfig
     #from jj_recipe_base import ProcessBase
     config = IGRINSConfig(config_file)
-    refdate = config.get_value("REFDATE", None)
+    #refdate = config.get_value("REFDATE", None)
+    refdate = config.get("MASTER_CAL", "REFDATE")
     pr = ProcessBase(utdate, refdate, config)
 
     return pr
@@ -246,7 +247,8 @@ class RecipeExtractPR(object):
                  load_a0v_db=True):
         #self.pr = get_pr(utdate=utdate, config=config)
 
-        refdate = config.get_value("REFDATE", None)
+        #refdate = config.get_value("REFDATE", None)
+        refdate = config.get("MASTER_CAL", "REFDATE")
         self.pr = ProcessBase(utdate, refdate, config)
         self.pr.prepare(band, obsids,
                         load_a0v_db=load_a0v_db) #[32], ["A"])
