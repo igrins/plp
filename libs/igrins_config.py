@@ -3,7 +3,7 @@ import warnings
 import os
 
 default_config_content = """[DEFAULT]
-REFDATE=20140316
+MASTER_CAL_DIR=master_calib
 INDATA_PATH=indata/%(UTDATE)s
 OUTDATA_PATH=outdata/%(UTDATE)s
 PRIMARY_CALIB_PATH=calib/primary/%(UTDATE)s

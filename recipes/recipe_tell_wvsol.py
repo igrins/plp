@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 import numpy as np
@@ -13,7 +12,7 @@ from astropy.modeling import models, fitting
 from scipy.signal import firwin, lfilter, argrelmin
 import libs.recipes as recipes
 from libs.ecfit import fit_2dspec
-import os
+import os, sys
 
 
 def Poly(pars, middle, low, high, x):
@@ -50,10 +49,12 @@ def fit_wavelength(data_original, modelfcn, fitorder=3, be_safe=True):
     It returns a version of data_original with an updated wavelength axis.
     """
     pars = np.zeros(fitorder + 1)
+
     if be_safe:
         args = (data_original, modelfcn, 0.05)
     else:
         args = (data_original, modelfcn, 100)
+
     output = leastsq(wavelength_errorfcn, pars, args=args, full_output=True, xtol=1e-12, ftol=1e-12)
     pars = output[0]
 
@@ -68,6 +69,8 @@ def optimize_wavelength(data_original, modelfcn, fitorder=3, be_safe=True, N=3):
     Runs fit_wavelength N times.
     """
     data = data_original.copy()
+    if len(data[0]) < 100:
+        return data
     for i in range(N):
         data = fit_wavelength(data.copy(), modelfcn, fitorder=fitorder, be_safe=be_safe)
     return data
@@ -95,10 +98,12 @@ def find_lines(spectrum, tol=0.99, linespacing = 5):
     if yval > tol:
       lines.pop(i)
 
-  return np.array(lines)
+  return np.array(lines, dtype="i")
 
 
-def fit_chip(original_orders, corrected_orders, pixels, order_nums, modelfcn, plot_file=None):
+# pixels, order_nums, modelfcn = original_pixels, order_numbers, tell_model
+
+def fit_chip(original_orders, corrected_orders, pixels, order_nums, modelfcn, ax3d=None):
     """
     Fit the entire chip to a 2D surface.
     :param original_orders: The original orders, before blaze correction or anything (they have all pixels)
@@ -131,19 +136,23 @@ def fit_chip(original_orders, corrected_orders, pixels, order_nums, modelfcn, pl
     p, m = fit_2dspec(pixels, ordernums, wavelengths*ordernums, x_degree=3, y_degree=4)
 
     pred = p(pixels, ordernums) / ordernums
-    fig3d = plt.figure(2)
-    ax3d = fig3d.add_subplot(111, projection='3d')
-    ax3d.scatter3D(pixels[m], ordernums[m], wavelengths[m] - pred[m], 'ro')
-    ax3d.set_xlabel('Pixel')
-    ax3d.set_ylabel('Echelle order')
-    ax3d.set_zlabel(r'$\lambda$ - fit(pixel)')
+
+    # fig3d = plt.figure(2)
+    # ax3d = fig3d.add_subplot(111, projection='3d')
+
+    if ax3d is not None:
+        ax3d.scatter3D(pixels[m], ordernums[m], wavelengths[m] - pred[m],
+                       'ro')
+        ax3d.set_xlabel('Pixel')
+        ax3d.set_ylabel('Echelle order')
+        ax3d.set_zlabel(r'$\lambda$ - fit(pixel)')
 
     print('RMS Scatter = {} nm'.format(np.std(wavelengths[m] - pred[m])))
-    if plot_file is None:
-        plt.show()
-    else:
-        plt.savefig(plot_file)
-        plt.clf()
+    # if plot_file is None:
+    #     plt.show()
+    # else:
+    #     plt.savefig(plot_file)
+    #     plt.clf()
 
     # Assign the wavelength solution to each order
     new_orders = []
@@ -198,14 +207,10 @@ def read_data(filename, debug=False):
 
     return orders, apertures
 
-def plot(x, y, style='k-', alpha=0.5, outfilename=None, normed=True):
-    plt.plot(x, y, style, alpha=alpha)
-    plt.xlabel('Wavelength (nm)')
-    plt.ylabel('Flux')
-    if normed:
-        plt.ylim((-0.1, 1.2))
-    if outfilename is not None:
-        plt.savefig(outfilename)
+def plot_spec(ax, x, y, style='k-', alpha=0.5):
+    ax.plot(x, y, style, alpha=alpha)
+    ax.set_xlabel('Wavelength (nm)')
+    ax.set_ylabel('Flux')
     return
 
 
@@ -223,125 +228,300 @@ def remove_blaze(orders, telluric, N=200, freq=1e-2):
     remove the blaze function. It is only approximate, so probably don't use for other things!
     #It also returns the original pixel indices for the eventual 2d fit...
     """
-    half_window = N / 2
-    filt = firwin(N, freq, window='hanning')
+    if N is not None:
+        half_window = N / 2
+        filt = firwin(N, freq, window='hanning')
+    else:
+        filt = None
     new_orders = []
     original_pixels = []
     for i, o in enumerate(orders):
-        idx = (~np.isnan(o[1])) & (o[0] >= o[0][100]) & (o[0] <= o[0][-100])
-        y = o[1][idx] / telluric(o[0][idx])
+        idx = (np.isfinite(o[1])) & (o[0] >= o[0][100]) & (o[0] <= o[0][-100])
+        if filt is not None:
+            y = o[1][idx] / telluric(o[0][idx])
 
-        # Extend the array to account for edge effects
-        firstvals = y[0] - np.abs( y[1:half_window+1][::-1] - y[0] )
-        lastvals = y[-1] + np.abs(y[-half_window-1:-1][::-1] - y[-1])
-        y = np.concatenate((firstvals, y, lastvals))
+            # Extend the array to account for edge effects
+            firstvals = y[0] - np.abs( y[1:half_window+1][::-1] - y[0] )
+            lastvals = y[-1] + np.abs(y[-half_window-1:-1][::-1] - y[-1])
+            y = np.concatenate((firstvals, y, lastvals))
 
-        # Filter the data
-        filtered = lfilter(filt, 1.0, y)
-        new_orders.append(np.array((o[0][idx], (o[1][idx]/filtered[N:]))))
+            # Filter the data
+            filtered = lfilter(filt, 1.0, y)
+            y = o[1][idx]/filtered[N:]
+        else:
+            y = o[1][idx]
+        new_orders.append(np.array((o[0][idx], y)))
         original_pixels.append(np.array([i for i, good in enumerate(idx) if good]))
     return new_orders, original_pixels
 
+tell_model_dict = {}
+def get_tell_model(tell_file):
+    import os
+    tell_file = os.path.realpath(os.path.abspath(tell_file))
+
+    tell_model = tell_model_dict.get(tell_file, None)
+
+    if tell_file not in tell_model_dict:
+        tell_model = interpolate_telluric_model(tell_file)
+        tell_model_dict[tell_file] = tell_model
+
+    return tell_model_dict[tell_file]
 
 
-def run(filename, plot_dir=None, tell_file='data/TelluricModel.dat'):
-    #orders, corrected_orders, original_pixels, order_numbers, tell_model = fit_by_order(filename)
+def run(filename, outfilename,
+        plot_dir=None, tell_file='data/TelluricModel.dat',
+        blaze_corrected=False):
+
+    # prepare figures and axes
+    if plot_dir is None: #interactive mode
+        from matplotlib.pyplot import figure as Figure
+    else:
+        from matplotlib.figure import Figure
+
+    fig1 = Figure(figsize=(12,6))
+    ax1 = fig1.add_subplot(111)
 
     orders, order_numbers = read_data(filename, debug=False)
-    tell_model = interpolate_telluric_model(tell_file)
 
-    print 'Roughly removing blaze function for {}'.format(filename)
-    filtered_orders, original_pixels = remove_blaze(orders, tell_model)
+    tell_model = get_tell_model(tell_file)
+
+    kwargs = {}
+    if blaze_corrected:
+        kwargs["N"] = None
+    else:
+        print 'Roughly removing blaze function for {}'.format(filename)
+
+
+    filtered_orders, original_pixels = remove_blaze(orders, tell_model,
+                                                    **kwargs)
 
     corrected_orders = []
-    for i, order in enumerate(filtered_orders):
-        plot(order[0], order[1], 'k-', alpha=0.4)
-        plot(order[0], tell_model(order[0]), 'r-', alpha=0.6)
+    print 'Optimizing wavelength for order ',
+    for o_n, order in zip(order_numbers, filtered_orders):
+
+        plot_spec(ax1, order[0], order[1], 'k-', alpha=0.4)
+        plot_spec(ax1, order[0], tell_model(order[0]), 'r-', alpha=0.6)
 
         # Use the wavelength fit function to fit the wavelength.
-        print 'Optimizing wavelength for order {}/{}'.format(i+1, len(filtered_orders))
-        new_order = optimize_wavelength(order.copy(), tell_model, fitorder=4)
-        plot(new_order[0], new_order[1], 'g-', alpha=0.4)
+        print ' {}'.format(o_n),
+        sys.stdout.flush()
+
+        new_order = optimize_wavelength(order, tell_model, fitorder=2)
+        plot_spec(ax1, new_order[0], new_order[1], 'g-', alpha=0.4)
         corrected_orders.append(new_order)
 
-        if plot_dir is not None:
-            plt.title('Individual order fit')
-            plt.savefig('{}{}-individual_order{}.png'.format(plot_dir, filename.split('/')[-1], i+1))
-            plt.clf()
+        # do not trt to plot if number valid points is less than 2
+        if len(order[0]) < 2:
+            continue
 
-    if plot_dir is None:
-        plt.show()
+        if plot_dir is not None:
+            ax1.set_title('Individual order fit : {}'.format(o_n))
+            ax1.set_xlim(order[0][0], order[0][-1])
+            ax1.set_ylim(-0.05, 1.15)
+            figout = os.path.join(plot_dir, 'individual_order')
+            postfix="_%03d" % (o_n,)
+            from libs.qa_helper import fig_to_png
+            fig_to_png(figout, fig1, postfix=postfix)
+
+            # fig1.savefig('{}{}-individual_order{}.png'.format(plot_dir, filename.split('/')[-1], i+1))
+            ax1.cla()
+
+    print
 
     original_orders = [o.copy() for o in orders]
 
     # Now, fit the entire chip to a surface
-    if plot_dir is not None:
-        plot_file = '{}{}-fullchip_fit.png'.format(plot_dir, filename.split('/')[-1])
-    else:
-        plot_file = None
 
-    final_orders = fit_chip(original_orders, 
-                            corrected_orders, 
-                            original_pixels, 
-                            order_numbers, 
+
+
+    fig3d = Figure()
+    ax3d = fig3d.add_subplot(111, projection='3d')
+
+    final_orders = fit_chip(original_orders,
+                            corrected_orders,
+                            original_pixels,
+                            order_numbers,
                             tell_model,
-                            plot_file=plot_file)
+                            ax3d=ax3d)
+
+    if plot_dir is not None:
+        figout = os.path.join(plot_dir, 'fullchip_fit')
+        from libs.qa_helper import fig_to_png
+        fig_to_png(figout, fig3d)
+
+    fig3 = Figure(figsize=(12,6))
+    ax3 = fig3.add_subplot(111)
 
     # Filter again just for plotting
-    final_filtered, _ = remove_blaze(final_orders, tell_model)
-    for i, order in enumerate(final_filtered):
-        plot(order[0], order[1], 'k-', alpha=0.4)
-        plot(order[0], tell_model(order[0]), 'r-', alpha=0.6)
+    final_filtered, _ = remove_blaze(final_orders, tell_model, **kwargs)
+    for o_n, order in zip(order_numbers, final_filtered):
+        plot_spec(ax3, order[0], order[1], 'k-', alpha=0.4)
+        plot_spec(ax3, order[0], tell_model(order[0]), 'r-', alpha=0.6)
+
+        if len(order[0]) < 2:
+            continue
 
         if plot_dir is not None:
-            plt.title('Final wavelength solution')
-            plt.savefig('{}{}-final_order{}.png'.format(plot_dir, filename.split('/')[-1], i+1))
-            plt.clf()
+            ax3.set_title('Final wavelength solution : {}'.format(o_n))
+            ax3.set_xlim(order[0][0], order[0][-1])
+            ax3.set_ylim(-0.05, 1.15)
 
-    plt.title('Final wavelength solution')
-    
+            figout = os.path.join(plot_dir, 'final_order')
+            postfix="_%03d" % (o_n,)
+            from libs.qa_helper import fig_to_png
+            fig_to_png(figout, fig3, postfix=postfix)
+
+            # fig1.savefig('{}{}-individual_order{}.png'.format(plot_dir, filename.split('/')[-1], i+1))
+            ax3.cla()
+
+
     if plot_dir is None:
+        ax3.set_title('Final wavelength solution')
+        import matplotlib.pyplot as plt
         plt.show()
 
     # Output
-    outfilename = filename.replace('spec.fits', 'wave.fits')
     wave_arr = np.array([o[0] for o in final_orders])
     hdulist = fits.PrimaryHDU(wave_arr)
     hdulist.writeto(outfilename, clobber=True)
 
 
+def process_band(utdate, recipe_name, band, obsids, config,
+                 interactive=True):
 
-def tell_wvsol(utdate, refdate="20140316", bands="HK",
-               starting_obsids=None,
-               config_file="recipe.config"):
- 
-    # Get the directory the data is in
-    datadir = 'outdata/'+utdate+'/'
+    # utdate, recipe_name, band, obsids, config = "20150525", "A0V", "H", [63, 64], "recipe.config"
 
-    # Make a new directory in the qa subdirectory for my plots
-    if not os.path.exists(datadir + 'qa/tell_wvsol'):
-        os.makedirs(datadir + 'qa/tell_wvsol')
+    from libs.recipe_helper import RecipeHelper
+    helper = RecipeHelper(config, utdate, recipe_name)
+    caldb = helper.get_caldb()
 
-    # Read the recipe log to get the A0V standards
-    night = recipes.Recipes('recipe_logs/'+utdate+'.recipes') #Load up table for a night
-    framenos = [] #Set up list to store numbers for first frame of each A0V standadr star
-    for found_a0v in night.recipe_dict['A0V_AB']: #Loop through dictionary7
-        framenos.append( '%.4d' % found_a0v[0][0]) #Append the first frame found for each A0V star in a night
+    master_obsid = obsids[0]
+    src_filename = caldb.query_item_path((band, master_obsid),
+                                         "SPEC_FITS_FLATTENED")
 
-    # Get the list of bands
-    if bands=="HK":
-        bandlist = ["H", "K"]
-    elif bands=="H":
-        bandlist = ["H"]
-    elif bands=="K":
-        bandlist==["K"]
+    out_filename = caldb.query_item_path((band, master_obsid),
+                                         "SPEC_FITS_WAVELENGTH")
+
+    from libs.master_calib import get_ref_data_path
+    tell_file = get_ref_data_path(helper.config, band,
+                                  kind="TELL_WVLSOL_MODEL")
+
+    if not interactive:
+        tgt_basename = helper.get_basename(band, master_obsid)
+        figout_dir = helper.igr_path.get_section_filename_base("QA_PATH",
+                                                               "",
+                                                               "tell_wvsol_"+tgt_basename)
+        from libs.path_info import ensure_dir
+        ensure_dir(figout_dir)
     else:
-        raise ValueError
+        figout_dir = None
 
-    # Process each file separately
-    for band in bandlist:
-        for frame in framenos:
-            if starting_obsids is not None and frame not in starting_obsids:
-                continue
-            run(datadir+'SDC'+band+'_'+utdate+'_'+frame+'.spec.fits',
-                plot_dir=datadir+'qa/tell_wvsol/')
+    #print src_filename, out_filename, figout_dir, tell_file
+    run(src_filename, out_filename,
+        plot_dir=figout_dir, tell_file=tell_file,
+        blaze_corrected=True)
+
+# outfilename = "outdata/20150525/SDCK_20150525_0063.wave.fits"
+
+#     run(filename, outfilename,
+#         plot_dir=None, tell_file='data/TelluricModel.dat',
+#         blaze_corrected=True)
+#     pass
+
+
+from libs.recipe_base import RecipeBase
+
+class RecipeTellWvlsol(RecipeBase):
+
+    def run_selected_bands_with_recipe(self, utdate, selected, bands):
+        interactive = self.kwargs.get("interactive", True)
+
+        for band in bands:
+            for s in selected:
+                recipe_name = s[0].strip()
+                obsids = s[1]
+
+                target_type = recipe_name.split("_")[0]
+
+                if target_type not in ["A0V", "STELLAR", "EXTENDED"]:
+                    print "Unsupported recipe : %s" % recipe_name
+                    continue
+
+                process_band(utdate, recipe_name, band, obsids, self.config,
+                             interactive)
+                #print (utdate, recipe_name, band, obsids, self.config)
+
+
+def tell_wvsol(utdate, refdate=None, bands="HK",
+               starting_obsids=None, interactive=False,
+               recipe_name = "A0V*",
+               config_file="recipe.config",
+               ):
+
+    recipe = RecipeTellWvlsol(interactive=interactive)
+    recipe.set_recipe_name(recipe_name)
+    recipe.process(utdate, bands,
+                   starting_obsids, config_file)
+
+
+# if __name__ == "__main__":
+#     utdate = "20150525"
+#     bands="HK"
+
+#     starting_obsids=None
+#     interactive=False
+#     recipe_name = "A0V-AB"
+#     config_file="recipe.config"
+
+#     recipe = RecipeTellWvlsol()
+#     recipe.process(utdate, bands,
+#                    starting_obsids, config_file)
+
+# def tell_wvlsol(utdate, refdate="20140316", bands="HK",
+#                 starting_obsids=None, interactive=False,
+#                 recipe_name = "A0V",
+#                 config_file="recipe.config",
+#                 ):
+
+
+#     from libs.igrins_config import IGRINSConfig
+#     config = IGRINSConfig(config_file)
+
+#     if not bands in ["H", "K", "HK"]:
+#         raise ValueError("bands must be one of 'H', 'K' or 'HK'")
+
+#     fn = config.get_value('RECIPE_LOG_PATH', utdate)
+#     from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
+#     recipe = Recipes(fn)
+
+#     if starting_obsids is not None:
+#         starting_obsids = map(int, starting_obsids.split(","))
+
+#     # recipe_name = "ALL_RECIPES"
+#     selected = recipe.select(recipe_name, starting_obsids)
+#     if not selected:
+#         print "no recipe of with matching arguments is found"
+
+#     selected.sort()
+#     for s in selected:
+#         obsids = s[0]
+#         frametypes = s[1]
+#         recipe_name = s[2]["RECIPE"].strip()
+
+#         target_type = recipe_name.split("_")[0]
+
+#         if target_type not in ["A0V", "STELLAR", "EXTENDED"]:
+#             print "Unsupported recipe : %s" % recipe_name
+#             continue
+
+#         for band in bands:
+#             pass
+
+
+# if __name__ == "__main__":
+#     filename = "outdata/20150525/SDCK_20150525_0063.spec_flattened.fits"
+#     outfilename = "outdata/20150525/SDCK_20150525_0063.wave.fits"
+
+#     run(filename, outfilename,
+#         plot_dir=None, tell_file='data/TelluricModel.dat',
+#         blaze_corrected=True)

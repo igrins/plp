@@ -19,6 +19,22 @@ def make_recipe_dict(recipe_list):
         recipe_dict.setdefault(recipe_name, []).append((obsids, frametypes, row))
     return recipe_dict
 
+def get_multi_fnmatch_pattern(fnmatch_list):
+
+    import re, fnmatch
+    p_list = []
+    for fnmatch1 in fnmatch_list:
+        p = re.compile(fnmatch.translate(fnmatch1))
+        p_list.append(p)
+
+    def p_match(s, p_list=p_list):
+        for p in p_list:
+            if p.match(s): return True
+        return False
+
+    return p_match
+
+
 class Recipes(object):
     def __init__(self, fn):
         self._fn = fn
@@ -26,10 +42,10 @@ class Recipes(object):
         self.recipe_dict = make_recipe_dict(self.recipe_list)
 
     def select_multi(self, recipe_names, starting_obsids=None):
-        selected_multi = []
+        selected = []
         for recipe_name in recipe_names:
-            _ = self.select(recipe_name, starting_obsids)
-            selected_multi.append(_)
+            _ = self.select_fnmatch(recipe_name, starting_obsids)
+            selected.extend(_)
 
     def select(self, recipe_name, starting_obsids=None):
         if recipe_name == "ALL_RECIPES":
@@ -58,3 +74,23 @@ class Recipes(object):
                                ", ".join(sorted(remained_obsids)))
         else:
             return selected
+
+    def select_fnmatch(self, recipe_fnmatch, starting_obsids=None):
+
+        if isinstance(recipe_fnmatch, str):
+            recipe_fnmatch_list = [recipe_fnmatch]
+        else:
+            recipe_fnmatch_list = recipe_fnmatch
+
+        p_match = get_multi_fnmatch_pattern(recipe_fnmatch_list)
+
+        dict_by_1st_obsid = dict((recipe_item[1][0], recipe_item) \
+                                 for recipe_item in self.recipe_list \
+                                 if p_match(recipe_item[0]))
+
+        if starting_obsids is None:
+            starting_obsids = sorted(dict_by_1st_obsid.keys())
+
+        selected = [dict_by_1st_obsid[s1] for s1 in starting_obsids]
+
+        return selected

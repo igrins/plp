@@ -4,18 +4,20 @@ from recipe_wvlsol_v0 import process_band
 
 class RecipeRegister(RecipeBase):
 
-    def run_selected_bands_with_recipe(self, utdate, selected, bands,
-                                       recipe_name):
+    def run_selected_bands_with_recipe(self, utdate, selected, bands):
         for band in bands:
             for s in selected:
-                obsids = s[0]
-                print obsids
+                recipe_name = s[0].strip()
+                obsids = s[1]
+                #print obsids
                 # frametypes = s[1]
 
+                #print utdate, recipe_name, band, obsids, self.config
                 process_band(utdate, recipe_name, band, obsids, self.config)
 
                 # process_thar_band(utdate, self.refdate, band, obsids,
                 #                   self.config)
+
 
 
 def _register_factory(cls, recipe_name):

@@ -1,3 +1,12 @@
+def fig_to_png(rootname, fig, postfix=None):
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+
+    if postfix is None:
+        postfix = ""
+
+    FigureCanvasAgg(fig)
+    fig.savefig("%s%s.png" % (rootname, postfix))
+
 def figlist_to_pngs(rootname, figlist, postfixes=None):
     from matplotlib.backends.backend_agg import FigureCanvasAgg
     from itertools import izip, count

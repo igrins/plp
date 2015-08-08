@@ -62,6 +62,8 @@ SLITOFFSET_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".slitoffset_map.fits")
 WAVELENGTHMAP_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".wavelength_map.fits")
 
 # extract
+SPEC_FITS_WAVELENGTH_DESC = ("OUTDATA_PATH", "",
+                            ".wave.fits")
 SPEC_FITS_FLATTENED_DESC = ("OUTDATA_PATH", "",
                             ".spec_flattened.fits")
 SPEC_FITS_DESC = ("OUTDATA_PATH", "", ".spec.fits")
