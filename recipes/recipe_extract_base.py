@@ -233,7 +233,7 @@ class RecipeExtractPR(object):
         from libs.storage_descriptions import BIAS_MASK_DESC
         bias_mask = self.igr_storage.load1(BIAS_MASK_DESC,
                                            self.basenames["flat_on"]).data
-        bias_mask[-100:,:] = False
+        #bias_mask[-100:,:] = False
         bias_mask[self.pix_mask] = True
         bias_mask[:4] = True
         bias_mask[-4:] = True
@@ -268,11 +268,15 @@ class RecipeExtractPR(object):
 class RecipeExtractBase(RecipeExtractPR):
 
     def __init__(self, utdate, band, obsids, frametypes,
-                 config,
+                 config=None,
                  ab_mode=True, load_a0v_db=False):
         """
         ab_mode : True if nodding tye is 'ABBA' or its variation.
         """
+
+        if config is None or isinstance(config, str):
+            from libs.igrins_config import IGRINSConfig
+            config = IGRINSConfig(config)
 
         RecipeExtractPR.__init__(self,
                                  utdate, band, obsids,
