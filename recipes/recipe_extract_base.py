@@ -305,7 +305,7 @@ class RecipeExtractBase(RecipeExtractPR):
 
         return msk
 
-    def estimate_sky(self, data, msk, di=24, min_pixel=40):
+    def estimate_interorder_background(self, data, msk, di=24, min_pixel=40):
 
         from libs.estimate_sky import (estimate_background,
                                        get_interpolated_cubic)

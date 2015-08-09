@@ -23,7 +23,7 @@ def extractor_factory(recipe_name):
                 wavelength_increasing_order=False,
                 fill_nan=None,
                 lacosmics_thresh=0,
-                subtract_sky=False,
+                subtract_interorder_background=False,
                 ):
         abba_all(recipe_name, utdate, refdate=refdate, bands=bands,
                  starting_obsids=starting_obsids,
@@ -34,7 +34,7 @@ def extractor_factory(recipe_name):
                  wavelength_increasing_order=wavelength_increasing_order,
                  fill_nan=fill_nan,
                  lacosmics_thresh=lacosmics_thresh,
-                 sky_subtract=subtract_sky,
+                 subtract_interorder_background=subtract_interorder_background,
                  )
 
     extract.__name__ = recipe_name.lower()
@@ -58,7 +58,7 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
              wavelength_increasing_order=False,
              fill_nan=None,
              lacosmics_thresh=0,
-             sky_subtract=False,
+             subtract_interorder_background=False,
              ):
 
     from libs.igrins_config import IGRINSConfig
@@ -87,7 +87,7 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
                   cr_rejection_thresh=cr_rejection_thresh,
                   debug_output=debug_output,
                   wavelength_increasing_order=wavelength_increasing_order,
-                  sky_subtract=sky_subtract,
+                  subtract_interorder_background=subtract_interorder_background,
                   fill_nan=fill_nan)
 
     process_abba_band = ProcessABBABand(utdate, refdate,
@@ -117,7 +117,7 @@ class ProcessABBABand(object):
                  wavelength_increasing_order=False,
                  fill_nan=None,
                  lacosmics_thresh=0,
-                 sky_subtract=False):
+                 subtract_interorder_background=False):
         """
         cr_rejection_thresh : pixels that deviate significantly from the profile are excluded.
         """
@@ -138,7 +138,7 @@ class ProcessABBABand(object):
 
         self.wavelength_increasing_order = wavelength_increasing_order
 
-        self.sky_subtract = sky_subtract
+        self.subtract_interorder_background = subtract_interorder_background
 
     def process(self, recipe, band, obsids, frametypes):
 
@@ -178,10 +178,10 @@ class ProcessABBABand(object):
 
         data_minus, variance_map, variance_map0 = _
 
-        if self.sky_subtract:
+        if self.subtract_interorder_background:
             print "### doing sky subtraction"
-            data_minus_sky = extractor.estimate_sky(data_minus,
-                                                    extractor.sky_mask)
+            data_minus_sky = extractor.estimate_interorder_background(\
+                data_minus, extractor.sky_mask)
 
             data_minus -= data_minus_sky
 
