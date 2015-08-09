@@ -35,15 +35,16 @@ recipe_list = [recipes.recipe_flat.flat,
                tell_wvsol
                ]
 
-import recipes.recipe_register
-subcommands = dict(register=recipes.recipe_register.get_recipe_list())
-
+from recipes.recipe_register import get_recipe_list as get_register_recipe_list
+_recipes = get_register_recipe_list(function_name_prefix="register_")
+#subcommands = dict(register=recipes.recipe_register.get_recipe_list())
+recipe_list.extend(_recipes)
 
 parser = argh.ArghParser()
 parser.add_commands(recipe_list)
 
-for k, v in subcommands.items():
-    parser.add_commands(v, namespace=k)
+# for k, v in subcommands.items():
+#     parser.add_commands(v, namespace=k)
 
 if __name__ == '__main__':
     import numpy

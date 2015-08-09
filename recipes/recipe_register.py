@@ -18,46 +18,39 @@ class RecipeRegister(RecipeBase):
                 # process_thar_band(utdate, self.refdate, band, obsids,
                 #                   self.config)
 
-
-
-def _register_factory(cls, recipe_name):
-    _recipe_register_obj = cls()
-    def register_subcommand(utdate, bands="HK",
-                            starting_obsids=None,
-                            config_file="recipe.config"):
-
-        _recipe_register_obj(utdate, bands,
-                             starting_obsids, config_file)
-
-    register_subcommand.__name__ = recipe_name.lower()
-    return register_subcommand
-
-_recipe_dict = {}
+_class_dict = {}
 for recipe_name in ["ThAr", "Sky"]:
     type_name = "RecipeRegister%s" % recipe_name
     cls = type(type_name, (RecipeRegister,),
                dict(RECIPE_NAME=recipe_name.upper()))
-
-    r = _register_factory(cls, recipe_name)
-    _recipe_dict[recipe_name] = r
+    _class_dict[recipe_name] = cls
 
 
-def get_recipe_list():
-    return _recipe_dict.values()
+def _register_factory(recipe_cls, recipe_name, function_name_prefix=""):
 
-def get_recipe_dict():
-    return _recipe_dict
+    def _command(utdate, bands="HK",
+                 starting_obsids=None,
+                 config_file="recipe.config"):
 
+        _recipe_register_obj = recipe_cls()
+        _recipe_register_obj.process(utdate, bands,
+                                     starting_obsids, config_file)
 
-# class RecipeRegisterThAr(RecipeBase):
-#     RECIPE_NAME = "THAR"
-
-# class RecipeRegisterSky(RecipeBase):
-#     RECIPE_NAME = "SKY"
-
-#_recipe_register_thar = RecipeRegisterThAr()
-#_recipe_register_sky = RecipeRegisterSky()
+    _command.__name__ = (function_name_prefix+recipe_name).lower()
+    return _command
 
 
 
-#thar = _register_factory(cls, name)
+def get_recipe_list(function_name_prefix=""):
+
+    _recipe_list = []
+    for recipe_name, recipe_cls in _class_dict.items():
+        r = _register_factory(recipe_cls, recipe_name,
+                              function_name_prefix=function_name_prefix)
+        _recipe_list.append(r)
+
+    return _recipe_list
+
+def get_recipe_dict(function_name_prefix=""):
+    l = get_recipe_list(function_name_prefix=function_name_prefix)
+    return dict((f.__name__, f) for f in l)
