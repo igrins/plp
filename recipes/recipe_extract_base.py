@@ -352,20 +352,25 @@ class RecipeExtractBase(RecipeExtractPR):
         a_data = np.sum(a_list, axis=0)
         b_data = np.sum(b_list, axis=0)
 
-        from libs.destriper import destriper
 
         data_minus = a_data - a_b*b_data
         #data_minus0 = data_minus
 
-        if use_destripe_mask:
-            destrip_mask = ~np.isfinite(data_minus)|self.destripe_mask
-        else:
-            destrip_mask = None
+        if destripe_pattern is not None:
+            data_minus = self.get_destriped(data_minus,
+                                            destripe_pattern=destripe_pattern,
+                                            use_destripe_mask=use_destripe_mask,
+                                            sub_horizontal_median=sub_horizontal_median)
 
-        data_minus = destriper.get_destriped(data_minus,
-                                             destrip_mask,
-                                             pattern=destripe_pattern,
-                                             hori=sub_horizontal_median)
+        # if use_destripe_mask:
+        #     destrip_mask = ~np.isfinite(data_minus)|self.destripe_mask
+        # else:
+        #     destrip_mask = None
+
+        # data_minus = destriper.get_destriped(data_minus,
+        #                                      destrip_mask,
+        #                                      pattern=destripe_pattern,
+        #                                      hori=sub_horizontal_median)
 
         # remove sky
 
@@ -387,6 +392,27 @@ class RecipeExtractBase(RecipeExtractPR):
 
 
         return data_minus, variance_map, variance_map0
+
+
+    def get_destriped(self, data_minus,
+                      destripe_pattern=64,
+                      use_destripe_mask=True,
+                      sub_horizontal_median=True,
+                      remove_vertical=False):
+
+        if use_destripe_mask:
+            destrip_mask = ~np.isfinite(data_minus)|self.destripe_mask
+        else:
+            destrip_mask = None
+
+        from libs.destriper import destriper
+        data_minus_d = destriper.get_destriped(data_minus,
+                                               destrip_mask,
+                                               pattern=destripe_pattern,
+                                               hori=sub_horizontal_median,
+                                               remove_vertical=remove_vertical)
+
+        return data_minus_d
 
 
     def get_data1(self, i, hori=True, vert=False):

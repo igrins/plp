@@ -555,7 +555,7 @@ def get_a0v_flattened(a0v_interp1d, tel_interp1d_f,
     #     flattened_s[~np.isfinite(flattened_s)] = self.fill_nan
 
     data_list = [("flattened_spec", flattened_s),
-                 ("wavelength", wvl),
+                 ("wavelength", np.array(wvl)),
                  ("fitted_continuum", continuum_array),
                  ("mask", mask_array),
                  ("a0v_norm", a0v_array),

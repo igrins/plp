@@ -443,6 +443,7 @@ class ProcessABBABand(object):
                           Image([("EXTNAME", "CR_MASK")],
                                 cr_mask)]
 
+
             shifted_image_list = [Image([("EXTNAME", "DATA_CORRECTED")],
                                         shifted["data"]),
                                   Image([("EXTNAME", "VARIANCE_MAP")],
@@ -455,6 +456,10 @@ class ProcessABBABand(object):
                                    Image([("EXTNAME", "SYNTH_MAP")],
                                          synth_map),
                                    ])
+
+            if self.subtract_interorder_background:
+                image_list.append(Image([("EXTNAME", "INTERORDER_BG")],
+                                        data_minus_sky))
 
             self.store_processed_inputs(igr_storage, mastername,
                                         image_list,
@@ -489,7 +494,7 @@ class ProcessABBABand(object):
             a0v_flattened = a0v_flattened_data[0][1]  #"flattened_spec"]
 
             self.store_a0v_results(igr_storage, extractor,
-                                   a0v_flattened)
+                                   a0v_flattened_data)
 
 
     def refine_wavelength_solution(self, wvl_solutions):
@@ -828,7 +833,7 @@ class ProcessABBABand(object):
         return a0v_flattened
 
     def store_a0v_results(self, igr_storage, extractor,
-                          a0v_flattened):
+                          a0v_flattened_data):
 
         wvl_header, wvl_data, convert_data = \
                     self.get_wvl_header_data(igr_storage,
@@ -838,16 +843,26 @@ class ProcessABBABand(object):
         f_obj = pyfits.open(extractor.obj_filenames[0])
         f_obj[0].header.extend(wvl_header)
 
-        tgt_basename = extractor.pr.tgt_basename
+        from libs.products import PipelineImage as Image
+        image_list = [Image([("EXTNAME", "SPEC_FLATTENED")],
+                            convert_data(a0v_flattened_data[0][1]))]
+        if self.debug_output:
+            for ext_name, data in a0v_flattened_data[1:]:
+                image_list.append(Image([("EXTNAME", ext_name.upper())],
+                                        convert_data(data)))
 
-        d = np.array(a0v_flattened)
-        #d[~np.isfinite(d)] = 0.
-        f_obj[0].data = convert_data(d.astype("f32"))
 
+        from libs.products import PipelineImages #Base
         from libs.storage_descriptions import SPEC_FITS_FLATTENED_DESC
-        fout = igr_storage.get_path(SPEC_FITS_FLATTENED_DESC,
-                                    tgt_basename)
 
-        f_obj.writeto(fout, clobber=True)
+        r = PipelineProducts("flattened 1d specs")
+        r.add(SPEC_FITS_FLATTENED_DESC, PipelineImages(image_list))
 
+        mastername = extractor.obj_filenames[0]
+
+        igr_storage.store(r,
+                          mastername=mastername,
+                          masterhdu=f_obj[0])
+
+        tgt_basename = extractor.pr.tgt_basename
         extractor.db["a0v"].update(extractor.band, tgt_basename)
