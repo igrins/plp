@@ -42,6 +42,12 @@ def sky_wvlsol(utdate, bands="HK",
     RecipeSkyWvlsol()(utdate, bands,
                       starting_obsids, config_file)
 
+def wvlsol_sky(utdate, bands="HK",
+               starting_obsids=None, config_file="recipe.config"):
+
+    RecipeSkyWvlsol()(utdate, bands,
+                      starting_obsids, config_file)
+
 # def wvlsol_sky(utdate, refdate="20140316", bands="HK",
 #                starting_obsids=None):
 

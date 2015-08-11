@@ -22,6 +22,7 @@ from recipes.recipe_tell_wvsol import tell_wvsol
 recipe_list = [recipes.recipe_flat.flat,
                recipes.recipe_thar.thar,
                recipes.recipe_wvlsol_sky.sky_wvlsol,
+               recipes.recipe_wvlsol_sky.wvlsol_sky,
                #distortion_sky,
                a0v_ab,
                stellar_ab,
