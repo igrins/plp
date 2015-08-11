@@ -463,6 +463,17 @@ def tell_wvsol(utdate, refdate=None, bands="HK",
     recipe.process(utdate, bands,
                    starting_obsids, config_file)
 
+def wvlsol_tell(utdate, refdate=None, bands="HK",
+                starting_obsids=None, interactive=False,
+                recipe_name = "A0V*",
+                config_file="recipe.config",
+                ):
+
+    recipe = RecipeTellWvlsol(interactive=interactive)
+    recipe.set_recipe_name(recipe_name)
+    recipe.process(utdate, bands,
+                   starting_obsids, config_file)
+
 
 # if __name__ == "__main__":
 #     utdate = "20150525"
