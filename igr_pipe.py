@@ -20,7 +20,7 @@ from recipes.recipe_prepare_recipe_logs import prepare_recipe_logs
 from recipes.recipe_tell_wvsol import tell_wvsol, wvlsol_tell
 
 recipe_list = [recipes.recipe_flat.flat,
-               recipes.recipe_thar.thar,
+               #recipes.recipe_thar.thar,
                recipes.recipe_wvlsol_sky.sky_wvlsol,
                recipes.recipe_wvlsol_sky.wvlsol_sky,
                #distortion_sky,
@@ -39,8 +39,12 @@ recipe_list = [recipes.recipe_flat.flat,
 
 from recipes.recipe_register import get_recipe_list as get_register_recipe_list
 _recipes = get_register_recipe_list(function_name_prefix="register_")
-#subcommands = dict(register=recipes.recipe_register.get_recipe_list())
 recipe_list.extend(_recipes)
+
+_recipes = get_register_recipe_list(function_name_prefix="",
+                                    class_names=["ThAr"])
+recipe_list.extend(_recipes)
+
 
 parser = argh.ArghParser()
 parser.add_commands(recipe_list)

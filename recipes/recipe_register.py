@@ -41,10 +41,13 @@ def _register_factory(recipe_cls, recipe_name, function_name_prefix=""):
 
 
 
-def get_recipe_list(function_name_prefix=""):
+def get_recipe_list(function_name_prefix="", class_names=None):
 
     _recipe_list = []
-    for recipe_name, recipe_cls in _class_dict.items():
+    if class_names is None:
+        class_names = _class_dict.keys()
+    for recipe_name in class_names:
+        recipe_cls = _class_dict[recipe_name]
         r = _register_factory(recipe_cls, recipe_name,
                               function_name_prefix=function_name_prefix)
         _recipe_list.append(r)
