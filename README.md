@@ -1,22 +1,10 @@
+[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.18579.svg)](http://dx.doi.org/10.5281/zenodo.18579)
+
 # IGRINS Pipeline Package
 
-IGRINS pipeline package is currently in active development. There are two versions for now. Once the version 2 becomes mature, version one may be deprecated.
+IGRINS pipeline package is currently in active development. Version 1, that was originally developed by Prof. Soojong Pak's team at Kyung Hee University (KHU), is deprecated and is not recommended to use. While the version 2 of the pipeline is still in active development, it is encouraged that you try this version.
 
 - https://github.com/igrins/plp/releases
-
-## Version 1
-
-This is the original pipeline that has developed by Prof. Soojong
-Pak's team at Kyung Hee University (KHU).
-
-The pipeline is described in the following publication.
-
-- http://adsabs.harvard.edu/abs/2014AdSpR..53.1647S
-
-More information about this version can be found from the link below.
-
-- http://irlab.khu.ac.kr/~igrins/
-
 
 ## Version 2
 
@@ -42,3 +30,19 @@ should be used to which data sets.
 The page below briefly describes how to run the pipeline version 2.
 
  - https://github.com/igrins/plp/wiki/How-to-run-pipeline
+
+
+## Version 1
+
+This is the original pipeline that has developed by Prof. Soojong
+Pak's team at Kyung Hee University (KHU). We recommend users to use the version 2 instead of this.
+
+The version 1 pipeline is described in the following publication.
+
+- http://adsabs.harvard.edu/abs/2014AdSpR..53.1647S
+
+More information about this version can be found from the link below.
+
+- http://irlab.khu.ac.kr/~igrins/
+
+
