@@ -133,7 +133,7 @@ def fit_chip(original_orders, corrected_orders, pixels, order_nums, modelfcn, ax
     wavelengths = np.hstack(wavelength_list).astype(float)
     weights = np.ones(pixels.size).astype(float)
 
-    p, m = fit_2dspec(pixels, ordernums, wavelengths*ordernums, x_degree=3, y_degree=4)
+    p, m = fit_2dspec(pixels, ordernums, wavelengths*ordernums, x_degree=4, y_degree=3)
 
     pred = p(pixels, ordernums) / ordernums
 
@@ -306,7 +306,8 @@ def run(filename, outfilename,
         print ' {}'.format(o_n),
         sys.stdout.flush()
 
-        new_order = optimize_wavelength(order, tell_model, fitorder=2)
+        new_order = optimize_wavelength(order, tell_model,
+                                        fitorder=2)
         plot_spec(ax1, new_order[0], new_order[1], 'g-', alpha=0.4)
         corrected_orders.append(new_order)
 
