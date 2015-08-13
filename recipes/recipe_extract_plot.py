@@ -282,6 +282,7 @@ def save_for_html(dir, name, band, orders, wvl_sol, s_list1, s_list2):
 
     df_even_odd = {}
     for o, wvl, s in zip(orders, wvl_sol, s_list1):
+        if len(wvl) < 2: continue
         oo = ["even", "odd"][o % 2]
         dn = 'order_%s'%oo
         df = pd.DataFrame({dn: s},
@@ -297,6 +298,7 @@ def save_for_html(dir, name, band, orders, wvl_sol, s_list1, s_list2):
     #df_list = []
     df_even_odd = {}
     for o, wvl, s in zip(orders, wvl_sol, s_list2):
+        if len(wvl) < 2: continue
         oo = ["even", "odd"][o % 2]
         dn = 'order_%s'%oo
         df = pd.DataFrame({dn: s},
@@ -319,15 +321,19 @@ def save_for_html(dir, name, band, orders, wvl_sol, s_list1, s_list2):
     df2.to_csv(os.path.join(dir, igrins_spec_output2))
 
     wvlminmax_list = []
+    filtered_orders = []
     for o, wvl in zip(orders, wvl_sol):
-        wvlminmax_list.append([min(wvl), max(wvl)])
+        if len(wvl) > 2:
+            filtered_orders.append(o)
+            wvlminmax_list.append([min(wvl), max(wvl)])
 
     f = open(os.path.join(dir, "igrins_spec_%s_%s.js"%(name, band)),"w")
     f.write('name="%s : %s";\n' % (name,band))
     f.write("wvl_ranges=")
     f.write(str(wvlminmax_list))
     f.write(";\n")
-    f.write("order_minmax=[%d,%d];\n" % (orders[0], orders[-1]))
+    f.write("order_minmax=[%d,%d];\n" % (filtered_orders[0],
+                                         filtered_orders[-1]))
 
     f.write('first_filename = "%s";\n' % igrins_spec_output1)
     f.write('second_filename = "%s";\n' % igrins_spec_output2)
@@ -343,11 +349,13 @@ def get_tgt_spec_cor(tgt, a0v, threshold_a0v, multiply_model_a0v):
                         a0v.flattened):
 
         st = s/t
-        #print np.percentile(t[np.isfinite(t)], 95), threshold_a0v
-        t0 = np.percentile(t[np.isfinite(t)], 95)*threshold_a0v
-        st[t<t0] = np.nan
+        msk = np.isfinite(t)
+        if np.any(msk):
+            #print np.percentile(t[np.isfinite(t)], 95), threshold_a0v
+            t0 = np.percentile(t[msk], 95)*threshold_a0v
+            st[t<t0] = np.nan
 
-        st[t2 < threshold_a0v] = np.nan
+            st[t2 < threshold_a0v] = np.nan
 
         tgt_spec_cor.append(st)
 
