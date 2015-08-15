@@ -208,10 +208,10 @@ def read_data(filename, debug=False):
     return orders, apertures
 
 def plot_spec(ax, x, y, style='k-', alpha=0.5):
-    ax.plot(x, y, style, alpha=alpha)
+    l, = ax.plot(x, y, style, alpha=alpha)
     ax.set_xlabel('Wavelength (nm)')
     ax.set_ylabel('Flux')
-    return
+    return l
 
 
 def interpolate_telluric_model(filename):
@@ -299,8 +299,10 @@ def run(filename, outfilename,
     print 'Optimizing wavelength for order ',
     for o_n, order in zip(order_numbers, filtered_orders):
 
-        plot_spec(ax1, order[0], order[1], 'k-', alpha=0.4)
-        plot_spec(ax1, order[0], tell_model(order[0]), 'r-', alpha=0.6)
+        l_orig = plot_spec(ax1, order[0], order[1],
+                           'k-', alpha=0.4)
+        l_model = plot_spec(ax1, order[0], tell_model(order[0]),
+                            'r-', alpha=0.6)
 
         # Use the wavelength fit function to fit the wavelength.
         print ' {}'.format(o_n),
@@ -308,17 +310,24 @@ def run(filename, outfilename,
 
         new_order = optimize_wavelength(order, tell_model,
                                         fitorder=2)
-        plot_spec(ax1, new_order[0], new_order[1], 'g-', alpha=0.4)
+        l_modified = plot_spec(ax1, new_order[0], new_order[1],
+                               'g-', alpha=0.4)
         corrected_orders.append(new_order)
 
         # do not trt to plot if number valid points is less than 2
         if len(order[0]) < 2:
             continue
 
+        ax1.legend([l_model, l_orig, l_modified],
+                   ["Telluric Model",
+                    "Original Spec.",
+                    "Modified Spec."])
+
         if plot_dir is not None:
             ax1.set_title('Individual order fit : {}'.format(o_n))
             ax1.set_xlim(order[0][0], order[0][-1])
             ax1.set_ylim(-0.05, 1.15)
+
             figout = os.path.join(plot_dir, 'individual_order')
             postfix="_%03d" % (o_n,)
             from libs.qa_helper import fig_to_png
@@ -336,7 +345,10 @@ def run(filename, outfilename,
 
 
     fig3d = Figure()
-    ax3d = fig3d.add_subplot(111, projection='3d')
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        ax3d = fig3d.add_subplot(111, projection='3d')
 
     final_orders = fit_chip(original_orders,
                             corrected_orders,
@@ -356,11 +368,17 @@ def run(filename, outfilename,
     # Filter again just for plotting
     final_filtered, _ = remove_blaze(final_orders, tell_model, **kwargs)
     for o_n, order in zip(order_numbers, final_filtered):
-        plot_spec(ax3, order[0], order[1], 'k-', alpha=0.4)
-        plot_spec(ax3, order[0], tell_model(order[0]), 'r-', alpha=0.6)
+        l_final = plot_spec(ax3, order[0], order[1], 'k-', alpha=0.4)
+        l_model = plot_spec(ax3, order[0], tell_model(order[0]),
+                            'r-', alpha=0.6)
 
         if len(order[0]) < 2:
             continue
+
+        ax3.legend([l_model, l_final],
+                   ["Telluric Model",
+                    "Final Spec."])
+
 
         if plot_dir is not None:
             ax3.set_title('Final wavelength solution : {}'.format(o_n))
@@ -379,7 +397,9 @@ def run(filename, outfilename,
     if plot_dir is None:
         ax3.set_title('Final wavelength solution')
         import matplotlib.pyplot as plt
-        plt.show()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            plt.show()
 
     # Output
     wave_arr = np.array([o[0] for o in final_orders])
@@ -397,8 +417,16 @@ def process_band(utdate, recipe_name, band, obsids, config,
     caldb = helper.get_caldb()
 
     master_obsid = obsids[0]
+    desc = "SPEC_FITS_FLATTENED"
+    blaze_corrected=True
     src_filename = caldb.query_item_path((band, master_obsid),
-                                         "SPEC_FITS_FLATTENED")
+                                         desc)
+
+    if not os.path.exists(src_filename):
+        desc = "SPEC_FITS"
+        blaze_corrected=False
+        src_filename = caldb.query_item_path((band, master_obsid),
+                                             desc)
 
     out_filename = caldb.query_item_path((band, master_obsid),
                                          "SPEC_FITS_WAVELENGTH")
@@ -420,7 +448,7 @@ def process_band(utdate, recipe_name, band, obsids, config,
     #print src_filename, out_filename, figout_dir, tell_file
     run(src_filename, out_filename,
         plot_dir=figout_dir, tell_file=tell_file,
-        blaze_corrected=True)
+        blaze_corrected=blaze_corrected)
 
 # outfilename = "outdata/20150525/SDCK_20150525_0063.wave.fits"
 
