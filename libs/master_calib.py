@@ -36,23 +36,28 @@ def load_thar_ref_data(ref_date, band):
 
 
 
-def load_sky_ref_data(ref_utdate, band):
-    json_name = "ref_ohlines_indices_%s.json" % (ref_utdate,)
-    fn = get_master_calib_abspath(json_name)
-    ref_ohline_indices_map = json.load(open(fn))
+def load_sky_ref_data(config, band):
+    # json_name = "ref_ohlines_indices_%s.json" % (ref_utdate,)
+    # fn = get_master_calib_abspath(json_name)
+    # ref_ohline_indices_map = json.load(open(fn))
+
+    ref_ohline_indices_map = load_ref_data(config, band,
+                                           kind="OHLINES_INDICES_JSON")
+
     ref_ohline_indices = ref_ohline_indices_map[band]
 
     ref_ohline_indices = dict((int(k), v) for k, v \
                               in ref_ohline_indices.items())
 
     from oh_lines import OHLines
-    fn = get_master_calib_abspath("ohlines.dat")
+    fn = get_ref_data_path(config, band, kind="OHLINES_JSON")
+    #fn = get_master_calib_abspath("ohlines.dat")
     ohlines = OHLines(fn)
 
     # from fit_gaussian import fit_gaussian_simple
 
 
-    r = dict(ref_date=ref_utdate,
+    r = dict(#ref_date=ref_utdate,
              band=band,
              ohlines_db = ohlines,
              ohline_indices=ref_ohline_indices,

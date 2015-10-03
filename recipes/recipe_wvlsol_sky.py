@@ -27,11 +27,11 @@ class RecipeSkyWvlsol(RecipeBase):
                                self.config, debug_output=False)
 
             for band in bands:
-                p.process(band, obsids)
+                p.derive_1d_wvlsol(band, obsids)
                 #process_wvlsol_band(utdate, self.refdate, band, obsids,
                 #                    self.config)
 
-                p.process_distortion_sky_band(band, obsids)
+                p.derive_distortion_map(band, obsids)
                 # process_distortion_sky_band(utdate, self.refdate,
                 #                             band, obsids,
                 #                             self.config)
@@ -211,7 +211,7 @@ class ProcessSkyBand(object):
 
         return orders_w_solutions, wvl_solutions, s_list
 
-    def process(self, band, obsids):
+    def derive_1d_wvlsol(self, band, obsids):
 
         from recipe_extract_base import RecipeExtractPR
 
@@ -754,7 +754,7 @@ class ProcessSkyBand(object):
             dx2 = p2_dict[o](x, yi[0]+np.zeros_like(x))
             ax2.plot(x-dx2, s2)
 
-    def process_distortion_sky_band(self, band, obsids):
+    def derive_distortion_map(self, band, obsids):
 
         from recipe_extract_base import RecipeExtractPR
 
@@ -807,6 +807,160 @@ class ProcessSkyBand(object):
 
         self.store_wavelength_outputs(extractor, p2_list, ap)
 
+if 1:
+    def save_wavelength_sol(helper, band, obsids,
+                            orders_w_solutions, wvl_sol, p):
+
+        caldb = helper.get_caldb()
+
+        # oh_sol_products = PipelineProducts("Wavelength solution based on ohlines")
+        # #from libs.process_thar import ONED_SPEC_JSON
+        # from libs.products import PipelineDict
+        # from libs.storage_descriptions import SKY_WVLSOL_JSON_DESC
+        # oh_sol_products.add(SKY_WVLSOL_JSON_DESC,
+        #                     PipelineDict(orders=orders_w_solutions,
+        #                                  wvl_sol=wvl_sol))
+        #caldb
+
+        d = dict(orders=orders_w_solutions,
+                 wvl_sol=wvl_sol)
+        master_obsid = obsids[0]
+        caldb.store_dict((band, master_obsid), "SKY_WVLSOL_JSON", d)
+
+
+        if 1: # save as WAT fits header
+            xx = np.arange(0, 2048)
+            xx_plus1 = np.arange(1, 2048+1)
+
+            from astropy.modeling import models, fitting
+
+            # We convert 2d chebyshev solution to a seriese of 1d
+            # chebyshev.  For now, use naive (and inefficient)
+            # approach of refitting the solution with 1d. Should be
+            # reimplemented.
+
+            p1d_list = []
+            for o in orders_w_solutions:
+                oo = np.empty_like(xx)
+                oo.fill(o)
+                wvl = p(xx, oo) / o * 1.e4 # um to angstrom
+
+                p_init1d = models.Chebyshev1D(domain=[1, 2048],
+                                              degree=p.x_degree)
+                fit_p1d = fitting.LinearLSQFitter()
+                p1d = fit_p1d(p_init1d, xx_plus1, wvl)
+                p1d_list.append(p1d)
+
+        from libs.iraf_helper import get_wat_spec, default_header_str
+        wat_list = get_wat_spec(orders_w_solutions, p1d_list)
+
+        # cards = [pyfits.Card.fromstring(l.strip()) \
+        #          for l in open("echell_2dspec.header")]
+        import astropy.io.fits as pyfits
+        cards = [pyfits.Card.fromstring(l.strip()) \
+                 for l in default_header_str]
+
+        wat = "wtype=multispec " + " ".join(wat_list)
+        char_per_line = 68
+        num_line, remainder = divmod(len(wat), char_per_line)
+        for i in range(num_line):
+            k = "WAT2_%03d" % (i+1,)
+            v = wat[char_per_line*i:char_per_line*(i+1)]
+            #print k, v
+            c = pyfits.Card(k, v)
+            cards.append(c)
+        if remainder > 0:
+            i = num_line
+            k = "WAT2_%03d" % (i+1,)
+            v = wat[char_per_line*i:]
+            #print k, v
+            c = pyfits.Card(k, v)
+            cards.append(c)
+
+        if 1:
+            # save fits with empty header
+
+            header = pyfits.Header(cards)
+            hdu = pyfits.PrimaryHDU(header=header,
+                                    data=np.array([]).reshape((0,0)))
+
+            caldb.store_image((band, master_obsid),
+                              "SKY_WVLSOL_FITS", np.array(wvl_sol),
+                              hdu=hdu)
+
+            # from libs.storage_descriptions import SKY_WVLSOL_FITS_DESC
+            # from libs.products import PipelineImageBase
+            # oh_sol_products.add(SKY_WVLSOL_FITS_DESC,
+            #                     PipelineImageBase([],
+            #                                   np.array(wvl_sol)))
+
+            # igr_storage = helper.igr_storage
+            # sky_filenames = extractor.obj_filenames
+
+            # igr_storage.store(oh_sol_products,
+            #                   mastername=sky_filenames[0],
+            #                   masterhdu=hdu)
+
+            #fn = sky_path.get_secondary_path("wvlsol_v1.fits")
+            #hdu.writeto(fn, clobber=True)
+
+        if 0:
+            # plot all spectra
+            for w, s in zip(wvl_sol, s_list):
+                plot(w, s)
+
+
+
+    def save_qa(helper, band, obsids,
+                orders_w_solutions,
+                reidentified_lines_map, p, m):
+        # filter out the line indices not well fit by the surface
+
+
+        keys = reidentified_lines_map.keys()
+        di_list = [len(reidentified_lines_map[k_][0]) for k_ in keys]
+
+        endi_list = np.add.accumulate(di_list)
+
+        filter_mask = [m[endi-di:endi] for di, endi in zip(di_list, endi_list)]
+        #from itertools import compress
+        # _ = [list(compress(indices, mm)) for indices, mm \
+        #      in zip(line_indices_list, filter_mask)]
+        # line_indices_list_filtered = _
+
+        reidentified_lines_ = [reidentified_lines_map[k_] for k_ in keys]
+        _ = [(v_[0][mm], v_[1][mm]) for v_, mm \
+             in zip(reidentified_lines_, filter_mask)]
+
+        reidentified_lines_map_filtered = dict(zip(orders_w_solutions, _))
+
+
+        if 1:
+            from matplotlib.figure import Figure
+            from libs.ecfit import get_ordered_line_data, check_fit
+
+            xl, yl, zl = get_ordered_line_data(reidentified_lines_map)
+
+            fig1 = Figure(figsize=(12, 7))
+            check_fit(fig1, xl, yl, zl, p,
+                      orders_w_solutions,
+                      reidentified_lines_map)
+            fig1.tight_layout()
+
+            fig2 = Figure(figsize=(12, 7))
+            check_fit(fig2, xl[m], yl[m], zl[m], p,
+                      orders_w_solutions,
+                      reidentified_lines_map_filtered)
+            fig2.tight_layout()
+
+        from libs.qa_helper import figlist_to_pngs
+        igr_path = helper.igr_path
+        sky_basename = helper.get_basename(band, obsids[0])
+        sky_figs = igr_path.get_section_filename_base("QA_PATH",
+                                                      "oh_fit2d",
+                                                      "oh_fit2d_"+sky_basename)
+        figlist_to_pngs(sky_figs, [fig1, fig2])
+
 
 
 class WavelengthFitter(object):
@@ -817,12 +971,13 @@ class SkyFitter(WavelengthFitter):
         from libs.master_calib import load_sky_ref_data
 
         if band not in self._refdata:
-            sky_refdata = load_sky_ref_data(self.refdate, band)
+            sky_refdata = load_sky_ref_data(self.config, band)
             self._refdata[band] = sky_refdata
 
         return self._refdata[band]
 
-    def __init__(self, refdate):
+    def __init__(self, config, refdate):
+        self.config = config
         self.refdate = refdate
         self._refdata = {}
 
@@ -844,11 +999,16 @@ class SkyFitter(WavelengthFitter):
     def update_K(self, reidentified_lines_map,
                  orders_w_solutions,
                  wvl_solutions, s_list):
-        import libs.master_calib as master_calib
-        fn = "hitran_bootstrap_K_%s.json" % self.refdate
-        bootstrap_name = master_calib.get_master_calib_abspath(fn)
-        import json
-        bootstrap = json.load(open(bootstrap_name))
+        # import libs.master_calib as master_calib
+        # fn = "hitran_bootstrap_K_%s.json" % self.refdate
+        # bootstrap_name = master_calib.get_master_calib_abspath(fn)
+        # import json
+        # bootstrap = json.load(open(bootstrap_name))
+
+        from libs.master_calib import load_ref_data
+        bootstrap = load_ref_data(self.config, band="K",
+                                  kind="HITRAN_BOOTSTRAP_K")
+
 
         import libs.hitran as hitran
         r, ref_pixel_list = hitran.reidentify(orders_w_solutions,
@@ -1003,26 +1163,124 @@ def fit_oh_spectra(refdate, band,
 #         return orders_w_solutions, wvl_sol, reidentified_lines_map, p, m
 
 
+# 20151003 : Below is an attemp to modularize the recipes, which has
+# not finished. Initial solution part is done, but the distortion part
+# is not.
+
+from libs.recipe_helper import RecipeHelper
+
+from recipe_wvlsol_v0 import extract_spectra
+from recipe_wvlsol_v0 import make_combined_image
+
+def fit_wvl_sol(helper, band, obsids):
+
+    caldb = helper.get_caldb()
+    master_obsid = obsids[0]
+    spec_json = caldb.load_item_from((band, master_obsid), "ONED_SPEC_JSON")
+
+    wvlsol_json = caldb.load_item_from((band, master_obsid),
+                                       "WVLSOL_V0_JSON")
+
+    assert len(wvlsol_json["orders"]) == len(spec_json["orders"])
+    orders = wvlsol_json["orders"]
+    wvlsol = wvlsol_json["wvl_sol"]
+    s = spec_json["specs"]
+
+    fitter = SkyFitter(helper.config, helper.refdate)
+    _ = fitter.fit(band, orders, wvlsol, s)
+    orders_w_solutions, wvl_sol, reidentified_lines_map, p, m = _
+    #_ = fitter.fit(band, orders, wvlsol["wvl_sol"], s["specs"])
+
+    save_wavelength_sol(helper, band, obsids,
+                        orders_w_solutions, wvl_sol, p)
+
+    save_qa(helper, band, obsids,
+            orders_w_solutions, reidentified_lines_map, p, m)
 
 
+def process_band(utdate, recipe_name, band, obsids, config_name):
+
+    helper = RecipeHelper(config_name, utdate, recipe_name)
+
+    # STEP 1 :
+    ## make combined image
+
+    make_combined_image(helper, band, obsids, mode=None)
+
+    # Step 2
+
+    ## load simple-aperture (no order info; depends on
+
+    extract_spectra(helper, band, obsids)
+
+    fit_wvl_sol(helper, band, obsids)
+
+
+if 0:
+
+    # Step 3:
+
+    identify_lines(helper, band, obsids)
+
+    get_1d_wvlsol(helper, band, obsids)
+
+    save_1d_wvlsol(extractor,
+                   orders_w_solutions, wvl_sol, p)
+
+    save_qa(extractor, orders_w_solutions,
+            reidentified_lines_map, p, m)
+
+
+    save_figures(helper, band, obsids)
+
+    save_db(helper, band, obsids)
 
 
 
 if __name__ == "__main__":
-    import sys
 
-    utdate = sys.argv[1]
-    bands = "HK"
-    starting_obsids = None
+    utdate = "20140709"
+    obsids = [62, 63]
 
-    if len(sys.argv) >= 3:
-        bands = sys.argv[2]
+    utdate = "20140525"
+    obsids = [29]
 
-    if len(sys.argv) >= 4:
-        starting_obsids = sys.argv[3]
+    utdate = "20150525"
+    obsids = [52]
 
-    wvlsol_sky(utdate, refdate="20140316", bands=bands,
-               starting_obsids=starting_obsids)
+
+    recipe_name = "SKY"
+
+
+    # utdate = "20150525"
+    # obsids = [32]
+
+    # recipe_name = "THAR"
+
+    band = "K"
+
+    #helper = RecipeHelper("../recipe.config", utdate)
+    config_name = "../recipe.config"
+
+    process_band(utdate, recipe_name, band, obsids, config_name)
+
+
+# if __name__ == "__main__":
+#     import sys
+
+#     utdate = sys.argv[1]
+#     bands = "HK"
+#     starting_obsids = None
+
+#     if len(sys.argv) >= 3:
+#         bands = sys.argv[2]
+
+#     if len(sys.argv) >= 4:
+#         starting_obsids = sys.argv[3]
+
+#     wvlsol_sky(utdate, refdate="20140316", bands=bands,
+#                starting_obsids=starting_obsids)
+
 
 
 # if __name__ == "__main__":

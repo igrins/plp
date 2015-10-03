@@ -11,26 +11,50 @@ def load_storage_descriptions():
 
     return desc_dict
 
+caldb_resource = '''
+aperture_definition=("flat_on", "FLATCENTROID_SOL_JSON")
+orders=("flat_on", "FLATCENTROID_ORDERS_JSON")
+wvlsol=("sky", "SKY_WVLSOL_JSON")
+hotpix_mask=("flat_off", "HOTPIX_MASK")
+deadpix_mask=("flat_on", "DEADPIX_MASK")
+bias_mask=("flat_on", "BIAS_MASK")
+'''
+
 class CalDB(object):
 
     DB_Specs = dict(flat_on=("PRIMARY_CALIB_PATH", "flat_on.db"),
+                    flat_off=("PRIMARY_CALIB_PATH", "flat_off.db"),
                     sky=("PRIMARY_CALIB_PATH", "sky.db")
                     )
 
-    RESOURCE_DICT = dict(aperture_definition=("flat_on",
-                                              DESCS.FLATCENTROID_SOL_JSON_DESC),
-                         orders=("flat_on",
-                                 DESCS.FLATCENTROID_ORDERS_JSON_DESC),
-                         wvlsol=("sky",
-                                 DESCS.SKY_WVLSOL_JSON_DESC),
-                         )
-
     DESC_DICT = load_storage_descriptions()
+
+    def _load_resource_dict(self):
+        resource_dict = {}
+        import cal_db
+        reload(cal_db)
+        import ast
+        for l in cal_db.caldb_resource.split("\n"):
+            _ = l.strip()
+            if not _: continue
+            _ = _.split("=")
+            if len(_) != 2:
+                print "unknown resource definition : " + l.strip()
+            else:
+                v, e_ = _
+                e = ast.literal_eval(e_)
+                e0 = e[0]
+                e1 = getattr(DESCS, e[1] + "_DESC")
+                resource_dict[v] = (e0, e1)
+
+        return resource_dict
 
     def __init__(self, helper, utdate, db_names=[]):
         self.helper = helper
         self.utdate = utdate
         self.db_dict = {}
+
+        self.RESOURCE_DICT = self._load_resource_dict()
 
         for db_name in db_names:
             self.load_db(db_name)
@@ -194,7 +218,7 @@ class CalDB(object):
         resource_basename = self.db_query_basename(db_name, band, master_obsid)
 
         # FIX THIS
-        self.store_dict(band, resource_basename, item_type, data)
+        self.store_dict(band, resource_basename, item_desc, data)
 
         return resource
 
@@ -210,7 +234,7 @@ if __name__ == "__main__":
     helper = RecipeHelper("../recipe.config", utdate)
 
     caldb = helper.get_caldb()
-    resource = caldb.load_resource_for(band, master_obsid,
+    resource = caldb.load_resource_for((band, master_obsid),
                                        resource_type="aperture_definition")
 
     basename = caldb.db_query_basename("flat_on", band, master_obsid)

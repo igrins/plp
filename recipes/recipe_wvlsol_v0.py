@@ -61,11 +61,11 @@ from libs.recipe_helper import RecipeHelper
 
 def make_combined_image(helper, band, obsids, mode=None):
 
-    from libs.image_combine import make_combined_image_thar
+    from libs.image_combine import make_combined_image_sky
 
     caldb = helper.get_caldb()
 
-    d = make_combined_image_thar(helper, band, obsids)
+    d = make_combined_image_sky(helper, band, obsids)
 
     master_obsid = obsids[0]
     caldb.store_image((band, master_obsid),

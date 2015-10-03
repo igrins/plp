@@ -132,8 +132,8 @@ class Destriper(object):
 
         if hori:
             d_ddm_masked = np.ma.array(d_ddm, mask=mask)
-            s_hori = np.ma.median(d_ddm_masked, axis=0)
-            d_ddm = d_ddm - s_hori
+            s_hori = np.ma.median(d_ddm_masked, axis=1)
+            d_ddm = d_ddm - s_hori[:,np.newaxis]
 
 
         return np.array(d_ddm)
