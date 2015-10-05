@@ -5,7 +5,7 @@ import numpy as np
 
 
 from libs.path_info import IGRINSPath, IGRINSFiles
-#import astropy.io.fits as pyfits
+#import libs.fits as pyfits
 
 from libs.products import PipelineProducts
 from libs.apertures import Apertures
@@ -426,7 +426,7 @@ def process_distortion_sky_band(utdate, refdate, band, obsids, config):
             msk = order_map == o
             slitoffset_map[msk] = p2_dict[o](xl[msk], slitpos_map[msk])
 
-        import astropy.io.fits as pyfits
+        import libs.fits as pyfits
         #fn = sky_path.get_secondary_path("slitoffset_map.fits")
         #pyfits.PrimaryHDU(data=slitoffset_map).writeto(fn, clobber=True)
 

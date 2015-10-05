@@ -3,7 +3,7 @@ import os
 
 
 from libs.path_info import IGRINSPath, IGRINSFiles
-import astropy.io.fits as pyfits
+import libs.fits as pyfits
 
 from libs.products import PipelineProducts, PipelineImageBase
 from libs.apertures import Apertures

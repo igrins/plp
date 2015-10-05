@@ -5,7 +5,7 @@ from libs.process_flat import FlatOff, FlatOn
 
 
 from libs.path_info import IGRINSPath
-import astropy.io.fits as pyfits
+import libs.fits as pyfits
 
 from libs.recipe_base import RecipeBase
 

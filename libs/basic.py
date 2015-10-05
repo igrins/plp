@@ -11,7 +11,7 @@ from scipy.ndimage import gaussian_filter
 from scipy.interpolate import griddata, interp2d, interp1d  
 from scipy.stats import nanmean,nanmedian,nanstd
 from H_series import H_series
-import pyfits
+import libs.fits as pyfits
 
 
 #############################################################################

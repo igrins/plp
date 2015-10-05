@@ -90,7 +90,7 @@ def get_variance_map2(a_plus_b, a_minus_b, bias_mask2, pix_mask, gain):
 
 
 if __name__ == "__main__":
-    import astropy.io.fits as pyfits
+    import libs.fits as pyfits
     a = pyfits.open("../indata/20140525/SDCH_20140525_0016.fits")[0].data
     b = pyfits.open("../indata/20140525/SDCH_20140525_0017.fits")[0].data
 

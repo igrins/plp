@@ -1,6 +1,6 @@
 import numpy as np
 #from jj_recipe_base import get_pr
-#import astropy.io.fits as pyfits
+#import libs.fits as pyfits
 import scipy.ndimage as ni
 
 

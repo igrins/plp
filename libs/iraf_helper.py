@@ -1,4 +1,4 @@
-import astropy.io.fits as pyfits
+import libs.fits as pyfits
 
 default_header_str = """WCSDIM  =                    3
 CTYPE1  = 'MULTISPE'

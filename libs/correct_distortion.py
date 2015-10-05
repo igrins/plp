@@ -1,5 +1,5 @@
 import numpy as np
-import astropy.io.fits as pyfits
+import libs.fits as pyfits
 from scipy.interpolate import interp1d
 from numpy.polynomial import Polynomial
 

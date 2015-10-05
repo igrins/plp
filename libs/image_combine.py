@@ -1,4 +1,4 @@
-import astropy.io.fits as pyfits
+import libs.fits as pyfits
 from stsci_helper import stsci_median
 
 def make_combined_image_thar(helper, band, obsids):

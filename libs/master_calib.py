@@ -78,7 +78,7 @@ def json_loader(fn):
     return json.load(open(fn))
 
 def fits_loader(fn):
-    import astropy.io.fits as pyfits
+    import libs.fits as pyfits
     return pyfits.open(fn)
 
 

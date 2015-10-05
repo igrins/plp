@@ -124,7 +124,7 @@ def plot_sol(ax, sol):
 
 if __name__ == "__main__":
 
-    import astropy.io.fits as pyfits
+    import libs.fits as pyfits
     f = pyfits.open("crires/CR_GCAT_061130A_lines_hitran.fits")
     d = f[1].data
 

@@ -1,6 +1,6 @@
 import numpy as np
 
-import astropy.io.fits as pyfits
+import libs.fits as pyfits
 from scipy.interpolate import interp1d
 from libs.master_calib import get_master_calib_abspath
 

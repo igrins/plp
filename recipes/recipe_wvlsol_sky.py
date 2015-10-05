@@ -4,7 +4,7 @@ import numpy as np
 #from libs.process_flat import FlatOff, FlatOn
 
 from libs.path_info import IGRINSPath
-#import astropy.io.fits as pyfits
+#import libs.fits as pyfits
 
 from libs.products import PipelineProducts
 from libs.apertures import Apertures
@@ -160,7 +160,7 @@ class ProcessSkyBand(object):
         # sky_master_fn_ = os.path.splitext(os.path.basename(sky_names[0]))[0]
         # sky_master_fn = igr_path.get_secondary_calib_filename(sky_master_fn_)
 
-        import astropy.io.fits as pyfits
+        import libs.fits as pyfits
         masterhdu = pyfits.open(sky_filenames[0])[0]
 
         igr_storage = extractor.igr_storage
@@ -289,7 +289,7 @@ class ProcessSkyBand(object):
 
         # cards = [pyfits.Card.fromstring(l.strip()) \
         #          for l in open("echell_2dspec.header")]
-        import astropy.io.fits as pyfits
+        import libs.fits as pyfits
         cards = [pyfits.Card.fromstring(l.strip()) \
                  for l in default_header_str]
 

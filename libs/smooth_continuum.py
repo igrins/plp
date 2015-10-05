@@ -185,7 +185,7 @@ if __name__ == "__main__":
     #for s1 in specs:
     #    plot(s1)
 
-    import astropy.io.fits as pyfits
+    import libs.fits as pyfits
     dd = pyfits.open("outdata/20140525/SDC%s_20140525_0016.spec.fits" % band)[0].data
 
     #ii = 0

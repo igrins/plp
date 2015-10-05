@@ -3,7 +3,7 @@ from json_helper import json_dump
 import json
 import numpy as np
 
-import astropy.io.fits as pyfits
+import libs.fits as pyfits
 #from astropy.io.fits import Card
 
 class PipelineImage(object):

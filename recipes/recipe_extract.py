@@ -2,7 +2,7 @@ import os
 import numpy as np
 
 from libs.path_info import IGRINSPath
-import astropy.io.fits as pyfits
+import libs.fits as pyfits
 
 from libs.products import PipelineProducts
 

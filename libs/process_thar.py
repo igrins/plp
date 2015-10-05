@@ -1,7 +1,7 @@
 import os
 import numpy as np
 
-import astropy.io.fits as pyfits
+import libs.fits as pyfits
 from stsci_helper import stsci_median
 
 #from products import PipelineProducts

@@ -1,7 +1,7 @@
 
 import os
 from os.path import join
-import astropy.io.fits as pyfits
+import libs.fits as pyfits
 
 def ensure_dir(d):
     if not os.path.exists(d):

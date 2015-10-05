@@ -1,6 +1,6 @@
 
 import numpy as np
-import astropy.io.fits as pyfits
+import libs.fits as pyfits
 import scipy.ndimage as ni
 
 

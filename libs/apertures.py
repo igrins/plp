@@ -200,7 +200,7 @@ class Apertures(object):
 
             msk10 = shiftx(msk1)
             if debug:
-                import astropy.io.fits as pyfits
+                import libs.fits as pyfits
                 hdu_list = pyfits.HDUList()
                 #hdu_list.append(pyfits.PrimaryHDU(data=msk1.astype("i4")))
                 hdu_list.append(pyfits.PrimaryHDU(data=np.array(msk1, dtype="i")))
@@ -229,7 +229,7 @@ class Apertures(object):
 
         SAVE_PROFILE = False
         if SAVE_PROFILE:
-            import astropy.io.fits as pyfits
+            import libs.fits as pyfits
             hl = pyfits.HDUList()
             hl.append(pyfits.PrimaryHDU())
 
@@ -317,7 +317,7 @@ class Apertures(object):
 
         SAVE_PROFILE = False
         if SAVE_PROFILE:
-            import astropy.io.fits as pyfits
+            import libs.fits as pyfits
             hl = pyfits.HDUList()
             hl.append(pyfits.PrimaryHDU())
 

@@ -5,7 +5,7 @@ from numpy.polynomial import chebyshev
 from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.optimize import leastsq
 from functools import partial
-from astropy.io import fits
+import libs.fits as fits
 import libs.readmultispec as multispec
 from astropy import units as u
 from astropy.modeling import models, fitting
