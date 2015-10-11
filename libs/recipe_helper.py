@@ -39,3 +39,8 @@ class RecipeHelper:
         master_obsid = obsids[0]
 
         return filenames, basename, master_obsid
+
+    def load_ref_data(self, band, spec):
+        from master_calib import load_ref_data
+        s = load_ref_data(self.config, band, spec)
+        return s

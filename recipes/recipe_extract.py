@@ -754,11 +754,8 @@ class ProcessABBABand(object):
 
     def get_a0v_interp1d(self, extractor):
 
-        from libs.a0v_spec import A0VSpec
-        a0v_model = A0VSpec()
-        a0v_interp1d = a0v_model.get_flux_interp1d(1.3, 2.5,
-                                                   flatten=True,
-                                                   smooth_pixel=32)
+        from libs.a0v_spec import A0V
+        a0v_interp1d = A0V.get_flux_interp1d(self.config)
         return a0v_interp1d
 
 

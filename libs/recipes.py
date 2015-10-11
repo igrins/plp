@@ -71,7 +71,7 @@ class Recipes(object):
         if len(selected_obsids) != len(starting_obsids):
             remained_obsids = set(starting_obsids) - set(selected_obsids)
             raise RuntimeError("some obsids is not correct : %s" % \
-                               ", ".join(sorted(remained_obsids)))
+                               ", ".join(map(str, sorted(remained_obsids))))
         else:
             return selected
 

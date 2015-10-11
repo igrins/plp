@@ -18,9 +18,12 @@ class IGRINSConfig(object):
 
         if config_file is None:
             config_file = 'recipe.config'
-        self.config_file = config_file
 
         import os.path
+
+        config_file = os.path.abspath(config_file)
+        self.config_file = config_file
+
         #_ = os.path.abspath(config_file)
         self.root_dir = os.path.dirname(config_file)
 

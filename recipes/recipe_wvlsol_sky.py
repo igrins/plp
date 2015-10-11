@@ -28,8 +28,6 @@ class RecipeSkyWvlsol(RecipeBase):
 
             for band in bands:
                 p.derive_1d_wvlsol(band, obsids)
-                #process_wvlsol_band(utdate, self.refdate, band, obsids,
-                #                    self.config)
 
                 p.derive_distortion_map(band, obsids)
                 # process_distortion_sky_band(utdate, self.refdate,
@@ -106,13 +104,14 @@ def load_aperture(extractor, band, master_obsid):
     return ap
 
 
-def load_aperture_wvlsol(extractor, band):
+def load_aperture_wvlsol2(extractor, band):
     """
     for orders that wvlsols are derived.
     """
     #orders, orders_w_solutions):
 
     orders = get_orders_for_flat(extractor, band)
+    print "flat orders", orders
     bottomup_solutions = get_bottomup_solutions(extractor, band)
 
     _o_s = dict(zip(orders, bottomup_solutions))
@@ -129,6 +128,34 @@ def load_aperture_wvlsol(extractor, band):
 
     return ap
 
+
+
+def load_aperture_wvlsol(extractor, band):
+    """
+    for orders that wvlsols are derived.
+    """
+
+    config, utdate = extractor.pr.config, extractor.pr.utdate
+    bottomup_solutions = get_bottomup_solutions(extractor, band)
+
+    recipe_name = ""
+    helper = RecipeHelper(config, utdate, recipe_name)
+    caldb = helper.get_caldb()
+    #def load_resource_for(self, basename, resource_type):
+    basename = caldb.db_query_basename("flat_on", band,
+                                       extractor.pr.master_obsid)
+    d = caldb.load_item_from(basename,
+                             "FLATCENTROID_ORDERS_JSON")
+
+    #d = caldb.load_item_from
+
+    orders = d["orders"]
+
+    #_o_s = dict(zip(orders, bottomup_solutions))
+
+    ap =  Apertures(orders, bottomup_solutions)
+
+    return ap
 
 
 
@@ -203,6 +230,7 @@ class ProcessSkyBand(object):
         orders_w_solutions_ = thar_wvl_sol["orders"]
         from libs.storage_descriptions import ONED_SPEC_JSON_DESC
         orders_w_solutions = [o for o in orders_w_solutions_ if o in raw_spec_product[ONED_SPEC_JSON_DESC]["orders"]]
+
         _ = dict(zip(raw_spec_product[ONED_SPEC_JSON_DESC]["orders"],
                      raw_spec_product[ONED_SPEC_JSON_DESC]["specs"]))
         s_list = [_[o]for o in orders_w_solutions]
@@ -223,12 +251,26 @@ class ProcessSkyBand(object):
         self.save_db(extractor, band)
 
         master_obsid = obsids[0]
+
+
         ap = load_aperture(extractor, band, master_obsid)
+
+
+        # from aperture_helper import get_simple_aperture
+        # recipe_name = "sky"
+        # helper = RecipeHelper(self.config, self.utdate,
+        #                       recipe_name)
+        # ap = get_simple_aperture(helper, band, obsids)
+        ap = load_aperture_wvlsol(extractor, band)
+
 
         _ = self.get_sky_spectra(extractor, ap, band, master_obsid)
         orders_w_solutions, wvl_solutions, s_list = _
+        print "orders", orders_w_solutions
 
-        fitter = SkyFitter(self.refdate)
+
+        fitter = SkyFitter(self.config, self.refdate)
+
         _ = fitter.fit(band, orders_w_solutions, wvl_solutions, s_list)
 
         # _ = fit_oh_spectra(self.refdate, band,
@@ -413,9 +455,9 @@ class ProcessSkyBand(object):
         from libs.master_calib import load_sky_ref_data
 
         #ref_utdate = self.config.get_value("REFDATE", self.utdate)
-        refdate = self.refdate
+        #refdate = self.refdate
 
-        sky_ref_data = load_sky_ref_data(refdate, band)
+        sky_ref_data = load_sky_ref_data(self.config, band)
 
 
         ohlines_db = sky_ref_data["ohlines_db"]
@@ -1074,7 +1116,7 @@ def fit_oh_spectra(refdate, band,
                    orders_w_solutions,
                    wvl_solutions, s_list):
 
-    fitter = SkyFitter(self.refdate)
+    fitter = SkyFitter(refdate)
     _ = fitter.fit(band, orders_w_solutions, wvl_solutions, s_list)
 
     orders_w_solutions, wvl_sol, reidentified_lines_map, p, m = _

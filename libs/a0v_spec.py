@@ -37,15 +37,12 @@ class TelluricTransmission(object):
 
 
 
+
 class A0VSpec(object):
-    def __init__(self):
-        from libs.master_calib import get_master_calib_abspath
+    def __init__(self, config):
 
-        #fn = get_master_calib_abspath("A0V/vegallpr25.50000resam5")
-        #d = np.genfromtxt(fn)
-
-        fn = get_master_calib_abspath("A0V/vegallpr25.50000resam5.npy")
-        d = np.load(fn)
+        from master_calib import load_ref_data
+        d = load_ref_data(config, "", "VEGA_SPEC")
 
         wvl, flux, cont = (d[:,i] for i in [0, 1, 2])
         wvl = wvl/1000.
@@ -87,6 +84,30 @@ class A0VSpec(object):
                        )
 
         return spl
+
+
+class A0V(object):
+
+    a0v_dict = {}
+
+    @staticmethod
+    def get_config_key(config):
+        return config.config_file
+
+    @classmethod
+    def get_flux_interp1d(kls, config):
+        k = kls.get_config_key(config)
+        r = kls.a0v_dict.get(k, None)
+
+        if r is None:
+            a0v_model = A0VSpec(config)
+            a0v_interp1d = a0v_model.get_flux_interp1d(1.3, 2.5,
+                                                       flatten=False,
+                                                       smooth_pixel=32)
+            r = kls.a0v_dict[k] = a0v_interp1d
+
+        return r
+
 
 
 #a0v_wvl, a0v_tel_trans

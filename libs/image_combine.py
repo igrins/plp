@@ -21,6 +21,7 @@ def make_combined_image_sky(helper, band, obsids):
                                          di=48, min_pixel=40)
     nx = ny = 2048
     ZI3 = get_interpolated_cubic(nx, ny, xc, yc, v)
+    ZI3 = np.nan_to_num(ZI3)
 
     d = _data - ZI3
     mask=destripe_mask | ~np.isfinite(d)

@@ -24,7 +24,8 @@ class CalDB(object):
 
     DB_Specs = dict(flat_on=("PRIMARY_CALIB_PATH", "flat_on.db"),
                     flat_off=("PRIMARY_CALIB_PATH", "flat_off.db"),
-                    sky=("PRIMARY_CALIB_PATH", "sky.db")
+                    sky=("PRIMARY_CALIB_PATH", "sky.db"),
+                    a0v=("OUTDATA_PATH", "a0v.db"),
                     )
 
     DESC_DICT = load_storage_descriptions()

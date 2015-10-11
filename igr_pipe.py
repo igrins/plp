@@ -37,14 +37,11 @@ recipe_list = [recipes.recipe_flat.flat,
                wvlsol_tell
                ]
 
-from recipes.recipe_register import get_recipe_list as get_register_recipe_list
-_recipes = get_register_recipe_list(function_name_prefix="register_")
-recipe_list.extend(_recipes)
+from recipes.recipe_register import register_sky, register_thar, thar
+recipe_list.extend([register_sky, register_thar, thar])
 
-_recipes = get_register_recipe_list(function_name_prefix="",
-                                    class_names=["ThAr"])
-recipe_list.extend(_recipes)
-
+from recipes.recipe_divide_a0v import divide_a0v
+recipe_list.extend([divide_a0v])
 
 parser = argh.ArghParser()
 parser.add_commands(recipe_list)

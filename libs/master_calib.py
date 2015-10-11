@@ -86,9 +86,14 @@ def fits_loader(fn):
     import astropy.io.fits as pyfits
     return pyfits.open(fn)
 
+def npy_loader(fn):
+    import numpy
+    return numpy.load(fn)
+
 
 ref_loader_dict = {".json":json_loader,
-                   ".fits":fits_loader}
+                   ".fits":fits_loader,
+                   ".npy":npy_loader}
 
 def load_ref_data(config, band, kind, ref_utdate=None):
     fn = get_ref_data_path(config, band, kind, ref_utdate=ref_utdate)
