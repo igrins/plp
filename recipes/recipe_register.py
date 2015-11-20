@@ -1,4 +1,4 @@
-from recipe_wvlsol_v0 import process_band
+from process_wvlsol_v0 import process_band
 
 from libs.recipe_factory import new_recipe_class, new_recipe_func
 

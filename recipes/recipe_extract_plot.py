@@ -93,7 +93,8 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
 
         tgt_spec_cor = get_tgt_spec_cor(tgt, a0v,
                                         threshold_a0v,
-                                        multiply_model_a0v)
+                                        multiply_model_a0v,
+                                        config)
 
     # prepare i1i2_list
     i1i2_list = get_i1i2_list(extractor,
@@ -341,7 +342,7 @@ def save_for_html(dir, name, band, orders, wvl_sol, s_list1, s_list2):
     f.close()
 
 
-def get_tgt_spec_cor(tgt, a0v, threshold_a0v, multiply_model_a0v):
+def get_tgt_spec_cor(tgt, a0v, threshold_a0v, multiply_model_a0v, config):
     tgt_spec_cor = []
     #for s, t in zip(s_list, telluric_cor):
     for s, t, t2 in zip(tgt.spec,
@@ -363,7 +364,7 @@ def get_tgt_spec_cor(tgt, a0v, threshold_a0v, multiply_model_a0v):
     if multiply_model_a0v:
         # multiply by A0V model
         from libs.a0v_spec import A0VSpec
-        a0v_model = A0VSpec()
+        a0v_model = A0VSpec(config)
 
         a0v_interp1d = a0v_model.get_flux_interp1d(1.3, 2.5,
                                                    flatten=True,
