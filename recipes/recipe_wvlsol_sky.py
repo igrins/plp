@@ -1211,8 +1211,9 @@ def fit_oh_spectra(refdate, band,
 
 from libs.recipe_helper import RecipeHelper
 
-from recipe_wvlsol_v0 import extract_spectra
-from recipe_wvlsol_v0 import make_combined_image
+#from recipe_wvlsol_v0 import extract_spectra
+from process_wvlsol_v0 import extract_spectra, make_combined_image
+#from recipe_wvlsol_v0 import make_combined_image
 
 def fit_wvl_sol(helper, band, obsids):
 
