@@ -638,21 +638,21 @@ class ProcessABBABand(object):
 
 
         d = np.array(v_list)
-        f_obj[0].data = convert_data(d.astype("f32"))
+        f_obj[0].data = convert_data(d.astype("float32"))
         fout = igr_storage.get_path(VARIANCE_FITS_DESC,
                                     tgt_basename)
 
         f_obj.writeto(fout, clobber=True)
 
         d = np.array(sn_list)
-        f_obj[0].data = convert_data(d.astype("f32"))
+        f_obj[0].data = convert_data(d.astype("float32"))
         fout = igr_storage.get_path(SN_FITS_DESC,
                                     tgt_basename)
 
         f_obj.writeto(fout, clobber=True)
 
         d = np.array(s_list)
-        f_obj[0].data = convert_data(d.astype("f32"))
+        f_obj[0].data = convert_data(d.astype("float32"))
 
         fout = igr_storage.get_path(SPEC_FITS_DESC,
                                     tgt_basename)
@@ -701,7 +701,7 @@ class ProcessABBABand(object):
 
 
         d = np.array(d0_shft_list) / np.array(msk_shft_list)
-        f_obj[0].data = convert_data(d.astype("f32"))
+        f_obj[0].data = convert_data(d.astype("float32"))
 
         from libs.storage_descriptions import SPEC2D_FITS_DESC
 
@@ -720,7 +720,7 @@ class ProcessABBABand(object):
                                            ordermap_bpixed,
                                            new_bottom_up_solutions)
         d = np.array(d0_shft_list) / np.array(msk_shft_list)
-        f_obj[0].data = d.astype("f32")
+        f_obj[0].data = d.astype("float32")
         from libs.storage_descriptions import VAR2D_FITS_DESC
         fout = igr_storage.get_path(VAR2D_FITS_DESC,
                                     tgt_basename)
