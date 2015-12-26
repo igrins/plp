@@ -156,7 +156,7 @@ class Apertures(object):
             yy2 = self.apcoeffs[o](xx, frac=f2)
 
             down = np.clip((yy1+0.5).astype("i"), 0, 2048)
-            up = np.clip((yy2++0.5).astype("i"), 0, 2048)
+            up = np.clip((yy2+0.5).astype("i"), 0, 2048)
 
             s = [np.nanmedian(data[down[i]:up[i],i]) for i in range(2048)]
             s_list.append(s)
