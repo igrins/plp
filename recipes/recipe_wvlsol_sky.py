@@ -625,27 +625,37 @@ class ProcessSkyBand(object):
         x_domain = [0, 2048]
         y_domain = [orders[0]-2, orders[-1]+2]
 
+        zl_list0 = [np.concatenate(d_) for d_
+                    in d_shift_down[::-1] + d_shift_up]
 
-        xl = np.concatenate(fitted_centroid_center)
+        # mask out outliers
+        msk0 = np.ones((len(zl_list0[0]),), dtype=bool)
+        for zl in zl_list0:
+            zl0 = zl[np.isfinite(zl)]
+            #z_sigma = (zl0**2).mean()**.5
+            z_sigma2 = np.median(np.abs(zl0))
+            msk = np.abs(zl) < 3*z_sigma2
+            msk0 = msk0 & msk
+
+        zl_list = [z[msk0] for z in zl_list0]
+
+        xl = np.concatenate(fitted_centroid_center)[msk0]
 
         yl_ = [o + np.zeros_like(x_) for o, x_ in zip(orders,
                                                       fitted_centroid_center)]
-        yl = np.concatenate(yl_)
+        yl = np.concatenate(yl_)[msk0]
 
-        from libs.ecfit import fit_2dspec, check_fit_simple
-
-        zl_list = [np.concatenate(d_) for d_ \
-                   in d_shift_down[::-1] + d_shift_up]
+        from libs.ecfit import fit_2dspec
 
         pm_list = []
         for zl in zl_list:
             p, m = fit_2dspec(xl, yl, zl,
                               x_degree=1, y_degree=1,
                               x_domain=x_domain, y_domain=y_domain)
-            pm_list.append((p,m))
+            pm_list.append((p, m))
 
         zz_std_list = []
-        for zl, (p, m)  in zip(zl_list, pm_list):
+        for zl, (p, m) in zip(zl_list, pm_list):
             z_m = p(xl[m], yl[m])
             zz = z_m - zl[m]
             zz_std_list.append(zz.std())
