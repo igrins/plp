@@ -54,6 +54,15 @@ class IGRINSConfig(object):
         return self.config.get(section, kind, 0, kwargs)
 
 
+def get_config(config):
+    if isinstance(config, IGRINSConfig):
+        config = config
+    else:
+        config = IGRINSConfig(config)
+
+    return config
+
+
 if __name__ == "__main__":
 
     config = IGRINSConfig()

@@ -1,7 +1,78 @@
 import numpy as np
+import pandas as pd
+
 from oh_lines import OHLines
 from scipy.interpolate import interp1d
 from reidentify import reidentify_lines_all
+
+
+def get_ref_wavelengths(ohlines, line_indices):
+
+    ref_wvl = [ohlines.um[l] for l in line_indices]
+
+    return ref_wvl
+
+
+def flatten(l):
+    return [r_ for r1 in l for r_ in r1]
+
+
+def nested(line_list, colname):
+    r = [row[colname].values for group_id, row
+         in line_list.groupby(["group_id"])]
+
+    return r
+
+
+def get_group_flag_generator():
+    import itertools
+    p = itertools.chain([1], itertools.repeat(0))
+    return p
+
+
+def get_group_flags(l):
+    return [f for r1 in l for r_, f in zip(r1, get_group_flag_generator())]
+
+
+def get_ref_pixels(ref_wvl, wvlsol0, x=None):
+    """
+    Given the list of wavelengths tuples, return expected pixel
+    positions from the initial wavelength solution of wvlsol0.
+
+    """
+
+    if x is None:
+        x = np.arange(len(wvl))
+    um2pixel = interp1d(wvl, x, bounds_error=False)
+
+    ref_pixel = [um2pixel(w) for w in ref_wvl]
+
+    # there could be cases when the ref lines fall out of bounds,
+    # resulting nans.
+    nan_filter = [np.all(np.isfinite(p)) for p in ref_pixel]
+    valid_list = [[np.all(np.isfinite(p))]*len(p) for p in ref_pixel]
+
+    group_flags = get_group_flags(ref_wvl)
+    df = pd.DataFrame(dict(wavelength=flatten(ref_wvl),
+                           valid=flatten(valid_list),
+                           group_flag=group_flags,
+                           group_id=np.add.accumulate(group_flags))
+                       )
+
+    ref_pixel_filtered = [r for r, m in zip(ref_pixel, nan_filter) if m]
+    df2 = df.join(pd.DataFrame(dict(pixel_i=flatten(ref_pixel_filtered)),
+                               index=df.index[flatten(valid_list)]))
+
+    return df2
+
+
+def get_ref_list1(ohlines, line_indices,
+                  wvlsol0, x=None):
+    ref_wvl = get_ref_wavelengths(ohlines, line_indices)
+    line_list = get_ref_pixels(ref_wvl, wvlsol0, x=x)
+
+    return line_list
+
 
 def get_ref_list(ohlines, line_indices_list,
                  orders_w_solution, wvl_solutions, s_list):
@@ -35,9 +106,9 @@ def fit_ohlines_parameters(ohlines, line_indices_list,
                            nan_for_bad_fits=True):
 
     ref_wvl_list, ref_pixel_list = \
-                  get_ref_list(ohlines, line_indices_list,
-                               orders_w_solution, wvl_solutions,
-                               s_list)
+            get_ref_list(ohlines, line_indices_list,
+                         orders_w_solution, wvl_solutions,
+                         s_list)
 
     fit_results = reidentify_lines_all(s_list, ref_pixel_list,
                                        sol_list_transform=None)
@@ -98,7 +169,7 @@ def retrieve_positions_from_fit(fit_results):
     fitted_positions = []
     for results_, dpix_list in fit_results:
 
-        positions = [sol_[0][0] + dpix for sol_, dpix in \
+        positions = [sol_[0][0] + dpix for sol_, dpix in
                      zip(results_, dpix_list)]
 
         # reidentified_lines.append((np.concatenate(fitted_positions),
@@ -107,6 +178,96 @@ def retrieve_positions_from_fit(fit_results):
         fitted_positions.append(np.array(map(np.mean, positions)))
 
     return fitted_positions
+
+
+
+class Test:
+    def __init__(self):
+
+        from libs.igrins_config import IGRINSConfig
+        config = IGRINSConfig("../recipe.config")
+
+        def get_refdata(band):
+            from libs.master_calib import load_sky_ref_data
+
+            sky_refdata = load_sky_ref_data(config, band)
+
+            return sky_refdata
+
+        sky_ref_data = get_refdata("H")
+
+        self.ohline_indices = sky_ref_data["ohline_indices"]
+        self.ohlines_db = sky_ref_data["ohlines_db"]
+
+        import json
+        fn = "../calib/primary/20140525/SDCH_20140525_0003.wvlsol_v0.json"
+        wvl_solution = json.load(open(fn))
+        self.wvl_map = dict(zip(wvl_solution["orders"],
+                                wvl_solution["wvl_sol"]))
+
+        fn = "../calib/primary/20140525/SDCH_20140525_0029.oned_spec.json"
+        s_list = json.load(open(fn))
+        self.s_map = dict(zip(s_list["orders"],
+                              s_list["specs"]))
+
+    def test(self, o):
+
+        #o = 115
+        wvl = self.wvl_map[o]
+        s = self.s_map[o]
+        line_indices = self.ohline_indices[o]
+
+        x = np.arange(len(wvl))
+
+        ref_lines = get_ref_list1(self.ohlines_db, line_indices,
+                                  wvl, x=x)
+
+        ref_lines["order"] = o
+
+        from libs.reidentify import reidentify
+        ref_pixel = nested(ref_lines, "pixel_i")
+
+        res = reidentify(s, ref_pixel, x=x, sigma_init=1.5)
+
+        fitted_lines = get_fitted_lines(ref_lines, res)
+
+
+def get_fitted_lines(ref_lines, res):
+
+    # calculate centroid pixel positions
+    _p = ref_lines.groupby(["group_id"])["pixel_i"]
+    dx_list = _p.mean() - _p.first()
+
+    x_list0 = [params[0] for params, _, _ in res]
+    x_list = x_list0 + dx_list
+
+    # centroid wavelength
+    wvl_list = ref_lines.groupby(["group_id"])["wavelength"].mean()
+
+    fitted_lines = pd.DataFrame(dict(params=[p for p, _, _ in res],
+                                     wavelength=wvl_list,
+                                     pixel=x_list))
+
+    fitted_lines["order"] = o
+
+    return fitted_lines
+
+    #line_list["pixle_i"]
+    # wavelengths, pixels, centroid_wavelengths, centoid_pixels
+
+
+#def test():
+#if 1:
+
+
+
+if 0:
+    ref_wvl = nested(ref_lines, "wavelength")
+    for w in ref_wvl:
+        plot(w, np.zeros_like(w), "ro-")
+
+
+
 
 
 if __name__ == "__main__":

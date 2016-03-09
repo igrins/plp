@@ -1,6 +1,8 @@
 import numpy as np
 import scipy.spatial as spatial
 
+from itertools import izip, repeat
+
 from fit_gaussian import fit_gaussian_simple
 from find_peak import find_peaks
 
@@ -9,17 +11,24 @@ def reidentify(s, x_list, x=None, sigma_init=1.5):
     """
     given spectrum s, try to reidentify lines as x_list as initial point.
     x_list is shifted by delta_x if not 0.
+
+    sigma_init : a single value, or an iterator of single value.
     """
 
     if x is None:
         x = np.arange(len(s))
 
+    try:
+        sigma_iter = iter(sigma_init)
+    except TypeError:
+        sigma_iter = repeat(sigma_init)
+
     fit_results = []
 
-    for lines_pixel in x_list:
+    for lines_pixel, sigma in izip(x_list, sigma_iter):
 
         sol_ = fit_gaussian_simple(x, s, lines_pixel,
-                                   sigma_init=sigma_init,
+                                   sigma_init=sigma,
                                    do_plot=False)
 
         fit_results.append(sol_)
@@ -105,10 +114,10 @@ def reidentify_lines_all(s_list, ref_positions_list,
 
     x = np.arange(2048)
     fit_results = []
-    for ref_positions, s in  zip(ref_positions_list, s_list):
+
+    for ref_positions, s in zip(ref_positions_list, s_list):
 
         results_ = reidentify(s, ref_positions, x=x, sigma_init=1.5)
-
 
         dpix_list = [p_ - p_[0] for p_ in ref_positions]
 

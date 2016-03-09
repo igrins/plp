@@ -35,6 +35,7 @@ COMBINED_IMAGE_A_DESC = ("OUTDATA_PATH", "", ".combined_image_a.fits")
 COMBINED_IMAGE_B_DESC = ("OUTDATA_PATH", "", ".combined_image_b.fits")
 WVLCOR_IMAGE_DESC = ("OUTDATA_PATH", "", ".wvlcor_image.fits")
 ONED_SPEC_JSON_DESC = ("PRIMARY_CALIB_PATH", "", ".oned_spec.json")
+MULTI_SPEC_FITS_DESC = ("PRIMARY_CALIB_PATH", "", ".multi_spec.fits")
 
 # THAR related descriptions
 

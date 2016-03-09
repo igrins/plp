@@ -71,9 +71,10 @@ def make_combined_image(helper, band, obsids, mode=None):
     caldb.store_image((band, master_obsid),
                       item_type="combined_image", data=d)
 
-from aperture_helper import get_simple_aperture
 
 def extract_spectra(helper, band, obsids):
+
+    from aperture_helper import get_simple_aperture
 
     caldb = helper.get_caldb()
 
@@ -91,6 +92,86 @@ def extract_spectra(helper, band, obsids):
                                specs=s,
                                aperture_basename=ap.basename
                                ))
+
+
+def _get_slices(n_slice_one_direction):
+    """
+    given number of slices per direction, return slices for the
+    center, up and down positions.
+    """
+
+    n_slice = n_slice_one_direction*2 + 1
+    i_center = n_slice_one_direction
+    slit_slice = np.linspace(0., 1., n_slice+1)
+
+    slice_center = (slit_slice[i_center], slit_slice[i_center+1])
+
+    slice_up = [(slit_slice[i_center+i], slit_slice[i_center+i+1])
+                for i in range(1, n_slice_one_direction+1)]
+
+    slice_down = [(slit_slice[i_center-i-1], slit_slice[i_center-i])
+                  for i in range(n_slice_one_direction)]
+
+    return slice_center, slice_up, slice_down
+
+
+from collections import namedtuple
+SimpleHDU = namedtuple('SimpleHDU', ['header', 'data'])
+
+
+def extract_spectra_multi(helper, band, obsids):
+
+    n_slice_one_direction = 2
+    slice_center, slice_up, slice_down = _get_slices(n_slice_one_direction)
+
+    from aperture_helper import get_simple_aperture
+
+    caldb = helper.get_caldb()
+
+    master_obsid = obsids[0]
+    basename = (band, master_obsid)
+    data = caldb.load_image(basename,
+                            item_type="combined_image")
+
+    # just to retrieve order information
+    wvlsol_v0 = caldb.load_resource_for(basename, "wvlsol_v0")
+    orders = wvlsol_v0["orders"]
+
+    ap = get_simple_aperture(helper, band, obsids,
+                             orders=orders)
+
+    def make_hdu(s_up, s_down, data):
+        h = [("NSLIT", n_slice_one_direction*2 + 1),
+             ("FSLIT_DN", s_down),
+             ("FSLIT_UP", s_up),
+             ("FSLIT_CN", 0.5 * (s_up+s_down)),
+             ("NORDER", len(ap.orders)),
+             ("B_ORDER", ap.orders[0]),
+             ("E_ORDER", ap.orders[-1]), ]
+
+        return SimpleHDU(h, np.array(data))
+
+    hdu_list = []
+
+    s_center = ap.extract_spectra_v2(data,
+                                     slice_center[0], slice_center[1])
+    hdu_list.append(make_hdu(slice_center[0], slice_center[1], s_center))
+
+    #s_up, s_down = [], []
+
+    for s1, s2 in slice_up:
+        s = ap.extract_spectra_v2(data, s1, s2)
+        hdu_list.append(make_hdu(s1, s2, s))
+        #s_up.append(s)
+
+    for s1, s2 in slice_down:
+        s = ap.extract_spectra_v2(data, s1, s2)
+        hdu_list.append(make_hdu(s1, s2, s))
+        #s_down.append(s)
+
+    caldb.store_multi_image((band, master_obsid),
+                            item_type="MULTI_SPEC_FITS",
+                            hdu_list=hdu_list)
 
 
 # def get_thar_products_deprecated(helper, band, obsids):
@@ -293,8 +374,6 @@ def test_identify_lines(helper, band, obsids):
 
     print d
 
-
-
 # def find_initial_wvlsol(helper, band, obsids,
 #                         thar_products,
 #                         thar_reidentified_products,
@@ -355,6 +434,7 @@ def test_identify_lines(helper, band, obsids):
 #         helper.igr_storage.store(thar_wvl_sol,
 #                                  mastername=thar_filenames[0],
 #                                  masterhdu=hdu)
+#
 
 def save_figures(helper, band, obsids):
 
@@ -369,6 +449,8 @@ def save_figures(helper, band, obsids):
     thar_master_obsid = obsids[0]
 
     if 1: # make amp and order falt
+
+        from aperture_helper import get_simple_aperture
 
         ap = get_simple_aperture(helper, band, obsids,
                                  orders=orders)

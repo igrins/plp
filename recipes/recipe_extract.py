@@ -324,6 +324,13 @@ class ProcessABBABand(object):
                                                   slitoffset_map=slitoffset_map
                                                   )
 
+                    shifted = extractor.get_shifted_all(ap, profile_map,
+                                                        variance_map,
+                                                        synth_map,
+                                                        slitoffset_map,
+                                                        debug=False)
+
+
 
             else: # if extended source
                 from scipy.interpolate import UnivariateSpline

@@ -18,6 +18,7 @@ wvlsol=("sky", "SKY_WVLSOL_JSON")
 hotpix_mask=("flat_off", "HOTPIX_MASK")
 deadpix_mask=("flat_on", "DEADPIX_MASK")
 bias_mask=("flat_on", "BIAS_MASK")
+wvlsol_v0=("thar", "WVLSOL_V0_JSON")
 '''
 
 class CalDB(object):
@@ -26,6 +27,7 @@ class CalDB(object):
                     flat_off=("PRIMARY_CALIB_PATH", "flat_off.db"),
                     sky=("PRIMARY_CALIB_PATH", "sky.db"),
                     a0v=("OUTDATA_PATH", "a0v.db"),
+                    thar=('PRIMARY_CALIB_PATH', 'thar.db')
                     )
 
     DESC_DICT = load_storage_descriptions()
@@ -174,6 +176,21 @@ class CalDB(object):
         self.helper.igr_storage.store_item(item_desc, basename,
                                            pipeline_image)
 
+    def store_multi_image(self, basename, item_type, hdu_list):
+        band, master_obsid = self._get_band_masterobsid(basename)
+        basename = self._get_basename(basename)
+
+        item_desc = self.DESC_DICT[item_type.upper()]
+
+        from products import PipelineImages
+        mastername = self.helper.get_filenames(band, [master_obsid])[0]
+        hdu = self.helper.igr_storage.get_masterhdu(mastername)
+
+        pipeline_image = PipelineImages(hdu_list,
+                                        masterhdu=hdu)
+
+        self.helper.igr_storage.store_item(item_desc, basename,
+                                           pipeline_image)
 
     def store_dict(self, basename, item_type, data):
         basename = self._get_basename(basename)
