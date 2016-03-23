@@ -208,11 +208,14 @@ class CalDB(object):
 
         band, master_obsid = self._get_band_masterobsid(basename)
 
-        db_name, item_desc = self.RESOURCE_DICT[resource_type]
-        basename = self.db_query_basename(db_name, band, master_obsid)
+        try:
+            db_name, item_desc = self.RESOURCE_DICT.get(resource_type,
+                                                        resource_type)
+            db_name, item_desc = resource_type
+        except ValueError as e:
+            raise e  # it would be good if we can modify the message
 
         return basename, item_desc
-
 
     def load_resource_for(self, basename, resource_type):
         """
