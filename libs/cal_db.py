@@ -19,6 +19,7 @@ hotpix_mask=("flat_off", "HOTPIX_MASK")
 deadpix_mask=("flat_on", "DEADPIX_MASK")
 bias_mask=("flat_on", "BIAS_MASK")
 wvlsol_v0=("thar", "WVLSOL_V0_JSON")
+flat_off=("flat_off", "FLAT_OFF")
 '''
 
 class CalDB(object):
@@ -134,7 +135,10 @@ class CalDB(object):
 
     def load_image(self, basename, item_type):
         pipeline_image = self.load_item_from(basename, item_type)
-        return pipeline_image.data
+        if hasattr(pipeline_image, "data"):
+            return pipeline_image.data
+        else:
+            return pipeline_image[0].data
 
     def _get_basename_old(self, band, master_obsid):
         if isinstance(master_obsid, str):
@@ -161,7 +165,7 @@ class CalDB(object):
         return band, masterobsid
 
     def store_image(self, basename, item_type, data,
-                    hdu=None):
+                    header=None, card_list=None):
         band, master_obsid = self._get_band_masterobsid(basename)
         basename = self._get_basename(basename)
 
@@ -169,7 +173,13 @@ class CalDB(object):
 
         from products import PipelineImageBase
         mastername = self.helper.get_filenames(band, [master_obsid])[0]
+
         hdu = self.helper.igr_storage.get_masterhdu(mastername)
+        if header is not None:
+            hdu.header = header
+        if card_list is not None:
+            hdu.header.extend(card_list)
+
         pipeline_image = PipelineImageBase([], data,
                                            masterhdu=hdu)
 

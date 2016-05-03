@@ -10,6 +10,7 @@ FLATOFF_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_off.json")
 
 # FLAT_ON related
 
+FLAT_ON_DESC = ("OUTDATA_PATH", "", ".flat_on.fits")
 FLAT_NORMED_DESC = ("OUTDATA_PATH", "", ".flat_normed.fits")
 FLAT_BPIXED_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_bpixed.fits")
 FLAT_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_mask.fits")
