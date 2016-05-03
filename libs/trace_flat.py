@@ -41,6 +41,53 @@ def get_flat_mask(flat_bpix, bg_std_norm, sigma=3):
 
     return m_dilation
 
+
+def estimate_bg_mean_std(flat, pad=4, smoothing_length=150):
+
+    flat = flat[pad:-pad, pad:-pad]
+
+    flat_flat = flat[np.isfinite(flat)].flat
+    flat_sorted = np.sort(flat_flat)
+
+    flat_gradient = ni.gaussian_filter1d(flat_sorted,
+                                         smoothing_length, order=1)
+
+    flat_sorted = flat_sorted[smoothing_length:]
+    flat_dist = 1. / flat_gradient[smoothing_length:]
+
+    over_half_mask = flat_dist > 0.5 * max(flat_dist)
+    max_width_slice = max((sl.stop-sl.start, sl) for sl,
+                          in ni.find_objects(over_half_mask))[1]
+
+    flat_selected = flat_sorted[max_width_slice]
+
+    l = len(flat_selected)
+    indm = int(0.5 * l)
+    # ind1, indm, ind2 = map(int, [0.05 * l, 0.5 * l, 0.95 * l])
+
+    flat_bg = flat_selected[indm]
+
+    fwhm = flat_selected[-1] - flat_selected[0]
+
+    return flat_bg, fwhm
+
+
+def get_flat_mask_auto(flat_bpix):
+    # now we try to build a reasonable mask
+    # start with a simple thresholded mask
+
+    bg_mean, bg_fwhm = estimate_bg_mean_std(flat_bpix, pad=4,
+                                            smoothing_length=150)
+    flat_mask = (flat_bpix > bg_mean + bg_fwhm*3)
+
+    # remove isolated dots by doing binary erosion
+    m_opening = ni.binary_opening(flat_mask, iterations=2)
+    # try to extend the mask with dilation
+    m_dilation = ni.binary_dilation(m_opening, iterations=5)
+
+    return m_dilation
+
+
 def mask_median_clip(y_ma, median_size=5, clip=1):
     """
     Subtract a median-ed singal from the original.
@@ -160,8 +207,19 @@ def identify_horizontal_line(d_deriv, mmp, pad=20, bg_std=None):
     # labels_center_column = [i for i, _ in groupby(im_labeled[:,nx/2]) if i>0]
 
     thre_dx = 30
-    labels_ = set(np.unique(im_labeled[:,nx/2-thre_dx:nx/2+thre_dx])) - set([0])
-    labels_center_column = sorted(list(labels_))
+    center_cut = im_labeled[:,nx/2-thre_dx:nx/2+thre_dx]
+    labels_ = list(set(np.unique(center_cut)) - set([0]))
+
+    if True:  # remove flase detections
+        sl_subset = [slice_map[l][1] for l in labels_]
+        mm = [(sl1.stop - sl1.start) > thre_dx for sl1 in sl_subset]
+        labels1 = [l1 for l1, m1 in zip(labels_, mm) if m1]
+
+    # for i in labels_:
+    #     if i not in labels1:
+    #         center_cut[center_cut == i] = 0
+
+    labels_center_column = sorted(labels1)
 
     # remove objects with small area
     s = ni.measurements.sum(mmp, labels=im_labeled,
@@ -225,10 +283,11 @@ def identify_horizontal_line(d_deriv, mmp, pad=20, bg_std=None):
         # This suprress the lowest order of K band
         if bg_std is not None:
             msk = msk | (ys/yn < bg_std)
+            #msk = msk | (ys/yn < 0.0006 + 0.0003)
 
         # mask out columns with # of valid pixel is too many
-        msk = msk | (yn > 4)
-
+        # number 10 need to be fixed - JJL
+        msk = msk | (yn > 10)
 
         centroid_list.append((x_indices1,
                               np.ma.array(yy, mask=msk)))
@@ -250,6 +309,24 @@ def get_line_fiiter(order):
         return np.poly1d(p)
 
     return _f
+
+
+def get_matched_slices(yc_down_list, yc_up_list):
+
+    mid_indx_down = len(yc_down_list) // 2
+
+    mid_indx_up = np.searchsorted(yc_up_list, yc_down_list[mid_indx_down])
+
+    n_lower = min(mid_indx_down, mid_indx_up)
+
+    n_upper = min(len(yc_down_list) - mid_indx_down,
+                  len(yc_up_list) - mid_indx_up)
+
+    slice_down = slice(mid_indx_down - n_lower, mid_indx_down + n_upper)
+    slice_up = slice(mid_indx_up - n_lower, mid_indx_up + n_upper)
+
+    return slice_down, slice_up
+
 
 def trace_centroids_chevyshev(centroid_bottom_list,
                               centroid_up_list,
@@ -285,20 +362,35 @@ def trace_centroids_chevyshev(centroid_bottom_list,
     #                                 side="right")
 
     #print zip(yc_down_list[1:-1], yc_up_list[indx:])
-    print indx_down_bottom, indx_up_top
-    print yc_down_list
-    print yc_up_list
-    print zip(yc_down_list[indx_down_bottom-1:-1],
-              yc_up_list[1:indx_up_top+1])
+    # print "index", indx_down_bottom, indx_up_top
+    # print "down", yc_down_list
+    # print "up", yc_up_list
+    # print zip(yc_down_list[indx_down_bottom-1:-1],
+    #           yc_up_list[1:indx_up_top+1])
 
     sol_bottom_up_list_full = zip(sol_bottom_list_full[indx_down_bottom-1:-1],
                                   sol_up_list_full[1:indx_up_top+1])
+
+    slice_down, slice_up = get_matched_slices(yc_down_list, yc_up_list)
+
+    sol_bottom_up_list_full = zip(sol_bottom_list_full[slice_down],
+                                  sol_up_list_full[slice_up])
+
+    # check if the given order has pixels in the detector
+    x = np.arange(2048)
+    sol_bottom_up_list_full_filtered = []
+    for s_bottom, s_up in sol_bottom_up_list_full:
+        if max(s_up(x)) > 0. and min(s_bottom(x)) < 2048.:
+            sol_bottom_up_list_full_filtered.append((s_bottom, s_up))
+
+    # print sol_bottom_up_list_full
 
     sol_bottom_up_list = sol_bottom_list, sol_up_list
     centroid_bottom_up_list = centroid_bottom_list, centroid_up_list
     #centroid_bottom_up_list = []
 
-    return sol_bottom_up_list_full, sol_bottom_up_list, centroid_bottom_up_list
+    return (sol_bottom_up_list_full_filtered,
+            sol_bottom_up_list, centroid_bottom_up_list)
 
 
 def trace_centroids(centroid_bottom_list,

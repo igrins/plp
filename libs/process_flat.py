@@ -60,7 +60,9 @@ class FlatOff(object):
 
         return r
 
-from trace_flat import get_flat_normalization, get_flat_mask
+
+from trace_flat import (get_flat_normalization, get_flat_mask,
+                        get_flat_mask_auto)
 
 class FlatOn(object):
     def __init__(self, ondata_list):
@@ -104,8 +106,9 @@ class FlatOn(object):
                                               # returns new array.
         flat_bpixed[hotpix_mask] = np.nan
 
-        flat_mask = get_flat_mask(flat_bpixed, bg_std_norm,
-                                  sigma=flat_mask_sigma)
+        flat_mask = get_flat_mask_auto(flat_bpixed)
+        # flat_mask = get_flat_mask(flat_bpixed, bg_std_norm,
+        #                           sigma=flat_mask_sigma)
 
 
         # get dead pixel mask
@@ -151,6 +154,23 @@ from trace_flat import (get_y_derivativemap,
                         identify_horizontal_line,
                         trace_centroids_chevyshev)
 
+
+def check_boundary_orders(cent_list, nx=2048, order=2):
+    """
+    check if list of centroids are in the order of increasing y.
+    Return a new list sorted by increasing y.
+    """
+    c_list = []
+    for xc, yc in cent_list:
+        p = np.polyfit(xc[~yc.mask], yc.data[~yc.mask], order)
+        c_list.append(np.polyval(p, nx/2.))
+
+    indexes = np.argsort(c_list)
+    #c_list = np.array(c_list)[indexes]
+
+    return [cent_list[i] for i in indexes]
+
+
 def trace_orders(flaton_products):
 
     # flat_normed=flaton_products["flat_normed"]
@@ -186,11 +206,14 @@ def trace_orders(flaton_products):
                                                 pad=10,
                                                 bg_std=bg_std_normed)
 
+    cent_bottom_list = check_boundary_orders(cent_bottom_list, nx=2048)
+
     cent_up_list = identify_horizontal_line(-flat_deriv,
                                             flat_deriv_neg_msk,
                                             pad=10,
                                             bg_std=bg_std_normed)
 
+    cent_up_list = check_boundary_orders(cent_up_list, nx=2048)
 
     r = PipelineProducts("flat trace centroids")
 
@@ -256,6 +279,8 @@ def trace_solutions(trace_products):
                                   ref_x=nx/2)
 
     bottom_up_solutions_full, bottom_up_solutions, bottom_up_centroids = _
+
+    assert len(bottom_up_solutions_full) != 0
 
     from numpy.polynomial import Polynomial
     bottom_up_solutions_as_list = []
