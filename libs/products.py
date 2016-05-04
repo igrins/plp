@@ -171,15 +171,22 @@ class PipelineStorage(object):
 
         fn = item_path
 
-        if fn in self._cache:
-            print "loading (cached)", fn
-            v = self._cache[fn]
-        else:
+        load_from_disk = True
+
+        v = self._cache.get(fn, None)
+
+        # if v is an instance of PipelineImageBase, we reread from the
+        # disk so that a full header can be read.
+        if isinstance(v, PipelineImageBase):
+            v = None
+
+        if v is None:
             print "loading", fn
             v = self.load_one(fn)
             self._cache[fn] = v
+        else:
+            print "loading (cached)", fn
 
-            #self.save_one(fn, v, masterhdu)
         return v
 
     def load_item(self, product_desc, mastername):
