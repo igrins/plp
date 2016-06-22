@@ -36,7 +36,8 @@ class IGRINSConfig(object):
 
         read_file = self.config.read(config_file)
         if not read_file:
-            warnings.warn("no recipe.config is found. Internal default will be used.")
+            warnings.warn("no {} is found. Internal default will be used."
+                          .format(config_file))
 
         self.master_cal_dir = os.path.join(self.root_dir,
                                            self.config.get("DEFAULT",
