@@ -597,8 +597,8 @@ def plot_solutions2(cent_bottomup_list,
     for up_sol, up_cent in \
         zip(bottom_up_solutions[1], cent_bottomup_list[1]):
 
-        x = np.array(bottom_cent[0], dtype="f")
-        y = np.array(bottom_cent[1], dtype="f")
+        x = np.array(up_cent[0], dtype="f")
+        y = np.array(up_cent[1], dtype="f")
         ax22.plot(x, y - up_sol(x))
 
     ax21.set_xlim(0, 2048)
