@@ -285,17 +285,22 @@ class SpecFlattener(object):
         ratio = s1_orig/tt # model corrected spec
         if ax1:
             # plot raw spec
-            color1 = ax1._get_lines.color_cycle.next()
-            ax1.plot(w1, s1_orig, alpha=0.3, color=color1)
+            try:
+                color_next = ax1._get_lines.color_cycle
+                prop_next = dict(color=color_next.next())
+            except AttributeError:
+                prop_next = ax1._get_lines.prop_cycler.next()
+
+            ax1.plot(w1, s1_orig, alpha=0.3, **prop_next)
             # plot mask
             ax1.plot(w1,
                      np.ma.array(ratio, mask=msk_i).filled(np.nan),
-                     lw=5, alpha=0.2, color=color1)
+                     lw=5, alpha=0.2, **prop_next)
 
             # show model corrected raw spec
             ax1.plot(w1,
                      np.ma.array(ratio, mask=msk_sv).filled(np.nan),
-                     lw=3, alpha=0.5, color=color1)
+                     lw=3, alpha=0.5, **prop_next)
 
             # show fitted continuum
             ax1.plot(w1, fitted_continuum/s_a0v, lw=1.5, alpha=0.3, color="0.3")
@@ -304,11 +309,11 @@ class SpecFlattener(object):
 
         if ax2:
             # plot telluric model
-            ax2.plot(w1, tt, alpha=0.2, lw=3, color=color1)
+            ax2.plot(w1, tt, alpha=0.2, lw=3, **prop_next)
             # plot flattened spec
             ax2.plot(w1,
                      np.ma.array(fl,mask=fitted_continuum<0.05).filled(np.nan),
-                     color=color1)
+                     **prop_next)
 
 
     def flatten_deprecated(self, w1, s1_orig, dw_opt, gw_opt, try_small=True,
