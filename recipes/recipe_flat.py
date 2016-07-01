@@ -579,21 +579,32 @@ def store_qa(helper, band, obsids_off, obsids_on):
     #                       masterhdu=flat_on_hdu_list[0])
 
 
-def store_db(helper, band, obsids_off, obsids_on):
+def store_db_off(helper, band, obsids_off):
 
     caldb = helper.get_caldb()
 
     flatoff_basename = helper.get_basename(band, obsids_off[0])
-    flaton_basename = helper.get_basename(band, obsids_on[0])
 
     # save db
-    if 1:
-        flatoff_db = caldb.load_db("flat_off")
-        flatoff_db.update(band, flatoff_basename)
+    flatoff_db = caldb.load_db("flat_off")
+    flatoff_db.update(band, flatoff_basename)
 
-        flaton_db = caldb.load_db("flat_on")
-        flaton_db.update(band, flaton_basename)
 
+def store_db_on(helper, band, obsids_on):
+
+    caldb = helper.get_caldb()
+
+    flaton_basename = helper.get_basename(band, obsids_on[0])
+
+    flaton_db = caldb.load_db("flat_on")
+    flaton_db.update(band, flaton_basename)
+
+
+def store_db(helper, band, obsids_off, obsids_on):
+    store_db_off(helper, band, obsids_off)
+    store_db_on(helper, band, obsids_on)
+
+    
         # from libs.products import ProductDB
         # flatoff_db_name = get_filename("PRIMARY_CALIB_PATH",
         #                                "flat_off.db")
@@ -608,10 +619,14 @@ def store_db(helper, band, obsids_off, obsids_on):
         # flaton_db = ProductDB(flaton_db_name)
 
 
+def process_aux_off(helper, band, obsids_off):
+    store_db_off(helper, band, obsids_off)
+
+
 def process_aux(helper, band, obsids_off, obsids_on):
+    store_db_on(helper, band, obsids_on)
     store_aux_data(helper, band, obsids_on)
     store_qa(helper, band, obsids_off, obsids_on)
-    store_db(helper, band, obsids_off, obsids_on)
 
 
 def process_band(utdate, recipe_name, band,
@@ -623,6 +638,8 @@ def process_band(utdate, recipe_name, band,
     ## make combined image
 
     process_flat_off(helper, band, obsids_off)
+
+    process_aux_off(helper, band, obsids_off)
 
     process_flat_on(helper, band, obsids_on)
 
