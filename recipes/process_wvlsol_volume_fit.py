@@ -1,15 +1,70 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+import json
+
+from nd_poly import NdPolyNamed
+
+from numpy.linalg import lstsq
 
 
+def _get_center(key_list):
+    key_list = sorted(key_list)
+    n = len(key_list)
+    assert divmod(n, 2)[1] == 1
+    center_key = key_list[divmod(n, 2)[0]]
+    return center_key
 
-def test_fit():
 
-    df = pd.read_json("test.json", orient="split")
+def _append_offset(df):
+    """
+    input should be indexed with multiple values of 'slit_center'.
+    Columns of 'pixel0' and 'offsets' will be appended and returned.
+    """
+
+    grouped = df.groupby("slit_center")
+
+    slit_center0 = _get_center(grouped.groups.keys())
+    rename_dict = {'pixels': 'pixels0'}
+    center = grouped.get_group(slit_center0).rename(columns=rename_dict)
+
+    pp = df.join(center["pixels0"])
+
+    pp["offsets"] = pp["pixels"] - pp["pixels0"]
+    pp_masked = pp[np.isfinite(pp["offsets"])]
+
+    df_offset = pp_masked.reset_index()
+
+    return df_offset
+
+
+def _volume_poly_fit(points, scalar, orders, names):
+
+    p = NdPolyNamed(orders, names)  # order 2 for all dimension.
+
+    v = p.get_array(points)
+    v = np.array(v)
+
+    # errors are not properly handled for now.
+    s = lstsq(v.T, scalar)
+
+    return p, s
+
+
+def volume_fit(helper, band, obsids):
+
+    caldb = helper.get_caldb()
+
+    master_obsid = obsids[0]
+    basename = (band, master_obsid)
+
+    fitted_pixles_path = caldb.query_item_path(basename,
+                                               "SKY_FITTED_PIXELS_JSON")
+
+    df = pd.read_json(fitted_pixles_path, orient="split")
     index_names = ["kind", "order", "wavelength"]
     df = df.set_index(index_names)[["slit_center", "pixels"]]
 
-    dd = append_offset(df)
+    dd = _append_offset(df)
 
     names = ["pixel", "order", "slit"]
     orders = [3, 2, 1]
@@ -34,7 +89,7 @@ def test_fit():
     scalar = dd["offsets"][msk] / cc0[msk]
 
 
-    poly, params = volume_poly_fit(points, scalar, orders, names)
+    poly, params = _volume_poly_fit(points, scalar, orders, names)
 
     if 0:
         #values = dict(zip(names, [pixels, orders, slit_pos]))
@@ -68,22 +123,11 @@ def test_fit():
     out_df = out_df.reset_index()
 
     d = out_df.to_dict(orient="split")
-    import json
-    json.dump(d, open("coeffs.json", "w"))
-
-if 0:
-    # read
-    in_df = pd.read_json("coeffs.json", orient="split")
-    in_df = in_df.set_index(["pixel", "order", "slit"])
-
-    poly, coeffs = NdPolyNamed.from_pandas(in_df)
+    output_path = caldb.query_item_path(basename, "VOLUMEFIT_COEFFS_JSON")
+    json.dump(d, open(output_path, "w"))
 
 
-def process_band_make_offset_map(utdate, recipe_name, band,
-                                 obsids, config_name):
-
-    from libs.recipe_helper import RecipeHelper
-    helper = RecipeHelper(config_name, utdate, recipe_name)
+def generate_slitoffsetmap(helper, band, obsids):
 
     caldb = helper.get_caldb()
 
@@ -96,20 +140,16 @@ def process_band_make_offset_map(utdate, recipe_name, band,
     slitposmap_fits = caldb.load_resource_for(basename,
                                               ("sky", "slitposmap_fits"))
 
-    # slitoffset_fits = caldb.load_resource_for(basename,
-    #                                           ("sky", "slitoffset_fits"))
-
     yy, xx = np.indices(ordermap_fits[0].data.shape)
 
     msk = np.isfinite(ordermap_fits[0].data) & (ordermap_fits[0].data > 0)
     pixels, orders, slit_pos = (xx[msk], ordermap_fits[0].data[msk],
                                 slitposmap_fits[0].data[msk])
 
-    # load coeffs
-    # This needs to be fixed
     names = ["pixel", "order", "slit"]
 
-    in_df = pd.read_json("coeffs.json", orient="split")
+    coeffs_path = caldb.query_item_path(basename, "VOLUMEFIT_COEFFS_JSON")
+    in_df = pd.read_json(coeffs_path, orient="split")
     in_df = in_df.set_index(names)
 
     poly, coeffs = NdPolyNamed.from_pandas(in_df)
@@ -123,40 +163,13 @@ def process_band_make_offset_map(utdate, recipe_name, band,
     offset_map[msk] = offsets * cc0 # dd["offsets"]
     
 
-    if 0:
-        slitoffset_fits = caldb.load_resource_for(basename,
-                                                  ("sky", "slitoffset_fits"))
-        offset_map_orig = slitoffset_fits[0].data
-        
+    caldb.store_image(basename, "slitoffset_fits", offset_map)
+                     
 
+from libs.recipe_helper import RecipeHelper
 
-if 0:
-    xy = np.indices([60, 2048]) / np.array([60., 1.])[:, np.newaxis, np.newaxis]
+def process_band_make_offset_map(utdate, recipe_name, band,
+                                 obsids, config_name):
 
-    p93, params93 = p.freeze("order", 93, params)
-    offset93 = p93.multiply(dict(pixel=xy[1], slit=xy[0]), params93)
-
-    p72, params72 = p.freeze("order", 72, params)
-    offset72 = p93.multiply(dict(pixel=xy[1], slit=xy[0]), params72)
-
-
-if 0:
-    offsets_fit = p.multiply(values, params)
-
-    #plot(values["slit"], offsets, "x")
-    plot(values["slit"], offsets_fit - offsets, "o")
-
-
-if __name__ == "__main__":
-    utdate = "20150525"
-    obsids = [52]
-
-    recipe_name = "SKY"
-
-    band = "K"
-
-    #helper = RecipeHelper("../recipe.config", utdate)
-    config_name = "../recipe.config"
-
-    process_band_make_offset_map(utdate, recipe_name, band,
-                                 obsids, config_name)
+    from libs.recipe_helper import RecipeHelper
+    helper = RecipeHelper(config_name, utdate, recipe_name)

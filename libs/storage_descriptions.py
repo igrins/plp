@@ -63,6 +63,13 @@ SLITPOSMAP_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".slitpos_map.fits")
 SLITOFFSET_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".slitoffset_map.fits")
 WAVELENGTHMAP_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".wavelength_map.fits")
 
+SKY_FITTED_PIXELS_JSON_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".fitted_pixels.json")
+
+VOLUMEFIT_COEFFS_JSON_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".volumefit_coeffs.json")
+
+SKY_WVLSOL_FIT_RESULT_JSON_DESC = ("PRIMARY_CALIB_PATH", "SKY_",
+                                   ".wvlsol_fit_result.json")
+
 # extract
 SPEC_FITS_WAVELENGTH_DESC = ("OUTDATA_PATH", "",
                             ".wave.fits")
