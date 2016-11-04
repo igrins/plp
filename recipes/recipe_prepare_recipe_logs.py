@@ -67,8 +67,16 @@ def prepare_recipe_logs(utdate, config_file="recipe.config"):
     from itertools import groupby
 
     groupby_keys = ["OBJNAME", "OBJTYPE", "GROUP1", "GROUP2", "EXPTIME"]
+    # If the OBJTYPE is flat, we replace its name ot "FLAT ON/OFF" so
+    # that it can be assembled in a single recipe even tough their
+    # names are different.
     def keyfunc(l1):
-        return tuple(l1[k] for k in groupby_keys)
+        if l1["OBJTYPE"].lower() == "flat":
+            objname_tuple = ("FLAT ON/OFF", )
+        else:
+            objname_tuple = (l1["OBJNAME"], )
+
+        return objname_tuple + tuple(l1[k] for k in groupby_keys[1:])
 
     s_list = []
     for lll in groupby(l, keyfunc):
