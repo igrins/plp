@@ -6,7 +6,8 @@ _recipe_class_register_thar = new_recipe_class("RecipeRegisterThAr",
                                                "THAR", process_band)
 
 _recipe_class_register_sky = new_recipe_class("RecipeRegisterSky",
-                                               "SKY", process_band)
+                                               ["SKY", "*_AB"],
+                                              process_band)
 
 register_thar = new_recipe_func("register_thar",
                                 _recipe_class_register_thar)

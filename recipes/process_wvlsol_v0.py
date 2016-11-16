@@ -59,17 +59,18 @@ from libs.products import ProductDB
 from libs.recipe_helper import RecipeHelper
 
 
-def make_combined_image(helper, band, obsids, mode=None):
+def make_combined_image(helper, band, obsids, frame_types=None):
 
     from libs.image_combine import make_combined_image_sky
 
     caldb = helper.get_caldb()
 
-    d = make_combined_image_sky(helper, band, obsids)
+    d = make_combined_image_sky(helper, band, obsids, frame_types)
 
     master_obsid = obsids[0]
+    # "SKY_GENERATED_FITS"
     caldb.store_image((band, master_obsid),
-                      item_type="combined_image", data=d)
+                      item_type="sky_generated_fits", data=d)
 
 
 def extract_spectra(helper, band, obsids):
@@ -80,7 +81,7 @@ def extract_spectra(helper, band, obsids):
 
     master_obsid = obsids[0]
     data = caldb.load_image((band, master_obsid),
-                            item_type="combined_image")
+                            item_type="sky_generated_fits")
 
     ap = get_simple_aperture(helper, band, obsids)
 
@@ -192,7 +193,7 @@ def extract_spectra_multi(helper, band, obsids):
 #     return thar_products
 
 def _get_ref_spec_name(helper):
-    if helper.recipe_name in ["SKY"]:
+    if (helper.recipe_name in ["SKY"]) or helper.recipe_name.endswith("_AB"):
         ref_spec_key = "SKY_REFSPEC_JSON"
         ref_identified_lines_key = "SKY_IDENTIFIED_LINES_V0_JSON"
     elif helper.recipe_name in ["THAR"]:
@@ -487,7 +488,10 @@ def save_figures(helper, band, obsids):
         #fn = thar_path.get_secondary_path("orderflat")
         #order_flat_products.save(fn, masterhdu=hdu)
 
-        hdu = pyfits.open(thar_filenames[0])[0]
+        from libs.load_fits import load_fits_data
+        hdu = load_fits_data(thar_filenames[0])
+        # hdu = pyfits.open(thar_filenames[0])[0]
+        
         helper.igr_storage.store(order_flat_products,
                                  mastername=flaton_basename,
                                  masterhdu=hdu)
@@ -531,14 +535,22 @@ def save_db(helper, band, obsids):
         thar_db.update(band, thar_basename)
 
 
-def process_band(utdate, recipe_name, band, obsids, config_name):
+def process_band(utdate, recipe_name, band,
+                 obsids, frame_types, aux_infos,
+                 config_name):
 
     helper = RecipeHelper(config_name, utdate, recipe_name)
 
     # STEP 1 :
     ## make combined image
 
-    make_combined_image(helper, band, obsids, mode=None)
+    if recipe_name.upper() in ["SKY"]:
+        make_combined_image(helper, band, obsids)
+    elif recipe_name.upper().endswith("_AB"):
+        make_combined_image(helper, band, obsids, frame_types)
+    else:
+        msg = "recipe_name {} not supported for this recipe".format(recipe_name)
+        raise ValueError(msg)
 
     # Step 2
 

@@ -3,6 +3,9 @@
 class RecipeBase(object):
     """ The derived mus define RECIPE_NAME attribute and must implement
         run_selected_bands method.
+
+        RECIPE_NAME can be a string, or a sequence of strings which is
+        interpreted as a fnmatch translater.
     """
     def __init__(self, **kwargs):
         self.kwargs = kwargs

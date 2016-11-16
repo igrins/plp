@@ -11,8 +11,11 @@ class RecipeFactoryProcessBand(RecipeBase):
             for s in selected:
                 recipe_name = s[0].strip()
                 obsids = s[1]
+                frame_types = s[2]
+                aux_infos = s[3]
 
-                self.process_band(utdate, recipe_name, band, obsids,
+                self.process_band(utdate, recipe_name, band, 
+                                  obsids, frame_types, aux_infos,
                                   self.config)
 
 def new_recipe_class(type_name, recipe_name, process_band_func):
