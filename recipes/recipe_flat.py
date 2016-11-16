@@ -2,16 +2,17 @@ from libs.recipe_helper import RecipeHelper
 import numpy as np
 import scipy.ndimage as ni
 
-import astropy.io.fits as pyfits
 from astropy.io.fits import Card
 
 from libs.process_flat import FlatOff, FlatOn
+
+from libs.load_fits import load_fits_data
 
 def get_data_list(helper, band, obsids):
     _ = helper.get_base_info(band, obsids)
     flat_off_filenames = _[0]
 
-    flat_offs_hdu_list = [pyfits.open(fn_)[0] for fn_
+    flat_offs_hdu_list = [load_fits_data(fn_) for fn_
                           in flat_off_filenames]
 
     flat_offs = [hdu.data for hdu in flat_offs_hdu_list]
