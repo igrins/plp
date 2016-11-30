@@ -277,7 +277,7 @@ class ProcessABBABand(object):
                 if self.lacosmics_thresh > 0:
                     from libs.cosmics import cosmicsimage
 
-                    cosmic_input = variance_map.copy()
+                    cosmic_input = sig_map.copy()
                     cosmic_input[~np.isfinite(data_minus_flattened)] = np.nan
                     c = cosmicsimage(cosmic_input,
                                      readnoise=self.lacosmics_thresh)
