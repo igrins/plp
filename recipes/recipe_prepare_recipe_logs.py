@@ -78,10 +78,67 @@ def prepare_recipe_logs(utdate, config_file="recipe.config"):
 
         return objname_tuple + tuple(l1[k] for k in groupby_keys[1:])
 
+    # prepare the convertsion map between obsids with different utdate
+    # to the current utdate.
+    utdate0 = int(utdate)
+    obsid_link_list = []
+
+    maxobsid = 0
+
+    for l1 in l:
+        fn = l1[0]
+        utdate1, obsid = fn.split(".")[0].split("_")[-2:]
+
+        if int(utdate1) != utdate0:
+            obsid_link_list.append((utdate1, int(obsid)))
+        else:
+            maxobsid = max(maxobsid, int(obsid))
+
+    obsid_map = {}
+    for i, (utdate1, obsid) in enumerate(obsid_link_list, start=1):
+        obsid2 = maxobsid + i
+        obsid_map[(utdate1, obsid)] = obsid2
+
+
+    if obsid_map:
+        print "trying to make soft links for files of different utdates"
+        from libs.load_fits import find_fits
+        old_new_list = []
+
+        for band in "HK":
+            for k, v in obsid_map.items():
+                utdate1, obsid = k
+                tmpl = "SDC%s_%s_%04d" % (band, utdate1, obsid)
+                old_fn = os.path.join(fn0, tmpl+".fits")
+                old_fn = find_fits(old_fn)
+
+                newtmpl = "SDC%s_%s_%04d" % (band, utdate, v)
+                new_fn = os.path.join(os.path.dirname(old_fn),
+                                      os.path.basename(old_fn).replace(tmpl, newtmpl))
+
+                old_new_list.append((old_fn, new_fn))
+
+        for old_fn, new_fn in old_new_list:
+            if os.path.exists(new_fn):
+                if os.path.islink(new_fn):
+                    os.unlink(new_fn)
+                else:
+                    raise RuntimeError("file already exists: %s" % new_fn)
+
+        for old_fn, new_fn in old_new_list:
+            os.symlink(os.path.basename(old_fn), new_fn)
+
+    # now prepare the recipe_logs.
     s_list = []
     for lll in groupby(l, keyfunc):
         grouper = list(lll[1])
-        obsids = [int(lll1[0].split(".")[0].split("_")[-1]) for lll1 in grouper]
+        utdate_obsids = [lll1[0].split(".")[0].split("_")[-2:]
+                         for lll1 in grouper]
+
+        # convert (utdate, obsid) tuple in the form of 12 or 1:12
+        obsids = [obsid_map.get((utdate1, int(obsid)), int(obsid))
+                  for (utdate1, obsid) in utdate_obsids]
+
         frametypes = [lll1["FRAMETYPE"]  for lll1 in grouper]
 
         objtype = lll[0][1]
