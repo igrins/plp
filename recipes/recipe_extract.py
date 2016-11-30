@@ -88,7 +88,8 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
                   debug_output=debug_output,
                   wavelength_increasing_order=wavelength_increasing_order,
                   subtract_interorder_background=subtract_interorder_background,
-                  fill_nan=fill_nan)
+                  fill_nan=fill_nan,
+                  lacosmics_thresh=lacosmics_thresh)
 
     process_abba_band = ProcessABBABand(utdate, refdate,
                                         config,

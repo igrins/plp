@@ -61,7 +61,7 @@ import numpy as np
 import math
 import scipy.signal as signal
 import scipy.ndimage as ndimage
-import pyfits
+import astropy.io.fits as pyfits
 
 
 
