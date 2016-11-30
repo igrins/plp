@@ -40,6 +40,8 @@ recipe_list = [recipes.recipe_flat.flat,
                ]
 
 from recipes.recipe_register import register_sky, register_thar, thar
+
+register_sky = argh.arg('--do-ab', default=False, action='store_true')(register_sky)
 recipe_list.extend([register_sky, register_thar, thar])
 
 from recipes.recipe_divide_a0v import divide_a0v
