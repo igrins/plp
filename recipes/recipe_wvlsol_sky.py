@@ -192,8 +192,10 @@ class ProcessSkyBand(object):
         # sky_master_fn_ = os.path.splitext(os.path.basename(sky_names[0]))[0]
         # sky_master_fn = igr_path.get_secondary_calib_filename(sky_master_fn_)
 
-        import astropy.io.fits as pyfits
-        masterhdu = pyfits.open(sky_filenames[0])[0]
+        # import astropy.io.fits as pyfits
+        # masterhdu = pyfits.open(sky_filenames[0])[0]
+        from libs.load_fits import load_fits_data
+        masterhdu = load_fits_data(sky_filenames[0])
 
         igr_storage = extractor.igr_storage
         igr_storage.store(raw_spec_product,

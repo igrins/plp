@@ -537,7 +537,10 @@ def save_db(helper, band, obsids):
 
 def process_band(utdate, recipe_name, band,
                  obsids, frame_types, aux_infos,
-                 config_name):
+                 config_name, **kwargs):
+
+    if not kwargs.pop("do_ab") and recipe_name.upper().endswith("_AB"):
+        return
 
     helper = RecipeHelper(config_name, utdate, recipe_name)
 

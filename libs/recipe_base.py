@@ -43,7 +43,8 @@ class RecipeBase(object):
         self.process(utdate, bands, starting_obsids, config_file)
 
     def process(self, utdate, bands="HK",
-                starting_obsids=None, config_file="recipe.config"):
+                starting_obsids=None, config_file="recipe.config",
+                **kwargs):
 
         from libs.igrins_config import IGRINSConfig
         self.config = IGRINSConfig(config_file)
@@ -59,4 +60,5 @@ class RecipeBase(object):
         selected = recipes.select_fnmatch(self.RECIPE_NAME,
                                           starting_obsids_parsed)
 
-        self.run_selected_bands_with_recipe(utdate, selected, bands)
+        self.run_selected_bands_with_recipe(utdate, selected, bands,
+                                            **kwargs)

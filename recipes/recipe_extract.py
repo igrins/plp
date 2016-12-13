@@ -88,7 +88,8 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
                   debug_output=debug_output,
                   wavelength_increasing_order=wavelength_increasing_order,
                   subtract_interorder_background=subtract_interorder_background,
-                  fill_nan=fill_nan)
+                  fill_nan=fill_nan,
+                  lacosmics_thresh=lacosmics_thresh)
 
     process_abba_band = ProcessABBABand(utdate, refdate,
                                         config,
@@ -276,7 +277,7 @@ class ProcessABBABand(object):
                 if self.lacosmics_thresh > 0:
                     from libs.cosmics import cosmicsimage
 
-                    cosmic_input = variance_map.copy()
+                    cosmic_input = sig_map.copy()
                     cosmic_input[~np.isfinite(data_minus_flattened)] = np.nan
                     c = cosmicsimage(cosmic_input,
                                      readnoise=self.lacosmics_thresh)
@@ -633,7 +634,8 @@ class ProcessABBABand(object):
                                              extractor)
 
 
-        f_obj = pyfits.open(extractor.obj_filenames[0])
+        from libs.load_fits import open_fits
+        f_obj = open_fits(extractor.obj_filenames[0])
         f_obj[0].header.extend(wvl_header)
 
         tgt_basename = extractor.pr.tgt_basename
@@ -683,7 +685,8 @@ class ProcessABBABand(object):
                                              extractor)
 
 
-        f_obj = pyfits.open(extractor.obj_filenames[0])
+        from libs.load_fits import open_fits
+        f_obj = open_fits(extractor.obj_filenames[0])
         f_obj[0].header.extend(wvl_header)
 
         tgt_basename = extractor.pr.tgt_basename
@@ -844,7 +847,8 @@ class ProcessABBABand(object):
                                              extractor)
 
 
-        f_obj = pyfits.open(extractor.obj_filenames[0])
+        from libs.load_fits import open_fits
+        f_obj = open_fits(extractor.obj_filenames[0])
         f_obj[0].header.extend(wvl_header)
 
         from libs.products import PipelineImage as Image
