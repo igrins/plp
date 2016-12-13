@@ -634,7 +634,8 @@ class ProcessABBABand(object):
                                              extractor)
 
 
-        f_obj = pyfits.open(extractor.obj_filenames[0])
+        from libs.load_fits import open_fits
+        f_obj = open_fits(extractor.obj_filenames[0])
         f_obj[0].header.extend(wvl_header)
 
         tgt_basename = extractor.pr.tgt_basename
@@ -684,7 +685,8 @@ class ProcessABBABand(object):
                                              extractor)
 
 
-        f_obj = pyfits.open(extractor.obj_filenames[0])
+        from libs.load_fits import open_fits
+        f_obj = open_fits(extractor.obj_filenames[0])
         f_obj[0].header.extend(wvl_header)
 
         tgt_basename = extractor.pr.tgt_basename
@@ -845,7 +847,8 @@ class ProcessABBABand(object):
                                              extractor)
 
 
-        f_obj = pyfits.open(extractor.obj_filenames[0])
+        from libs.load_fits import open_fits
+        f_obj = open_fits(extractor.obj_filenames[0])
         f_obj[0].header.extend(wvl_header)
 
         from libs.products import PipelineImage as Image

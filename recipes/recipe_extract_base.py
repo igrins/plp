@@ -334,9 +334,10 @@ class RecipeExtractBase(RecipeExtractPR):
         b_name_list = filter_abba_names(abba_names, frametypes, "B")
 
 
-        a_list = [pyfits.open(name)[0].data \
+        from libs.load_fits import load_fits_data
+        a_list = [load_fits_data(name).data \
                   for name in a_name_list]
-        b_list = [pyfits.open(name)[0].data \
+        b_list = [load_fits_data(name).data \
                   for name in b_name_list]
 
 
@@ -418,7 +419,9 @@ class RecipeExtractBase(RecipeExtractPR):
     def get_data1(self, i, hori=True, vert=False):
 
         fn = self.obj_filenames[i]
-        data = pyfits.open(fn)[0].data
+        # data = pyfits.open(fn)[0].data
+        from libs.load_fits import load_fits_data
+        data = load_fits_data(fn)
 
         from libs.destriper import destriper
         destrip_mask = ~np.isfinite(data)|self.destripe_mask
