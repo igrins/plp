@@ -113,20 +113,82 @@ def save_db(helper, band, obsids):
 # not finished. Initial solution part is done, but the distortion part
 # is not.
 
+
+
+
+def save_ordermap_slitposmap(helper, band, obsids):
+
+    from aperture_helper import get_simple_aperture
+
+    caldb = helper.get_caldb()
+
+    master_obsid = obsids[0]
+    basename = (band, master_obsid)
+
+    wvlsol_v0 = caldb.load_resource_for(basename, "wvlsol_v0")
+    orders = wvlsol_v0["orders"]
+
+    ap = get_simple_aperture(helper, band, obsids,
+                             orders=orders)
+
+    order_map = ap.make_order_map()
+    slitpos_map = ap.make_slitpos_map()
+    order_map2 = ap.make_order_map(mask_top_bottom=True)
+
+    caldb.store_image(basename, "ordermap_fits", order_map)
+    caldb.store_image(basename, "slitposmap_fits", slitpos_map)
+    caldb.store_image(basename, "ordermap_masked_fits", order_map2)
+
+
+def save_wavelength_map(helper, band, obsids):
+
+    caldb = helper.get_caldb()
+
+    master_obsid = obsids[0]
+    basename = (band, master_obsid)
+
+    fit_results = caldb.load_item_from(basename, "SKY_WVLSOL_FIT_RESULT_JSON")
+
+    from libs.astropy_poly_helper import deserialize_poly_model
+
+    module_name, klass_name, serialized = fit_results["fitted_model"]
+    poly_2d = deserialize_poly_model(module_name, klass_name, serialized)
+
+    order_map = caldb.load_item_from(basename, "ordermap_fits")[0].data
+    # slitpos_map = caldb.load_item_from(basename, "slitposmap_fits")
+
+    offset_map = caldb.load_item_from(basename, "slitoffset_fits")[0].data
+
+    msk = order_map > 0
+
+    _, pixels = np.indices(msk.shape)
+    orders = order_map[msk]
+    wvl = poly_2d(pixels[msk] - offset_map[msk], orders) / orders
+
+    wvlmap = np.empty(msk.shape, dtype=float)
+    wvlmap.fill(np.nan)
+
+    wvlmap[msk] = wvl
+
+    caldb.store_image(basename, "WAVELENGTHMAP_FITS", wvlmap)
+
+
+
 from libs.recipe_helper import RecipeHelper
 
 from process_wvlsol_v0 import extract_spectra_multi
 from process_wvlsol_v0 import make_combined_image
 
 
-def process_band(utdate, recipe_name, band, obsids, config_name):
+def process_band(utdate, recipe_name, band, obsids, frame_types,
+                 aux_infos, config_name):
 
     helper = RecipeHelper(config_name, utdate, recipe_name)
 
     # STEP 1 :
     ## make combined image
 
-    make_combined_image(helper, band, obsids, mode=None)
+    make_combined_image(helper, band, obsids) #, mode=None)
 
     # Step 2
 
@@ -143,41 +205,62 @@ def process_band(utdate, recipe_name, band, obsids, config_name):
     from process_wvlsol_volume_fit import volume_fit, generate_slitoffsetmap
 
     volume_fit(helper, band, obsids)
+
+    save_db(helper, band, obsids)
+
+    save_ordermap_slitposmap(helper, band, obsids)
+
     generate_slitoffsetmap(helper, band, obsids)
 
     from process_derive_wvlsol import derive_wvlsol
     derive_wvlsol(helper, band, obsids)
 
+    save_wavelength_map(helper, band, obsids)
+
     from process_save_wat_header import save_wat_header
     save_wat_header(helper, band, obsids)
 
-    #fit_wvl_sol(helper, band, obsids)
+    # save_wavelength_map(helper, band, obsids)
+    # #fit_wvl_sol(helper, band, obsids)
 
     save_qa(helper, band, obsids)
 
     # some of the fugures are missing.
     # save_figures()
 
-    save_db(helper, band, obsids)
-
-if 0:
-
-    # Step 3:
-
-    identify_lines(helper, band, obsids)
-
-    get_1d_wvlsol(helper, band, obsids)
-
-    save_1d_wvlsol(extractor,
-                   orders_w_solutions, wvl_sol, p)
-
-    save_qa(extractor, orders_w_solutions,
-            reidentified_lines_map, p, m)
 
 
-    save_figures(helper, band, obsids)
+from libs.recipe_factory import new_recipe_class, new_recipe_func
 
-    save_db(helper, band, obsids)
+_recipe_class_wvlsol_sky = new_recipe_class("RecipeWvlsolSky",
+                                            "SKY", process_band)
+
+wvlsol_sky2 = new_recipe_func("wvlsol_sky2",
+                              _recipe_class_wvlsol_sky)
+
+__all__ = wvlsol_sky2
+
+
+
+
+# if 0:
+
+#     # Step 3:
+
+#     identify_lines(helper, band, obsids)
+
+#     get_1d_wvlsol(helper, band, obsids)
+
+#     save_1d_wvlsol(extractor,
+#                    orders_w_solutions, wvl_sol, p)
+
+#     save_qa(extractor, orders_w_solutions,
+#             reidentified_lines_map, p, m)
+
+
+#     save_figures(helper, band, obsids)
+
+#     save_db(helper, band, obsids)
 
 
 

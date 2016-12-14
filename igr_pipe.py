@@ -9,6 +9,9 @@ except ImportError:
 import recipes.recipe_flat
 import recipes.recipe_thar
 import recipes.recipe_wvlsol_sky
+
+from recipes.recipe_wvlsol_sky2 import wvlsol_sky2
+
 #from recipes.recipe_distort_sky import distortion_sky
 from recipes.recipe_extract import (a0v_ab, stellar_ab,
                                     a0v_onoff, stellar_onoff,
@@ -24,6 +27,7 @@ recipe_list = [recipes.recipe_flat.flat,
                #recipes.recipe_thar.thar,
                recipes.recipe_wvlsol_sky.sky_wvlsol,
                recipes.recipe_wvlsol_sky.wvlsol_sky,
+               wvlsol_sky2,
                #distortion_sky,
                a0v_ab,
                stellar_ab,
