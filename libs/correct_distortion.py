@@ -42,7 +42,7 @@ def get_flattened_2dspec(data, order_map, bottom_up_solutions):
 
     from scipy.interpolate import interp1d
 
-    def get_shifted(data):
+    def get_shifted(data, normalize=False):
 
         acc_data = np.add.accumulate(data, axis=0)
         ny, nx = acc_data.shape
@@ -79,19 +79,23 @@ def get_flattened_2dspec(data, order_map, bottom_up_solutions):
 
             #max_height = int(np.ceil(max(height)))
 
-            d0_acc_shft = np.array([intp(np.linspace(y1, y2, max_height+1)) \
-                                    for (y1, y2), intp in zip(bottom_up, d0_acc_interp)]).T
+            yy_list = [np.linspace(y1, y2, max_height+1) \
+                  for (y1, y2) in bottom_up]
+            d0_acc_shft = np.array([intp(yy) \
+                                    for yy, intp in zip(yy_list, d0_acc_interp)]).T
 
 
             #d0_shft = np.empty_like(d0_acc_shft)
             d0_shft = d0_acc_shft[1:,:]-d0_acc_shft[:-1,:]
+            if normalize:
+                d0_shft = d0_shft/[yy[1]-yy[0] for yy in yy_list]
             d0_shft_list.append(d0_shft)
 
         return d0_shft_list
 
 
     d0_shft_list = get_shifted(data)
-    msk_shft_list = get_shifted(msk)
+    msk_shft_list = get_shifted(msk, normalize=True)
 
     return d0_shft_list, msk_shft_list
 
