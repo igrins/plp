@@ -1,10 +1,4 @@
-try:
-    import argh
-except ImportError:
-    import sys
-    sys.path.append("./external/argh")
-
-    import argh
+from argh_helper import argh
 
 import recipes.recipe_flat
 import recipes.recipe_thar
