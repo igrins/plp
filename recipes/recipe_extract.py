@@ -865,10 +865,10 @@ class ProcessABBABand(object):
         from libs.products import PipelineImage as Image
         image_list = [Image([("EXTNAME", "SPEC_FLATTENED")],
                             convert_data(a0v_flattened_data[0][1]))]
-        if self.debug_output:
-            for ext_name, data in a0v_flattened_data[1:]:
-                image_list.append(Image([("EXTNAME", ext_name.upper())],
-                                        convert_data(data)))
+
+        for ext_name, data in a0v_flattened_data[1:]:
+            image_list.append(Image([("EXTNAME", ext_name.upper())],
+                                    convert_data(data)))
 
 
         from libs.products import PipelineImages #Base

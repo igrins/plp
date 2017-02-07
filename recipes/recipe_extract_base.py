@@ -554,7 +554,7 @@ class RecipeExtractBase(RecipeExtractPR):
                         data_minus_flattened, slitoffset_map,
                         debug=False):
 
-        if slitoffset_map == "none":
+        if isinstance(slitoffset_map, str) and (slitoffset_map == "none"):
             msk1 = np.isfinite(data_minus_flattened) & np.isfinite(variance_map)
             shifted = dict(data=data_minus_flattened,
                            variance_map=variance_map,
@@ -601,7 +601,7 @@ class RecipeExtractBase(RecipeExtractPR):
         if slitpos_map is None:
             slitpos_map = self.slitpos_map
 
-        if slitoffset_map == "none":
+        if isinstance(slitoffset_map, str) and (slitoffset_map == "none"):
             "do not use slit offset map"
             slitoffset_map = None
         elif slitoffset_map is None:
