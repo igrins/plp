@@ -22,7 +22,7 @@ def extractor_factory(recipe_name):
                 debug_output=False,
                 wavelength_increasing_order=False,
                 fill_nan=None,
-                lacosmics_thresh=0,
+                lacosmics_thresh=0.,
                 subtract_interorder_background=False,
                 ):
         abba_all(recipe_name, utdate, refdate=refdate, bands=bands,
