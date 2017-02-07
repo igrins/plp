@@ -7,7 +7,8 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
               config_file="recipe.config",
               threshold_a0v=0.2,
               multiply_model_a0v=False,
-              html_output=False):
+              html_output=False,
+              a0v_obsid=None):
 
     from libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
@@ -47,7 +48,8 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
                               threshold_a0v=threshold_a0v,
                               objname=objname,
                               multiply_model_a0v=multiply_model_a0v,
-                              html_output=html_output)
+                              html_output=html_output,
+                              a0v_obsid=a0v_obsid)
 
 
 def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
@@ -56,7 +58,8 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
                       threshold_a0v=0.1,
                       objname="",
                       multiply_model_a0v=False,
-                      html_output=False):
+                      html_output=False,
+                      a0v_obsid=None):
 
     target_type, nodding_type = recipe.split("_")
 
@@ -87,7 +90,12 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
 
     if FIX_TELLURIC:
 
-        A0V_basename = extractor.basenames["a0v"]
+        if a0v_obsid is None:
+            A0V_basename = extractor.basenames["a0v"]
+        else:
+            A0V_basename = "SDC%s_%s_%04d" % (band, utdate, int(a0v_obsid))
+            print A0V_basename
+
         a0v = extractor.get_oned_spec_helper(A0V_basename)
 
 

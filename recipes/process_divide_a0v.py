@@ -4,7 +4,7 @@ import numpy as np
 from libs.a0v_spec import A0V
 
 
-def generate_a0v_divided(helper, band, obsids):
+def generate_a0v_divided(helper, band, obsids, a0v_obsid=None):
 
     caldb = helper.get_caldb()
 
@@ -14,12 +14,21 @@ def generate_a0v_divided(helper, band, obsids):
     spec = tgt_spec_hdulist[0].data
     wvl = tgt_spec_hdulist[1].data
 
-    a0v_basename = caldb.db_query_basename("a0v", band, master_obsid)
+    print master_obsid, a0v_obsid
+    if a0v_obsid is None:
+        a0v_basename = caldb.db_query_basename("a0v", band, master_obsid)
+    else:
+        a0v_basename = helper.get_basename(band, a0v_obsid)
 
     a0v_spec_hdulist = caldb.load_item_from(a0v_basename,
                                             "SPEC_FITS")
 
     a0v_spec = a0v_spec_hdulist[0].data
+
+    a0v_spec_flattened_hdulist = caldb.load_item_from(a0v_basename,
+                                                      "SPEC_FITS_FLATTENED")
+
+    a0v_fitted_continuum = a0v_spec_flattened_hdulist["FITTED_CONTINUUM"].data
 
     a0v_interp1d = A0V.get_flux_interp1d(helper.config)
     vega = np.array([a0v_interp1d(w1) for w1 in wvl])
@@ -30,12 +39,14 @@ def generate_a0v_divided(helper, band, obsids):
 
     store_tgt_divide_a0v(caldb, basename,
                          master_hdu,
-                         wvl, spec, a0v_spec, vega)
+                         wvl, spec, a0v_spec, vega,
+                         a0v_fitted_continuum)
 
 
 def store_tgt_divide_a0v(caldb, basename,
                          master_hdu,
-                         wvl, spec, a0v_spec, vega):
+                         wvl, spec, a0v_spec, vega,
+                         a0v_fitted_continuum):
 
     from libs.products import PipelineImage as Image
     from libs.products import PipelineImages
@@ -50,6 +61,8 @@ def store_tgt_divide_a0v(caldb, basename,
                             a0v_spec))
     image_list.append(Image([("EXTNAME", "VEGA_SPEC")],
                             vega))
+    image_list.append(Image([("EXTNAME", "SPEC_DIVIDE_CONT")],
+                            spec/a0v_fitted_continuum*vega))
 
 
     product = PipelineImages(image_list, masterhdu=master_hdu)
@@ -80,11 +93,11 @@ from libs.recipe_helper import RecipeHelper
 
 def process_band(utdate, recipe_name, band, 
                  obsids, frame_types, aux_infos,
-                 config_name):
+                 config_name, a0v_obsid=None):
 
     helper = RecipeHelper(config_name, utdate, recipe_name)
 
-    generate_a0v_divided(helper, band, obsids)
+    generate_a0v_divided(helper, band, obsids, a0v_obsid)
 
 
 if __name__ == "__main__":
