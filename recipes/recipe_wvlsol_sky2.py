@@ -192,10 +192,6 @@ def process_band(utdate, recipe_name, band, obsids, frame_types,
 
     # Step 2
 
-    ## load simple-aperture (no order info; depends on
-
-    # extract_spectra(helper, band, obsids)
-
     extract_spectra_multi(helper, band, obsids)
 
     from process_identify_multiline import identify_multiline
