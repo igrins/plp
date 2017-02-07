@@ -30,7 +30,8 @@ class ShiftX(object):
         return d0_shft
 
 
-def get_flattened_2dspec(data, order_map, bottom_up_solutions):
+def get_flattened_2dspec(data, order_map, bottom_up_solutions,
+                         conserve_flux=False):
 
     #sl = slice(0, 2048), slice(0, 2048)
 
@@ -95,7 +96,7 @@ def get_flattened_2dspec(data, order_map, bottom_up_solutions):
 
 
     d0_shft_list = get_shifted(data)
-    msk_shft_list = get_shifted(msk, normalize=True)
+    msk_shft_list = get_shifted(msk, normalize=conserve_flux)
 
     return d0_shft_list, msk_shft_list
 

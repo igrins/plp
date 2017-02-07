@@ -14,6 +14,7 @@ def extractor_factory(recipe_name):
     @argh.arg("--wavelength-increasing-order")
     @argh.arg("--fill-nan")
     @argh.arg("--lacosmics-thresh")
+    @argh.arg("--conserve-2d-flux", default=True)
     def extract(utdate, refdate="20140316", bands="HK",
                 starting_obsids=None,
                 config_file="recipe.config",
@@ -24,6 +25,7 @@ def extractor_factory(recipe_name):
                 fill_nan=None,
                 lacosmics_thresh=0,
                 subtract_interorder_background=False,
+                conserve_2d_flux=True,
                 ):
         abba_all(recipe_name, utdate, refdate=refdate, bands=bands,
                  starting_obsids=starting_obsids,
@@ -35,6 +37,7 @@ def extractor_factory(recipe_name):
                  fill_nan=fill_nan,
                  lacosmics_thresh=lacosmics_thresh,
                  subtract_interorder_background=subtract_interorder_background,
+                 conserve_2d_flux=conserve_2d_flux,
                  )
 
     extract.__name__ = recipe_name.lower()
@@ -59,6 +62,7 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
              fill_nan=None,
              lacosmics_thresh=0,
              subtract_interorder_background=False,
+             conserve_2d_flux=True,
              ):
 
     from libs.igrins_config import IGRINSConfig
@@ -89,7 +93,8 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
                   wavelength_increasing_order=wavelength_increasing_order,
                   subtract_interorder_background=subtract_interorder_background,
                   fill_nan=fill_nan,
-                  lacosmics_thresh=lacosmics_thresh)
+                  lacosmics_thresh=lacosmics_thresh,
+                  conserve_2d_flux=conserve_2d_flux)
 
     process_abba_band = ProcessABBABand(utdate, refdate,
                                         config,
@@ -118,7 +123,8 @@ class ProcessABBABand(object):
                  wavelength_increasing_order=False,
                  fill_nan=None,
                  lacosmics_thresh=0,
-                 subtract_interorder_background=False):
+                 subtract_interorder_background=False,
+                 conserve_2d_flux=False):
         """
         cr_rejection_thresh : pixels that deviate significantly from the profile are excluded.
         """
@@ -141,7 +147,8 @@ class ProcessABBABand(object):
 
         self.subtract_interorder_background = subtract_interorder_background
 
-    def process(self, recipe, band, obsids, frametypes):
+    def process(self, recipe, band, obsids, frametypes,
+                conserve_2d_flux=True):
 
         igr_storage = self.igr_storage
 
@@ -488,7 +495,8 @@ class ProcessABBABand(object):
                           shifted["data"],
                           shifted["variance_map"],
                           ordermap_bpixed,
-                          cr_mask=cr_mask)
+                          cr_mask=cr_mask,
+                          conserve_flux=conserve_2d_flux)
 
 
         if DO_STD:
@@ -678,7 +686,8 @@ class ProcessABBABand(object):
                      data_shft,
                      variance_map_shft,
                      ordermap_bpixed,
-                     cr_mask=None):
+                     cr_mask=None,
+                     conserve_flux=True):
 
         wvl_header, wvl_data, convert_data = \
                     self.get_wvl_header_data(igr_storage,
@@ -707,7 +716,8 @@ class ProcessABBABand(object):
         d0_shft_list, msk_shft_list = \
                       get_flattened_2dspec(data_shft,
                                            ordermap_bpixed,
-                                           new_bottom_up_solutions)
+                                           new_bottom_up_solutions,
+                                           conserve_flux=conserve_flux)
 
 
         d = np.array(d0_shft_list) / np.array(msk_shft_list)
@@ -728,7 +738,8 @@ class ProcessABBABand(object):
         d0_shft_list, msk_shft_list = \
                       get_flattened_2dspec(variance_map_shft,
                                            ordermap_bpixed,
-                                           new_bottom_up_solutions)
+                                           new_bottom_up_solutions,
+                                           conserve_flux=conserve_flux)
         d = np.array(d0_shft_list) / np.array(msk_shft_list)
         f_obj[0].data = d.astype("float32")
         from libs.storage_descriptions import VAR2D_FITS_DESC
