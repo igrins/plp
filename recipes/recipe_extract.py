@@ -11,33 +11,21 @@ import argh
 def extractor_factory(recipe_name):
     @argh.arg("-s", "--starting-obsids", default=None)
     @argh.arg("-c", "--config-file", default="recipe.config")
-    @argh.arg("--wavelength-increasing-order")
-    @argh.arg("--fill-nan")
-    @argh.arg("--lacosmics-thresh")
+    @argh.arg("-d", "--debug-output", default=False)
+    @argh.arg("--wavelength-increasing-order", default=False)
+    @argh.arg("--cr-rejection-thresh", default=30.)
+    @argh.arg("--frac-slit", default="0,1")
+    @argh.arg("--fill-nan", default=None)
+    @argh.arg("--lacosmics-thresh", default=0.)
     @argh.arg("--conserve-2d-flux", default=True)
+    @argh.arg("--slit-profile-mode", choices=['auto','simple', "gauss2d"],
+              default="auto")
+    @argh.arg("--subtract-interorder-background", default=False)
     def extract(utdate, refdate="20140316", bands="HK",
-                starting_obsids=None,
-                config_file="recipe.config",
-                frac_slit=None,
-                cr_rejection_thresh=30,
-                debug_output=False,
-                wavelength_increasing_order=False,
-                fill_nan=None,
-                lacosmics_thresh=0.,
-                subtract_interorder_background=False,
-                conserve_2d_flux=True,
+                **kwargs
                 ):
         abba_all(recipe_name, utdate, refdate=refdate, bands=bands,
-                 starting_obsids=starting_obsids,
-                 config_file=config_file,
-                 frac_slit=frac_slit,
-                 cr_rejection_thresh=cr_rejection_thresh,
-                 debug_output=debug_output,
-                 wavelength_increasing_order=wavelength_increasing_order,
-                 fill_nan=fill_nan,
-                 lacosmics_thresh=lacosmics_thresh,
-                 subtract_interorder_background=subtract_interorder_background,
-                 conserve_2d_flux=conserve_2d_flux,
+                 **kwargs
                  )
 
     extract.__name__ = recipe_name.lower()
@@ -53,20 +41,13 @@ extended_onoff = extractor_factory("EXTENDED_ONOFF")
 
 
 def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
-             starting_obsids=None, interactive=False,
-             config_file="recipe.config",
-             frac_slit=None,
-             cr_rejection_thresh=100.,
-             debug_output=False,
-             wavelength_increasing_order=False,
-             fill_nan=None,
-             lacosmics_thresh=0,
-             subtract_interorder_background=False,
-             conserve_2d_flux=True,
+             **kwargs
              ):
 
+    starting_obsids = kwargs.pop("starting_obsids")
+
     from libs.igrins_config import IGRINSConfig
-    config = IGRINSConfig(config_file)
+    config = IGRINSConfig(kwargs.pop("config_file"))
 
     if not bands in ["H", "K", "HK"]:
         raise ValueError("bands must be one of 'H', 'K' or 'HK'")
@@ -82,19 +63,11 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
     if not selected:
         print "no recipe of with matching arguments is found"
 
-    if frac_slit is not None:
-        frac_slit = map(float, frac_slit.split(","))
-        if len(frac_slit) !=2:
-            raise ValueError("frac_slit must be two floats separated by comma")
+    frac_slit = map(float, kwargs["frac_slit"].split(","))
+    if len(frac_slit) !=2:
+        raise ValueError("frac_slit must be two floats separated by comma")
 
-    kwargs = dict(frac_slit=frac_slit,
-                  cr_rejection_thresh=cr_rejection_thresh,
-                  debug_output=debug_output,
-                  wavelength_increasing_order=wavelength_increasing_order,
-                  subtract_interorder_background=subtract_interorder_background,
-                  fill_nan=fill_nan,
-                  lacosmics_thresh=lacosmics_thresh,
-                  conserve_2d_flux=conserve_2d_flux)
+    kwargs["frac_slit"] = frac_slit
 
     process_abba_band = ProcessABBABand(utdate, refdate,
                                         config,
@@ -124,7 +97,8 @@ class ProcessABBABand(object):
                  fill_nan=None,
                  lacosmics_thresh=0,
                  subtract_interorder_background=False,
-                 conserve_2d_flux=False):
+                 conserve_2d_flux=False,
+                 slit_profile_mode="auto"):
         """
         cr_rejection_thresh : pixels that deviate significantly from the profile are excluded.
         """
@@ -146,6 +120,8 @@ class ProcessABBABand(object):
         self.wavelength_increasing_order = wavelength_increasing_order
 
         self.subtract_interorder_background = subtract_interorder_background
+
+        self.slit_profile_mode = slit_profile_mode
 
     def _estimate_slit_profile_1d(self, extractor, ap,
                                   data_minus_flattened,
@@ -179,18 +155,9 @@ class ProcessABBABand(object):
 
         return profile
 
-    def _estimate_slit_profile_gauss(self, extractor, ap,
-                                     data_minus_flattened,
-                                     spec1d, bias_mask,
-                                     x1=800, x2=2048-800,
-                                     do_ab=True):
-        """
-        return a profile function
-
-        def profile(order, x_pixel, y_slit_pos):
-            return profile_value
-
-        """
+    def _derive_data_for_slit_profile(self, extractor, ap,
+                                      data_minus_flattened,
+                                      spec1d):
 
         def expand_1dspec_to_2dspec(s1d, o2d, min_order=None):
             mmm = (o2d > 0) & (o2d < 999)
@@ -205,7 +172,7 @@ class ProcessABBABand(object):
 
             return s2
 
-        omap, slitpos = self.ordermap_bpixed, self.slitpos_map
+        omap = extractor.ordermap_bpixed
 
         # correction factors for aperture width
         ds0 = np.array([ap(o, ap.xi, 1.) - ap(o, ap.xi, 0.) for o in ap.orders])
@@ -224,20 +191,26 @@ class ProcessABBABand(object):
         s2d = expand_1dspec_to_2dspec(ss/ds, omap)
 
         ods = data_minus_flattened/s2d
-        msk1 = np.isfinite(ods) & bias_mask
 
-        # ode = hdus_combined["VARIANCE_MAP"].data**.5/s2d
-        # ode[ode<0] = np.nan
+        return ods
 
-        # msk1 = np.isfinite(ods) & np.isfinite(ode) & bias_mask
+    def _estimate_slit_profile_glist(self, extractor, ap,
+                                     ods, 
+                                     # spec1d,
+                                     x1=800, x2=2048-800,
+                                     do_ab=True):
+        """
+        return a profile function. This has a signature of
 
-        # select only the central part
+        def profile(y_slit_pos):
+            return profile_value
 
-        # o1 = np.percentile(ap.orders, ap.orders[i1])
-        # o2 = np.percentile(ap.orders, ap.orders[i2])
+        """
 
-        # select central orders : orders of y between [128, -128]
-        #                       : x between [800:-800]
+        omap, slitpos = extractor.ordermap_bpixed, extractor.slitpos_map
+
+        msk1 = np.isfinite(ods) # & bias_mask
+
         x_min, x_max = x1, x2
         y_min, y_max = 128, 2048-128
 
@@ -255,11 +228,106 @@ class ProcessABBABand(object):
         ods_mskd = ods[msk]
         s_mskd = slitpos[msk]
 
-        from slit_profile_model import derive_multi_gaussian_slit_profile
+        from libs.slit_profile_model import derive_multi_gaussian_slit_profile
         g_list0 = derive_multi_gaussian_slit_profile(s_mskd, ods_mskd)
 
-        def profile(order, x_pixel, y_slit_pos):
-            return g_list0(y_slit_pos)
+        return g_list0
+
+
+    def _estimate_slit_profile_gauss_2d(self, extractor, ap,
+                                        ods,
+                                        g_list0,
+                                        # spec1d,
+                                        x1=800, x2=2048-800,
+                                        do_ab=True):
+        _, xx = np.indices(ods.shape)
+
+        msk1 = np.isfinite(ods) # & np.isfinite(ode) & bias_mask
+
+        from libs.slit_profile_2d_model import Logger
+        logger = Logger("test.pdf")
+
+        omap, slitpos = extractor.ordermap_bpixed, extractor.slitpos_map
+
+        func_dict = {}
+        print "deriving 2d slit profiles"
+        for o in ap.orders:
+            print o
+            msk2 = omap == o
+
+            msk = msk1 & msk2 # & (slitpos < 0.5)
+
+            x = xx[msk]
+            y = slitpos[msk]
+            s = ods[msk]
+
+            xmsk = (800 < x) & (x < 2048-800)
+
+            # check if there is enough pixels to derive new slit profile
+            if len(s[xmsk]) > 8000:
+                from libs.slit_profile_model import derive_multi_gaussian_slit_profile
+
+                g_list = derive_multi_gaussian_slit_profile(y[xmsk], s[xmsk])
+            else:
+                g_list = g_list0
+
+            if len(x) < 1000:
+                # print "skipping"
+                # def _f(order, xpixel, slitpos):
+                #     return g_list(slitpos)
+
+                # func_dict[o] = g_list0
+                continue
+
+            if 0:
+
+                import libs.slit_profile_model as slit_profile_model
+                debug_func = slit_profile_model.get_debug_func()
+                debug_func(g_list, g_list, y, s)
+
+            from libs.slit_profile_2d_model import get_varying_conv_gaussian_model
+            Varying_Conv_Gaussian_Model = get_varying_conv_gaussian_model(g_list)
+            vcg = Varying_Conv_Gaussian_Model()
+
+            if 0:
+                def _vcg(y):
+                    centers = np.zeros_like(y) + 1024
+                    return vcg(centers, y)
+
+                debug_func(_vcg, _vcg, y, s)
+
+            from astropy.modeling import fitting
+
+            fitter = fitting.LevMarLSQFitter()
+            t = fitter(vcg, x, y, s, maxiter=100000)
+
+            func_dict[o] = t
+
+            # print "saveing figure"
+            logi = logger.open("slit_profile_2d_conv_gaussian",
+                               ("basename", o))
+
+            logi.submit("raw_data_scatter",
+                        (x, y, s))
+
+            logi.submit("profile_sub_scatter",
+                        (x, y, s-vcg(x, y)),
+                        label="const. model")
+
+            logi.submit("profile_sub_scatter",
+                        (x, y, s-t(x, y)),
+                        label="varying model")
+
+            logi.close()
+
+        def profile(order, x_pixel, slitpos):
+            # print "profile", order, func_dict.keys()
+            def oo(x_pixel, slitpos):
+                return g_list0(slitpos)
+
+            return func_dict.get(order, oo)(x_pixel, slitpos)
+
+        logger.pdf.close()
 
         return profile
 
@@ -327,23 +395,6 @@ class ProcessABBABand(object):
             cr_mask_cosmics = c.getmask()
 
             cr_mask = cr_mask | cr_mask_cosmics
-
-        #variance_map[cr_mask] = np.nan
-
-
-        # masking this out will affect the saved combined image.
-        # data_minus_flattened_orig = data_minus_flattened.copy()
-        # data_minus_flattened[cr_mask] = np.nan
-
-
-        #profile_map_shft = profile_map
-
-        #data_minus_flattened_shft = (data_minus_flattened)
-        #variance_map_shft = (variance_map)
-
-
-
-        # extract spec
 
         # extract spec
 
@@ -438,37 +489,12 @@ class ProcessABBABand(object):
                                                          x1=800, x2=2048-800,
                                                          do_ab=DO_AB)
 
-                # _ = extractor.extract_slit_profile(ap,
-                #                                    data_minus_flattened,
-                #                                    x1=800, x2=1200)
-                # bins, hh0, slit_profile_list = _
-
-                # if DO_AB:
-                #     profile_x, profile_y = extractor.get_norm_profile_ab(bins, hh0)
-                # else:
-                #     profile_x, profile_y = extractor.get_norm_profile(bins, hh0)
-
-
-                # self.store_profile(igr_storage,
-                #                    extractor.obj_filenames[0],
-                #                    ap.orders, slit_profile_list,
-                #                    profile_x, profile_y)
-
-                # if DO_AB:
-                #     profile = extractor.get_profile_func_ab(profile_x, profile_y)
-                # else:
-                #     profile = extractor.get_profile_func(profile_x, profile_y)
-
-                # make weight map
                 profile_map = extractor.make_profile_map(ap,
                                                          profile,
                                                          frac_slit=self.frac_slit)
 
 
                 # extract spec
-
-
-
                 _ = self._extract_spec_using_profile(extractor,
                                                      ap, profile_map,
                                                      variance_map,
@@ -481,95 +507,44 @@ class ProcessABBABand(object):
 
                 s_list, v_list, cr_mask, aux_images = _
 
-                # now try to derive the n-gaussian profile
-                # self._estimate_slit_profile_gauss(extractor, ap,
-                #                                   data_minus_flattened,
-                #                                   s_list, bias_mask,
-                #                                   x1=800, x2=2048-800,
-                #                                   do_ab=True)
 
+                if self.slit_profile_mode == "gauss2d":
+                    # now try to derive the n-gaussian profile
+                    print "updating profile using the multi gauss fit"
 
+                    ods = self._derive_data_for_slit_profile(extractor, ap,
+                                                             data_minus_flattened,
+                                                             s_list)
 
-                # shifted = extractor.get_shifted_all(ap,
-                #                                     profile_map,
-                #                                     variance_map,
-                #                                     data_minus_flattened,
-                #                                     slitoffset_map_extract,
-                #                                     debug=self.debug_output)
+                    glist = self._estimate_slit_profile_glist(
+                        extractor, ap,
+                        ods,
+                        # s_list, # bias_mask,
+                        x1=800, x2=2048-800,
+                        do_ab=True)
 
-                # # for khjeong
-                # weight_thresh = None
-                # remove_negative = False
+                    profile = self._estimate_slit_profile_gauss_2d(extractor, ap,
+                                                                   ods,
+                                                                   glist,
+                                                                   # s_list,
+                                                                   x1=800, x2=2048-800,
+                                                                   do_ab=True)
 
+                    profile_map = extractor.make_profile_map(ap,
+                                                             profile,
+                                                             frac_slit=self.frac_slit)
 
-                # _ = extractor.extract_spec_stellar(ap, shifted,
-                #                                    weight_thresh,
-                #                                    remove_negative)
+                    _ = self._extract_spec_using_profile(extractor,
+                                                         ap, profile_map,
+                                                         variance_map,
+                                                         variance_map0,
+                                                         data_minus_flattened,
+                                                         ordermap,
+                                                         slitpos_map,
+                                                         slitoffset_map,
+                                                         debug=False)
 
-
-                # s_list, v_list = _
-
-                # # if self.debug_output:
-                # #     self.save_debug_output()
-
-                # # make synth_spec : profile * spectra
-                # synth_map = extractor.make_synth_map(\
-                #     ap, profile_map, s_list,
-                #     ordermap=ordermap,
-                #     slitpos_map=slitpos_map,
-                #     slitoffset_map=slitoffset_map)
-
-
-                # # update variance map
-                # variance_map = extractor.get_updated_variance(\
-                #     variance_map, variance_map0, synth_map)
-
-                # # get cosmicray mask
-                # sig_map = np.abs(data_minus_flattened - synth_map)/variance_map**.5
-
-                # cr_mask = np.abs(sig_map) > self.cr_rejection_thresh
-
-                # if self.lacosmics_thresh > 0:
-                #     from libs.cosmics import cosmicsimage
-
-                #     cosmic_input = sig_map.copy()
-                #     cosmic_input[~np.isfinite(data_minus_flattened)] = np.nan
-                #     c = cosmicsimage(cosmic_input,
-                #                      readnoise=self.lacosmics_thresh)
-                #     c.run()
-                #     cr_mask_cosmics = c.getmask()
-
-                #     cr_mask = cr_mask | cr_mask_cosmics
-
-                # #variance_map[cr_mask] = np.nan
-
-
-                # # masking this out will affect the saved combined image.
-                # data_minus_flattened_orig = data_minus_flattened.copy()
-                # data_minus_flattened[cr_mask] = np.nan
-
-
-                # #profile_map_shft = profile_map
-
-                # #data_minus_flattened_shft = (data_minus_flattened)
-                # #variance_map_shft = (variance_map)
-
-
-
-                # # extract spec
-
-                # # extract spec
-
-
-                # shifted = extractor.get_shifted_all(ap, profile_map,
-                #                                     variance_map,
-                #                                     data_minus_flattened,
-                #                                     slitoffset_map,
-                #                                     debug=False)
-
-                # _ = extractor.extract_spec_stellar(ap, shifted,
-                #                                    weight_thresh,
-                #                                    remove_negative)
+                    s_list, v_list, cr_mask, aux_images = _
 
 
                 sig_map = aux_images["sig_map"]
