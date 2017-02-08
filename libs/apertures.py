@@ -408,7 +408,7 @@ class Apertures(object):
 
 
     def extract_slit_profile(self, order_map, slitpos_map, data,
-                             x1, x2, bins=None):
+                             x1, x2, bins=None, normalize=True):
 
         x1, x2 = int(x1), int(x2)
 
@@ -429,7 +429,13 @@ class Apertures(object):
             hh = np.histogram(slitpos_map[sl][msk][finite_mask],
                               weights=d[finite_mask], bins=bins,
                               )
-            slit_profile_list.append(hh[0])
+            if normalize:
+                nn = np.histogram(slitpos_map[sl][msk][finite_mask], bins=bins)
+                hh0 = hh[0] / nn[0]
+            else:
+                hh0 = hh[0]
+
+            slit_profile_list.append(hh0)
 
         return bins, slit_profile_list
 

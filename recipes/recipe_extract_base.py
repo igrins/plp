@@ -469,7 +469,7 @@ class RecipeExtractBase(RecipeExtractPR):
         return ap
 
     def extract_slit_profile(self, ap, data_minus_flattened,
-                             x1=800, x2=1200):
+                             x1=800, x2=1200, mode="median"):
         bins, slit_profile_list = \
               ap.extract_slit_profile(self.ordermap_bpixed,
                                       self.slitpos_map,
@@ -477,7 +477,13 @@ class RecipeExtractBase(RecipeExtractPR):
                                       x1, x2, bins=None)
 
 
-        hh0 = np.sum(slit_profile_list, axis=0)
+        if mode == "median":
+            s0 = np.array(slit_profile_list)
+            ss = np.sum(np.abs(s0), axis=1)
+
+            hh0 = np.nanmedian(s0/ss[:, np.newaxis], axis=0)
+        else:
+            hh0 = np.sum(slit_profile_list, axis=0)
 
         return bins, hh0, slit_profile_list
 

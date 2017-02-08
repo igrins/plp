@@ -147,6 +147,227 @@ class ProcessABBABand(object):
 
         self.subtract_interorder_background = subtract_interorder_background
 
+    def _estimate_slit_profile_1d(self, extractor, ap,
+                                  data_minus_flattened,
+                                  x1=800, x2=2048-800,
+                                  do_ab=True):
+        """
+        return a profile function
+
+        def profile(order, x_pixel, y_slit_pos):
+            return profile_value
+
+        """
+        _ = extractor.extract_slit_profile(ap,
+                                           data_minus_flattened,
+                                           x1=x1, x2=x2)
+        bins, hh0, slit_profile_list = _
+
+        if do_ab:
+            profile_x, profile_y = extractor.get_norm_profile_ab(bins, hh0)
+        else:
+            profile_x, profile_y = extractor.get_norm_profile(bins, hh0)
+
+        self.store_profile(extractor.obj_filenames[0],
+                           ap.orders, slit_profile_list,
+                           profile_x, profile_y)
+
+        if do_ab:
+            profile = extractor.get_profile_func_ab(profile_x, profile_y)
+        else:
+            profile = extractor.get_profile_func(profile_x, profile_y)
+
+        return profile
+
+    def _estimate_slit_profile_gauss(self, extractor, ap,
+                                     data_minus_flattened,
+                                     spec1d, bias_mask,
+                                     x1=800, x2=2048-800,
+                                     do_ab=True):
+        """
+        return a profile function
+
+        def profile(order, x_pixel, y_slit_pos):
+            return profile_value
+
+        """
+
+        def expand_1dspec_to_2dspec(s1d, o2d, min_order=None):
+            mmm = (o2d > 0) & (o2d < 999)
+            xi = np.indices(mmm.shape)[-1]
+            if min_order is None:
+                min_order = o2d[mmm].min()
+            indx = (o2d[mmm]-min_order)*2048 + xi[mmm]
+
+            s2 = np.empty(mmm.shape, dtype=float)
+            s2.fill(np.nan)
+            s2[mmm] = np.take(s1d, indx)
+
+            return s2
+
+        omap, slitpos = self.ordermap_bpixed, self.slitpos_map
+
+        # correction factors for aperture width
+        ds0 = np.array([ap(o, ap.xi, 1.) - ap(o, ap.xi, 0.) for o in ap.orders])
+        ds = ds0 / 50. # 50 is just a typical width.
+
+        # try to estimate threshold to mask the spectra
+        s_max = np.nanpercentile(spec1d / ds0, 90) # mean counts per pixel
+        s_cut = 0.03 * s_max # 3 % of s_max
+
+        ss_cut = s_cut * ds0
+
+        ss = np.ma.array(spec1d, mask=(spec1d < ss_cut)).filled(np.nan)
+
+        # omap[0].data
+
+        s2d = expand_1dspec_to_2dspec(ss/ds, omap)
+
+        ods = data_minus_flattened/s2d
+        msk1 = np.isfinite(ods) & bias_mask
+
+        # ode = hdus_combined["VARIANCE_MAP"].data**.5/s2d
+        # ode[ode<0] = np.nan
+
+        # msk1 = np.isfinite(ods) & np.isfinite(ode) & bias_mask
+
+        # select only the central part
+
+        # o1 = np.percentile(ap.orders, ap.orders[i1])
+        # o2 = np.percentile(ap.orders, ap.orders[i2])
+
+        # select central orders : orders of y between [128, -128]
+        #                       : x between [800:-800]
+        x_min, x_max = x1, x2
+        y_min, y_max = 128, 2048-128
+
+        xx = np.array([ap(o, 1024, .5) for o in ap.orders])
+        i1, i2 = np.searchsorted(xx, [y_min, y_max])
+        o1, o2 = ap.orders[i1], ap.orders[i2]
+        msk2 = (o1 < omap) & (omap < o2)
+
+        msk2[:, :x_min] = False
+        msk2[:, x_max:] = False
+
+
+        msk = msk1 & msk2 # & (slitpos < 0.5)
+
+        ods_mskd = ods[msk]
+        s_mskd = slitpos[msk]
+
+        from slit_profile_model import derive_multi_gaussian_slit_profile
+        g_list0 = derive_multi_gaussian_slit_profile(s_mskd, ods_mskd)
+
+        def profile(order, x_pixel, y_slit_pos):
+            return g_list0(y_slit_pos)
+
+        return profile
+
+
+    def _extract_spec_using_profile(self, extractor,
+                                    ap, profile_map,
+                                    variance_map,
+                                    variance_map0,
+                                    data_minus_flattened,
+                                    ordermap,
+                                    slitpos_map,
+                                    slitoffset_map,
+                                    debug=False):
+
+        # This is used to test spec-extraction without slit-offset-map
+
+        # slitoffset_map_extract = "none"
+        slitoffset_map_extract = slitoffset_map
+
+        shifted = extractor.get_shifted_all(ap,
+                                            profile_map,
+                                            variance_map,
+                                            data_minus_flattened,
+                                            slitoffset_map_extract,
+                                            debug=self.debug_output)
+
+        # for khjeong
+        weight_thresh = None
+        remove_negative = False
+
+        _ = extractor.extract_spec_stellar(ap, shifted,
+                                           weight_thresh,
+                                           remove_negative)
+
+        s_list, v_list = _
+
+        # if self.debug_output:
+        #     self.save_debug_output()
+
+        # make synth_spec : profile * spectra
+        synth_map = extractor.make_synth_map(\
+            ap, profile_map, s_list,
+            ordermap=ordermap,
+            slitpos_map=slitpos_map,
+            slitoffset_map=slitoffset_map)
+
+
+        # update variance map
+        variance_map = extractor.get_updated_variance(\
+            variance_map, variance_map0, synth_map)
+
+        # get cosmicray mask
+        sig_map = np.abs(data_minus_flattened - synth_map)/variance_map**.5
+
+        cr_mask = np.abs(sig_map) > self.cr_rejection_thresh
+
+        if self.lacosmics_thresh > 0:
+            from libs.cosmics import cosmicsimage
+
+            cosmic_input = sig_map.copy()
+            cosmic_input[~np.isfinite(data_minus_flattened)] = np.nan
+            c = cosmicsimage(cosmic_input,
+                             readnoise=self.lacosmics_thresh)
+            c.run()
+            cr_mask_cosmics = c.getmask()
+
+            cr_mask = cr_mask | cr_mask_cosmics
+
+        #variance_map[cr_mask] = np.nan
+
+
+        # masking this out will affect the saved combined image.
+        # data_minus_flattened_orig = data_minus_flattened.copy()
+        # data_minus_flattened[cr_mask] = np.nan
+
+
+        #profile_map_shft = profile_map
+
+        #data_minus_flattened_shft = (data_minus_flattened)
+        #variance_map_shft = (variance_map)
+
+
+
+        # extract spec
+
+        # extract spec
+
+
+        shifted = extractor.get_shifted_all(ap, profile_map,
+                                            variance_map,
+                                            data_minus_flattened,
+                                            slitoffset_map,
+                                            debug=False)
+
+        _ = extractor.extract_spec_stellar(ap, shifted,
+                                           weight_thresh,
+                                           remove_negative)
+
+        s_list, v_list = _
+
+        # assemble aux images that can be used by debug output
+        aux_images = dict(sig_map=sig_map,
+                          synth_map=synth_map,
+                          shifted=shifted)
+
+        return s_list, v_list, cr_mask, aux_images
+
+
     def process(self, recipe, band, obsids, frametypes,
                 conserve_2d_flux=True):
 
@@ -194,6 +415,7 @@ class ProcessABBABand(object):
             data_minus -= data_minus_sky
 
         data_minus_flattened = data_minus / extractor.orderflat
+        data_minus_flattened_orig = data_minus_flattened.copy()
 
         ordermap_bpixed = extractor.ordermap_bpixed
 
@@ -204,8 +426,6 @@ class ProcessABBABand(object):
 
 
         slitoffset_map = extractor.slitoffset_map
-        #slitoffset_map_extract = "none"
-        slitoffset_map_extract = slitoffset_map
 
         if 1:
 
@@ -213,26 +433,31 @@ class ProcessABBABand(object):
             if IF_POINT_SOURCE: # if point source
 
 
-                _ = extractor.extract_slit_profile(ap,
-                                                   data_minus_flattened,
-                                                   x1=800, x2=1200)
-                bins, hh0, slit_profile_list = _
+                profile = self._estimate_slit_profile_1d(extractor, ap,
+                                                         data_minus_flattened,
+                                                         x1=800, x2=2048-800,
+                                                         do_ab=DO_AB)
 
-                if DO_AB:
-                    profile_x, profile_y = extractor.get_norm_profile_ab(bins, hh0)
-                else:
-                    profile_x, profile_y = extractor.get_norm_profile(bins, hh0)
+                # _ = extractor.extract_slit_profile(ap,
+                #                                    data_minus_flattened,
+                #                                    x1=800, x2=1200)
+                # bins, hh0, slit_profile_list = _
+
+                # if DO_AB:
+                #     profile_x, profile_y = extractor.get_norm_profile_ab(bins, hh0)
+                # else:
+                #     profile_x, profile_y = extractor.get_norm_profile(bins, hh0)
 
 
-                self.store_profile(igr_storage,
-                                   extractor.obj_filenames[0],
-                                   ap.orders, slit_profile_list,
-                                   profile_x, profile_y)
+                # self.store_profile(igr_storage,
+                #                    extractor.obj_filenames[0],
+                #                    ap.orders, slit_profile_list,
+                #                    profile_x, profile_y)
 
-                if DO_AB:
-                    profile = extractor.get_profile_func_ab(profile_x, profile_y)
-                else:
-                    profile = extractor.get_profile_func(profile_x, profile_y)
+                # if DO_AB:
+                #     profile = extractor.get_profile_func_ab(profile_x, profile_y)
+                # else:
+                #     profile = extractor.get_profile_func(profile_x, profile_y)
 
                 # make weight map
                 profile_map = extractor.make_profile_map(ap,
@@ -242,89 +467,114 @@ class ProcessABBABand(object):
 
                 # extract spec
 
-                shifted = extractor.get_shifted_all(ap,
-                                                    profile_map,
-                                                    variance_map,
-                                                    data_minus_flattened,
-                                                    slitoffset_map_extract,
-                                                    debug=self.debug_output)
-
-                # for khjeong
-                weight_thresh = None
-                remove_negative = False
 
 
-                _ = extractor.extract_spec_stellar(ap, shifted,
-                                                   weight_thresh,
-                                                   remove_negative)
+                _ = self._extract_spec_using_profile(extractor,
+                                                     ap, profile_map,
+                                                     variance_map,
+                                                     variance_map0,
+                                                     data_minus_flattened,
+                                                     ordermap,
+                                                     slitpos_map,
+                                                     slitoffset_map,
+                                                     debug=False)
 
+                s_list, v_list, cr_mask, aux_images = _
 
-                s_list, v_list = _
-
-                # if self.debug_output:
-                #     self.save_debug_output()
-
-                # make synth_spec : profile * spectra
-                synth_map = extractor.make_synth_map(\
-                    ap, profile_map, s_list,
-                    ordermap=ordermap,
-                    slitpos_map=slitpos_map,
-                    slitoffset_map=slitoffset_map)
-
-
-                # update variance map
-                variance_map = extractor.get_updated_variance(\
-                    variance_map, variance_map0, synth_map)
-
-                # get cosmicray mask
-                sig_map = np.abs(data_minus_flattened - synth_map)/variance_map**.5
-
-                cr_mask = np.abs(sig_map) > self.cr_rejection_thresh
-
-                if self.lacosmics_thresh > 0:
-                    from libs.cosmics import cosmicsimage
-
-                    cosmic_input = sig_map.copy()
-                    cosmic_input[~np.isfinite(data_minus_flattened)] = np.nan
-                    c = cosmicsimage(cosmic_input,
-                                     readnoise=self.lacosmics_thresh)
-                    c.run()
-                    cr_mask_cosmics = c.getmask()
-
-                    cr_mask = cr_mask | cr_mask_cosmics
-
-                #variance_map[cr_mask] = np.nan
-
-
-                # masking this out will affect the saved combined image.
-                data_minus_flattened_orig = data_minus_flattened.copy()
-                data_minus_flattened[cr_mask] = np.nan
-
-
-                #profile_map_shft = profile_map
-
-                #data_minus_flattened_shft = (data_minus_flattened)
-                #variance_map_shft = (variance_map)
+                # now try to derive the n-gaussian profile
+                # self._estimate_slit_profile_gauss(extractor, ap,
+                #                                   data_minus_flattened,
+                #                                   s_list, bias_mask,
+                #                                   x1=800, x2=2048-800,
+                #                                   do_ab=True)
 
 
 
-                # extract spec
+                # shifted = extractor.get_shifted_all(ap,
+                #                                     profile_map,
+                #                                     variance_map,
+                #                                     data_minus_flattened,
+                #                                     slitoffset_map_extract,
+                #                                     debug=self.debug_output)
 
-                # extract spec
+                # # for khjeong
+                # weight_thresh = None
+                # remove_negative = False
 
 
-                shifted = extractor.get_shifted_all(ap, profile_map,
-                                                    variance_map,
-                                                    data_minus_flattened,
-                                                    slitoffset_map,
-                                                    debug=False)
+                # _ = extractor.extract_spec_stellar(ap, shifted,
+                #                                    weight_thresh,
+                #                                    remove_negative)
 
-                _ = extractor.extract_spec_stellar(ap, shifted,
-                                                   weight_thresh,
-                                                   remove_negative)
 
-                s_list, v_list = _
+                # s_list, v_list = _
 
+                # # if self.debug_output:
+                # #     self.save_debug_output()
+
+                # # make synth_spec : profile * spectra
+                # synth_map = extractor.make_synth_map(\
+                #     ap, profile_map, s_list,
+                #     ordermap=ordermap,
+                #     slitpos_map=slitpos_map,
+                #     slitoffset_map=slitoffset_map)
+
+
+                # # update variance map
+                # variance_map = extractor.get_updated_variance(\
+                #     variance_map, variance_map0, synth_map)
+
+                # # get cosmicray mask
+                # sig_map = np.abs(data_minus_flattened - synth_map)/variance_map**.5
+
+                # cr_mask = np.abs(sig_map) > self.cr_rejection_thresh
+
+                # if self.lacosmics_thresh > 0:
+                #     from libs.cosmics import cosmicsimage
+
+                #     cosmic_input = sig_map.copy()
+                #     cosmic_input[~np.isfinite(data_minus_flattened)] = np.nan
+                #     c = cosmicsimage(cosmic_input,
+                #                      readnoise=self.lacosmics_thresh)
+                #     c.run()
+                #     cr_mask_cosmics = c.getmask()
+
+                #     cr_mask = cr_mask | cr_mask_cosmics
+
+                # #variance_map[cr_mask] = np.nan
+
+
+                # # masking this out will affect the saved combined image.
+                # data_minus_flattened_orig = data_minus_flattened.copy()
+                # data_minus_flattened[cr_mask] = np.nan
+
+
+                # #profile_map_shft = profile_map
+
+                # #data_minus_flattened_shft = (data_minus_flattened)
+                # #variance_map_shft = (variance_map)
+
+
+
+                # # extract spec
+
+                # # extract spec
+
+
+                # shifted = extractor.get_shifted_all(ap, profile_map,
+                #                                     variance_map,
+                #                                     data_minus_flattened,
+                #                                     slitoffset_map,
+                #                                     debug=False)
+
+                # _ = extractor.extract_spec_stellar(ap, shifted,
+                #                                    weight_thresh,
+                #                                    remove_negative)
+
+
+                sig_map = aux_images["sig_map"]
+                synth_map = aux_images["sig_map"]
+                shifted = aux_images["shifted"]
 
                 if 0: # save aux files
                     synth_map = ap.make_synth_map(ordermap, slitpos_map,
@@ -525,10 +775,11 @@ class ProcessABBABand(object):
         return wvl_solutions
 
 
-    def store_profile(self, igr_storage, mastername,
+    def store_profile(self, mastername,
                       orders, slit_profile_list,
                       profile_x, profile_y):
         ## save profile
+        igr_storage = self.igr_storage
         r = PipelineProducts("slit profile for point source")
         from libs.storage_descriptions import SLIT_PROFILE_JSON_DESC
         from libs.products import PipelineDict
