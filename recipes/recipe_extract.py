@@ -172,7 +172,7 @@ class ProcessABBABand(object):
 
             return s2
 
-        omap = extractor.ordermap_bpixed
+        omap = self.ordermap_bpixed
 
         # correction factors for aperture width
         ds0 = np.array([ap(o, ap.xi, 1.) - ap(o, ap.xi, 0.) for o in ap.orders])
@@ -228,106 +228,11 @@ class ProcessABBABand(object):
         ods_mskd = ods[msk]
         s_mskd = slitpos[msk]
 
-        from libs.slit_profile_model import derive_multi_gaussian_slit_profile
+        from slit_profile_model import derive_multi_gaussian_slit_profile
         g_list0 = derive_multi_gaussian_slit_profile(s_mskd, ods_mskd)
 
-        return g_list0
-
-
-    def _estimate_slit_profile_gauss_2d(self, extractor, ap,
-                                        ods,
-                                        g_list0,
-                                        # spec1d,
-                                        x1=800, x2=2048-800,
-                                        do_ab=True):
-        _, xx = np.indices(ods.shape)
-
-        msk1 = np.isfinite(ods) # & np.isfinite(ode) & bias_mask
-
-        from libs.slit_profile_2d_model import Logger
-        logger = Logger("test.pdf")
-
-        omap, slitpos = extractor.ordermap_bpixed, extractor.slitpos_map
-
-        func_dict = {}
-        print "deriving 2d slit profiles"
-        for o in ap.orders:
-            print o
-            msk2 = omap == o
-
-            msk = msk1 & msk2 # & (slitpos < 0.5)
-
-            x = xx[msk]
-            y = slitpos[msk]
-            s = ods[msk]
-
-            xmsk = (800 < x) & (x < 2048-800)
-
-            # check if there is enough pixels to derive new slit profile
-            if len(s[xmsk]) > 8000:
-                from libs.slit_profile_model import derive_multi_gaussian_slit_profile
-
-                g_list = derive_multi_gaussian_slit_profile(y[xmsk], s[xmsk])
-            else:
-                g_list = g_list0
-
-            if len(x) < 1000:
-                # print "skipping"
-                # def _f(order, xpixel, slitpos):
-                #     return g_list(slitpos)
-
-                # func_dict[o] = g_list0
-                continue
-
-            if 0:
-
-                import libs.slit_profile_model as slit_profile_model
-                debug_func = slit_profile_model.get_debug_func()
-                debug_func(g_list, g_list, y, s)
-
-            from libs.slit_profile_2d_model import get_varying_conv_gaussian_model
-            Varying_Conv_Gaussian_Model = get_varying_conv_gaussian_model(g_list)
-            vcg = Varying_Conv_Gaussian_Model()
-
-            if 0:
-                def _vcg(y):
-                    centers = np.zeros_like(y) + 1024
-                    return vcg(centers, y)
-
-                debug_func(_vcg, _vcg, y, s)
-
-            from astropy.modeling import fitting
-
-            fitter = fitting.LevMarLSQFitter()
-            t = fitter(vcg, x, y, s, maxiter=100000)
-
-            func_dict[o] = t
-
-            # print "saveing figure"
-            logi = logger.open("slit_profile_2d_conv_gaussian",
-                               ("basename", o))
-
-            logi.submit("raw_data_scatter",
-                        (x, y, s))
-
-            logi.submit("profile_sub_scatter",
-                        (x, y, s-vcg(x, y)),
-                        label="const. model")
-
-            logi.submit("profile_sub_scatter",
-                        (x, y, s-t(x, y)),
-                        label="varying model")
-
-            logi.close()
-
-        def profile(order, x_pixel, slitpos):
-            # print "profile", order, func_dict.keys()
-            def oo(x_pixel, slitpos):
-                return g_list0(slitpos)
-
-            return func_dict.get(order, oo)(x_pixel, slitpos)
-
-        logger.pdf.close()
+        def profile(order, x_pixel, y_slit_pos):
+            return g_list0(y_slit_pos)
 
         return profile
 
@@ -488,7 +393,6 @@ class ProcessABBABand(object):
                                                          data_minus_flattened,
                                                          x1=800, x2=2048-800,
                                                          do_ab=DO_AB)
-
                 profile_map = extractor.make_profile_map(ap,
                                                          profile,
                                                          frac_slit=self.frac_slit)
