@@ -23,7 +23,7 @@ def extractor_factory(recipe_name):
                 debug_output=False,
                 wavelength_increasing_order=False,
                 fill_nan=None,
-                lacosmics_thresh=0,
+                lacosmics_thresh=0.,
                 subtract_interorder_background=False,
                 conserve_2d_flux=True,
                 ):
@@ -377,12 +377,20 @@ class ProcessABBABand(object):
 
                     from libs.cosmics import cosmicsimage
 
-                    cosmic_input = variance_map.copy()
-                    cosmic_input[~np.isfinite(data_minus_flattened)] = np.nan
+                    cosmic_input = data_minus/(variance_map**.5)
+                    lacosmics_thresh = self.lacosmics_thresh
+
                     c = cosmicsimage(cosmic_input,
-                                     readnoise=self.lacosmics_thresh)
+                                     readnoise=lacosmics_thresh)
                     c.run()
-                    cr_mask = c.getmask()
+                    cr_mask_p = c.getmask()
+
+                    c = cosmicsimage(-cosmic_input,
+                                     readnoise=lacosmics_thresh)
+                    c.run()
+                    cr_mask_m = c.getmask()
+
+                    cr_mask = cr_mask_p | cr_mask_m
 
                 else:
                     cr_mask = np.zeros(data_minus_flattened.shape,
