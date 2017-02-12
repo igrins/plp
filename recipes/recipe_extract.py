@@ -8,6 +8,74 @@ from libs.products import PipelineProducts
 
 import argh
 
+# def _run_order_main(o):
+#     print o
+
+
+def _run_order_main(args):
+    o, x, y, s, g_list0, logi = args
+    print o
+
+    xmsk = (800 < x) & (x < 2048-800)
+
+    # check if there is enough pixels to derive new slit profile
+    if len(s[xmsk]) > 8000:
+        from libs.slit_profile_model import derive_multi_gaussian_slit_profile
+
+        g_list = derive_multi_gaussian_slit_profile(y[xmsk], s[xmsk])
+    else:
+        g_list = g_list0
+
+    if len(x) < 1000:
+        # print "skipping"
+        # def _f(order, xpixel, slitpos):
+        #     return g_list(slitpos)
+
+        # func_dict[o] = g_list0
+        return None
+
+    if 0:
+
+        import libs.slit_profile_model as slit_profile_model
+        debug_func = slit_profile_model.get_debug_func()
+        debug_func(g_list, g_list, y, s)
+
+    from libs.slit_profile_2d_model import get_varying_conv_gaussian_model
+    Varying_Conv_Gaussian_Model = get_varying_conv_gaussian_model(g_list)
+    vcg = Varying_Conv_Gaussian_Model()
+
+    if 0:
+        def _vcg(y):
+            centers = np.zeros_like(y) + 1024
+            return vcg(centers, y)
+
+        debug_func(_vcg, _vcg, y, s)
+
+    from astropy.modeling import fitting
+
+    fitter = fitting.LevMarLSQFitter()
+    t = fitter(vcg, x, y, s, maxiter=100000)
+
+    # func_dict[o] = t
+
+    # print "saveing figure"
+
+    if logi is not None:
+        logi.submit("raw_data_scatter",
+                    (x, y, s))
+
+        logi.submit("profile_sub_scatter",
+                    (x, y, s-vcg(x, y)),
+                    label="const. model")
+
+        logi.submit("profile_sub_scatter",
+                    (x, y, s-t(x, y)),
+                    label="varying model")
+
+    # return t
+    return g_list.parameters, t.parameters
+
+
 def extractor_factory(recipe_name):
     @argh.arg("-s", "--starting-obsids", default=None)
     @argh.arg("-c", "--config-file", default="recipe.config")
@@ -255,10 +323,84 @@ class ProcessABBABand(object):
 
         omap, slitpos = extractor.ordermap_bpixed, extractor.slitpos_map
 
-        func_dict = {}
+        def oo(x_pixel, slitpos):
+            return g_list0(slitpos)
+
+        # def _run_order(o):
+        #     print o
+
+        # if 0:
+        #     msk2 = omap == o
+
+        #     msk = msk1 & msk2 # & (slitpos < 0.5)
+
+        #     x = xx[msk]
+        #     y = slitpos[msk]
+        #     s = ods[msk]
+
+        #     xmsk = (800 < x) & (x < 2048-800)
+
+        #     # check if there is enough pixels to derive new slit profile
+        #     if len(s[xmsk]) > 8000:
+        #         from libs.slit_profile_model import derive_multi_gaussian_slit_profile
+
+        #         g_list = derive_multi_gaussian_slit_profile(y[xmsk], s[xmsk])
+        #     else:
+        #         g_list = g_list0
+
+        #     if len(x) < 1000:
+        #         # print "skipping"
+        #         # def _f(order, xpixel, slitpos):
+        #         #     return g_list(slitpos)
+
+        #         # func_dict[o] = g_list0
+        #         return oo
+
+        #     if 0:
+
+        #         import libs.slit_profile_model as slit_profile_model
+        #         debug_func = slit_profile_model.get_debug_func()
+        #         debug_func(g_list, g_list, y, s)
+
+        #     from libs.slit_profile_2d_model import get_varying_conv_gaussian_model
+        #     Varying_Conv_Gaussian_Model = get_varying_conv_gaussian_model(g_list)
+        #     vcg = Varying_Conv_Gaussian_Model()
+
+        #     if 0:
+        #         def _vcg(y):
+        #             centers = np.zeros_like(y) + 1024
+        #             return vcg(centers, y)
+
+        #         debug_func(_vcg, _vcg, y, s)
+
+        #     from astropy.modeling import fitting
+
+        #     fitter = fitting.LevMarLSQFitter()
+        #     t = fitter(vcg, x, y, s, maxiter=100000)
+
+        #     # func_dict[o] = t
+
+        #     # print "saveing figure"
+        #     logi = logger.open("slit_profile_2d_conv_gaussian",
+        #                        ("basename", o))
+
+        #     logi.submit("raw_data_scatter",
+        #                 (x, y, s))
+
+        #     logi.submit("profile_sub_scatter",
+        #                 (x, y, s-vcg(x, y)),
+        #                 label="const. model")
+
+        #     logi.submit("profile_sub_scatter",
+        #                 (x, y, s-t(x, y)),
+        #                 label="varying model")
+
+        #     return t
+
         print "deriving 2d slit profiles"
+
+        args = []
         for o in ap.orders:
-            print o
             msk2 = omap == o
 
             msk = msk1 & msk2 # & (slitpos < 0.5)
@@ -267,64 +409,52 @@ class ProcessABBABand(object):
             y = slitpos[msk]
             s = ods[msk]
 
-            xmsk = (800 < x) & (x < 2048-800)
-
-            # check if there is enough pixels to derive new slit profile
-            if len(s[xmsk]) > 8000:
-                from libs.slit_profile_model import derive_multi_gaussian_slit_profile
-
-                g_list = derive_multi_gaussian_slit_profile(y[xmsk], s[xmsk])
-            else:
-                g_list = g_list0
-
-            if len(x) < 1000:
-                # print "skipping"
-                # def _f(order, xpixel, slitpos):
-                #     return g_list(slitpos)
-
-                # func_dict[o] = g_list0
-                continue
-
-            if 0:
-
-                import libs.slit_profile_model as slit_profile_model
-                debug_func = slit_profile_model.get_debug_func()
-                debug_func(g_list, g_list, y, s)
-
-            from libs.slit_profile_2d_model import get_varying_conv_gaussian_model
-            Varying_Conv_Gaussian_Model = get_varying_conv_gaussian_model(g_list)
-            vcg = Varying_Conv_Gaussian_Model()
-
-            if 0:
-                def _vcg(y):
-                    centers = np.zeros_like(y) + 1024
-                    return vcg(centers, y)
-
-                debug_func(_vcg, _vcg, y, s)
-
-            from astropy.modeling import fitting
-
-            fitter = fitting.LevMarLSQFitter()
-            t = fitter(vcg, x, y, s, maxiter=100000)
-
-            func_dict[o] = t
-
-            # print "saveing figure"
             logi = logger.open("slit_profile_2d_conv_gaussian",
                                ("basename", o))
 
-            logi.submit("raw_data_scatter",
-                        (x, y, s))
+            args.append((o, x, y, s, g_list0, logi))
 
-            logi.submit("profile_sub_scatter",
-                        (x, y, s-vcg(x, y)),
-                        label="const. model")
 
-            logi.submit("profile_sub_scatter",
-                        (x, y, s-t(x, y)),
-                        label="varying model")
+        n_process = 4
+        if n_process > 1:
+            from multiprocessing import Pool
+            #from multiprocessing.pool import ThreadPool as Pool
+            p = Pool(n_process)
+            _ = p.map(_run_order_main, args)
+        else:
+            _ = []
+            for a in args:
+                r = _run_order_main(a)
+                _.append(r)
 
-            logi.close()
+        print "done"
+        # func_dict.update((k, v) )
+
+        from libs.slit_profile_2d_model import get_varying_conv_gaussian_model
+
+        func_dict = {}
+        for o, v in zip(ap.orders, _):
+            if v is None: continue
+
+            g_list_parameters, vcg_parameters = v
+            g_list = type(g_list0)()
+            g_list.parameters = g_list_parameters
+
+            Varying_Conv_Gaussian_Model = get_varying_conv_gaussian_model(g_list)
+            vcg = Varying_Conv_Gaussian_Model()
+            vcg.parameters = vcg_parameters
+
+            func_dict[o] = vcg
+
+        for key in sorted(logger.instances.keys()):
+            logger.finalize(key)
+
+        logger.pdf.close()
+
+        # for o in ap.orders:
+        #     print o
+
+        #     logi.close()
 
         def profile(order, x_pixel, slitpos):
             # print "profile", order, func_dict.keys()
@@ -332,8 +462,6 @@ class ProcessABBABand(object):
                 return g_list0(slitpos)
 
             return func_dict.get(order, oo)(x_pixel, slitpos)
-
-        logger.pdf.close()
 
         return profile
 
