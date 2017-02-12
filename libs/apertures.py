@@ -214,6 +214,46 @@ class Apertures(object):
 
         return data, variance_map, profile_map, msk1
 
+    def extract_uniform_from_shifted(self, ordermap,
+                                     profile_map, variance_map,
+                                     data):
+        """
+        It assumes that bad pixels in the data and the variance_map are filled.
+        """
+
+        s_list = []
+        v_list = []
+        slices = ni.find_objects(ordermap)
+
+        for o in self.orders:
+            sl = slices[o-1][0], slice(0, 2048)
+            msk = (ordermap[sl] == o)
+
+            profile_map1 = np.ma.array(profile_map[sl],
+                                       mask=~msk).filled(np.nan)
+
+            map_weighted_spectra1 = profile_map1 * data[sl]
+            map_weights1 = profile_map1**2
+
+            map_weighted_variance = np.abs(profile_map1) * variance_map[sl]
+
+
+            sum_weighted_spectra1 = np.nansum(map_weighted_spectra1, axis=0)
+            sum_weights1 = np.nansum(map_weights1, axis=0)
+
+            sum_weighted_variance = np.nansum(map_weighted_variance, axis=0)
+
+            s = sum_weighted_spectra1 / sum_weights1
+
+            s_list.append(s)
+
+            v = sum_weighted_variance / sum_weights1
+
+            v_list.append(v)
+
+        return s_list, v_list
+
+
     def extract_stellar_from_shifted(self, ordermap_bpixed,
                                      profile_map, variance_map,
                                      data, msk1,

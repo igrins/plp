@@ -21,6 +21,8 @@ def extractor_factory(recipe_name):
     @argh.arg("--slit-profile-mode", choices=['auto','simple', "gauss2d"],
               default="auto")
     @argh.arg("--subtract-interorder-background", default=False)
+    @argh.arg("--weighting-mode", choices=['auto','uniform', "optimal"],
+              default="auto")
     def extract(utdate, refdate="20140316", bands="HK",
                 **kwargs
                 ):
@@ -98,7 +100,8 @@ class ProcessABBABand(object):
                  lacosmics_thresh=0,
                  subtract_interorder_background=False,
                  conserve_2d_flux=False,
-                 slit_profile_mode="auto"):
+                 slit_profile_mode="auto",
+                 weighting_mode="auto"):
         """
         cr_rejection_thresh : pixels that deviate significantly from the profile are excluded.
         """
@@ -122,6 +125,8 @@ class ProcessABBABand(object):
         self.subtract_interorder_background = subtract_interorder_background
 
         self.slit_profile_mode = slit_profile_mode
+
+        self.weighting_mode = weighting_mode
 
     def _estimate_slit_profile_1d(self, extractor, ap,
                                   data_minus_flattened,
@@ -341,7 +346,8 @@ class ProcessABBABand(object):
                                     ordermap,
                                     slitpos_map,
                                     slitoffset_map,
-                                    debug=False):
+                                    debug=False,
+                                    mode="optimal"):
 
         # This is used to test spec-extraction without slit-offset-map
 
@@ -397,9 +403,13 @@ class ProcessABBABand(object):
 
             cr_mask = cr_mask | cr_mask_cosmics
 
+
+        data_minus_flattened = np.ma.array(data_minus_flattened,
+                                           mask=cr_mask).filled(np.nan)
+
         # extract spec
 
-
+        # profile_map is not used for shifting.
         shifted = extractor.get_shifted_all(ap, profile_map,
                                             variance_map,
                                             data_minus_flattened,
@@ -412,10 +422,46 @@ class ProcessABBABand(object):
 
         s_list, v_list = _
 
+        if self.weighting_mode == "uniform":
+
+            print "doing uniform extraction"
+            synth_map = extractor.make_synth_map(
+                ap, profile_map, s_list,
+                ordermap=ordermap,
+                slitpos_map=slitpos_map,
+                slitoffset_map=slitoffset_map)
+
+            nan_msk = ~np.isfinite(data_minus_flattened)
+            data_minus_flattened[nan_msk] = synth_map[nan_msk]
+            variance_map[nan_msk] = 0. # can we replace it with other values??
+
+            # profile_map is not used for shifting.
+            shifted = extractor.get_shifted_all(ap, profile_map,
+                                                variance_map,
+                                                data_minus_flattened,
+                                                slitoffset_map,
+                                                debug=False)
+
+            _ = extractor.extract_spec_uniform(ap, shifted)
+            s_list, v_list = _
+
+        elif self.weighting_mode in ["auto", "optimal"]:
+            pass
+        else:
+            raise RuntimeError("")
+            
+
+
+
+
+
+
+
         # assemble aux images that can be used by debug output
         aux_images = dict(sig_map=sig_map,
                           synth_map=synth_map,
                           shifted=shifted)
+
 
         return s_list, v_list, cr_mask, aux_images
 

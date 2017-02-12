@@ -149,6 +149,10 @@ class RecipeExtractPR(object):
         orderflat = orderflat_.data
         orderflat[self.pix_mask] = np.nan
 
+        orderflat[~self.bias_mask] = 1.
+
+
+        #orderflat[~self.destripe_mask] = np.nan
         return orderflat
 
     @lazyprop
@@ -222,10 +226,16 @@ class RecipeExtractPR(object):
 
 
     @lazyprop
-    def destripe_mask(self):
+    def bias_mask(self):
         from libs.storage_descriptions import BIAS_MASK_DESC
         bias_mask = self.igr_storage.load1(BIAS_MASK_DESC,
                                            self.basenames["flat_on"]).data
+        return bias_mask
+
+    @lazyprop
+    def destripe_mask(self):
+        bias_mask = self.bias_mask
+
         #bias_mask[-100:,:] = False
         bias_mask[self.pix_mask] = True
         bias_mask[:4] = True
@@ -593,6 +603,16 @@ class RecipeExtractBase(RecipeExtractPR):
                                             shifted["mask"],
                                             weight_thresh=weight_thresh,
                                             remove_negative=remove_negative)
+        s_list, v_list = _
+
+        return s_list, v_list
+
+    def extract_spec_uniform(self, ap, shifted):
+
+        _ = ap.extract_uniform_from_shifted(self.ordermap,
+                                            shifted["profile_map"],
+                                            shifted["variance_map"],
+                                            shifted["data"])
         s_list, v_list = _
 
         return s_list, v_list
