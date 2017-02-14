@@ -37,21 +37,29 @@ def generate_a0v_divided(helper, band, obsids, a0v_obsid=None):
 
     basename = helper.get_basename(band, master_obsid)
 
+    header_updates = [("hierarch IGR_A0V_BASENAME", str(a0v_basename)),]
+
     store_tgt_divide_a0v(caldb, basename,
                          master_hdu,
                          wvl, spec, a0v_spec, vega,
-                         a0v_fitted_continuum)
+                         a0v_fitted_continuum,
+                         header_updates=header_updates)
 
 
 def store_tgt_divide_a0v(caldb, basename,
                          master_hdu,
                          wvl, spec, a0v_spec, vega,
-                         a0v_fitted_continuum):
+                         a0v_fitted_continuum,
+                         header_updates=None):
 
     from libs.products import PipelineImage as Image
     from libs.products import PipelineImages
 
-    image_list = [Image([("EXTNAME", "SPEC_DIVIDE_A0V")],
+    primary_header_cards = [("EXTNAME", "SPEC_DIVIDE_A0V")]
+    if header_updates is not None:
+        primary_header_cards.extend(header_updates)
+
+    image_list = [Image(primary_header_cards,
                         spec/a0v_spec*vega)]
     image_list.append(Image([("EXTNAME", "WAVELENGTH")],
                             wvl))
