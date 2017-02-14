@@ -578,6 +578,13 @@ class ProcessABBABand(object):
             _ = extractor.extract_spec_uniform(ap, shifted)
             s_list, v_list = _
 
+            # regenerate synth_map using the new s_list, which will be saved.
+            synth_map = extractor.make_synth_map(
+                ap, profile_map, s_list,
+                ordermap=ordermap,
+                slitpos_map=slitpos_map,
+                slitoffset_map=slitoffset_map)
+
         elif self.weighting_mode in ["auto", "optimal"]:
             pass
         else:
