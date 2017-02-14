@@ -122,8 +122,12 @@ class PipelineStorage(object):
         igr_storage = cls(igr_path)
         return igr_storage
 
-    def get_path(self, desc, mastername):
+    def get_path(self, desc, mastername, ext_prefix=None):
         section, prefix, ext = desc
+
+        if ext_prefix is not None:
+            ext = ext_prefix + ext
+
         fn0 = prefix + os.path.basename(mastername) + ext
         fn = self.igr_path.get_section_filename_base(section, fn0)
 
@@ -227,10 +231,14 @@ class PipelineStorage(object):
             return product1
 
 
-    def store(self, products, mastername, masterhdu=None, cache=True):
+    def store(self, products, mastername, masterhdu=None, cache=True,
+              ext_prefix=None):
         mastername, ext_ = os.path.splitext(mastername)
 
         for (section, prefix, ext), v in products.items():
+            if ext_prefix is not None:
+                ext = ext_prefix + ext
+
             fn0 = prefix + os.path.basename(mastername) + ext
             fn = self.igr_path.get_section_filename_base(section, fn0)
 

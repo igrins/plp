@@ -91,6 +91,7 @@ def extractor_factory(recipe_name):
     @argh.arg("--subtract-interorder-background", default=False)
     @argh.arg("--weighting-mode", choices=['auto','uniform', "optimal"],
               default="auto")
+    @argh.arg("--ext-prefix", default=None)
     def extract(utdate, refdate="20140316", bands="HK",
                 **kwargs
                 ):
@@ -156,7 +157,7 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
                               #do_interactive_figure=interactive
                               )
 
-from libs.products import ProductDB, PipelineStorage
+from libs.products import PipelineStorage
 
 class ProcessABBABand(object):
     def __init__(self, utdate, refdate, config,
@@ -169,7 +170,8 @@ class ProcessABBABand(object):
                  subtract_interorder_background=False,
                  conserve_2d_flux=False,
                  slit_profile_mode="auto",
-                 weighting_mode="auto"):
+                 weighting_mode="auto",
+                 ext_prefix=None):
         """
         cr_rejection_thresh : pixels that deviate significantly from the profile are excluded.
         """
@@ -195,6 +197,8 @@ class ProcessABBABand(object):
         self.slit_profile_mode = slit_profile_mode
 
         self.weighting_mode = weighting_mode
+
+        self.ext_prefix = ext_prefix
 
     def _estimate_slit_profile_1d(self, extractor, ap,
                                   data_minus_flattened,
@@ -885,7 +889,6 @@ class ProcessABBABand(object):
 
             self.store_processed_inputs(igr_storage, mastername,
                                         image_list,
-                                        variance_map,
                                         shifted_image_list)
 
 
@@ -940,7 +943,8 @@ class ProcessABBABand(object):
 
         igr_storage.store(r,
                           mastername=mastername,
-                          masterhdu=None)
+                          masterhdu=None,
+                          ext_prefix=self.ext_prefix)
 
     def save_debug_output(self, shifted):
         """
@@ -982,34 +986,21 @@ class ProcessABBABand(object):
     def store_processed_inputs(self, igr_storage,
                                mastername,
                                image_list,
-                               variance_map,
                                shifted_image_list):
 
         from libs.storage_descriptions import (COMBINED_IMAGE_DESC,
-                                               # COMBINED_IMAGE_A_DESC,
-                                               # COMBINED_IMAGE_B_DESC,
                                                WVLCOR_IMAGE_DESC,
-                                               #VARIANCE_MAP_DESC
                                                )
         from libs.products import PipelineImages #Base
 
         r = PipelineProducts("1d specs")
 
-        #r.add(COMBINED_IMAGE_DESC, PipelineImageBase([], *image_list))
         r.add(COMBINED_IMAGE_DESC, PipelineImages(image_list))
-        # r.add(COMBINED_IMAGE_A_DESC, PipelineImageBase([],
-        #                                            a_data))
-        # r.add(COMBINED_IMAGE_B_DESC, PipelineImageBase([],
-        #                                            b_data))
-        #r.add(VARIANCE_MAP_DESC, PipelineImageBase([],
-        #                                       variance_map))
-
-        # r.add(VARIANCE_MAP_DESC, PipelineImageBase([],
-        #                                        variance_map.data))
 
         igr_storage.store(r,
                           mastername=mastername,
-                          masterhdu=None)
+                          masterhdu=None,
+                          ext_prefix=self.ext_prefix)
 
 
         r = PipelineProducts("1d specs")
@@ -1018,7 +1009,8 @@ class ProcessABBABand(object):
 
         igr_storage.store(r,
                           mastername=mastername,
-                          masterhdu=None)
+                          masterhdu=None,
+                          ext_prefix=self.ext_prefix)
 
 
 
@@ -1065,14 +1057,14 @@ class ProcessABBABand(object):
         d = np.array(v_list)
         f_obj[0].data = convert_data(d.astype("float32"))
         fout = igr_storage.get_path(VARIANCE_FITS_DESC,
-                                    tgt_basename)
+                                    tgt_basename, ext_prefix=self.ext_prefix)
 
         f_obj.writeto(fout, clobber=True)
 
         d = np.array(sn_list)
         f_obj[0].data = convert_data(d.astype("float32"))
         fout = igr_storage.get_path(SN_FITS_DESC,
-                                    tgt_basename)
+                                    tgt_basename, ext_prefix=self.ext_prefix)
 
         f_obj.writeto(fout, clobber=True)
 
@@ -1080,7 +1072,7 @@ class ProcessABBABand(object):
         f_obj[0].data = convert_data(d.astype("float32"))
 
         fout = igr_storage.get_path(SPEC_FITS_DESC,
-                                    tgt_basename)
+                                    tgt_basename, ext_prefix=self.ext_prefix)
 
         hdu_wvl = pyfits.ImageHDU(data=convert_data(wvl_data),
                                   header=wvl_header)
@@ -1134,7 +1126,7 @@ class ProcessABBABand(object):
         from libs.storage_descriptions import SPEC2D_FITS_DESC
 
         fout = igr_storage.get_path(SPEC2D_FITS_DESC,
-                                    tgt_basename)
+                                    tgt_basename, ext_prefix=self.ext_prefix)
 
         hdu_wvl = pyfits.ImageHDU(data=convert_data(wvl_data),
                                   header=wvl_header)
@@ -1152,7 +1144,7 @@ class ProcessABBABand(object):
         f_obj[0].data = d.astype("float32")
         from libs.storage_descriptions import VAR2D_FITS_DESC
         fout = igr_storage.get_path(VAR2D_FITS_DESC,
-                                    tgt_basename)
+                                    tgt_basename, ext_prefix=self.ext_prefix)
         f_obj.writeto(fout, clobber=True)
 
 
@@ -1289,7 +1281,8 @@ class ProcessABBABand(object):
 
         igr_storage.store(r,
                           mastername=mastername,
-                          masterhdu=f_obj[0])
+                          masterhdu=f_obj[0],
+                          ext_prefix=self.ext_prefix)
 
         tgt_basename = extractor.pr.tgt_basename
         extractor.db["a0v"].update(extractor.band, tgt_basename)
