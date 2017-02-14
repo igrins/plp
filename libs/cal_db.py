@@ -18,6 +18,8 @@ wvlsol=("sky", "SKY_WVLSOL_JSON")
 hotpix_mask=("flat_off", "HOTPIX_MASK")
 deadpix_mask=("flat_on", "DEADPIX_MASK")
 bias_mask=("flat_on", "BIAS_MASK")
+wvlsol_v0=("thar", "WVLSOL_V0_JSON")
+flat_off=("flat_off", "FLAT_OFF")
 '''
 
 class CalDB(object):
@@ -26,6 +28,7 @@ class CalDB(object):
                     flat_off=("PRIMARY_CALIB_PATH", "flat_off.db"),
                     sky=("PRIMARY_CALIB_PATH", "sky.db"),
                     a0v=("OUTDATA_PATH", "a0v.db"),
+                    thar=('PRIMARY_CALIB_PATH', 'thar.db')
                     )
 
     DESC_DICT = load_storage_descriptions()
@@ -132,7 +135,10 @@ class CalDB(object):
 
     def load_image(self, basename, item_type):
         pipeline_image = self.load_item_from(basename, item_type)
-        return pipeline_image.data
+        if hasattr(pipeline_image, "data"):
+            return pipeline_image.data
+        else:
+            return pipeline_image[0].data
 
     def _get_basename_old(self, band, master_obsid):
         if isinstance(master_obsid, str):
@@ -159,7 +165,7 @@ class CalDB(object):
         return band, masterobsid
 
     def store_image(self, basename, item_type, data,
-                    hdu=None):
+                    header=None, card_list=None):
         band, master_obsid = self._get_band_masterobsid(basename)
         basename = self._get_basename(basename)
 
@@ -167,13 +173,34 @@ class CalDB(object):
 
         from products import PipelineImageBase
         mastername = self.helper.get_filenames(band, [master_obsid])[0]
+
         hdu = self.helper.igr_storage.get_masterhdu(mastername)
+        if header is not None:
+            hdu.header = header
+        if card_list is not None:
+            hdu.header.extend(card_list)
+
         pipeline_image = PipelineImageBase([], data,
                                            masterhdu=hdu)
 
         self.helper.igr_storage.store_item(item_desc, basename,
                                            pipeline_image)
 
+    def store_multi_image(self, basename, item_type, hdu_list):
+        band, master_obsid = self._get_band_masterobsid(basename)
+        basename = self._get_basename(basename)
+
+        item_desc = self.DESC_DICT[item_type.upper()]
+
+        from products import PipelineImages
+        mastername = self.helper.get_filenames(band, [master_obsid])[0]
+        hdu = self.helper.igr_storage.get_masterhdu(mastername)
+
+        pipeline_image = PipelineImages(hdu_list,
+                                        masterhdu=hdu)
+
+        self.helper.igr_storage.store_item(item_desc, basename,
+                                           pipeline_image)
 
     def store_dict(self, basename, item_type, data):
         basename = self._get_basename(basename)
@@ -191,18 +218,24 @@ class CalDB(object):
 
         band, master_obsid = self._get_band_masterobsid(basename)
 
-        db_name, item_desc = self.RESOURCE_DICT[resource_type]
-        basename = self.db_query_basename(db_name, band, master_obsid)
+        try:
+            db_name, item_desc = self.RESOURCE_DICT.get(resource_type,
+                                                        resource_type)
+        except ValueError as e:
+            raise e  # it would be good if we can modify the message
 
-        return basename, item_desc
+        resource_basename = self.db_query_basename(db_name, band,
+                                                   master_obsid)
 
+        return resource_basename, item_desc
 
     def load_resource_for(self, basename, resource_type):
         """
         this load resource from the given master_obsid.
         """
 
-        resource_basename, item_desc = self.query_resource_for(basename, resource_type)
+        resource_basename, item_desc = self.query_resource_for(basename,
+                                                               resource_type)
 
         resource = self.load_item_from(resource_basename, item_desc)
 

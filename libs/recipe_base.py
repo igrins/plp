@@ -3,6 +3,9 @@
 class RecipeBase(object):
     """ The derived mus define RECIPE_NAME attribute and must implement
         run_selected_bands method.
+
+        RECIPE_NAME can be a string, or a sequence of strings which is
+        interpreted as a fnmatch translater.
     """
     def __init__(self, **kwargs):
         self.kwargs = kwargs
@@ -40,7 +43,8 @@ class RecipeBase(object):
         self.process(utdate, bands, starting_obsids, config_file)
 
     def process(self, utdate, bands="HK",
-                starting_obsids=None, config_file="recipe.config"):
+                starting_obsids=None, config_file="recipe.config",
+                **kwargs):
 
         from libs.igrins_config import IGRINSConfig
         self.config = IGRINSConfig(config_file)
@@ -56,4 +60,5 @@ class RecipeBase(object):
         selected = recipes.select_fnmatch(self.RECIPE_NAME,
                                           starting_obsids_parsed)
 
-        self.run_selected_bands_with_recipe(utdate, selected, bands)
+        self.run_selected_bands_with_recipe(utdate, selected, bands,
+                                            **kwargs)

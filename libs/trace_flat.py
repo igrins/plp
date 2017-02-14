@@ -590,14 +590,16 @@ def plot_solutions2(cent_bottomup_list,
     for bottom_sol, bottom_cent in \
         zip(bottom_up_solutions[0], cent_bottomup_list[0]):
 
-        ax21.plot(bottom_cent[0],
-                  bottom_cent[1] - bottom_sol(bottom_cent[0]))
+        x = np.array(bottom_cent[0], dtype="f")
+        y = np.array(bottom_cent[1], dtype="f")
+        ax21.plot(x, y - bottom_sol(x))
 
     for up_sol, up_cent in \
         zip(bottom_up_solutions[1], cent_bottomup_list[1]):
 
-        ax22.plot(up_cent[0],
-                  up_cent[1] - up_sol(up_cent[0]))
+        x = np.array(up_cent[0], dtype="f")
+        y = np.array(up_cent[1], dtype="f")
+        ax22.plot(x, y - up_sol(x))
 
     ax21.set_xlim(0, 2048)
     ax22.set_xlim(0, 2048)

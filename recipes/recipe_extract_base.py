@@ -334,9 +334,10 @@ class RecipeExtractBase(RecipeExtractPR):
         b_name_list = filter_abba_names(abba_names, frametypes, "B")
 
 
-        a_list = [pyfits.open(name)[0].data \
+        from libs.load_fits import load_fits_data
+        a_list = [load_fits_data(name).data \
                   for name in a_name_list]
-        b_list = [pyfits.open(name)[0].data \
+        b_list = [load_fits_data(name).data \
                   for name in b_name_list]
 
 
@@ -418,7 +419,9 @@ class RecipeExtractBase(RecipeExtractPR):
     def get_data1(self, i, hori=True, vert=False):
 
         fn = self.obj_filenames[i]
-        data = pyfits.open(fn)[0].data
+        # data = pyfits.open(fn)[0].data
+        from libs.load_fits import load_fits_data
+        data = load_fits_data(fn)
 
         from libs.destriper import destriper
         destrip_mask = ~np.isfinite(data)|self.destripe_mask
@@ -551,7 +554,7 @@ class RecipeExtractBase(RecipeExtractPR):
                         data_minus_flattened, slitoffset_map,
                         debug=False):
 
-        if slitoffset_map == "none":
+        if isinstance(slitoffset_map, str) and (slitoffset_map == "none"):
             msk1 = np.isfinite(data_minus_flattened) & np.isfinite(variance_map)
             shifted = dict(data=data_minus_flattened,
                            variance_map=variance_map,
@@ -598,7 +601,7 @@ class RecipeExtractBase(RecipeExtractPR):
         if slitpos_map is None:
             slitpos_map = self.slitpos_map
 
-        if slitoffset_map == "none":
+        if isinstance(slitoffset_map, str) and (slitoffset_map == "none"):
             "do not use slit offset map"
             slitoffset_map = None
         elif slitoffset_map is None:

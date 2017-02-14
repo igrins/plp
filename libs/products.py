@@ -3,8 +3,10 @@ from json_helper import json_dump
 import json
 import numpy as np
 
-import astropy.io.fits as pyfits
+from load_fits import get_first_science_hdu, open_fits
+
 #from astropy.io.fits import Card
+import astropy.io.fits as pyfits
 
 class PipelineImage(object):
     Header = pyfits.Header
@@ -132,9 +134,10 @@ class PipelineStorage(object):
         if mastername in self._hdu_cache:
             return self._hdu_cache[mastername][0]
         else:
-            hdu_list = pyfits.open(mastername)
+            hdu_list = open_fits(mastername)
             self._hdu_cache[mastername] = hdu_list
-            return hdu_list[0]
+            hdu = get_first_science_hdu(hdu_list)
+            return hdu
 
     def load(self, product_descs, mastername):
         mastername, ext_ = os.path.splitext(mastername)
@@ -171,15 +174,22 @@ class PipelineStorage(object):
 
         fn = item_path
 
-        if fn in self._cache:
-            print "loading (cached)", fn
-            v = self._cache[fn]
-        else:
+        load_from_disk = True
+
+        v = self._cache.get(fn, None)
+
+        # if v is an instance of PipelineImageBase, we reread from the
+        # disk so that a full header can be read.
+        if isinstance(v, PipelineImageBase):
+            v = None
+
+        if v is None:
             print "loading", fn
             v = self.load_one(fn)
             self._cache[fn] = v
+        else:
+            print "loading (cached)", fn
 
-            #self.save_one(fn, v, masterhdu)
         return v
 
     def load_item(self, product_desc, mastername):
@@ -238,7 +248,7 @@ class PipelineStorage(object):
         if fn.endswith("json"):
             return json.load(open(fn))
         elif fn.endswith("mask.fits"):
-            hdu = pyfits.open(fn)[0]
+            hdu = get_first_science_hdu(pyfits.open(fn))
             return PipelineImageBase(hdu, hdu.data.astype(bool))
         elif fn.endswith("fits"):
             hdu = pyfits.open(fn)
@@ -320,7 +330,8 @@ class PipelineProductsDeprecated(dict):
             dirname = os.path.dirname(inname)
             for k, v in d.items():
                 if k.endswith(".fits"):
-                    hdu = pyfits.open(os.path.join(dirname, v))[0]
+                    hdu_list = pyfits.open(os.path.join(dirname, v))
+                    hdu = get_first_science_hdu(hdu_list)
                     k2 = k[:-5]
                     if k2.endswith("mask"):
                         d[k2] = hdu.data.astype(bool)

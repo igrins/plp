@@ -13,6 +13,7 @@ from libs.apertures import Apertures
 
 from libs.recipe_base import RecipeBase
 
+
 class RecipeSkyWvlsol(RecipeBase):
     #RECIPE_NAME = "SKY_WVLSOL"
     RECIPE_NAME = "SKY"
@@ -34,17 +35,20 @@ class RecipeSkyWvlsol(RecipeBase):
                 #                             band, obsids,
                 #                             self.config)
 
+
 def sky_wvlsol(utdate, bands="HK",
                starting_obsids=None, config_file="recipe.config"):
 
     RecipeSkyWvlsol()(utdate, bands,
                       starting_obsids, config_file)
 
+
 def wvlsol_sky(utdate, bands="HK",
                starting_obsids=None, config_file="recipe.config"):
 
     RecipeSkyWvlsol()(utdate, bands,
                       starting_obsids, config_file)
+
 
 # def wvlsol_sky(utdate, refdate="20140316", bands="HK",
 #                starting_obsids=None):
@@ -79,6 +83,7 @@ def get_orders_for_flat(extractor, band):
 
     return orders
 
+
 def get_bottomup_solutions(extractor, band):
     from libs.storage_descriptions import FLATCENTROID_SOL_JSON_DESC
 
@@ -91,6 +96,7 @@ def get_bottomup_solutions(extractor, band):
     bottomup_solutions = aperture_solution_products[FLATCENTROID_SOL_JSON_DESC]["bottom_up_solutions"]
 
     return bottomup_solutions
+
 
 def load_aperture(extractor, band, master_obsid):
     """
@@ -127,7 +133,6 @@ def load_aperture_wvlsol2(extractor, band):
     # #                 bottomup_solutions)
 
     return ap
-
 
 
 def load_aperture_wvlsol(extractor, band):
@@ -187,8 +192,10 @@ class ProcessSkyBand(object):
         # sky_master_fn_ = os.path.splitext(os.path.basename(sky_names[0]))[0]
         # sky_master_fn = igr_path.get_secondary_calib_filename(sky_master_fn_)
 
-        import astropy.io.fits as pyfits
-        masterhdu = pyfits.open(sky_filenames[0])[0]
+        # import astropy.io.fits as pyfits
+        # masterhdu = pyfits.open(sky_filenames[0])[0]
+        from libs.load_fits import load_fits_data
+        masterhdu = load_fits_data(sky_filenames[0])
 
         igr_storage = extractor.igr_storage
         igr_storage.store(raw_spec_product,

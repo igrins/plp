@@ -10,6 +10,7 @@ FLATOFF_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_off.json")
 
 # FLAT_ON related
 
+FLAT_ON_DESC = ("OUTDATA_PATH", "", ".flat_on.fits")
 FLAT_NORMED_DESC = ("OUTDATA_PATH", "", ".flat_normed.fits")
 FLAT_BPIXED_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_bpixed.fits")
 FLAT_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_mask.fits")
@@ -35,6 +36,7 @@ COMBINED_IMAGE_A_DESC = ("OUTDATA_PATH", "", ".combined_image_a.fits")
 COMBINED_IMAGE_B_DESC = ("OUTDATA_PATH", "", ".combined_image_b.fits")
 WVLCOR_IMAGE_DESC = ("OUTDATA_PATH", "", ".wvlcor_image.fits")
 ONED_SPEC_JSON_DESC = ("PRIMARY_CALIB_PATH", "", ".oned_spec.json")
+MULTI_SPEC_FITS_DESC = ("PRIMARY_CALIB_PATH", "", ".multi_spec.fits")
 
 # THAR related descriptions
 
@@ -52,6 +54,7 @@ WVLSOL_V0_JSON_DESC = ("PRIMARY_CALIB_PATH", "", ".wvlsol_v0.json")
 
 # SKY
 
+SKY_GENERATED_FITS_DESC = ("OUTDATA_PATH", "SKY_", ".fits")
 SKY_WVLSOL_JSON_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".wvlsol_v1.json")
 SKY_WVLSOL_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".wvlsol_v1.fits")
 
@@ -60,6 +63,13 @@ ORDERMAP_MASKED_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".order_map_masked.fi
 SLITPOSMAP_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".slitpos_map.fits")
 SLITOFFSET_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".slitoffset_map.fits")
 WAVELENGTHMAP_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".wavelength_map.fits")
+
+SKY_FITTED_PIXELS_JSON_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".fitted_pixels.json")
+
+VOLUMEFIT_COEFFS_JSON_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".volumefit_coeffs.json")
+
+SKY_WVLSOL_FIT_RESULT_JSON_DESC = ("PRIMARY_CALIB_PATH", "SKY_",
+                                   ".wvlsol_fit_result.json")
 
 # extract
 SPEC_FITS_WAVELENGTH_DESC = ("OUTDATA_PATH", "",

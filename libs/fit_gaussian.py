@@ -2,7 +2,14 @@ import numpy as np
 
 def fit_gaussian_simple(x, s, lines, xminmax=None, sigma_init=1.5,
                         do_plot=False):
+    """
+    sigma_init : initial sigma. A single value is given which will be shared with multiple lines. 
+    """
+
     lines = np.array(lines)
+
+    if not np.all(np.isfinite(lines)):  # if any of the position has nan
+        return [np.nan] * 4, None, None
 
     if xminmax is None:
         xmin = min(lines) - 5*sigma_init
@@ -15,6 +22,9 @@ def fit_gaussian_simple(x, s, lines, xminmax=None, sigma_init=1.5,
         imin = max(np.searchsorted(x, xmin), 0)
         imax = min(np.searchsorted(x, xmax), len(x))
         sl = slice(imin, imax)
+
+        if imax - imin < 3:
+            return [np.nan] * 4, None, None
 
     xx = x[sl]
     yy = s[sl]

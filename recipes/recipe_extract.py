@@ -14,6 +14,7 @@ def extractor_factory(recipe_name):
     @argh.arg("--wavelength-increasing-order")
     @argh.arg("--fill-nan")
     @argh.arg("--lacosmics-thresh")
+    @argh.arg("--conserve-2d-flux", default=True)
     def extract(utdate, refdate="20140316", bands="HK",
                 starting_obsids=None,
                 config_file="recipe.config",
@@ -22,8 +23,9 @@ def extractor_factory(recipe_name):
                 debug_output=False,
                 wavelength_increasing_order=False,
                 fill_nan=None,
-                lacosmics_thresh=0,
+                lacosmics_thresh=0.,
                 subtract_interorder_background=False,
+                conserve_2d_flux=True,
                 ):
         abba_all(recipe_name, utdate, refdate=refdate, bands=bands,
                  starting_obsids=starting_obsids,
@@ -35,6 +37,7 @@ def extractor_factory(recipe_name):
                  fill_nan=fill_nan,
                  lacosmics_thresh=lacosmics_thresh,
                  subtract_interorder_background=subtract_interorder_background,
+                 conserve_2d_flux=conserve_2d_flux,
                  )
 
     extract.__name__ = recipe_name.lower()
@@ -59,6 +62,7 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
              fill_nan=None,
              lacosmics_thresh=0,
              subtract_interorder_background=False,
+             conserve_2d_flux=True,
              ):
 
     from libs.igrins_config import IGRINSConfig
@@ -88,7 +92,9 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
                   debug_output=debug_output,
                   wavelength_increasing_order=wavelength_increasing_order,
                   subtract_interorder_background=subtract_interorder_background,
-                  fill_nan=fill_nan)
+                  fill_nan=fill_nan,
+                  lacosmics_thresh=lacosmics_thresh,
+                  conserve_2d_flux=conserve_2d_flux)
 
     process_abba_band = ProcessABBABand(utdate, refdate,
                                         config,
@@ -117,7 +123,8 @@ class ProcessABBABand(object):
                  wavelength_increasing_order=False,
                  fill_nan=None,
                  lacosmics_thresh=0,
-                 subtract_interorder_background=False):
+                 subtract_interorder_background=False,
+                 conserve_2d_flux=False):
         """
         cr_rejection_thresh : pixels that deviate significantly from the profile are excluded.
         """
@@ -140,7 +147,8 @@ class ProcessABBABand(object):
 
         self.subtract_interorder_background = subtract_interorder_background
 
-    def process(self, recipe, band, obsids, frametypes):
+    def process(self, recipe, band, obsids, frametypes,
+                conserve_2d_flux=True):
 
         igr_storage = self.igr_storage
 
@@ -276,7 +284,7 @@ class ProcessABBABand(object):
                 if self.lacosmics_thresh > 0:
                     from libs.cosmics import cosmicsimage
 
-                    cosmic_input = variance_map.copy()
+                    cosmic_input = sig_map.copy()
                     cosmic_input[~np.isfinite(data_minus_flattened)] = np.nan
                     c = cosmicsimage(cosmic_input,
                                      readnoise=self.lacosmics_thresh)
@@ -324,6 +332,13 @@ class ProcessABBABand(object):
                                                   slitoffset_map=slitoffset_map
                                                   )
 
+                    shifted = extractor.get_shifted_all(ap, profile_map,
+                                                        variance_map,
+                                                        synth_map,
+                                                        slitoffset_map,
+                                                        debug=False)
+
+
 
             else: # if extended source
                 from scipy.interpolate import UnivariateSpline
@@ -362,12 +377,20 @@ class ProcessABBABand(object):
 
                     from libs.cosmics import cosmicsimage
 
-                    cosmic_input = variance_map.copy()
-                    cosmic_input[~np.isfinite(data_minus_flattened)] = np.nan
+                    cosmic_input = data_minus/(variance_map**.5)
+                    lacosmics_thresh = self.lacosmics_thresh
+
                     c = cosmicsimage(cosmic_input,
-                                     readnoise=self.lacosmics_thresh)
+                                     readnoise=lacosmics_thresh)
                     c.run()
-                    cr_mask = c.getmask()
+                    cr_mask_p = c.getmask()
+
+                    c = cosmicsimage(-cosmic_input,
+                                     readnoise=lacosmics_thresh)
+                    c.run()
+                    cr_mask_m = c.getmask()
+
+                    cr_mask = cr_mask_p | cr_mask_m
 
                 else:
                     cr_mask = np.zeros(data_minus_flattened.shape,
@@ -480,7 +503,8 @@ class ProcessABBABand(object):
                           shifted["data"],
                           shifted["variance_map"],
                           ordermap_bpixed,
-                          cr_mask=cr_mask)
+                          cr_mask=cr_mask,
+                          conserve_flux=conserve_2d_flux)
 
 
         if DO_STD:
@@ -626,7 +650,8 @@ class ProcessABBABand(object):
                                              extractor)
 
 
-        f_obj = pyfits.open(extractor.obj_filenames[0])
+        from libs.load_fits import open_fits
+        f_obj = open_fits(extractor.obj_filenames[0])
         f_obj[0].header.extend(wvl_header)
 
         tgt_basename = extractor.pr.tgt_basename
@@ -669,14 +694,16 @@ class ProcessABBABand(object):
                      data_shft,
                      variance_map_shft,
                      ordermap_bpixed,
-                     cr_mask=None):
+                     cr_mask=None,
+                     conserve_flux=True):
 
         wvl_header, wvl_data, convert_data = \
                     self.get_wvl_header_data(igr_storage,
                                              extractor)
 
 
-        f_obj = pyfits.open(extractor.obj_filenames[0])
+        from libs.load_fits import open_fits
+        f_obj = open_fits(extractor.obj_filenames[0])
         f_obj[0].header.extend(wvl_header)
 
         tgt_basename = extractor.pr.tgt_basename
@@ -697,7 +724,8 @@ class ProcessABBABand(object):
         d0_shft_list, msk_shft_list = \
                       get_flattened_2dspec(data_shft,
                                            ordermap_bpixed,
-                                           new_bottom_up_solutions)
+                                           new_bottom_up_solutions,
+                                           conserve_flux=conserve_flux)
 
 
         d = np.array(d0_shft_list) / np.array(msk_shft_list)
@@ -718,7 +746,8 @@ class ProcessABBABand(object):
         d0_shft_list, msk_shft_list = \
                       get_flattened_2dspec(variance_map_shft,
                                            ordermap_bpixed,
-                                           new_bottom_up_solutions)
+                                           new_bottom_up_solutions,
+                                           conserve_flux=conserve_flux)
         d = np.array(d0_shft_list) / np.array(msk_shft_list)
         f_obj[0].data = d.astype("float32")
         from libs.storage_descriptions import VAR2D_FITS_DESC
@@ -837,16 +866,17 @@ class ProcessABBABand(object):
                                              extractor)
 
 
-        f_obj = pyfits.open(extractor.obj_filenames[0])
+        from libs.load_fits import open_fits
+        f_obj = open_fits(extractor.obj_filenames[0])
         f_obj[0].header.extend(wvl_header)
 
         from libs.products import PipelineImage as Image
         image_list = [Image([("EXTNAME", "SPEC_FLATTENED")],
                             convert_data(a0v_flattened_data[0][1]))]
-        if self.debug_output:
-            for ext_name, data in a0v_flattened_data[1:]:
-                image_list.append(Image([("EXTNAME", ext_name.upper())],
-                                        convert_data(data)))
+
+        for ext_name, data in a0v_flattened_data[1:]:
+            image_list.append(Image([("EXTNAME", ext_name.upper())],
+                                    convert_data(data)))
 
 
         from libs.products import PipelineImages #Base

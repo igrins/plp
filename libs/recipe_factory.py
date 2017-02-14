@@ -6,14 +6,18 @@ class RecipeFactoryProcessBand(RecipeBase):
      def process_band(utdate, recipe_name, band, obsids, config_name):
          pass
     """
-    def run_selected_bands_with_recipe(self, utdate, selected, bands):
+    def run_selected_bands_with_recipe(self, utdate, selected, bands,
+                                       **kwargs):
         for band in bands:
             for s in selected:
                 recipe_name = s[0].strip()
                 obsids = s[1]
+                frame_types = s[2]
+                aux_infos = s[3]
 
-                self.process_band(utdate, recipe_name, band, obsids,
-                                  self.config)
+                self.process_band(utdate, recipe_name, band, 
+                                  obsids, frame_types, aux_infos,
+                                  self.config, **kwargs)
 
 def new_recipe_class(type_name, recipe_name, process_band_func):
     cls = type(type_name, (RecipeFactoryProcessBand,),
@@ -25,11 +29,13 @@ def new_recipe_func(function_name, recipe_cls):
 
     def _recipe_func(utdate, bands="HK",
                      starting_obsids=None,
-                     config_file="recipe.config"):
+                     config_file="recipe.config",
+                     **kwargs):
 
         _recipe_obj = recipe_cls()
         _recipe_obj.process(utdate, bands,
-                            starting_obsids, config_file)
+                            starting_obsids, config_file,
+                            **kwargs)
 
     _recipe_func.__name__ = function_name.lower()
     return _recipe_func

@@ -31,7 +31,9 @@ class ThAr(object):
 
 
 def get_1d_median_specs(fits_names, ap):
-    hdu_list = [pyfits.open(fn)[0] for fn in fits_names]
+    #hdu_list = [pyfits.open(fn)[0] for fn in fits_names]
+    from load_fits import load_fits_data
+    hdu_list = [load_fits_data(fn) for fn in fits_names]
     _data = stsci_median([hdu.data for hdu in hdu_list])
 
     from destriper import destriper

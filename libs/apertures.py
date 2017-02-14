@@ -4,6 +4,7 @@ import scipy.ndimage as ni
 
 from stsci_helper import stsci_median
 
+
 class ApCoeff(object):
     """
     Apcoeff from original PLP.
@@ -38,7 +39,6 @@ class Apertures(object):
         self.xi = np.arange(2048)
 
         self.basename = basename
-
 
     def __call__(self, order, pixels, frac=0.5):
         return self.apcoeffs[order](pixels, frac)
@@ -95,7 +95,6 @@ class Apertures(object):
 
         return order_map
 
-
     def make_slitpos_map(self):
         from itertools import izip
 
@@ -137,10 +136,9 @@ class Apertures(object):
 
         return order_map
 
-
-    def extract_spectra_simple(self, data, mode="median"):
+    def extract_spectra_simple(self, data, mode="median", f1=0., f2=1.):
         if mode == "median":
-            s = self.extract_spectra_v2(data)
+            s = self.extract_spectra_v2(data, f1=f1, f2=f2)
         else:
             raise ValueError("unsupported mode value : mode = ", mode)
 
@@ -158,7 +156,7 @@ class Apertures(object):
             down = np.clip((yy1+0.5).astype("i"), 0, 2048)
             up = np.clip((yy2+0.5).astype("i"), 0, 2048)
 
-            s = [np.nanmedian(data[down[i]:up[i],i]) for i in range(2048)]
+            s = [np.nanmedian(data[down[i]:up[i], i]) for i in range(2048)]
             s_list.append(s)
 
         return s_list

@@ -78,7 +78,9 @@ if 0:
 
 from libs.recipe_helper import RecipeHelper
 
-def process_band(utdate, recipe_name, band, obsids, config_name):
+def process_band(utdate, recipe_name, band, 
+                 obsids, frame_types, aux_infos,
+                 config_name):
 
     helper = RecipeHelper(config_name, utdate, recipe_name)
 
@@ -90,9 +92,13 @@ if __name__ == "__main__":
     recipe_name = "divide_a0v"
     utdate = "20140525"
     obsids = [42]
+    frame_types = [None]
+    aux_infos = [None]
 
     band = "K"
 
     config_name = "../recipe.config"
 
-    process_band(utdate, recipe_name, band, obsids, config_name)
+    process_band(utdate, recipe_name, band, 
+                 obsids, frame_types, aux_infos, 
+                 config_name)
