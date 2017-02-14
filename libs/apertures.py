@@ -197,14 +197,14 @@ class Apertures(object):
             variance_map[~msk1] = 0
 
             msk10 = shiftx(msk1)
-            if debug:
-                import astropy.io.fits as pyfits
-                hdu_list = pyfits.HDUList()
-                #hdu_list.append(pyfits.PrimaryHDU(data=msk1.astype("i4")))
-                hdu_list.append(pyfits.PrimaryHDU(data=np.array(msk1, dtype="i")))
-                #hdu_list.append(pyfits.ImageHDU(data=np.array(msk1, dtype="i")))
-                hdu_list.append(pyfits.ImageHDU(data=msk10))
-                hdu_list.writeto("test_mask.fits", clobber=True)
+            # if debug:
+            #     import astropy.io.fits as pyfits
+            #     hdu_list = pyfits.HDUList()
+            #     #hdu_list.append(pyfits.PrimaryHDU(data=msk1.astype("i4")))
+            #     hdu_list.append(pyfits.PrimaryHDU(data=np.array(msk1, dtype="i")))
+            #     #hdu_list.append(pyfits.ImageHDU(data=np.array(msk1, dtype="i")))
+            #     hdu_list.append(pyfits.ImageHDU(data=msk10))
+            #     hdu_list.writeto("test_mask.fits", clobber=True)
 
             profile_map = profile_map*msk10
             data = shiftx(data)#/msk10
