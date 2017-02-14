@@ -86,11 +86,12 @@ def extractor_factory(recipe_name):
     @argh.arg("--fill-nan", default=None)
     @argh.arg("--lacosmics-thresh", default=0.)
     @argh.arg("--conserve-2d-flux", default=True)
-    @argh.arg("--slit-profile-mode", choices=['auto','simple', "gauss2d"],
+    @argh.arg("--slit-profile-mode", choices=['auto','simple', "gauss", "gauss2d"],
               default="auto")
     @argh.arg("--subtract-interorder-background", default=False)
     @argh.arg("--weighting-mode", choices=['auto','uniform', "optimal"],
               default="auto")
+    @argh.arg("--n-process", default=1)
     def extract(utdate, refdate="20140316", bands="HK",
                 **kwargs
                 ):
@@ -169,7 +170,9 @@ class ProcessABBABand(object):
                  subtract_interorder_background=False,
                  conserve_2d_flux=False,
                  slit_profile_mode="auto",
-                 weighting_mode="auto"):
+                 weighting_mode="auto",
+                 n_process=1,
+    ):
         """
         cr_rejection_thresh : pixels that deviate significantly from the profile are excluded.
         """
@@ -195,6 +198,8 @@ class ProcessABBABand(object):
         self.slit_profile_mode = slit_profile_mode
 
         self.weighting_mode = weighting_mode
+
+        self.n_process = n_process
 
     def _estimate_slit_profile_1d(self, extractor, ap,
                                   data_minus_flattened,
@@ -245,7 +250,7 @@ class ProcessABBABand(object):
 
             return s2
 
-        omap = self.ordermap_bpixed
+        omap = extractor.ordermap
         # omap = extractor.ordermap_bpixed (?)
 
         # correction factors for aperture width
@@ -323,8 +328,8 @@ class ProcessABBABand(object):
 
         omap, slitpos = extractor.ordermap_bpixed, extractor.slitpos_map
 
-        def oo(x_pixel, slitpos):
-            return g_list0(slitpos)
+        # def oo(x_pixel, slitpos):
+        #     return g_list0(slitpos)
 
         # def _run_order(o):
         #     print o
@@ -415,11 +420,11 @@ class ProcessABBABand(object):
             args.append((o, x, y, s, g_list0, logi))
 
 
-        n_process = 4
-        if n_process > 1:
+        # n_process = 4
+        if self.n_process > 1:
             from multiprocessing import Pool
             #from multiprocessing.pool import ThreadPool as Pool
-            p = Pool(n_process)
+            p = Pool(self.n_process)
             _ = p.map(_run_order_main, args)
         else:
             _ = []
@@ -682,7 +687,7 @@ class ProcessABBABand(object):
                 s_list, v_list, cr_mask, aux_images = _
 
 
-                if self.slit_profile_mode == "gauss2d":
+                if self.slit_profile_mode in ["gauss", "gauss2d"]:
                     # now try to derive the n-gaussian profile
                     print "updating profile using the multi gauss fit"
 
@@ -697,12 +702,18 @@ class ProcessABBABand(object):
                         x1=800, x2=2048-800,
                         do_ab=True)
 
-                    profile = self._estimate_slit_profile_gauss_2d(extractor, ap,
-                                                                   ods,
-                                                                   glist,
-                                                                   # s_list,
-                                                                   x1=800, x2=2048-800,
-                                                                   do_ab=True)
+                    if self.slit_profile_mode == "gauss2d":
+                        profile = self._estimate_slit_profile_gauss_2d(extractor, ap,
+                                                                       ods,
+                                                                       glist,
+                                                                       # s_list,
+                                                                       x1=800, x2=2048-800,
+                                                                       do_ab=True)
+                    elif self.slit_profile_mode == "gauss":
+                        def profile(order, x_pixel, slitpos):
+                            return glist(slitpos)
+                    else:
+                        raise ValueError("unexpected slit_profile_mode: %s" % self.slit_profile_mode)
 
                     profile_map = extractor.make_profile_map(ap,
                                                              profile,
