@@ -895,6 +895,8 @@ class ProcessABBABand(object):
                                          sig_map),
                                    Image([("EXTNAME", "SYNTH_MAP")],
                                          synth_map),
+                                   Image([("EXTNAME", "PROFILE_MAP")],
+                                         profile_map),
                                    ])
 
             if self.subtract_interorder_background:
