@@ -733,7 +733,7 @@ class ProcessABBABand(object):
 
 
                 sig_map = aux_images["sig_map"]
-                synth_map = aux_images["sig_map"]
+                synth_map = aux_images["synth_map"]
                 shifted = aux_images["shifted"]
 
                 if 0: # save aux files
