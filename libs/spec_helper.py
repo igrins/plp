@@ -18,7 +18,8 @@ class OnedSpecHelper(object):
         from libs.storage_descriptions import SPEC_FITS_DESC
         spec_hdu_list = self.igr_storage.load1(SPEC_FITS_DESC,
                                                self.basename,
-                                               return_hdu_list=True)
+                                               return_hdu_list=True,
+                                               prevent_split=True)
         return spec_hdu_list
 
     @lazyprop
@@ -35,7 +36,8 @@ class OnedSpecHelper(object):
     def sn(self):
         from libs.storage_descriptions import SN_FITS_DESC
         sn_ = self.igr_storage.load1(SN_FITS_DESC,
-                                     self.basename)
+                                     self.basename,
+                                     prevent_split=True)
         sn = list(sn_.data)
         return sn
 
@@ -44,7 +46,8 @@ class OnedSpecHelper(object):
 
         from libs.storage_descriptions import SPEC_FITS_FLATTENED_DESC
         telluric_cor_ = self.igr_storage.load1(SPEC_FITS_FLATTENED_DESC,
-                                               self.basename)
+                                               self.basename,
+                                               prevent_split=True)
 
         #A0V_path = ProductPath(igr_path, A0V_basename)
         #fn = A0V_path.get_secondary_path("spec_flattened.fits")

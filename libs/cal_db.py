@@ -81,7 +81,8 @@ class CalDB(object):
         return basename
 
 
-    def query_item_path(self, basename, item_type_or_desc):
+    def query_item_path(self, basename, item_type_or_desc,
+                        ext_prefix=None):
         """
         this queries db to find relavant basename and load the related resource.
         """
@@ -90,13 +91,17 @@ class CalDB(object):
             band, master_obsid = basename
             basename = self.helper.get_basename(band, master_obsid)
 
+        if ext_prefix is not None:
+            basename += ext_prefix
 
         if isinstance(item_type_or_desc, str):
             item_desc = self.DESC_DICT[item_type_or_desc.upper()]
         else:
             item_desc = item_type_or_desc
 
-        path = self.helper.igr_storage.get_item_path(item_desc, basename)
+        prevent_split=(ext_prefix is not None)
+        path = self.helper.igr_storage.get_item_path(item_desc, basename,
+                                                     prevent_split=prevent_split)
 
         return path
 
@@ -109,12 +114,14 @@ class CalDB(object):
         return self.helper.igr_storage.load_item_from_path(item_path)
 
 
-    def load_item_from(self, basename, item_type_or_desc):
+    def load_item_from(self, basename, item_type_or_desc,
+                       ext_prefix=None):
         """
         this queries db to find relavant basename and load the related resource.
         """
 
-        item_path = self.query_item_path(basename, item_type_or_desc)
+        item_path = self.query_item_path(basename, item_type_or_desc,
+                                         ext_prefix)
         return self.load_item_from_path(item_path)
 
 
@@ -186,7 +193,8 @@ class CalDB(object):
         self.helper.igr_storage.store_item(item_desc, basename,
                                            pipeline_image)
 
-    def store_multi_image(self, basename, item_type, hdu_list):
+    def store_multi_image(self, basename, item_type, hdu_list,
+                          ext_prefix=None):
         band, master_obsid = self._get_band_masterobsid(basename)
         basename = self._get_basename(basename)
 
@@ -200,7 +208,8 @@ class CalDB(object):
                                         masterhdu=hdu)
 
         self.helper.igr_storage.store_item(item_desc, basename,
-                                           pipeline_image)
+                                           pipeline_image,
+                                           ext_prefix=ext_prefix)
 
     def store_dict(self, basename, item_type, data):
         basename = self._get_basename(basename)

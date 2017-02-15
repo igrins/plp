@@ -143,8 +143,9 @@ class PipelineStorage(object):
             hdu = get_first_science_hdu(hdu_list)
             return hdu
 
-    def load(self, product_descs, mastername):
-        mastername, ext_ = os.path.splitext(mastername)
+    def load(self, product_descs, mastername, prevent_split=False):
+        if not prevent_split:
+            mastername, ext_ = os.path.splitext(mastername)
 
         r = PipelineProducts("")
         for (section, prefix, ext) in product_descs:
@@ -163,8 +164,9 @@ class PipelineStorage(object):
             #self.save_one(fn, v, masterhdu)
         return r
 
-    def get_item_path(self, product_desc, mastername):
-        mastername, ext_ = os.path.splitext(mastername)
+    def get_item_path(self, product_desc, mastername, prevent_split=False):
+        if not prevent_split:
+            mastername, ext_ = os.path.splitext(mastername)
 
         section, prefix, ext = product_desc
 
@@ -211,9 +213,17 @@ class PipelineStorage(object):
             #self.save_one(fn, v, masterhdu)
         return v
 
-    def store_item(self, product_desc, mastername, item):
+    def store_item(self, product_desc, mastername, item,
+                   ext_prefix=None):
 
-        fn = self.get_item_path(product_desc, mastername)
+        if ext_prefix:
+            mastername += ext_prefix
+            prevent_split = True
+        else:
+            prevent_split = False
+
+        fn = self.get_item_path(product_desc, mastername,
+                                prevent_split=prevent_split)
         print "saving %s" % fn
 
         item.store(fn)
@@ -222,8 +232,10 @@ class PipelineStorage(object):
 
 
     def load1(self, product_desc, mastername,
-              return_hdu_list=False):
-        product1 = self.load([product_desc], mastername)[product_desc]
+              return_hdu_list=False, prevent_split=False):
+        product1 = self.load([product_desc], mastername,
+                             prevent_split=prevent_split)[product_desc]
+
         if not return_hdu_list and isinstance(product1,
                                               pyfits.HDUList):
             return product1[0]

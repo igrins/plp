@@ -1,6 +1,8 @@
 import os
 import numpy as np
 
+import logging as igr_log
+
 def plot_spec(utdate, refdate="20140316", bands="HK",
               starting_obsids=None, interactive=False,
               recipe_name = "ALL_RECIPES",
@@ -8,7 +10,8 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
               threshold_a0v=0.2,
               multiply_model_a0v=False,
               html_output=False,
-              a0v_obsid=None):
+              a0v_obsid=None,
+              ext_prefix=None):
 
     from libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
@@ -49,7 +52,8 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
                               objname=objname,
                               multiply_model_a0v=multiply_model_a0v,
                               html_output=html_output,
-                              a0v_obsid=a0v_obsid)
+                              a0v_obsid=a0v_obsid,
+                              ext_prefix=ext_prefix)
 
 
 def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
@@ -59,7 +63,8 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
                       objname="",
                       multiply_model_a0v=False,
                       html_output=False,
-                      a0v_obsid=None):
+                      a0v_obsid=None,
+                      ext_prefix=None):
 
     target_type, nodding_type = recipe.split("_")
 
@@ -79,7 +84,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
     igr_path = extractor.pr.igr_path
 
 
-    tgt = extractor.get_oned_spec_helper()
+    tgt = extractor.get_oned_spec_helper(ext_prefix=ext_prefix)
 
     orders_w_solutions = extractor.orders_w_solutions
 
@@ -96,7 +101,8 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
             A0V_basename = "SDC%s_%s_%04d" % (band, utdate, int(a0v_obsid))
             print A0V_basename
 
-        a0v = extractor.get_oned_spec_helper(A0V_basename)
+        a0v = extractor.get_oned_spec_helper(A0V_basename,
+                                             ext_prefix=ext_prefix)
 
 
         tgt_spec_cor = get_tgt_spec_cor(tgt, a0v,
@@ -185,9 +191,12 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
             fig.tight_layout()
 
         tgt_basename = extractor.pr.tgt_basename
+        dirname = "spec_"+tgt_basename
+        ext_prefix_s = ext_prefix if ext_prefix is not None else ""
+        filename_prefix = "spec_" + tgt_basename + ext_prefix_s
         figout = igr_path.get_section_filename_base("QA_PATH",
-                                                    "spec_"+tgt_basename,
-                                                    "spec_"+tgt_basename)
+                                                    filename_prefix,
+                                                    dirname)
         #figout = obj_path.get_secondary_path("spec", "spec_dir")
         from libs.qa_helper import figlist_to_pngs
         figlist_to_pngs(figout, fig_list)
@@ -195,18 +204,21 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
     # save html
 
     if html_output:
-        dirname = config.get_value('HTML_PATH', utdate)
-        objroot = "%04d" % (master_obsid,)
-        html_save(utdate, dirname, objroot, band,
-                  orders_w_solutions, tgt.um,
-                  tgt.spec, tgt.sn, i1i2_list)
-
-        if FIX_TELLURIC:
-            objroot = "%04dA0V" % (master_obsid,)
+        if ext_prefix is not None:
+            igr_log.warn("For now, no html output is generated if ext-prefix option is used")
+        else:
+            dirname = config.get_value('HTML_PATH', utdate)
+            objroot = "%04d" % (master_obsid,)
             html_save(utdate, dirname, objroot, band,
                       orders_w_solutions, tgt.um,
-                      a0v.flattened, tgt_spec_cor, i1i2_list,
-                      spec_js_name="jj_a0v.js")
+                      tgt.spec, tgt.sn, i1i2_list)
+
+            if FIX_TELLURIC:
+                objroot = "%04dA0V" % (master_obsid,)
+                html_save(utdate, dirname, objroot, band,
+                          orders_w_solutions, tgt.um,
+                          a0v.flattened, tgt_spec_cor, i1i2_list,
+                          spec_js_name="jj_a0v.js")
 
 
     if do_interactive_figure:
