@@ -1036,7 +1036,7 @@ class ProcessABBABand(object):
     def get_wvl_header_data(self, igr_storage, extractor):
         from libs.storage_descriptions import SKY_WVLSOL_FITS_DESC
         fn = igr_storage.get_path(SKY_WVLSOL_FITS_DESC,
-                                  extractor.basenames["sky"])
+                                  extractor.basenames["wvlsol"])
 
         # fn = sky_path.get_secondary_path("wvlsol_v1.fits")
         f = pyfits.open(fn)

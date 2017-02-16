@@ -520,18 +520,14 @@ def save_figures(helper, band, obsids):
 
 
 def save_db(helper, band, obsids):
-    thar_filenames = helper.get_filenames(band, obsids)
-    thar_basename = os.path.splitext(os.path.basename(thar_filenames[0]))[0]
 
-    if 1:
-        from libs.products import ProductDB
-        thar_db_name = helper.igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
-                                                                 "thar.db",
-                                                                 )
-        thar_db = ProductDB(thar_db_name)
-        # os.path.join(igr_path.secondary_calib_path,
-        #                                  "thar.db"))
-        thar_db.update(band, thar_basename)
+    caldb = helper.get_caldb()
+
+    flatoff_basename = helper.get_basename(band, obsids[0])
+
+    # save db
+    db = caldb.load_db("register")
+    db.update(band, flatoff_basename)
 
 
 def process_band(utdate, recipe_name, band,

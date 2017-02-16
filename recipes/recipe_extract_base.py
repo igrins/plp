@@ -34,7 +34,7 @@ class ProcessBase(object):
         self.basenames = {}
 
 
-        db_types_calib = ["flat_off", "flat_on", "thar", "sky"]
+        db_types_calib = ["flat_off", "flat_on", "register", "distortion", "wvlsol"]
 
         for db_type in db_types_calib:
 
@@ -56,7 +56,7 @@ class ProcessBase(object):
             self.db[db_type] = ProductDB(db_name)
 
         # to get basenames
-        db_types = ["flat_off", "flat_on", "thar", "sky"]
+        db_types = ["flat_off", "flat_on", "register", "distortion", "wvlsol"]
         if load_a0v_db:
             db_types.append("a0v")
 
@@ -121,7 +121,7 @@ class RecipeExtractPR(object):
     def _orders_and_wvl_solutions(self):
         from libs.storage_descriptions import SKY_WVLSOL_JSON_DESC
 
-        sky_basename = self.basenames["sky"]
+        sky_basename = self.basenames["wvlsol"]
         wvlsol_products = self.igr_storage.load1(SKY_WVLSOL_JSON_DESC,
                                                  sky_basename)
 
@@ -169,7 +169,7 @@ class RecipeExtractPR(object):
     @lazyprop
     def ordermap(self):
 
-        sky_basename = self.basenames["sky"]
+        sky_basename = self.basenames["distortion"]
 
         from libs.storage_descriptions import ORDERMAP_FITS_DESC
 
@@ -206,7 +206,7 @@ class RecipeExtractPR(object):
 
     @lazyprop
     def slitpos_map(self):
-        sky_basename = self.basenames["sky"]
+        sky_basename = self.basenames["distortion"]
 
         from libs.storage_descriptions import SLITPOSMAP_FITS_DESC
 
@@ -219,7 +219,7 @@ class RecipeExtractPR(object):
     def slitoffset_map(self):
         from libs.storage_descriptions import SLITOFFSET_FITS_DESC
         prod_ = self.igr_storage.load1(SLITOFFSET_FITS_DESC,
-                                       self.basenames["sky"])
+                                       self.basenames["distortion"])
 
         slitoffset_map = prod_.data
         return slitoffset_map
@@ -458,7 +458,7 @@ class RecipeExtractBase(RecipeExtractPR):
     def get_old_orders(self):
         from libs.storage_descriptions import ONED_SPEC_JSON_DESC
 
-        sky_basename = self.basenames["sky"]
+        sky_basename = self.basenames["distortion"]
 
         raw_spec_products = self.igr_storage.load1(ONED_SPEC_JSON_DESC,
                                                    sky_basename)

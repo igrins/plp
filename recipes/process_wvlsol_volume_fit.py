@@ -134,11 +134,15 @@ def generate_slitoffsetmap(helper, band, obsids):
     master_obsid = obsids[0]
     basename = (band, master_obsid)
 
-    ordermap_fits = caldb.load_resource_for(basename,
-                                            ("sky", "ordermap_fits"))
+    # ordermap_fits = caldb.load_resource_for(basename,
+    #                                         ("sky", "ordermap_fits"))
 
-    slitposmap_fits = caldb.load_resource_for(basename,
-                                              ("sky", "slitposmap_fits"))
+    # slitposmap_fits = caldb.load_resource_for(basename,
+    #                                           ("sky", "slitposmap_fits"))
+
+    ordermap_fits = caldb.load_resource_for(basename, "ordermap")
+
+    slitposmap_fits = caldb.load_resource_for(basename, "slitposmap")
 
     yy, xx = np.indices(ordermap_fits[0].data.shape)
 

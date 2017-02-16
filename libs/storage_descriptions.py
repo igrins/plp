@@ -112,34 +112,30 @@ def load_descriptions():
     return desc_dict
 
 
-_resource_definitions = '''
-aperture_definition=("flat_on", "FLATCENTROID_SOL_JSON")
-orders=("flat_on", "FLATCENTROID_ORDERS_JSON")
-deadpix_mask=("flat_on", "DEADPIX_MASK")
-bias_mask=("flat_on", "BIAS_MASK")
-hotpix_mask=("flat_off", "HOTPIX_MASK")
-flat_off=("flat_off", "FLAT_OFF")
-wvlsol_v0=("register", "WVLSOL_V0_JSON")
-wvlsol=("wvlsol", "SKY_WVLSOL_JSON")
-'''
+_resource_definitions = dict(
+    aperture_definition=("flat_on", "FLATCENTROID_SOL_JSON"),
+    orders=("flat_on", "FLATCENTROID_ORDERS_JSON"),
+    deadpix_mask=("flat_on", "DEADPIX_MASK"),
+    bias_mask=("flat_on", "BIAS_MASK"),
+    #
+    hotpix_mask=("flat_off", "HOTPIX_MASK"),
+    flat_off=("flat_off", "FLAT_OFF"),
+    #
+    wvlsol_v0=("register", "WVLSOL_V0_JSON"),
+    #
+    ordermap=("distortion", "ORDERMAP_FITS"),
+    slitposmap=("distortion", "SLITPOSMAP_FITS"),
+    #
+    wvlsol=("wvlsol", "SKY_WVLSOL_JSON"),
+)
 
 def load_resource_def():
-    import ast
     resource_dict = {}
     desc_names = globals()
 
-    for l in _resource_definitions.split("\n"):
-        _ = l.strip()
-        if not _: continue
-        _ = _.split("=")
-        if len(_) != 2:
-            print "unknown resource definition : " + l.strip()
-        else:
-            v, e_ = _
-            e = ast.literal_eval(e_)
-            e0 = e[0]
-            e1 = desc_names.get(e[1] + "_DESC")
-            resource_dict[v] = (e0, e1)
+    for k, (db_name, desc_prefix) in _resource_definitions.iteritems():
+        e1 = desc_names.get(desc_prefix + "_DESC")
+        resource_dict[k] = (db_name, e1)
 
     return resource_dict
 

@@ -95,15 +95,27 @@ def save_qa(helper, band, obsids):
     figlist_to_pngs(sky_figs, [fig1, fig2])
 
 
-def save_db(helper, band, obsids):
+def save_distortion_db(helper, band, obsids):
 
     caldb = helper.get_caldb()
 
     master_obsid = obsids[0]
     basename = helper.get_basename(band, master_obsid)
 
-    db = caldb.load_db("sky")
+    db = caldb.load_db("distortion")
     db.update(band, basename)
+
+
+def save_wvlsol_db(helper, band, obsids):
+
+    caldb = helper.get_caldb()
+
+    master_obsid = obsids[0]
+    basename = helper.get_basename(band, master_obsid)
+
+    db = caldb.load_db("wvlsol")
+    db.update(band, basename)
+
 
     # if 1:
     #     thar_db.update(band, thar_basename)
@@ -202,7 +214,7 @@ def process_band(utdate, recipe_name, band, obsids, frame_types,
 
     volume_fit(helper, band, obsids)
 
-    save_db(helper, band, obsids)
+    save_distortion_db(helper, band, obsids)
 
     save_ordermap_slitposmap(helper, band, obsids)
 
@@ -210,6 +222,8 @@ def process_band(utdate, recipe_name, band, obsids, frame_types,
 
     from process_derive_wvlsol import derive_wvlsol
     derive_wvlsol(helper, band, obsids)
+
+    save_wvlsol_db(helper, band, obsids)
 
     save_wavelength_map(helper, band, obsids)
 
