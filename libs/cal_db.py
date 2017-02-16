@@ -1,64 +1,22 @@
-
-import storage_descriptions as DESCS
 from products import ProductDB
-import os
 
-def load_storage_descriptions():
-    import storage_descriptions
-    desc_list = [n for n in dir(storage_descriptions) if n.endswith("_DESC")]
-    desc_dict = dict((n[:-5].upper(),
-                      getattr(storage_descriptions, n)) for n in desc_list)
+from storage_descriptions import (load_resource_def,
+                                  load_descriptions,
+                                  DB_Specs)
 
-    return desc_dict
-
-caldb_resource = '''
-aperture_definition=("flat_on", "FLATCENTROID_SOL_JSON")
-orders=("flat_on", "FLATCENTROID_ORDERS_JSON")
-wvlsol=("sky", "SKY_WVLSOL_JSON")
-hotpix_mask=("flat_off", "HOTPIX_MASK")
-deadpix_mask=("flat_on", "DEADPIX_MASK")
-bias_mask=("flat_on", "BIAS_MASK")
-wvlsol_v0=("thar", "WVLSOL_V0_JSON")
-flat_off=("flat_off", "FLAT_OFF")
-'''
 
 class CalDB(object):
-
-    DB_Specs = dict(flat_on=("PRIMARY_CALIB_PATH", "flat_on.db"),
-                    flat_off=("PRIMARY_CALIB_PATH", "flat_off.db"),
-                    sky=("PRIMARY_CALIB_PATH", "sky.db"),
-                    a0v=("OUTDATA_PATH", "a0v.db"),
-                    thar=('PRIMARY_CALIB_PATH', 'thar.db')
-                    )
-
-    DESC_DICT = load_storage_descriptions()
-
-    def _load_resource_dict(self):
-        resource_dict = {}
-        import cal_db
-        reload(cal_db)
-        import ast
-        for l in cal_db.caldb_resource.split("\n"):
-            _ = l.strip()
-            if not _: continue
-            _ = _.split("=")
-            if len(_) != 2:
-                print "unknown resource definition : " + l.strip()
-            else:
-                v, e_ = _
-                e = ast.literal_eval(e_)
-                e0 = e[0]
-                e1 = getattr(DESCS, e[1] + "_DESC")
-                resource_dict[v] = (e0, e1)
-
-        return resource_dict
 
     def __init__(self, helper, utdate, db_names=[]):
         self.helper = helper
         self.utdate = utdate
         self.db_dict = {}
 
-        self.RESOURCE_DICT = self._load_resource_dict()
+        self.DB_Specs = DB_Specs
+
+        self.DESC_DICT = load_descriptions()
+
+        self.RESOURCE_DICT = load_resource_def()
 
         for db_name in db_names:
             self.load_db(db_name)

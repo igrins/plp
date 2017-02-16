@@ -92,3 +92,54 @@ SPEC_A0V_FITS_DESC = ("OUTDATA_PATH", "", ".spec_a0v.fits")
 #Added by Kyle Kaplan on Feb 25, 2015
 #Save variance map as straitened out 2D datacube like spec2d.fits
 VAR2D_FITS_DESC = ("OUTDATA_PATH", "", ".var2d.fits")
+
+
+DB_Specs = dict(flat_on=("PRIMARY_CALIB_PATH", "flat_on.db"),
+                flat_off=("PRIMARY_CALIB_PATH", "flat_off.db"),
+                register=("PRIMARY_CALIB_PATH", "register.db"),
+                distortion=("PRIMARY_CALIB_PATH", "distortion.db"),
+                wvlsol=("PRIMARY_CALIB_PATH", "wvlsol.db"),
+                a0v=("OUTDATA_PATH", "a0v.db"),
+                )
+
+
+def load_descriptions():
+    storage_descriptions = globals()
+    desc_list = [n for n in storage_descriptions if n.endswith("_DESC")]
+    desc_dict = dict((n[:-5].upper(),
+                      storage_descriptions[n]) for n in desc_list)
+
+    return desc_dict
+
+
+_resource_definitions = '''
+aperture_definition=("flat_on", "FLATCENTROID_SOL_JSON")
+orders=("flat_on", "FLATCENTROID_ORDERS_JSON")
+deadpix_mask=("flat_on", "DEADPIX_MASK")
+bias_mask=("flat_on", "BIAS_MASK")
+hotpix_mask=("flat_off", "HOTPIX_MASK")
+flat_off=("flat_off", "FLAT_OFF")
+wvlsol_v0=("register", "WVLSOL_V0_JSON")
+wvlsol=("wvlsol", "SKY_WVLSOL_JSON")
+'''
+
+def load_resource_def():
+    import ast
+    resource_dict = {}
+    desc_names = globals()
+
+    for l in _resource_definitions.split("\n"):
+        _ = l.strip()
+        if not _: continue
+        _ = _.split("=")
+        if len(_) != 2:
+            print "unknown resource definition : " + l.strip()
+        else:
+            v, e_ = _
+            e = ast.literal_eval(e_)
+            e0 = e[0]
+            e1 = desc_names.get(e[1] + "_DESC")
+            resource_dict[v] = (e0, e1)
+
+    return resource_dict
+
