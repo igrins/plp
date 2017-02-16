@@ -1,4 +1,6 @@
-from argh_helper import argh
+import recipes
+
+from recipes.argh_helper import argh
 
 import recipes.recipe_flat
 import recipes.recipe_thar
