@@ -413,7 +413,7 @@ class ProductDB(object):
                 i = np.where(obsid_dist == np.min(obsid_dist))[0][-1]
                 return basename_list[i]
             else:
-                return None
+                raise RuntimeError("db (%s) is empty." % (self.dbpath))
 
 
 def WavelenthSolutions(object):
