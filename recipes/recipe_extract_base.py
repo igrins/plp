@@ -258,10 +258,13 @@ class RecipeExtractPR(object):
         self.band = band
 
 
-    def get_oned_spec_helper(self, basename=None):
+    def get_oned_spec_helper(self, basename=None, basename_postfix=None):
         igr_storage = self.igr_storage
         if basename is None:
             basename = self.pr.tgt_basename
+
+        if basename_postfix is not None:
+            basename += basename_postfix
 
         from libs.spec_helper import OnedSpecHelper
         oned_spec_helper = OnedSpecHelper(igr_storage,

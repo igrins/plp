@@ -122,8 +122,12 @@ class PipelineStorage(object):
         igr_storage = cls(igr_path)
         return igr_storage
 
-    def get_path(self, desc, mastername):
+    def get_path(self, desc, mastername, basename_postfix=None):
         section, prefix, ext = desc
+
+        if basename_postfix is not None:
+            ext = basename_postfix + ext
+
         fn0 = prefix + os.path.basename(mastername) + ext
         fn = self.igr_path.get_section_filename_base(section, fn0)
 
@@ -139,8 +143,9 @@ class PipelineStorage(object):
             hdu = get_first_science_hdu(hdu_list)
             return hdu
 
-    def load(self, product_descs, mastername):
-        mastername, ext_ = os.path.splitext(mastername)
+    def load(self, product_descs, mastername, prevent_split=False):
+        if not prevent_split:
+            mastername, ext_ = os.path.splitext(mastername)
 
         r = PipelineProducts("")
         for (section, prefix, ext) in product_descs:
@@ -159,8 +164,9 @@ class PipelineStorage(object):
             #self.save_one(fn, v, masterhdu)
         return r
 
-    def get_item_path(self, product_desc, mastername):
-        mastername, ext_ = os.path.splitext(mastername)
+    def get_item_path(self, product_desc, mastername, prevent_split=False):
+        if not prevent_split:
+            mastername, ext_ = os.path.splitext(mastername)
 
         section, prefix, ext = product_desc
 
@@ -207,9 +213,17 @@ class PipelineStorage(object):
             #self.save_one(fn, v, masterhdu)
         return v
 
-    def store_item(self, product_desc, mastername, item):
+    def store_item(self, product_desc, mastername, item,
+                   basename_postfix=None):
 
-        fn = self.get_item_path(product_desc, mastername)
+        if basename_postfix:
+            mastername += basename_postfix
+            prevent_split = True
+        else:
+            prevent_split = False
+
+        fn = self.get_item_path(product_desc, mastername,
+                                prevent_split=prevent_split)
         print "saving %s" % fn
 
         item.store(fn)
@@ -218,8 +232,10 @@ class PipelineStorage(object):
 
 
     def load1(self, product_desc, mastername,
-              return_hdu_list=False):
-        product1 = self.load([product_desc], mastername)[product_desc]
+              return_hdu_list=False, prevent_split=False):
+        product1 = self.load([product_desc], mastername,
+                             prevent_split=prevent_split)[product_desc]
+
         if not return_hdu_list and isinstance(product1,
                                               pyfits.HDUList):
             return product1[0]
@@ -227,10 +243,14 @@ class PipelineStorage(object):
             return product1
 
 
-    def store(self, products, mastername, masterhdu=None, cache=True):
+    def store(self, products, mastername, masterhdu=None, cache=True,
+              basename_postfix=None):
         mastername, ext_ = os.path.splitext(mastername)
 
         for (section, prefix, ext), v in products.items():
+            if basename_postfix is not None:
+                ext = basename_postfix + ext
+
             fn0 = prefix + os.path.basename(mastername) + ext
             fn = self.igr_path.get_section_filename_base(section, fn0)
 

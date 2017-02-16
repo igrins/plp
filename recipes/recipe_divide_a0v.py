@@ -10,6 +10,8 @@ _recipe_class_divide_a0v = new_recipe_class("RecipeDivideA0V",
 
 divide_a0v = new_recipe_func("divide_a0v",
                              _recipe_class_divide_a0v)
+
 divide_a0v = argh.arg('--a0v-obsid', default=None, type=int)(divide_a0v)
+divide_a0v = argh.arg('--basename-postfix', default=None, type=str)(divide_a0v)
 
 __all__ = divide_a0v

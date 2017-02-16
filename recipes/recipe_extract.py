@@ -6,7 +6,7 @@ import astropy.io.fits as pyfits
 
 from libs.products import PipelineProducts
 
-import argh
+from argh_helper import argh
 
 # def _run_order_main(o):
 #     print o
@@ -77,6 +77,7 @@ def _run_order_main(args):
 
 
 def extractor_factory(recipe_name):
+    @argh.arg("-b", "--bands", default="HK", choices=["H", "K", "HK"])
     @argh.arg("-s", "--starting-obsids", default=None)
     @argh.arg("-c", "--config-file", default="recipe.config")
     @argh.arg("-d", "--debug-output", default=False)
@@ -92,6 +93,7 @@ def extractor_factory(recipe_name):
     @argh.arg("--weighting-mode", choices=['auto','uniform', "optimal"],
               default="auto")
     @argh.arg("--n-process", default=1)
+    @argh.arg("--basename-postfix", default=None)
     def extract(utdate, refdate="20140316", bands="HK",
                 **kwargs
                 ):
@@ -157,7 +159,7 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
                               #do_interactive_figure=interactive
                               )
 
-from libs.products import ProductDB, PipelineStorage
+from libs.products import PipelineStorage
 
 class ProcessABBABand(object):
     def __init__(self, utdate, refdate, config,
@@ -172,7 +174,7 @@ class ProcessABBABand(object):
                  slit_profile_mode="auto",
                  weighting_mode="auto",
                  n_process=1,
-    ):
+                 basename_postfix=None):
         """
         cr_rejection_thresh : pixels that deviate significantly from the profile are excluded.
         """
@@ -200,6 +202,7 @@ class ProcessABBABand(object):
         self.weighting_mode = weighting_mode
 
         self.n_process = n_process
+        self.basename_postfix = basename_postfix
 
     def _estimate_slit_profile_1d(self, extractor, ap,
                                   data_minus_flattened,
@@ -905,7 +908,6 @@ class ProcessABBABand(object):
 
             self.store_processed_inputs(igr_storage, mastername,
                                         image_list,
-                                        variance_map,
                                         shifted_image_list)
 
 
@@ -960,7 +962,8 @@ class ProcessABBABand(object):
 
         igr_storage.store(r,
                           mastername=mastername,
-                          masterhdu=None)
+                          masterhdu=None,
+                          basename_postfix=self.basename_postfix)
 
     def save_debug_output(self, shifted):
         """
@@ -1002,34 +1005,21 @@ class ProcessABBABand(object):
     def store_processed_inputs(self, igr_storage,
                                mastername,
                                image_list,
-                               variance_map,
                                shifted_image_list):
 
         from libs.storage_descriptions import (COMBINED_IMAGE_DESC,
-                                               # COMBINED_IMAGE_A_DESC,
-                                               # COMBINED_IMAGE_B_DESC,
                                                WVLCOR_IMAGE_DESC,
-                                               #VARIANCE_MAP_DESC
                                                )
         from libs.products import PipelineImages #Base
 
         r = PipelineProducts("1d specs")
 
-        #r.add(COMBINED_IMAGE_DESC, PipelineImageBase([], *image_list))
         r.add(COMBINED_IMAGE_DESC, PipelineImages(image_list))
-        # r.add(COMBINED_IMAGE_A_DESC, PipelineImageBase([],
-        #                                            a_data))
-        # r.add(COMBINED_IMAGE_B_DESC, PipelineImageBase([],
-        #                                            b_data))
-        #r.add(VARIANCE_MAP_DESC, PipelineImageBase([],
-        #                                       variance_map))
-
-        # r.add(VARIANCE_MAP_DESC, PipelineImageBase([],
-        #                                        variance_map.data))
 
         igr_storage.store(r,
                           mastername=mastername,
-                          masterhdu=None)
+                          masterhdu=None,
+                          basename_postfix=self.basename_postfix)
 
 
         r = PipelineProducts("1d specs")
@@ -1038,7 +1028,8 @@ class ProcessABBABand(object):
 
         igr_storage.store(r,
                           mastername=mastername,
-                          masterhdu=None)
+                          masterhdu=None,
+                          basename_postfix=self.basename_postfix)
 
 
 
@@ -1085,14 +1076,14 @@ class ProcessABBABand(object):
         d = np.array(v_list)
         f_obj[0].data = convert_data(d.astype("float32"))
         fout = igr_storage.get_path(VARIANCE_FITS_DESC,
-                                    tgt_basename)
+                                    tgt_basename, basename_postfix=self.basename_postfix)
 
         f_obj.writeto(fout, clobber=True)
 
         d = np.array(sn_list)
         f_obj[0].data = convert_data(d.astype("float32"))
         fout = igr_storage.get_path(SN_FITS_DESC,
-                                    tgt_basename)
+                                    tgt_basename, basename_postfix=self.basename_postfix)
 
         f_obj.writeto(fout, clobber=True)
 
@@ -1100,7 +1091,7 @@ class ProcessABBABand(object):
         f_obj[0].data = convert_data(d.astype("float32"))
 
         fout = igr_storage.get_path(SPEC_FITS_DESC,
-                                    tgt_basename)
+                                    tgt_basename, basename_postfix=self.basename_postfix)
 
         hdu_wvl = pyfits.ImageHDU(data=convert_data(wvl_data),
                                   header=wvl_header)
@@ -1154,7 +1145,7 @@ class ProcessABBABand(object):
         from libs.storage_descriptions import SPEC2D_FITS_DESC
 
         fout = igr_storage.get_path(SPEC2D_FITS_DESC,
-                                    tgt_basename)
+                                    tgt_basename, basename_postfix=self.basename_postfix)
 
         hdu_wvl = pyfits.ImageHDU(data=convert_data(wvl_data),
                                   header=wvl_header)
@@ -1172,7 +1163,7 @@ class ProcessABBABand(object):
         f_obj[0].data = d.astype("float32")
         from libs.storage_descriptions import VAR2D_FITS_DESC
         fout = igr_storage.get_path(VAR2D_FITS_DESC,
-                                    tgt_basename)
+                                    tgt_basename, basename_postfix=self.basename_postfix)
         f_obj.writeto(fout, clobber=True)
 
 
@@ -1309,7 +1300,8 @@ class ProcessABBABand(object):
 
         igr_storage.store(r,
                           mastername=mastername,
-                          masterhdu=f_obj[0])
+                          masterhdu=f_obj[0],
+                          basename_postfix=self.basename_postfix)
 
         tgt_basename = extractor.pr.tgt_basename
         extractor.db["a0v"].update(extractor.band, tgt_basename)
