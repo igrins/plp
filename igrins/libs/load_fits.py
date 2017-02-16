@@ -73,7 +73,7 @@ def get_combined_image(hdus): #, destripe=True):
 
     data_list = [hdu.data for hdu in hdus]
 
-    from libs.stsci_helper import stsci_median
+    from stsci_helper import stsci_median
     im = stsci_median(data_list)
 
     return im
@@ -82,7 +82,7 @@ if 0:
     cards = []
 
     if destripe:
-        from libs.destriper import destriper
+        from destriper import destriper
         im = destriper.get_destriped(im)
 
         cards.append(Card("HISTORY", "IGR: image destriped."))

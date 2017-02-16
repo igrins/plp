@@ -1,7 +1,7 @@
 
 def check_trace_order(flat_deriv, trace_dict, fig, rect=111):
     from mpl_toolkits.axes_grid1 import ImageGrid
-    #from libs.axes_grid import ImageGrid
+    #from axes_grid import ImageGrid
     #d = trace_products["flat_deriv"]
 
     # from storage_descriptions import (FLAT_DERIV_DESC,
@@ -47,7 +47,7 @@ def plot_trace_solutions(flat_normed,
 
     bottom_up_solutions_ = flatcentroid_sol_json["bottom_up_solutions"]
 
-    from libs.polynomials import nested_convert_to_poly
+    from polynomials import nested_convert_to_poly
     bottom_up_solutions = nested_convert_to_poly(bottom_up_solutions_)
 
     # for b, d in bottom_up_solutions_:
@@ -58,7 +58,7 @@ def plot_trace_solutions(flat_normed,
     #     dp = P.Polynomial(d[1])
     #     bottom_up_solutions.append((bp, dp))
 
-    from libs.trace_flat import plot_solutions1, plot_solutions2
+    from trace_flat import plot_solutions1, plot_solutions2
     fig2 = plot_solutions1(flat_normed,
                            bottom_up_solutions)
 

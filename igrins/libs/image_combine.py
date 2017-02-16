@@ -21,7 +21,7 @@ def make_combined_image_sky_deprecated(helper, band, obsids):
 
 def make_combined_image_sky(helper, band, obsids, frametypes=None):
 
-    from libs.load_fits import get_hdus, get_combined_image
+    from load_fits import get_hdus, get_combined_image
     hdus = get_hdus(helper, band, obsids)
 
     if frametypes is None: # do A-B
@@ -36,10 +36,10 @@ def make_combined_image_sky(helper, band, obsids, frametypes=None):
 
         sky_data_ = a+b - abs(a-b)
     
-    from libs.get_destripe_mask import get_destripe_mask
+    from get_destripe_mask import get_destripe_mask
     destripe_mask = get_destripe_mask(helper, band, obsids)
 
-    from libs.image_combine import destripe_sky
+    from image_combine import destripe_sky
     sky_data = destripe_sky(sky_data_, destripe_mask, subtract_bg=False)
 
     return sky_data

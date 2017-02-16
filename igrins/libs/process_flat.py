@@ -230,7 +230,7 @@ def trace_orders(flaton_products):
 
 def check_trace_order(trace_products, fig, rect=111):
     from mpl_toolkits.axes_grid1 import ImageGrid
-    #from libs.axes_grid import ImageGrid
+    #from axes_grid import ImageGrid
     #d = trace_products["flat_deriv"]
 
     from storage_descriptions import (FLAT_DERIV_DESC,
@@ -460,7 +460,7 @@ def plot_trace_solutions(flaton_products,
         dp = P.Polynomial(d[1])
         bottom_up_solutions.append((bp, dp))
 
-    from libs.trace_flat import plot_solutions1, plot_solutions2
+    from trace_flat import plot_solutions1, plot_solutions2
     fig2 = plot_solutions1(flat_normed,
                            bottom_up_solutions)
 

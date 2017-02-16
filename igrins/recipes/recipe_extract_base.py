@@ -2,10 +2,10 @@ import numpy as np
 import astropy.io.fits as pyfits
 import scipy.ndimage as ni
 
-from libs.lazyprop import lazyprop
+from igrins.libs.lazyprop import lazyprop
 
 import os
-from libs.products import ProductDB, PipelineStorage
+from igrins.libs.products import ProductDB, PipelineStorage
 
 class ProcessBase(object):
     def __init__(self, utdate, refdate, config):
@@ -66,7 +66,7 @@ class ProcessBase(object):
                                                                  self.master_obsid)
 
 def get_pr(utdate, config_file="recipe.config"):
-    from libs.igrins_config import IGRINSConfig
+    from igrins.libs.igrins_config import IGRINSConfig
     #from jj_recipe_base import ProcessBase
     config = IGRINSConfig(config_file)
     #refdate = config.get_value("REFDATE", None)
@@ -79,10 +79,10 @@ def get_pr(utdate, config_file="recipe.config"):
 
 class RecipeExtractPR(object):
     def load1(self, db_name, description):
-        import libs.storage_descriptions
+        import igrins.libs.storage_descriptions as storage_descriptions
         master_obsid = self.pr.master_obsid
         basename = self.db[db_name].query(self.band, master_obsid)
-        desc = getattr(libs.storage_descriptions,
+        desc = getattr(storage_descriptions,
                        description.upper() + "_DESC")
         product = self.igr_storage.load1(desc,
                                          basename)
@@ -113,13 +113,13 @@ class RecipeExtractPR(object):
 
     @property
     def gain(self):
-        from libs import instrument_parameters
+        from igrins.libs import instrument_parameters
         gain =  instrument_parameters.gain[self.band]
         return gain
 
     @lazyprop
     def _orders_and_wvl_solutions(self):
-        from libs.storage_descriptions import SKY_WVLSOL_JSON_DESC
+        from igrins.libs.storage_descriptions import SKY_WVLSOL_JSON_DESC
 
         sky_basename = self.basenames["sky"]
         wvlsol_products = self.igr_storage.load1(SKY_WVLSOL_JSON_DESC,
@@ -141,7 +141,7 @@ class RecipeExtractPR(object):
     @lazyprop
     def orderflat(self):
 
-        from libs.storage_descriptions import ORDER_FLAT_IM_DESC
+        from igrins.libs.storage_descriptions import ORDER_FLAT_IM_DESC
 
         orderflat_ = self.igr_storage.load1(ORDER_FLAT_IM_DESC,
                                             self.basenames["flat_on"])
@@ -158,7 +158,7 @@ class RecipeExtractPR(object):
     @lazyprop
     def orderflat_json(self):
 
-        from libs.storage_descriptions import ORDER_FLAT_JSON_DESC
+        from igrins.libs.storage_descriptions import ORDER_FLAT_JSON_DESC
 
         orderflat = self.igr_storage.load1(ORDER_FLAT_JSON_DESC,
                                            self.basenames["flat_on"])
@@ -171,7 +171,7 @@ class RecipeExtractPR(object):
 
         sky_basename = self.basenames["sky"]
 
-        from libs.storage_descriptions import ORDERMAP_FITS_DESC
+        from igrins.libs.storage_descriptions import ORDERMAP_FITS_DESC
 
         ordermap = self.igr_storage.load1(ORDERMAP_FITS_DESC,
                                           sky_basename).data
@@ -190,7 +190,7 @@ class RecipeExtractPR(object):
 
     @lazyprop
     def pix_mask(self):
-        from libs.storage_descriptions import (HOTPIX_MASK_DESC,
+        from igrins.libs.storage_descriptions import (HOTPIX_MASK_DESC,
                                                DEADPIX_MASK_DESC)
 
         hotpix_mask = self.igr_storage.load1(HOTPIX_MASK_DESC,
@@ -208,7 +208,7 @@ class RecipeExtractPR(object):
     def slitpos_map(self):
         sky_basename = self.basenames["sky"]
 
-        from libs.storage_descriptions import SLITPOSMAP_FITS_DESC
+        from igrins.libs.storage_descriptions import SLITPOSMAP_FITS_DESC
 
         slitpos_map = self.igr_storage.load1(SLITPOSMAP_FITS_DESC,
                                              sky_basename).data
@@ -217,7 +217,7 @@ class RecipeExtractPR(object):
 
     @lazyprop
     def slitoffset_map(self):
-        from libs.storage_descriptions import SLITOFFSET_FITS_DESC
+        from igrins.libs.storage_descriptions import SLITOFFSET_FITS_DESC
         prod_ = self.igr_storage.load1(SLITOFFSET_FITS_DESC,
                                        self.basenames["sky"])
 
@@ -227,7 +227,7 @@ class RecipeExtractPR(object):
 
     @lazyprop
     def bias_mask(self):
-        from libs.storage_descriptions import BIAS_MASK_DESC
+        from igrins.libs.storage_descriptions import BIAS_MASK_DESC
         bias_mask = self.igr_storage.load1(BIAS_MASK_DESC,
                                            self.basenames["flat_on"]).data
         return bias_mask
@@ -266,7 +266,7 @@ class RecipeExtractPR(object):
         if basename_postfix is not None:
             basename += basename_postfix
 
-        from libs.spec_helper import OnedSpecHelper
+        from igrins.libs.spec_helper import OnedSpecHelper
         oned_spec_helper = OnedSpecHelper(igr_storage,
                                           basename)
         return oned_spec_helper
@@ -281,7 +281,7 @@ class RecipeExtractBase(RecipeExtractPR):
         """
 
         if config is None or isinstance(config, str):
-            from libs.igrins_config import IGRINSConfig
+            from igrins.libs.igrins_config import IGRINSConfig
             config = IGRINSConfig(config)
 
         RecipeExtractPR.__init__(self,
@@ -299,7 +299,7 @@ class RecipeExtractBase(RecipeExtractPR):
 
     @lazyprop
     def shiftx(self):
-        from libs.correct_distortion import ShiftX
+        from igrins.libs.correct_distortion import ShiftX
         return ShiftX(self.slitoffset_map)
 
 
@@ -320,7 +320,7 @@ class RecipeExtractBase(RecipeExtractPR):
 
     def estimate_interorder_background(self, data, msk, di=24, min_pixel=40):
 
-        from libs.estimate_sky import (estimate_background,
+        from igrins.libs.estimate_sky import (estimate_background,
                                        get_interpolated_cubic)
 
         xc, yc, v, std = estimate_background(data, msk,
@@ -347,7 +347,7 @@ class RecipeExtractBase(RecipeExtractPR):
         b_name_list = filter_abba_names(abba_names, frametypes, "B")
 
 
-        from libs.load_fits import load_fits_data
+        from igrins.libs.load_fits import load_fits_data
         a_list = [load_fits_data(name).data \
                   for name in a_name_list]
         b_list = [load_fits_data(name).data \
@@ -395,7 +395,7 @@ class RecipeExtractBase(RecipeExtractPR):
         import scipy.ndimage as ni
         bias_mask2 = ni.binary_dilation(self.destripe_mask)
 
-        from libs.variance_map import (get_variance_map,
+        from igrins.libs.variance_map import (get_variance_map,
                                        get_variance_map0)
 
         variance_map0 = get_variance_map0(data_minus,
@@ -419,7 +419,7 @@ class RecipeExtractBase(RecipeExtractPR):
         else:
             destrip_mask = None
 
-        from libs.destriper import destriper
+        from igrins.libs.destriper import destriper
         data_minus_d = destriper.get_destriped(data_minus,
                                                destrip_mask,
                                                pattern=destripe_pattern,
@@ -433,10 +433,10 @@ class RecipeExtractBase(RecipeExtractPR):
 
         fn = self.obj_filenames[i]
         # data = pyfits.open(fn)[0].data
-        from libs.load_fits import load_fits_data
+        from igrins.libs.load_fits import load_fits_data
         data = load_fits_data(fn)
 
-        from libs.destriper import destriper
+        from igrins.libs.destriper import destriper
         destrip_mask = ~np.isfinite(data)|self.destripe_mask
 
         data = destriper.get_destriped(data,
@@ -456,7 +456,7 @@ class RecipeExtractBase(RecipeExtractPR):
             return data
 
     def get_old_orders(self):
-        from libs.storage_descriptions import ONED_SPEC_JSON_DESC
+        from igrins.libs.storage_descriptions import ONED_SPEC_JSON_DESC
 
         sky_basename = self.basenames["sky"]
 

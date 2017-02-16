@@ -6,12 +6,12 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 from scipy.optimize import leastsq
 from functools import partial
 from astropy.io import fits
-import libs.readmultispec as multispec
+import igrins.libs.readmultispec as multispec
 from astropy import units as u
 from astropy.modeling import models, fitting
 from scipy.signal import firwin, lfilter, argrelmin
-import libs.recipes as recipes
-from libs.ecfit import fit_2dspec
+import igrins.libs.recipes as recipes
+from igrins.libs.ecfit import fit_2dspec
 import os, sys
 
 
@@ -330,7 +330,7 @@ def run(filename, outfilename,
 
             figout = os.path.join(plot_dir, 'individual_order')
             postfix="_%03d" % (o_n,)
-            from libs.qa_helper import fig_to_png
+            from igrins.libs.qa_helper import fig_to_png
             fig_to_png(figout, fig1, postfix=postfix)
 
             # fig1.savefig('{}{}-individual_order{}.png'.format(plot_dir, filename.split('/')[-1], i+1))
@@ -359,7 +359,7 @@ def run(filename, outfilename,
 
     if plot_dir is not None:
         figout = os.path.join(plot_dir, 'fullchip_fit')
-        from libs.qa_helper import fig_to_png
+        from igrins.libs.qa_helper import fig_to_png
         fig_to_png(figout, fig3d)
 
     fig3 = Figure(figsize=(12,6))
@@ -387,7 +387,7 @@ def run(filename, outfilename,
 
             figout = os.path.join(plot_dir, 'final_order')
             postfix="_%03d" % (o_n,)
-            from libs.qa_helper import fig_to_png
+            from igrins.libs.qa_helper import fig_to_png
             fig_to_png(figout, fig3, postfix=postfix)
 
             # fig1.savefig('{}{}-individual_order{}.png'.format(plot_dir, filename.split('/')[-1], i+1))
@@ -412,7 +412,7 @@ def process_band(utdate, recipe_name, band, obsids, config,
 
     # utdate, recipe_name, band, obsids, config = "20150525", "A0V", "H", [63, 64], "recipe.config"
 
-    from libs.recipe_helper import RecipeHelper
+    from igrins.libs.recipe_helper import RecipeHelper
     helper = RecipeHelper(config, utdate, recipe_name)
     caldb = helper.get_caldb()
 
@@ -431,7 +431,7 @@ def process_band(utdate, recipe_name, band, obsids, config,
     out_filename = caldb.query_item_path((band, master_obsid),
                                          "SPEC_FITS_WAVELENGTH")
 
-    from libs.master_calib import get_ref_data_path
+    from igrins.libs.master_calib import get_ref_data_path
     tell_file = get_ref_data_path(helper.config, band,
                                   kind="TELL_WVLSOL_MODEL")
 
@@ -440,7 +440,7 @@ def process_band(utdate, recipe_name, band, obsids, config,
         figout_dir = helper.igr_path.get_section_filename_base("QA_PATH",
                                                                "",
                                                                "tell_wvsol_"+tgt_basename)
-        from libs.path_info import ensure_dir
+        from igrins.libs.path_info import ensure_dir
         ensure_dir(figout_dir)
     else:
         figout_dir = None
@@ -458,7 +458,7 @@ def process_band(utdate, recipe_name, band, obsids, config,
 #     pass
 
 
-from libs.recipe_base import RecipeBase
+from igrins.libs.recipe_base import RecipeBase
 
 class RecipeTellWvlsol(RecipeBase):
 
@@ -524,14 +524,14 @@ def wvlsol_tell(utdate, refdate=None, bands="HK",
 #                 ):
 
 
-#     from libs.igrins_config import IGRINSConfig
+#     from igrins.libs.igrins_config import IGRINSConfig
 #     config = IGRINSConfig(config_file)
 
 #     if not bands in ["H", "K", "HK"]:
 #         raise ValueError("bands must be one of 'H', 'K' or 'HK'")
 
 #     fn = config.get_value('RECIPE_LOG_PATH', utdate)
-#     from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
+#     from igrins.libs.recipes import Recipes #load_recipe_list, make_recipe_dict
 #     recipe = Recipes(fn)
 
 #     if starting_obsids is not None:

@@ -16,11 +16,11 @@ def transform_wavelength_solutions(helper, band, obsids):
     affine_tr_matrix = d["affine_tr_matrix"]
 
     # load echellogram
-    from libs.master_calib import load_ref_data
+    from master_calib import load_ref_data
     echellogram_data = load_ref_data(helper.config, band,
                                      kind="ECHELLOGRAM_JSON")
 
-    from libs.echellogram import Echellogram
+    from echellogram import Echellogram
     echellogram = Echellogram.from_dict(echellogram_data)
 
 
@@ -63,7 +63,7 @@ def get_wavelength_solutions(affine_tr_matrix, zdata,
     """
     new_orders : output orders
     """
-    from libs.ecfit import get_ordered_line_data, fit_2dspec, check_fit
+    from ecfit import get_ordered_line_data, fit_2dspec, check_fit
 
     affine_tr = matplotlib.transforms.Affine2D()
     affine_tr.set_matrix(affine_tr_matrix)

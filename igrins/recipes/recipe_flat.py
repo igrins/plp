@@ -1,12 +1,12 @@
-from libs.recipe_helper import RecipeHelper
+from igrins.libs.recipe_helper import RecipeHelper
 import numpy as np
 import scipy.ndimage as ni
 
 from astropy.io.fits import Card
 
-from libs.process_flat import FlatOff, FlatOn
+from igrins.libs.process_flat import FlatOff, FlatOn
 
-from libs.load_fits import load_fits_data
+from igrins.libs.load_fits import load_fits_data
 
 def get_data_list(helper, band, obsids):
     _ = helper.get_base_info(band, obsids)
@@ -24,13 +24,13 @@ def get_combined_image(data_list, destripe=True):
     # destripe=True):
 
 
-    from libs.stsci_helper import stsci_median
+    from igrins.libs.stsci_helper import stsci_median
     flat_off = stsci_median(data_list)
 
     flat_off_cards = []
 
     if destripe:
-        from libs.destriper import destriper
+        from igrins.libs.destriper import destriper
         flat_off = destriper.get_destriped(flat_off)
 
         flat_off_cards.append(Card("HISTORY",
@@ -64,7 +64,7 @@ def make_hotpix_mask(helper, band, obsids_off,
     flat_off_hdu = caldb.load_item_from((band, master_obsid), "flat_off")[0]
     flat_off = flat_off_hdu.data
 
-    import libs.badpixel as bp
+    import igrins.libs.badpixel as bp
     hotpix_mask = bp.badpixel_mask(flat_off,
                                    sigma_clip1=sigma_clip1,
                                    sigma_clip2=sigma_clip2,
@@ -136,7 +136,7 @@ def make_deadpix_mask(helper, band, obsids,
     caldb = helper.get_caldb()
     master_obsid = obsids[0]
 
-    from libs.master_calib import load_ref_data
+    from igrins.libs.master_calib import load_ref_data
     f = load_ref_data(helper.config, band=band,
                       kind="DEFAULT_DEADPIX_MASK")
 
@@ -155,7 +155,7 @@ def make_deadpix_mask(helper, band, obsids,
     if 1:
 
         # normalize it
-        from libs.trace_flat import (get_flat_normalization, get_flat_mask,
+        from igrins.libs.trace_flat import (get_flat_normalization, get_flat_mask,
                                      get_flat_mask_auto,
                                      estimate_bg_mean_std)
         bg_mean, bg_fwhm = estimate_bg_mean_std(flat_on_off)
@@ -292,7 +292,7 @@ def make_deadpix_mask(helper, band, obsids,
 
 
 
-from libs.trace_flat import (get_y_derivativemap,
+from igrins.libs.trace_flat import (get_y_derivativemap,
                              identify_horizontal_line,
                              trace_centroids_chevyshev)
 
@@ -303,7 +303,7 @@ def identify_order_boundaries(helper, band, obsids_on):
     # bg_std_normed=flaton_products["bg_std_normed"]
     # flat_mask=flaton_products["flat_mask"]
 
-    # from libs.storage_descriptions import (FLAT_NORMED_DESC,
+    # from igrins.libs.storage_descriptions import (FLAT_NORMED_DESC,
     #                                        FLAT_BPIXED_DESC,
     #                                        FLAT_MASK_DESC,
     #                                        FLATON_JSON_DESC)
@@ -327,7 +327,7 @@ def identify_order_boundaries(helper, band, obsids_on):
     flaton_info = caldb.load_item_from(basename, "flaton_json")
     bg_fwhm_normed = flaton_info["bg_fwhm_norm"]
 
-    from libs.trace_flat import get_y_derivativemap
+    from igrins.libs.trace_flat import get_y_derivativemap
     flat_deriv_ = get_y_derivativemap(flat_normed, flat_bpixed,
                                       bg_fwhm_normed,
                                       max_sep_order=150, pad=10,
@@ -377,7 +377,7 @@ def trace_order_boundaries(helper, band, obsids_on):
     bg_fwhm_normed = flaton_info["bg_fwhm_norm"]
 
     ny, nx = flat_deriv.shape
-    from libs.trace_flat import identify_horizontal_line
+    from igrins.libs.trace_flat import identify_horizontal_line
 
     cent_bottom_list = identify_horizontal_line(flat_deriv,
                                                 flat_deriv_pos_msk,
@@ -399,7 +399,7 @@ def trace_order_boundaries(helper, band, obsids_on):
 
 
 def stitch_up_traces(helper, band, obsids_on):
-    # from libs.process_flat import trace_solutions
+    # from igrins.libs.process_flat import trace_solutions
     # trace_solution_products, trace_solution_products_plot = \
     #                          trace_solutions(trace_products)
 
@@ -411,10 +411,10 @@ def stitch_up_traces(helper, band, obsids_on):
     bottom_centroids = centroids_dict["bottom_centroids"]
     up_centroids = centroids_dict["up_centroids"]
 
-    from libs.igrins_detector import IGRINSDetector
+    from igrins.libs.igrins_detector import IGRINSDetector
     nx = IGRINSDetector.nx
 
-    from libs.trace_flat import trace_centroids_chevyshev
+    from igrins.libs.trace_flat import trace_centroids_chevyshev
     _ = trace_centroids_chevyshev(bottom_centroids,
                                   up_centroids,
                                   domain=[0, nx],
@@ -501,12 +501,12 @@ def store_aux_data(helper, band, obsids_on):
 
         orders = range(len(bottomup_solutions))
 
-        from libs.apertures import Apertures
+        from igrins.libs.apertures import Apertures
         ap =  Apertures(orders, bottomup_solutions)
 
         order_map2 = ap.make_order_map(mask_top_bottom=True)
 
-        # from libs.storage_descriptions import FLAT_MASK_DESC
+        # from igrins.libs.storage_descriptions import FLAT_MASK_DESC
         # flat_mask = igr_storage.load1(FLAT_MASK_DESC,
         #                               flat_on_filenames[0])
         flat_mask = caldb.load_image(basename, "flat_mask")
@@ -515,9 +515,9 @@ def store_aux_data(helper, band, obsids_on):
 
         caldb.store_image(basename, "bias_mask", bias_mask)
 
-        # from libs.products import PipelineImageBase, PipelineProducts
+        # from igrins.libs.products import PipelineImageBase, PipelineProducts
         # pp = PipelineProducts("")
-        # from libs.storage_descriptions import BIAS_MASK_DESC
+        # from igrins.libs.storage_descriptions import BIAS_MASK_DESC
         # pp.add(BIAS_MASK_DESC,
         #        PipelineImageBase([], bias_mask))
 
@@ -535,7 +535,7 @@ def store_qa(helper, band, obsids_off, obsids_on):
     # plot qa figures.
 
     if 1:
-        from libs.process_flat import plot_trace_solutions
+        from igrins.libs.process_flat import plot_trace_solutions
         from matplotlib.figure import Figure
 
         fig1 = Figure(figsize=[9, 4])
@@ -543,14 +543,14 @@ def store_qa(helper, band, obsids_off, obsids_on):
         flat_deriv = caldb.load_image(basename, "flat_deriv")
         trace_dict = caldb.load_item_from(basename, "flatcentroids_json")
 
-        from libs.flat_qa import check_trace_order
+        from igrins.libs.flat_qa import check_trace_order
         check_trace_order(flat_deriv, trace_dict, fig1)
 
         flat_normed = caldb.load_image(basename, "flat_normed")
         flatcentroid_sol_json = caldb.load_item_from(basename,
                                                      "flatcentroid_sol_json")
 
-        from libs.flat_qa import plot_trace_solutions
+        from igrins.libs.flat_qa import plot_trace_solutions
         fig2, fig3 = plot_trace_solutions(flat_normed,
                                           flatcentroid_sol_json)
 
@@ -563,7 +563,7 @@ def store_qa(helper, band, obsids_off, obsids_on):
     igr_path = helper.igr_path
 
     if 1:
-        from libs.qa_helper import figlist_to_pngs
+        from igrins.libs.qa_helper import figlist_to_pngs
         get_filename = igr_path.get_section_filename_base
         aperture_figs = get_filename("QA_PATH",
                                      "aperture_"+flaton_basename,
@@ -606,7 +606,7 @@ def store_db(helper, band, obsids_off, obsids_on):
     store_db_on(helper, band, obsids_on)
 
     
-        # from libs.products import ProductDB
+        # from igrins.libs.products import ProductDB
         # flatoff_db_name = get_filename("PRIMARY_CALIB_PATH",
         #                                "flat_off.db")
 
@@ -649,10 +649,10 @@ def process_band(utdate, recipe_name, band,
     # make_combined_image(helper, band, obsids, mode=None)
 
 
-    from libs.recipe_base import RecipeBase
+    from igrins.libs.recipe_base import RecipeBase
 
 
-from libs.recipe_base import RecipeBase
+from igrins.libs.recipe_base import RecipeBase
 
 class RecipeFlat(RecipeBase):
     RECIPE_NAME = "FLAT"
@@ -714,7 +714,7 @@ if 0:
     from find_affine_transform import find_affine_transform
     find_affine_transform(helper, band, obsids)
 
-    from libs.transform_wvlsol import transform_wavelength_solutions
+    from igrins.libs.transform_wvlsol import transform_wavelength_solutions
     transform_wavelength_solutions(helper, band, obsids)
 
     # Step 8:

@@ -30,7 +30,7 @@ def derive_wvlsol(helper, band, obsids):
     msk = df["slit_center"] == 0.5
     dfm = df[msk]
 
-    from libs.ecfit import fit_2dspec
+    from igrins.libs.ecfit import fit_2dspec
 
     xl = dfm["pixels"].values
     yl = dfm["order"].values
@@ -65,7 +65,7 @@ def derive_wvlsol(helper, band, obsids):
     caldb.store_dict(basename, "SKY_WVLSOL_JSON", d)
 
     
-    from libs.astropy_poly_helper import serialize_poly_model
+    from igrins.libs.astropy_poly_helper import serialize_poly_model
     poly_2d = serialize_poly_model(p)
     fit_results = dict(xyz=[xl[msk], yl[msk], zlo[msk]],
                        fit_params=fit_params,
@@ -112,7 +112,7 @@ if 0:
 
 def process_band(utdate, recipe_name, band, obsids, config_name):
 
-    from libs.recipe_helper import RecipeHelper
+    from igrins.libs.recipe_helper import RecipeHelper
     helper = RecipeHelper(config_name, utdate, recipe_name)
 
     derive_wvlsol(helper, band, obsids)

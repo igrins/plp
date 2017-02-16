@@ -4,10 +4,10 @@ import os
 
 import astropy.io.fits as pyfits
 
-from libs.products import PipelineProducts, PipelineImageBase
-#from libs.apertures import Apertures
+from igrins.libs.products import PipelineProducts, PipelineImageBase
+#from igrins.libs.apertures import Apertures
 
-from libs.recipe_base import RecipeBase
+from igrins.libs.recipe_base import RecipeBase
 
 import numpy as np
 
@@ -39,7 +39,7 @@ import numpy as np
 # #         raise ValueError("bands must be one of 'H', 'K' or 'HK'")
 
 # #     fn = "%s.recipes" % utdate
-# #     from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
+# #     from igrins.libs.recipes import Recipes #load_recipe_list, make_recipe_dict
 # #     recipe = Recipes(fn)
 
 # #     if starting_obsids is not None:
@@ -54,14 +54,14 @@ import numpy as np
 # #             process_thar_band(utdate, refdate, band, obsids)
 
 
-from libs.products import ProductDB
+from igrins.libs.products import ProductDB
 
-from libs.recipe_helper import RecipeHelper
+from igrins.libs.recipe_helper import RecipeHelper
 
 
 def make_combined_image(helper, band, obsids, frame_types=None):
 
-    from libs.image_combine import make_combined_image_sky
+    from igrins.libs.image_combine import make_combined_image_sky
 
     caldb = helper.get_caldb()
 
@@ -182,7 +182,7 @@ def extract_spectra_multi(helper, band, obsids):
 
 
 #     if 1:
-#         from libs.process_thar import ThAr
+#         from igrins.libs.process_thar import ThAr
 
 #         thar_filenames = helper.get_filenames(band, obsids)
 #         thar = ThAr(thar_filenames)
@@ -206,7 +206,7 @@ def _get_ref_spec_name(helper):
 def identify_orders(helper, band, obsids):
 
     ref_spec_key, _ = _get_ref_spec_name(helper)
-    from libs.master_calib import load_ref_data
+    from igrins.libs.master_calib import load_ref_data
     ref_spectra = load_ref_data(helper.config, band,
                                 kind=ref_spec_key)
 
@@ -215,7 +215,7 @@ def identify_orders(helper, band, obsids):
     src_spectra = caldb.load_item_from((band, master_obsid),
                                        "ONED_SPEC_JSON")
 
-    from libs.process_thar import match_order
+    from igrins.libs.process_thar import match_order
     new_orders = match_order(src_spectra, ref_spectra)
 
     print  new_orders
@@ -236,8 +236,8 @@ def identify_orders(helper, band, obsids):
 
 # def get_orders_matching_ref_spec2_deprecated(helper, band, obsids, thar_products):
 #     if 1:
-#         from libs.process_thar import match_order_thar
-#         from libs.master_calib import load_thar_ref_data
+#         from igrins.libs.process_thar import match_order_thar
+#         from igrins.libs.master_calib import load_thar_ref_data
 
 #         thar_ref_data = load_thar_ref_data(helper.refdate, band)
 
@@ -248,7 +248,7 @@ def identify_orders(helper, band, obsids):
 
 #     if 1:
 
-#         from libs.storage_descriptions import ONED_SPEC_JSON_DESC
+#         from igrins.libs.storage_descriptions import ONED_SPEC_JSON_DESC
 #         thar_products[ONED_SPEC_JSON_DESC]["orders"] = new_orders
 
 #         thar_filenames = helper.get_filenames(band, obsids)
@@ -265,7 +265,7 @@ def identify_orders(helper, band, obsids):
 
 def identify_lines(helper, band, obsids):
 
-    from libs.master_calib import load_ref_data
+    from igrins.libs.master_calib import load_ref_data
 
     ref_spec_key, ref_identified_lines_key = _get_ref_spec_name(helper)
 
@@ -278,7 +278,7 @@ def identify_lines(helper, band, obsids):
                                           "ONED_SPEC_JSON")
     tgt_spec = caldb.load_item_from_path(tgt_spec_path)
 
-    from libs.process_thar import get_offset_treanform_between_2spec
+    from igrins.libs.process_thar import get_offset_treanform_between_2spec
     intersected_orders, d = get_offset_treanform_between_2spec(ref_spec,
                                                                tgt_spec)
 
@@ -293,7 +293,7 @@ def identify_lines(helper, band, obsids):
 
     offsetfunc_map = dict(zip(intersected_orders, d["sol_list"]))
 
-    from libs.identified_lines import IdentifiedLines
+    from igrins.libs.identified_lines import IdentifiedLines
 
     identified_lines_ref = IdentifiedLines(l)
     ref_map = identified_lines_ref.get_dict()
@@ -303,7 +303,7 @@ def identify_lines(helper, band, obsids):
                                      pixpos_list=[], orders=[],
                                      spec_path=tgt_spec_path))
 
-    from libs.line_identify_simple import match_lines1_pix
+    from igrins.libs.line_identify_simple import match_lines1_pix
 
     for o, s in zip(tgt_spec["orders"], tgt_spec["specs"]):
         if (o not in ref_map) or (o not in offsetfunc_map):
@@ -345,7 +345,7 @@ def identify_lines(helper, band, obsids):
 # if 0:
 #     if 1:
 
-#         from libs.process_thar import reidentify_ThAr_lines
+#         from igrins.libs.process_thar import reidentify_ThAr_lines
 #         thar_reidentified_products = reidentify_ThAr_lines(thar_products,
 #                                                            thar_ref_data)
 
@@ -360,7 +360,7 @@ def identify_lines(helper, band, obsids):
 def test_identify_lines(helper, band, obsids):
 
 
-    from libs.master_calib import load_ref_data
+    from igrins.libs.master_calib import load_ref_data
     ref_spec = load_ref_data(helper.config, band,
                              kind="SKY_REFSPEC_JSON")
 
@@ -369,7 +369,7 @@ def test_identify_lines(helper, band, obsids):
     tgt_spec = caldb.load_item_from((band, master_obsid),
                                     "ONED_SPEC_JSON")
 
-    from libs.process_thar import get_offset_treanform_between_2spec
+    from igrins.libs.process_thar import get_offset_treanform_between_2spec
     d = get_offset_treanform_between_2spec(ref_spec, tgt_spec)
 
     print d
@@ -380,12 +380,12 @@ def test_identify_lines(helper, band, obsids):
 #                         new_orders):
 #     if 1:
 
-#         from libs.process_thar import (load_echelogram,
+#         from igrins.libs.process_thar import (load_echelogram,
 #                                        align_echellogram_thar,
 #                                        check_thar_transorm,
 #                                        get_wavelength_solutions)
 
-#         from libs.master_calib import load_thar_ref_data
+#         from igrins.libs.master_calib import load_thar_ref_data
 
 #         #ref_date = "20140316"
 
@@ -419,7 +419,7 @@ def test_identify_lines(helper, band, obsids):
 #         fig_list = check_thar_transorm(thar_products,
 #                                        thar_aligned_echell_products)
 
-#         from libs.qa_helper import figlist_to_pngs
+#         from igrins.libs.qa_helper import figlist_to_pngs
 #         igr_path = helper.igr_path
 #         thar_figs = igr_path.get_section_filename_base("QA_PATH",
 #                                                        "thar",
@@ -455,7 +455,7 @@ def save_figures(helper, band, obsids):
         ap = get_simple_aperture(helper, band, obsids,
                                  orders=orders)
 
-        # from libs.storage_descriptions import ONED_SPEC_JSON_DESC
+        # from igrins.libs.storage_descriptions import ONED_SPEC_JSON_DESC
 
         #orders = thar_products[ONED_SPEC_JSON_DESC]["orders"]
         order_map = ap.make_order_map()
@@ -466,7 +466,7 @@ def save_figures(helper, band, obsids):
         #flat_on_params_name = flaton_path.get_secondary_path("flat_on_params")
 
         #flaton_products = PipelineProducts.load(flat_on_params_name)
-        from libs.storage_descriptions import (FLAT_NORMED_DESC,
+        from igrins.libs.storage_descriptions import (FLAT_NORMED_DESC,
                                                FLAT_MASK_DESC)
 
         flaton_db_name = helper.igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
@@ -480,14 +480,14 @@ def save_figures(helper, band, obsids):
                                                    FLAT_MASK_DESC],
                                                   flaton_basename)
 
-        from libs.process_flat import make_order_flat, check_order_flat
+        from igrins.libs.process_flat import make_order_flat, check_order_flat
         order_flat_products = make_order_flat(flaton_products,
                                               orders, order_map)
 
         #fn = thar_path.get_secondary_path("orderflat")
         #order_flat_products.save(fn, masterhdu=hdu)
 
-        from libs.load_fits import load_fits_data
+        from igrins.libs.load_fits import load_fits_data
         hdu = load_fits_data(thar_filenames[0])
         # hdu = pyfits.open(thar_filenames[0])[0]
         
@@ -501,7 +501,7 @@ def save_figures(helper, band, obsids):
         bias_mask = flat_mask.data & (order_map2 > 0)
 
         pp = PipelineProducts("")
-        from libs.storage_descriptions import BIAS_MASK_DESC
+        from igrins.libs.storage_descriptions import BIAS_MASK_DESC
         pp.add(BIAS_MASK_DESC,
                PipelineImageBase([], bias_mask))
 
@@ -512,7 +512,7 @@ def save_figures(helper, band, obsids):
     if 1:
         fig_list = check_order_flat(order_flat_products)
 
-        from libs.qa_helper import figlist_to_pngs
+        from igrins.libs.qa_helper import figlist_to_pngs
         orderflat_figs = helper.igr_path.get_section_filename_base("QA_PATH",
                                                                    "orderflat",
                                                                    "orderflat_"+thar_basename)
@@ -524,7 +524,7 @@ def save_db(helper, band, obsids):
     thar_basename = os.path.splitext(os.path.basename(thar_filenames[0]))[0]
 
     if 1:
-        from libs.products import ProductDB
+        from igrins.libs.products import ProductDB
         thar_db_name = helper.igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
                                                                  "thar.db",
                                                                  )
@@ -585,7 +585,7 @@ def process_band(utdate, recipe_name, band,
     from find_affine_transform import find_affine_transform
     find_affine_transform(helper, band, obsids)
 
-    from libs.transform_wvlsol import transform_wavelength_solutions
+    from igrins.libs.transform_wvlsol import transform_wavelength_solutions
     transform_wavelength_solutions(helper, band, obsids)
 
     # Step 8:
@@ -669,8 +669,8 @@ if __name__ == "__main__":
 
 # if __name__ == "__main__":
 
-#     from libs.recipes import load_recipe_list, make_recipe_dict
-#     from libs.products import PipelineProducts, ProductPath, ProductDB
+#     from igrins.libs.recipes import load_recipe_list, make_recipe_dict
+#     from igrins.libs.products import PipelineProducts, ProductPath, ProductDB
 
 #     if 0:
 #         utdate = "20140316"

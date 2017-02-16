@@ -3,11 +3,11 @@ import os
 
 def make_html(utdate, dirname, config_file="recipe.config"):
 
-    from libs.igrins_config import IGRINSConfig
+    from igrins.libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
 
     fn = config.get_value('RECIPE_LOG_PATH', utdate)
-    from libs.recipes import load_recipe_list
+    from igrins.libs.recipes import load_recipe_list
     recipe_list = load_recipe_list(fn)
     #recipe_dict = make_recipe_dict(recipe_list)
 
@@ -54,7 +54,7 @@ def make_html(utdate, dirname, config_file="recipe.config"):
 
 def publish_html(utdate, config_file="recipe.config"):
     #utdate = "20140713"
-    from libs.igrins_config import IGRINSConfig
+    from igrins.libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
 
     dirname = config.get_value("HTML_PATH", utdate)
@@ -64,7 +64,7 @@ def publish_html(utdate, config_file="recipe.config"):
     template = env.get_template('index.html')
 
     sources = make_html(utdate, dirname)
-    from libs.json_helper import json_dump
+    from igrins.libs.json_helper import json_dump
     json_dump(dict(utdate=utdate,
                    sources=sources),
               open(os.path.join(dirname, "summary.json"), "w"))

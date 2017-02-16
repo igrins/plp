@@ -1,4 +1,4 @@
-#from libs.products import PipelineProducts
+#from products import PipelineProducts
 
 class RecipeBase(object):
     """ The derived mus define RECIPE_NAME attribute and must implement
@@ -23,7 +23,7 @@ class RecipeBase(object):
 
     def get_recipes(self, utdate):
         fn = self.get_recipe_name(utdate)
-        from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
+        from recipes import Recipes #load_recipe_list, make_recipe_dict
         return Recipes(fn)
 
     def parse_starting_obsids(self, starting_obsids):
@@ -46,7 +46,7 @@ class RecipeBase(object):
                 starting_obsids=None, config_file="recipe.config",
                 **kwargs):
 
-        from libs.igrins_config import IGRINSConfig
+        from igrins_config import IGRINSConfig
         self.config = IGRINSConfig(config_file)
 
         self.refdate = self.config.get("MASTER_CAL", "REFDATE")

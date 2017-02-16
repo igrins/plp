@@ -103,7 +103,7 @@ class Echellogram(object):
             d["x_list"].append(zd.x)
             d["y_list"].append(zd.y)
 
-        from libs.json_helper import json_dump
+        from json_helper import json_dump
         json_dump(d, open(fn, "w"))
 
     @classmethod

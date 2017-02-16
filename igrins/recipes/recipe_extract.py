@@ -1,10 +1,10 @@
 import os
 import numpy as np
 
-from libs.path_info import IGRINSPath
+from igrins.libs.path_info import IGRINSPath
 import astropy.io.fits as pyfits
 
-from libs.products import PipelineProducts
+from igrins.libs.products import PipelineProducts
 
 from argh_helper import argh
 
@@ -20,7 +20,7 @@ def _run_order_main(args):
 
     # check if there is enough pixels to derive new slit profile
     if len(s[xmsk]) > 8000:
-        from libs.slit_profile_model import derive_multi_gaussian_slit_profile
+        from igrins.libs.slit_profile_model import derive_multi_gaussian_slit_profile
 
         g_list = derive_multi_gaussian_slit_profile(y[xmsk], s[xmsk])
     else:
@@ -36,11 +36,11 @@ def _run_order_main(args):
 
     if 0:
 
-        import libs.slit_profile_model as slit_profile_model
+        import igrins.libs.slit_profile_model as slit_profile_model
         debug_func = slit_profile_model.get_debug_func()
         debug_func(g_list, g_list, y, s)
 
-    from libs.slit_profile_2d_model import get_varying_conv_gaussian_model
+    from igrins.libs.slit_profile_2d_model import get_varying_conv_gaussian_model
     Varying_Conv_Gaussian_Model = get_varying_conv_gaussian_model(g_list)
     vcg = Varying_Conv_Gaussian_Model()
 
@@ -119,14 +119,14 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
 
     starting_obsids = kwargs.pop("starting_obsids")
 
-    from libs.igrins_config import IGRINSConfig
+    from igrins.libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(kwargs.pop("config_file"))
 
     if not bands in ["H", "K", "HK"]:
         raise ValueError("bands must be one of 'H', 'K' or 'HK'")
 
     fn = config.get_value('RECIPE_LOG_PATH', utdate)
-    from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
+    from igrins.libs.recipes import Recipes #load_recipe_list, make_recipe_dict
     recipe = Recipes(fn)
 
     if starting_obsids is not None:
@@ -159,7 +159,7 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
                               #do_interactive_figure=interactive
                               )
 
-from libs.products import PipelineStorage
+from igrins.libs.products import PipelineStorage
 
 class ProcessABBABand(object):
     def __init__(self, utdate, refdate, config,
@@ -310,7 +310,7 @@ class ProcessABBABand(object):
         ods_mskd = ods[msk]
         s_mskd = slitpos[msk]
 
-        from libs.slit_profile_model import derive_multi_gaussian_slit_profile
+        from igrins.libs.slit_profile_model import derive_multi_gaussian_slit_profile
         g_list0 = derive_multi_gaussian_slit_profile(s_mskd, ods_mskd)
 
         return g_list0
@@ -326,7 +326,7 @@ class ProcessABBABand(object):
 
         msk1 = np.isfinite(ods) # & np.isfinite(ode) & bias_mask
 
-        from libs.slit_profile_2d_model import Logger
+        from igrins.libs.slit_profile_2d_model import Logger
         logger = Logger("test.pdf")
 
         omap, slitpos = extractor.ordermap_bpixed, extractor.slitpos_map
@@ -350,7 +350,7 @@ class ProcessABBABand(object):
 
         #     # check if there is enough pixels to derive new slit profile
         #     if len(s[xmsk]) > 8000:
-        #         from libs.slit_profile_model import derive_multi_gaussian_slit_profile
+        #         from igrins.libs.slit_profile_model import derive_multi_gaussian_slit_profile
 
         #         g_list = derive_multi_gaussian_slit_profile(y[xmsk], s[xmsk])
         #     else:
@@ -366,11 +366,11 @@ class ProcessABBABand(object):
 
         #     if 0:
 
-        #         import libs.slit_profile_model as slit_profile_model
+        #         import igrins.libs.slit_profile_model as slit_profile_model
         #         debug_func = slit_profile_model.get_debug_func()
         #         debug_func(g_list, g_list, y, s)
 
-        #     from libs.slit_profile_2d_model import get_varying_conv_gaussian_model
+        #     from igrins.libs.slit_profile_2d_model import get_varying_conv_gaussian_model
         #     Varying_Conv_Gaussian_Model = get_varying_conv_gaussian_model(g_list)
         #     vcg = Varying_Conv_Gaussian_Model()
 
@@ -438,7 +438,7 @@ class ProcessABBABand(object):
         print "done"
         # func_dict.update((k, v) )
 
-        from libs.slit_profile_2d_model import get_varying_conv_gaussian_model
+        from igrins.libs.slit_profile_2d_model import get_varying_conv_gaussian_model
 
         func_dict = {}
         for o, v in zip(ap.orders, _):
@@ -528,7 +528,7 @@ class ProcessABBABand(object):
         cr_mask = np.abs(sig_map) > self.cr_rejection_thresh
 
         if self.lacosmics_thresh > 0:
-            from libs.cosmics import cosmicsimage
+            from igrins.libs.cosmics import cosmicsimage
 
             cosmic_input = sig_map.copy()
             cosmic_input[~np.isfinite(data_minus_flattened)] = np.nan
@@ -795,7 +795,7 @@ class ProcessABBABand(object):
 
                 if self.lacosmics_thresh > 0:
 
-                    from libs.cosmics import cosmicsimage
+                    from igrins.libs.cosmics import cosmicsimage
 
                     cosmic_input = data_minus/(variance_map**.5)
                     lacosmics_thresh = self.lacosmics_thresh
@@ -875,7 +875,7 @@ class ProcessABBABand(object):
 
         mastername = extractor.obj_filenames[0]
 
-        from libs.products import PipelineImage as Image
+        from igrins.libs.products import PipelineImage as Image
         if self.debug_output:
             image_list = [Image([("EXTNAME", "DATA_CORRECTED")],
                                 data_minus_flattened),
@@ -952,8 +952,8 @@ class ProcessABBABand(object):
         ## save profile
         igr_storage = self.igr_storage
         r = PipelineProducts("slit profile for point source")
-        from libs.storage_descriptions import SLIT_PROFILE_JSON_DESC
-        from libs.products import PipelineDict
+        from igrins.libs.storage_descriptions import SLIT_PROFILE_JSON_DESC
+        from igrins.libs.products import PipelineDict
         slit_profile_dict = PipelineDict(orders=orders,
                                          slit_profile_list=slit_profile_list,
                                          profile_x=profile_x,
@@ -1007,10 +1007,10 @@ class ProcessABBABand(object):
                                image_list,
                                shifted_image_list):
 
-        from libs.storage_descriptions import (COMBINED_IMAGE_DESC,
+        from igrins.libs.storage_descriptions import (COMBINED_IMAGE_DESC,
                                                WVLCOR_IMAGE_DESC,
                                                )
-        from libs.products import PipelineImages #Base
+        from igrins.libs.products import PipelineImages #Base
 
         r = PipelineProducts("1d specs")
 
@@ -1034,7 +1034,7 @@ class ProcessABBABand(object):
 
 
     def get_wvl_header_data(self, igr_storage, extractor):
-        from libs.storage_descriptions import SKY_WVLSOL_FITS_DESC
+        from igrins.libs.storage_descriptions import SKY_WVLSOL_FITS_DESC
         fn = igr_storage.get_path(SKY_WVLSOL_FITS_DESC,
                                   extractor.basenames["sky"])
 
@@ -1042,7 +1042,7 @@ class ProcessABBABand(object):
         f = pyfits.open(fn)
 
         if self.wavelength_increasing_order:
-            import libs.iraf_helper as iraf_helper
+            import igrins.libs.iraf_helper as iraf_helper
             header = iraf_helper.invert_order(f[0].header)
             convert_data = lambda d: d[::-1]
         else:
@@ -1061,13 +1061,13 @@ class ProcessABBABand(object):
                                              extractor)
 
 
-        from libs.load_fits import open_fits
+        from igrins.libs.load_fits import open_fits
         f_obj = open_fits(extractor.obj_filenames[0])
         f_obj[0].header.extend(wvl_header)
 
         tgt_basename = extractor.pr.tgt_basename
 
-        from libs.storage_descriptions import (SPEC_FITS_DESC,
+        from igrins.libs.storage_descriptions import (SPEC_FITS_DESC,
                                                VARIANCE_FITS_DESC,
                                                SN_FITS_DESC)
 
@@ -1113,13 +1113,13 @@ class ProcessABBABand(object):
                                              extractor)
 
 
-        from libs.load_fits import open_fits
+        from igrins.libs.load_fits import open_fits
         f_obj = open_fits(extractor.obj_filenames[0])
         f_obj[0].header.extend(wvl_header)
 
         tgt_basename = extractor.pr.tgt_basename
 
-        from libs.storage_descriptions import FLATCENTROID_SOL_JSON_DESC
+        from igrins.libs.storage_descriptions import FLATCENTROID_SOL_JSON_DESC
         cent = igr_storage.load1(FLATCENTROID_SOL_JSON_DESC,
                                  extractor.basenames["flat_on"])
 
@@ -1130,7 +1130,7 @@ class ProcessABBABand(object):
         new_bottom_up_solutions = [_o_s[o] for o in \
                                    extractor.orders_w_solutions]
 
-        from libs.correct_distortion import get_flattened_2dspec
+        from igrins.libs.correct_distortion import get_flattened_2dspec
 
         d0_shft_list, msk_shft_list = \
                       get_flattened_2dspec(data_shft,
@@ -1142,7 +1142,7 @@ class ProcessABBABand(object):
         d = np.array(d0_shft_list) / np.array(msk_shft_list)
         f_obj[0].data = convert_data(d.astype("float32"))
 
-        from libs.storage_descriptions import SPEC2D_FITS_DESC
+        from igrins.libs.storage_descriptions import SPEC2D_FITS_DESC
 
         fout = igr_storage.get_path(SPEC2D_FITS_DESC,
                                     tgt_basename, basename_postfix=self.basename_postfix)
@@ -1161,7 +1161,7 @@ class ProcessABBABand(object):
                                            conserve_flux=conserve_flux)
         d = np.array(d0_shft_list) / np.array(msk_shft_list)
         f_obj[0].data = d.astype("float32")
-        from libs.storage_descriptions import VAR2D_FITS_DESC
+        from igrins.libs.storage_descriptions import VAR2D_FITS_DESC
         fout = igr_storage.get_path(VAR2D_FITS_DESC,
                                     tgt_basename, basename_postfix=self.basename_postfix)
         f_obj.writeto(fout, clobber=True)
@@ -1169,7 +1169,7 @@ class ProcessABBABand(object):
 
     def get_tel_interp1d_f(self, extractor, wvl_solutions):
 
-        from libs.master_calib import get_master_calib_abspath
+        from igrins.libs.master_calib import get_master_calib_abspath
         #fn = get_master_calib_abspath("telluric/LBL_A15_s0_w050_R0060000_T.fits")
         #self.telluric = pyfits.open(fn)[1].data
 
@@ -1179,7 +1179,7 @@ class ProcessABBABand(object):
             dd = np.genfromtxt(telfit_outname)
             np.save(open(telfit_outname_npy, "w"), dd[::10])
 
-        from libs.a0v_flatten import TelluricTransmission
+        from igrins.libs.a0v_flatten import TelluricTransmission
         _fn = get_master_calib_abspath(telfit_outname_npy)
         tel_trans = TelluricTransmission(_fn)
 
@@ -1194,7 +1194,7 @@ class ProcessABBABand(object):
 
     def get_a0v_interp1d(self, extractor):
 
-        from libs.a0v_spec import A0V
+        from igrins.libs.a0v_spec import A0V
         a0v_interp1d = A0V.get_flux_interp1d(self.config)
         return a0v_interp1d
 
@@ -1213,7 +1213,7 @@ class ProcessABBABand(object):
         figout = igr_path.get_section_filename_base("QA_PATH",
                                                     "flattened_"+tgt_basename) + ".pdf"
 
-        from libs.a0v_flatten import get_a0v_flattened
+        from igrins.libs.a0v_flatten import get_a0v_flattened
         data_list = get_a0v_flattened(a0v_interp1d, tel_interp1d_f,
                                       wvl, s_list, orderflat_response,
                                       figout=figout)
@@ -1228,7 +1228,7 @@ class ProcessABBABand(object):
     def get_a0v_flattened_deprecated(self, igr_storage, extractor, ap,
                           s_list):
 
-        from libs.storage_descriptions import ORDER_FLAT_JSON_DESC
+        from igrins.libs.storage_descriptions import ORDER_FLAT_JSON_DESC
         prod = igr_storage.load1(ORDER_FLAT_JSON_DESC,
                                  extractor.basenames["flat_on"])
 
@@ -1245,7 +1245,7 @@ class ProcessABBABand(object):
             i1i2_list.append(i1i2_list_[o_new_ind])
 
 
-        from libs.a0v_spec import (A0VSpec, TelluricTransmission,
+        from igrins.libs.a0v_spec import (A0VSpec, TelluricTransmission,
                                    get_a0v, get_flattend)
         a0v_spec = A0VSpec()
         tel_trans = TelluricTransmission()
@@ -1277,11 +1277,11 @@ class ProcessABBABand(object):
                                              extractor)
 
 
-        from libs.load_fits import open_fits
+        from igrins.libs.load_fits import open_fits
         f_obj = open_fits(extractor.obj_filenames[0])
         f_obj[0].header.extend(wvl_header)
 
-        from libs.products import PipelineImage as Image
+        from igrins.libs.products import PipelineImage as Image
         image_list = [Image([("EXTNAME", "SPEC_FLATTENED")],
                             convert_data(a0v_flattened_data[0][1]))]
 
@@ -1290,8 +1290,8 @@ class ProcessABBABand(object):
                                     convert_data(data)))
 
 
-        from libs.products import PipelineImages #Base
-        from libs.storage_descriptions import SPEC_FITS_FLATTENED_DESC
+        from igrins.libs.products import PipelineImages #Base
+        from igrins.libs.storage_descriptions import SPEC_FITS_FLATTENED_DESC
 
         r = PipelineProducts("flattened 1d specs")
         r.add(SPEC_FITS_FLATTENED_DESC, PipelineImages(image_list))

@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from libs.recipe_helper import RecipeHelper
+from igrins.libs.recipe_helper import RecipeHelper
 
 def identify_multiline(helper, band, obsids):
 
@@ -25,7 +25,7 @@ def identify_multiline(helper, band, obsids):
     keys = []
     fitted_pixels_list = []
 
-    from libs.ref_lines_db import SkyLinesDB, HitranSkyLinesDB
+    from igrins.libs.ref_lines_db import SkyLinesDB, HitranSkyLinesDB
 
     ref_lines_db = SkyLinesDB(config=helper.config)
     ref_lines_db_hitrans = HitranSkyLinesDB(config=helper.config)

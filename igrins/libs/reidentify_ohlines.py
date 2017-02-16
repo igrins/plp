@@ -184,11 +184,11 @@ def retrieve_positions_from_fit(fit_results):
 class Test:
     def __init__(self):
 
-        from libs.igrins_config import IGRINSConfig
+        from igrins_config import IGRINSConfig
         config = IGRINSConfig("../recipe.config")
 
         def get_refdata(band):
-            from libs.master_calib import load_sky_ref_data
+            from master_calib import load_sky_ref_data
 
             sky_refdata = load_sky_ref_data(config, band)
 
@@ -224,7 +224,7 @@ class Test:
 
         ref_lines["order"] = o
 
-        from libs.reidentify import reidentify
+        from reidentify import reidentify
         ref_pixel = nested(ref_lines, "pixel_i")
 
         res = reidentify(s, ref_pixel, x=x, sigma_init=1.5)

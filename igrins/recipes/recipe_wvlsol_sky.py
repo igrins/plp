@@ -1,17 +1,17 @@
 import os
 import numpy as np
 
-#from libs.process_flat import FlatOff, FlatOn
+#from igrins.libs.process_flat import FlatOff, FlatOn
 
-from libs.path_info import IGRINSPath
+from igrins.libs.path_info import IGRINSPath
 #import astropy.io.fits as pyfits
 
-from libs.products import PipelineProducts
-from libs.apertures import Apertures
+from igrins.libs.products import PipelineProducts
+from igrins.libs.apertures import Apertures
 
-#from libs.products import PipelineProducts
+#from igrins.libs.products import PipelineProducts
 
-from libs.recipe_base import RecipeBase
+from igrins.libs.recipe_base import RecipeBase
 
 
 class RecipeSkyWvlsol(RecipeBase):
@@ -57,7 +57,7 @@ def wvlsol_sky(utdate, bands="HK",
 #         raise ValueError("bands must be one of 'H', 'K' or 'HK'")
 
 #     fn = "%s.recipes" % utdate
-#     from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
+#     from igrins.libs.recipes import Recipes #load_recipe_list, make_recipe_dict
 #     recipe = Recipes(fn)
 
 #     if starting_obsids is not None:
@@ -77,7 +77,7 @@ def get_orders_for_flat(extractor, band):
 
     thar_basename = extractor.basenames["thar"]
 
-    from libs.storage_descriptions import ONED_SPEC_JSON_DESC
+    from igrins.libs.storage_descriptions import ONED_SPEC_JSON_DESC
     orders = igr_storage.load1(ONED_SPEC_JSON_DESC,
                                           thar_basename)["orders"]
 
@@ -85,7 +85,7 @@ def get_orders_for_flat(extractor, band):
 
 
 def get_bottomup_solutions(extractor, band):
-    from libs.storage_descriptions import FLATCENTROID_SOL_JSON_DESC
+    from igrins.libs.storage_descriptions import FLATCENTROID_SOL_JSON_DESC
 
     igr_storage = extractor.igr_storage
     #flaton_basename = extractor.db["flat_on"].query(band, master_obsid)
@@ -164,7 +164,7 @@ def load_aperture_wvlsol(extractor, band):
 
 
 
-from libs.products import ProductDB, PipelineStorage
+from igrins.libs.products import ProductDB, PipelineStorage
 
 class ProcessSkyBand(object):
     def __init__(self, utdate, refdate, config,
@@ -184,7 +184,7 @@ class ProcessSkyBand(object):
         self.debug_output = debug_output
 
     def get_sky_spectra(self, extractor, ap, band, master_obsid):
-        from libs.process_thar import get_1d_median_specs
+        from igrins.libs.process_thar import get_1d_median_specs
         sky_filenames = extractor.obj_filenames
         raw_spec_product = get_1d_median_specs(sky_filenames, ap)
 
@@ -194,7 +194,7 @@ class ProcessSkyBand(object):
 
         # import astropy.io.fits as pyfits
         # masterhdu = pyfits.open(sky_filenames[0])[0]
-        from libs.load_fits import load_fits_data
+        from igrins.libs.load_fits import load_fits_data
         masterhdu = load_fits_data(sky_filenames[0])
 
         igr_storage = extractor.igr_storage
@@ -216,8 +216,8 @@ class ProcessSkyBand(object):
         # json_name_ = "SDC%s_%s_0003.median_spectra.wvlsol" % (band,
         #                                                      igrins_log.date)
 
-        #from libs.storage_descriptions import THAR_WVLSOL_JSON_DESC
-        from libs.storage_descriptions import WVLSOL_V0_JSON_DESC
+        #from igrins.libs.storage_descriptions import THAR_WVLSOL_JSON_DESC
+        from igrins.libs.storage_descriptions import WVLSOL_V0_JSON_DESC
         thar_basename = extractor.db["thar"].query(band, master_obsid)
         thar_wvl_sol = igr_storage.load([WVLSOL_V0_JSON_DESC],
                                         thar_basename)[WVLSOL_V0_JSON_DESC]
@@ -235,7 +235,7 @@ class ProcessSkyBand(object):
             wvl_solutionv = p["wvl_sol"]
 
         orders_w_solutions_ = thar_wvl_sol["orders"]
-        from libs.storage_descriptions import ONED_SPEC_JSON_DESC
+        from igrins.libs.storage_descriptions import ONED_SPEC_JSON_DESC
         orders_w_solutions = [o for o in orders_w_solutions_ if o in raw_spec_product[ONED_SPEC_JSON_DESC]["orders"]]
 
         _ = dict(zip(raw_spec_product[ONED_SPEC_JSON_DESC]["orders"],
@@ -303,9 +303,9 @@ class ProcessSkyBand(object):
                             orders_w_solutions, wvl_sol, p):
 
         oh_sol_products = PipelineProducts("Wavelength solution based on ohlines")
-        #from libs.process_thar import ONED_SPEC_JSON
-        from libs.products import PipelineDict
-        from libs.storage_descriptions import SKY_WVLSOL_JSON_DESC
+        #from igrins.libs.process_thar import ONED_SPEC_JSON
+        from igrins.libs.products import PipelineDict
+        from igrins.libs.storage_descriptions import SKY_WVLSOL_JSON_DESC
         oh_sol_products.add(SKY_WVLSOL_JSON_DESC,
                             PipelineDict(orders=orders_w_solutions,
                                          wvl_sol=wvl_sol))
@@ -333,7 +333,7 @@ class ProcessSkyBand(object):
                 p1d = fit_p1d(p_init1d, xx_plus1, wvl)
                 p1d_list.append(p1d)
 
-        from libs.iraf_helper import get_wat_spec, default_header_str
+        from igrins.libs.iraf_helper import get_wat_spec, default_header_str
         wat_list = get_wat_spec(orders_w_solutions, p1d_list)
 
         # cards = [pyfits.Card.fromstring(l.strip()) \
@@ -366,8 +366,8 @@ class ProcessSkyBand(object):
             hdu = pyfits.PrimaryHDU(header=header,
                                     data=np.array([]).reshape((0,0)))
 
-            from libs.storage_descriptions import SKY_WVLSOL_FITS_DESC
-            from libs.products import PipelineImageBase
+            from igrins.libs.storage_descriptions import SKY_WVLSOL_FITS_DESC
+            from igrins.libs.products import PipelineImageBase
             oh_sol_products.add(SKY_WVLSOL_FITS_DESC,
                                 PipelineImageBase([],
                                               np.array(wvl_sol)))
@@ -413,7 +413,7 @@ class ProcessSkyBand(object):
 
         if 1:
             from matplotlib.figure import Figure
-            from libs.ecfit import get_ordered_line_data, check_fit
+            from igrins.libs.ecfit import get_ordered_line_data, check_fit
 
             xl, yl, zl = get_ordered_line_data(reidentified_lines_map)
 
@@ -429,7 +429,7 @@ class ProcessSkyBand(object):
                       reidentified_lines_map_filtered)
             fig2.tight_layout()
 
-        from libs.qa_helper import figlist_to_pngs
+        from igrins.libs.qa_helper import figlist_to_pngs
         igr_path = extractor.igr_path
         sky_basename = extractor.tgt_basename
         sky_figs = igr_path.get_section_filename_base("QA_PATH",
@@ -439,7 +439,7 @@ class ProcessSkyBand(object):
 
 
     def save_db(self, extractor, band):
-        # from libs.products import ProductDB
+        # from igrins.libs.products import ProductDB
         # igr_path = extractor.pr.igr_path
         # sky_db_name = igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
         #                                                   "sky.db",
@@ -459,7 +459,7 @@ class ProcessSkyBand(object):
 
 
     def load_oh_reference_data(self, band):
-        from libs.master_calib import load_sky_ref_data
+        from igrins.libs.master_calib import load_sky_ref_data
 
         #ref_utdate = self.config.get_value("REFDATE", self.utdate)
         #refdate = self.refdate
@@ -485,7 +485,7 @@ class ProcessSkyBand(object):
 
         igr_storage = extractor.igr_storage
         sky_basename = extractor.tgt_basename
-        from libs.storage_descriptions import COMBINED_IMAGE_DESC
+        from igrins.libs.storage_descriptions import COMBINED_IMAGE_DESC
         raw_spec_products = igr_storage.load([COMBINED_IMAGE_DESC],
                                              sky_basename)
         d = raw_spec_products[COMBINED_IMAGE_DESC][0].data
@@ -522,7 +522,7 @@ class ProcessSkyBand(object):
                     ax.vlines(um, ymin=0, ymax=-intensity)
 
 
-        from libs.reidentify_ohlines import fit_ohlines, fit_ohlines_pixel
+        from igrins.libs.reidentify_ohlines import fit_ohlines, fit_ohlines_pixel
 
         def get_reidentified_lines_OH(orders_w_solutions,
                                       wvl_solutions, s_center):
@@ -554,13 +554,13 @@ class ProcessSkyBand(object):
 
         else: # band K
 
-            import libs.master_calib as master_calib
+            import igrins.libs.master_calib as master_calib
             fn = "hitran_bootstrap_K_%s.json" % self.refdate
             bootstrap_name = master_calib.get_master_calib_abspath(fn)
             import json
             bootstrap = json.load(open(bootstrap_name))
 
-            import libs.hitran as hitran
+            import igrins.libs.hitran as hitran
             r, ref_pixel_dict_hitrans = hitran.reidentify(orders_w_solutions,
                                                           wvl_solutions,
                                                           s_center,
@@ -652,7 +652,7 @@ class ProcessSkyBand(object):
                                                       fitted_centroid_center)]
         yl = np.concatenate(yl_)[msk0]
 
-        from libs.ecfit import fit_2dspec
+        from igrins.libs.ecfit import fit_2dspec
 
         pm_list = []
         for zl in zl_list:
@@ -672,7 +672,7 @@ class ProcessSkyBand(object):
 
     def save_check_images(self, extractor, xl, yl, zl_list, pm_list):
 
-        from libs.ecfit import check_fit_simple
+        from igrins.libs.ecfit import check_fit_simple
 
         fig_list = []
         from matplotlib.figure import Figure
@@ -684,7 +684,7 @@ class ProcessSkyBand(object):
             fig_list.append(fig)
 
         igr_path = extractor.igr_path
-        from libs.qa_helper import figlist_to_pngs
+        from igrins.libs.qa_helper import figlist_to_pngs
         sky_basename = extractor.tgt_basename
         sky_figs = igr_path.get_section_filename_base("QA_PATH",
                                                       "oh_distortion",
@@ -768,12 +768,12 @@ class ProcessSkyBand(object):
             wavelength_map[msk] = wvl_interp1d(xl_msk - slitoffset_map_msk)
 
 
-        from libs.storage_descriptions import (ORDERMAP_FITS_DESC,
+        from igrins.libs.storage_descriptions import (ORDERMAP_FITS_DESC,
                                                SLITPOSMAP_FITS_DESC,
                                                SLITOFFSET_FITS_DESC,
                                                WAVELENGTHMAP_FITS_DESC,
                                                ORDERMAP_MASKED_FITS_DESC)
-        from libs.products import PipelineImageBase, PipelineProducts
+        from igrins.libs.products import PipelineImageBase, PipelineProducts
         products = PipelineProducts("Distortion map")
 
         for desc, im in [(ORDERMAP_FITS_DESC, order_map),
@@ -873,9 +873,9 @@ if 1:
         caldb = helper.get_caldb()
 
         # oh_sol_products = PipelineProducts("Wavelength solution based on ohlines")
-        # #from libs.process_thar import ONED_SPEC_JSON
-        # from libs.products import PipelineDict
-        # from libs.storage_descriptions import SKY_WVLSOL_JSON_DESC
+        # #from igrins.libs.process_thar import ONED_SPEC_JSON
+        # from igrins.libs.products import PipelineDict
+        # from igrins.libs.storage_descriptions import SKY_WVLSOL_JSON_DESC
         # oh_sol_products.add(SKY_WVLSOL_JSON_DESC,
         #                     PipelineDict(orders=orders_w_solutions,
         #                                  wvl_sol=wvl_sol))
@@ -910,7 +910,7 @@ if 1:
                 p1d = fit_p1d(p_init1d, xx_plus1, wvl)
                 p1d_list.append(p1d)
 
-        from libs.iraf_helper import get_wat_spec, default_header_str
+        from igrins.libs.iraf_helper import get_wat_spec, default_header_str
         wat_list = get_wat_spec(orders_w_solutions, p1d_list)
 
         # cards = [pyfits.Card.fromstring(l.strip()) \
@@ -947,8 +947,8 @@ if 1:
                               "SKY_WVLSOL_FITS", np.array(wvl_sol),
                               hdu=hdu)
 
-            # from libs.storage_descriptions import SKY_WVLSOL_FITS_DESC
-            # from libs.products import PipelineImageBase
+            # from igrins.libs.storage_descriptions import SKY_WVLSOL_FITS_DESC
+            # from igrins.libs.products import PipelineImageBase
             # oh_sol_products.add(SKY_WVLSOL_FITS_DESC,
             #                     PipelineImageBase([],
             #                                   np.array(wvl_sol)))
@@ -996,7 +996,7 @@ if 1:
 
         if 1:
             from matplotlib.figure import Figure
-            from libs.ecfit import get_ordered_line_data, check_fit
+            from igrins.libs.ecfit import get_ordered_line_data, check_fit
 
             xl, yl, zl = get_ordered_line_data(reidentified_lines_map)
 
@@ -1012,7 +1012,7 @@ if 1:
                       reidentified_lines_map_filtered)
             fig2.tight_layout()
 
-        from libs.qa_helper import figlist_to_pngs
+        from igrins.libs.qa_helper import figlist_to_pngs
         igr_path = helper.igr_path
         sky_basename = helper.get_basename(band, obsids[0])
         sky_figs = igr_path.get_section_filename_base("QA_PATH",
@@ -1027,7 +1027,7 @@ class WavelengthFitter(object):
 
 class SkyFitter(WavelengthFitter):
     def get_refdata(self, band):
-        from libs.master_calib import load_sky_ref_data
+        from igrins.libs.master_calib import load_sky_ref_data
 
         if band not in self._refdata:
             sky_refdata = load_sky_ref_data(self.config, band)
@@ -1047,7 +1047,7 @@ class SkyFitter(WavelengthFitter):
         ohline_indices = sky_ref_data["ohline_indices"]
         ohlines_db = sky_ref_data["ohlines_db"]
 
-        from libs.reidentify_ohlines import fit_ohlines
+        from igrins.libs.reidentify_ohlines import fit_ohlines
         ref_pixel_list, reidentified_lines = \
                         fit_ohlines(ohlines_db, ohline_indices,
                                     orders_w_solutions,
@@ -1058,18 +1058,18 @@ class SkyFitter(WavelengthFitter):
     def update_K(self, reidentified_lines_map,
                  orders_w_solutions,
                  wvl_solutions, s_list):
-        # import libs.master_calib as master_calib
+        # import igrins.libs.master_calib as master_calib
         # fn = "hitran_bootstrap_K_%s.json" % self.refdate
         # bootstrap_name = master_calib.get_master_calib_abspath(fn)
         # import json
         # bootstrap = json.load(open(bootstrap_name))
 
-        from libs.master_calib import load_ref_data
+        from igrins.libs.master_calib import load_ref_data
         bootstrap = load_ref_data(self.config, band="K",
                                   kind="HITRAN_BOOTSTRAP_K")
 
 
-        import libs.hitran as hitran
+        import igrins.libs.hitran as hitran
         r, ref_pixel_list = hitran.reidentify(orders_w_solutions,
                                               wvl_solutions, s_list,
                                               bootstrap)
@@ -1102,7 +1102,7 @@ class SkyFitter(WavelengthFitter):
                                                        orders_w_solutions,
                                                        wvl_solutions, s_list)
 
-        from libs.ecfit import get_ordered_line_data, fit_2dspec
+        from igrins.libs.ecfit import get_ordered_line_data, fit_2dspec
 
         reidentified_lines_map = dict(zip(orders_w_solutions,
                                           reidentified_lines))
@@ -1144,7 +1144,7 @@ def fit_oh_spectra(refdate, band,
 #                    orders_w_solutions,
 #                    wvl_solutions, s_list):
 #     if 1:
-#         from libs.master_calib import load_sky_ref_data
+#         from igrins.libs.master_calib import load_sky_ref_data
 
 #         # ref_date = "20140316"
 
@@ -1168,7 +1168,7 @@ def fit_oh_spectra(refdate, band,
 
 #         ###### not fit identified lines
 
-#         from libs.ecfit import get_ordered_line_data, fit_2dspec
+#         from igrins.libs.ecfit import get_ordered_line_data, fit_2dspec
 
 #         # d_x_wvl = {}
 #         # for order, z in echel.zdata.items():
@@ -1180,13 +1180,13 @@ def fit_oh_spectra(refdate, band,
 #                                           reidentified_lines))
 
 #         if band == "K":
-#             import libs.master_calib as master_calib
+#             import igrins.libs.master_calib as master_calib
 #             fn = "hitran_bootstrap_K_%s.json" % refdate
 #             bootstrap_name = master_calib.get_master_calib_abspath(fn)
 #             import json
 #             bootstrap = json.load(open(bootstrap_name))
 
-#             import libs.hitran as hitran
+#             import igrins.libs.hitran as hitran
 #             r, ref_pixel_list = hitran.reidentify(wvl_solutions, s_list, bootstrap)
 #             # json_name = "hitran_reidentified_K_%s.json" % igrins_log.date
 #             # r = json.load(open(json_name))
@@ -1226,7 +1226,7 @@ def fit_oh_spectra(refdate, band,
 # not finished. Initial solution part is done, but the distortion part
 # is not.
 
-from libs.recipe_helper import RecipeHelper
+from igrins.libs.recipe_helper import RecipeHelper
 
 #from recipe_wvlsol_v0 import extract_spectra
 from process_wvlsol_v0 import extract_spectra, make_combined_image
@@ -1345,8 +1345,8 @@ if __name__ == "__main__":
 
 # if __name__ == "__main__":
 
-#     from libs.recipes import load_recipe_list, make_recipe_dict
-#     from libs.products import PipelineProducts, ProductPath, ProductDB
+#     from igrins.libs.recipes import load_recipe_list, make_recipe_dict
+#     from igrins.libs.products import PipelineProducts, ProductPath, ProductDB
 
 #     if 0:
 #         utdate = "20140316"

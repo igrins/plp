@@ -8,7 +8,7 @@
 
 import numpy as np
 
-from libs.recipe_helper import RecipeHelper
+from igrins.libs.recipe_helper import RecipeHelper
 
 from aperture_helper import get_simple_aperture
 
@@ -26,15 +26,15 @@ def find_affine_transform(helper, band, obsids):
     item_path = caldb.query_item_path((band, master_obsid),
                                       "IDENTIFIED_LINES_JSON")
 
-    from libs.identified_lines import IdentifiedLines
+    from igrins.libs.identified_lines import IdentifiedLines
     identified_lines_tgt = IdentifiedLines.load(item_path)
 
     xy_list_tgt = identified_lines_tgt.get_xy_list_from_pixlist(ap)
 
-    from libs.echellogram import Echellogram
+    from igrins.libs.echellogram import Echellogram
 
 
-    from libs.master_calib import load_ref_data
+    from igrins.libs.master_calib import load_ref_data
     echellogram_data = load_ref_data(helper.config, band,
                                      kind="ECHELLOGRAM_JSON")
 
@@ -44,11 +44,11 @@ def find_affine_transform(helper, band, obsids):
 
     assert len(xy_list_tgt) == len(xy_list_ref)
 
-    from libs.align_echellogram_thar import fit_affine_clip
+    from igrins.libs.align_echellogram_thar import fit_affine_clip
     affine_tr, mm = fit_affine_clip(np.array(xy_list_ref),
                                     np.array(xy_list_tgt))
 
-    from libs.products import PipelineDict
+    from igrins.libs.products import PipelineDict
     d = PipelineDict(xy1f=xy_list_ref, xy2f=xy_list_tgt,
                      affine_tr_matrix=affine_tr.get_matrix(),
                      affine_tr_mask=mm)

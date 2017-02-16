@@ -166,10 +166,10 @@ def generate_slitoffsetmap(helper, band, obsids):
     caldb.store_image(basename, "slitoffset_fits", offset_map)
                      
 
-from libs.recipe_helper import RecipeHelper
+from igrins.libs.recipe_helper import RecipeHelper
 
 def process_band_make_offset_map(utdate, recipe_name, band,
                                  obsids, config_name):
 
-    from libs.recipe_helper import RecipeHelper
+    from igrins.libs.recipe_helper import RecipeHelper
     helper = RecipeHelper(config_name, utdate, recipe_name)

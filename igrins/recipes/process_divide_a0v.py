@@ -1,7 +1,7 @@
 import astropy.io.fits as pyfits
 import numpy as np
 
-from libs.a0v_spec import A0V
+from igrins.libs.a0v_spec import A0V
 
 
 def generate_a0v_divided(helper, band, obsids, a0v_obsid=None,
@@ -60,7 +60,7 @@ def store_tgt_divide_a0v(caldb, basename,
                          header_updates=None,
                          basename_postfix=None):
 
-    from libs.products import PipelineImage as Image
+    from igrins.libs.products import PipelineImage as Image
 
     primary_header_cards = [("EXTNAME", "SPEC_DIVIDE_A0V")]
     if header_updates is not None:
@@ -101,7 +101,7 @@ if 0:
         s1 = np.ma.array(s1, mask=a0v1<0.3*m).filled(np.nan)
         plot(w1, s1)
 
-from libs.recipe_helper import RecipeHelper
+from igrins.libs.recipe_helper import RecipeHelper
 
 def process_band(utdate, recipe_name, band, 
                  obsids, frame_types, aux_infos,

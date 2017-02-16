@@ -23,7 +23,7 @@ def save_wat_header(helper, band, obsids):
     #                    fitted_model=poly_2d)
 
     modeul_name, class_name, serialized = fit_results["fitted_model"]
-    from libs.astropy_poly_helper import deserialize_poly_model
+    from igrins.libs.astropy_poly_helper import deserialize_poly_model
    
     p = deserialize_poly_model(modeul_name, class_name, serialized)
 
@@ -50,7 +50,7 @@ def save_wat_header(helper, band, obsids):
         p1d = fit_p1d(p_init1d, xx_plus1, wvl)
         p1d_list.append(p1d)
 
-    from libs.iraf_helper import get_wat_spec, default_header_str
+    from igrins.libs.iraf_helper import get_wat_spec, default_header_str
     wat_list = get_wat_spec(orders, p1d_list)
 
     # cards = [pyfits.Card.fromstring(l.strip()) \

@@ -5,11 +5,11 @@ def process_band(utdate, recipe_name, band,
 
     # utdate, recipe_name, band, obsids, config = "20150525", "A0V", "H", [63, 64], "recipe.config"
 
-    from libs.recipe_helper import RecipeHelper
+    from igrins.libs.recipe_helper import RecipeHelper
     helper = RecipeHelper(config, utdate, recipe_name)
     caldb = helper.get_caldb()
 
-    from libs.load_fits import get_hdus, get_combined_image
+    from igrins.libs.load_fits import get_hdus, get_combined_image
     hdus = get_hdus(helper, band, obsids)
 
     a_and_b = dict()
@@ -24,13 +24,13 @@ def process_band(utdate, recipe_name, band,
     sky_data_ = a+b - abs(a-b)
 
     
-    from libs.get_destripe_mask import get_destripe_mask
+    from igrins.libs.get_destripe_mask import get_destripe_mask
     destripe_mask = get_destripe_mask(helper, band, obsids)
 
-    from libs.image_combine import destripe_sky
+    from igrins.libs.image_combine import destripe_sky
     sky_data = destripe_sky(sky_data_, destripe_mask, subtract_bg=False)
 
-    # from libs.destriper import destriper
+    # from igrins.libs.destriper import destriper
     # sky_data = destriper.get_destriped(sky_data_)
 
     basename = helper.get_basename(band, obsids[0])
@@ -48,8 +48,8 @@ def process_band(utdate, recipe_name, band,
 
 def store_output(caldb, basename, master_hdu, sky_data):
 
-    from libs.products import PipelineImage as Image
-    from libs.products import PipelineImages
+    from igrins.libs.products import PipelineImage as Image
+    from igrins.libs.products import PipelineImages
 
     image_list = [Image([("EXTNAME", "SKY")], sky_data)]
 
@@ -60,7 +60,7 @@ def store_output(caldb, basename, master_hdu, sky_data):
                                         product)
 
 
-from libs.recipe_base import RecipeBase
+from igrins.libs.recipe_base import RecipeBase
 
 class RecipeSkyMaker(RecipeBase):
 

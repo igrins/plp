@@ -1,18 +1,18 @@
 import os
 import numpy as np
 
-#from libs.process_flat import FlatOff, FlatOn
+#from igrins.libs.process_flat import FlatOff, FlatOn
 
 
-from libs.path_info import IGRINSPath, IGRINSFiles
+from igrins.libs.path_info import IGRINSPath, IGRINSFiles
 #import astropy.io.fits as pyfits
 
-from libs.products import PipelineProducts
-from libs.apertures import Apertures
+from igrins.libs.products import PipelineProducts
+from igrins.libs.apertures import Apertures
 
-#from libs.products import PipelineProducts
+#from igrins.libs.products import PipelineProducts
 
-from libs.recipe_base import RecipeBase
+from igrins.libs.recipe_base import RecipeBase
 
 class RecipeDistortionSky(RecipeBase):
     RECIPE_NAME = "SKY"
@@ -42,7 +42,7 @@ def distortion_sky(utdate, bands="HK",
 #         raise ValueError("bands must be one of 'H', 'K' or 'HK'")
 
 #     fn = "%s.recipes" % utdate
-#     from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
+#     from igrins.libs.recipes import Recipes #load_recipe_list, make_recipe_dict
 #     recipe = Recipes(fn)
 
 #     if starting_obsids is not None:
@@ -59,7 +59,7 @@ def distortion_sky(utdate, bands="HK",
 
 def load_aperture(igr_storage, band, master_obsid, flaton_db,
                   orders, orders_w_solutions):
-    from libs.process_flat import FLATCENTROID_SOL_JSON_DESC
+    from igrins.libs.process_flat import FLATCENTROID_SOL_JSON_DESC
 
     flaton_basename = flaton_db.query(band, master_obsid)
 
@@ -85,7 +85,7 @@ def load_aperture(igr_storage, band, master_obsid, flaton_db,
 
 def process_distortion_sky_band(utdate, refdate, band, obsids, config):
 
-    from libs.products import ProductDB, PipelineStorage
+    from igrins.libs.products import ProductDB, PipelineStorage
 
     igr_path = IGRINSPath(config, utdate)
 
@@ -111,7 +111,7 @@ def process_distortion_sky_band(utdate, refdate, band, obsids, config):
 
 
 
-    from libs.process_thar import COMBINED_IMAGE_DESC, ONED_SPEC_JSON
+    from igrins.libs.process_thar import COMBINED_IMAGE_DESC, ONED_SPEC_JSON
     raw_spec_products = igr_storage.load([COMBINED_IMAGE_DESC, ONED_SPEC_JSON],
                                          sky_basename)
 
@@ -133,7 +133,7 @@ def process_distortion_sky_band(utdate, refdate, band, obsids, config):
 
 
     if 1: # load reference data
-        from libs.master_calib import load_sky_ref_data
+        from igrins.libs.master_calib import load_sky_ref_data
 
         ref_utdate = config.get_value("REFDATE", utdate)
 
@@ -172,7 +172,7 @@ def process_distortion_sky_band(utdate, refdate, band, obsids, config):
         wvlsol_products = PipelineProducts.load(fn)
 
         if 1:
-            from libs.master_calib import load_sky_ref_data
+            from igrins.libs.master_calib import load_sky_ref_data
 
             ref_utdate = "20140316"
 
@@ -239,7 +239,7 @@ def process_distortion_sky_band(utdate, refdate, band, obsids, config):
 
 
 
-        from libs.reidentify_ohlines import fit_ohlines, fit_ohlines_pixel
+        from igrins.libs.reidentify_ohlines import fit_ohlines, fit_ohlines_pixel
 
         def get_reidentified_lines_OH(orders_w_solutions,
                                       wvl_solutions, s_center):
@@ -270,13 +270,13 @@ def process_distortion_sky_band(utdate, refdate, band, obsids, config):
                                                  wvl_solutions,
                                                  s_center)
 
-            import libs.master_calib as master_calib
+            import igrins.libs.master_calib as master_calib
             fn = "hitran_bootstrap_K_%s.json" % ref_utdate
             bootstrap_name = master_calib.get_master_calib_abspath(fn)
             import json
             bootstrap = json.load(open(bootstrap_name))
 
-            import libs.hitran as hitran
+            import igrins.libs.hitran as hitran
             r, ref_pixel_dict_hitrans = hitran.reidentify(wvl_solutions,
                                                           s_center,
                                                           bootstrap)
@@ -355,7 +355,7 @@ def process_distortion_sky_band(utdate, refdate, band, obsids, config):
                                                       fitted_centroid_center)]
         yl = np.concatenate(yl_)
 
-        from libs.ecfit import fit_2dspec, check_fit_simple
+        from igrins.libs.ecfit import fit_2dspec, check_fit_simple
 
         zl_list = [np.concatenate(d_) for d_ \
                    in d_shift_down[::-1] + d_shift_up]
@@ -431,7 +431,7 @@ def process_distortion_sky_band(utdate, refdate, band, obsids, config):
         #pyfits.PrimaryHDU(data=slitoffset_map).writeto(fn, clobber=True)
 
         SLITOFFSET_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".slitoffset_map.fits")
-        from libs.products import PipelineImageBase, PipelineProducts
+        from igrins.libs.products import PipelineImageBase, PipelineProducts
         distortion_products = PipelineProducts("Distortion map")
         distortion_products.add(SLITOFFSET_FITS_DESC,
                                 PipelineImageBase([],
@@ -442,7 +442,7 @@ def process_distortion_sky_band(utdate, refdate, band, obsids, config):
                           masterhdu=None)
 
 
-        from libs.qa_helper import figlist_to_pngs
+        from igrins.libs.qa_helper import figlist_to_pngs
         sky_figs = igr_path.get_section_filename_base("QA_PATH",
                                                       "oh_distortion",
                                                       "oh_distortion_dir")
@@ -475,8 +475,8 @@ def process_distortion_sky_band(utdate, refdate, band, obsids, config):
 
 # if __name__ == "__main__":
 
-#     from libs.recipes import load_recipe_list, make_recipe_dict
-#     from libs.products import PipelineProducts, ProductPath, ProductDB
+#     from igrins.libs.recipes import load_recipe_list, make_recipe_dict
+#     from igrins.libs.products import PipelineProducts, ProductPath, ProductDB
 
 #     if 0:
 #         utdate = "20140316"

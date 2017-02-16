@@ -69,7 +69,7 @@ def match_order_thar(thar_products, thar_ref_data):
     s_list_dst = [np.array(s) for s in s_list_]
 
     # match the orders of s_list_src & s_list_dst
-    from libs.reidentify_thar_lines import match_orders
+    from reidentify_thar_lines import match_orders
     delta_indx, orders_dst = match_orders(orders_src, s_list_src,
                                           s_list_dst)
 
@@ -86,7 +86,7 @@ def match_order(src_spectra, ref_spectra):
     s_list = [np.array(s) for s in s_list_]
 
     # match the orders of s_list_src & s_list_dst
-    from libs.reidentify_thar_lines import match_orders
+    from reidentify_thar_lines import match_orders
     delta_indx, orders = match_orders(orders_ref, s_list_ref,
                                       s_list)
 
@@ -155,11 +155,11 @@ def reidentify_ThAr_lines(thar_products, thar_ref_data):
 
     orders = sorted(orders_intersection)
 
-    from libs.reidentify_thar_lines import get_offset_transform
+    from reidentify_thar_lines import get_offset_transform
     # get offset function from source spectra to target specta.
     sol_list_transform = get_offset_transform(s_list_src, s_list_dst)
 
-    from libs.reidentify import reidentify_lines_all2
+    from reidentify import reidentify_lines_all2
 
     #ref_lines_map = dict(zip(orders_src, ref_lines_list))
 
@@ -222,7 +222,7 @@ def align_echellogram_thar(thar_reidentified_products, echel, band, ap):
     xy1f, nan_mask = echel.get_xy_list_filtered(wvl_list)
     xy2f = ap.get_xy_list(pixel_list, nan_mask)
 
-    from libs.align_echellogram_thar import fit_affine_clip
+    from align_echellogram_thar import fit_affine_clip
     affine_tr, mm = fit_affine_clip(xy1f, xy2f)
 
     r = PipelineProducts("ThAr aligned echellogram products")

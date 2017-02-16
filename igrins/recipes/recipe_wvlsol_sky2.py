@@ -43,7 +43,7 @@ def save_qa(helper, band, obsids):
                      for o, _ in dfm.groupby("order"))
 
     from matplotlib.figure import Figure
-    from libs.ecfit import check_fit
+    from igrins.libs.ecfit import check_fit
 
     d = caldb.load_item_from(basename, "SKY_WVLSOL_JSON")
 
@@ -69,7 +69,7 @@ def save_qa(helper, band, obsids):
                               for o, _ in dfm[m].groupby("order"))
 
     modeul_name, class_name, serialized = fit_results["fitted_model"]
-    from libs.astropy_poly_helper import deserialize_poly_model
+    from igrins.libs.astropy_poly_helper import deserialize_poly_model
    
     p = deserialize_poly_model(modeul_name, class_name, serialized)
 
@@ -86,7 +86,7 @@ def save_qa(helper, band, obsids):
                   lines_map_filtered)
         fig2.tight_layout()
 
-    from libs.qa_helper import figlist_to_pngs
+    from igrins.libs.qa_helper import figlist_to_pngs
     igr_path = helper.igr_path
     sky_basename = helper.get_basename(band, obsids[0])
     sky_figs = igr_path.get_section_filename_base("QA_PATH",
@@ -149,7 +149,7 @@ def save_wavelength_map(helper, band, obsids):
 
     fit_results = caldb.load_item_from(basename, "SKY_WVLSOL_FIT_RESULT_JSON")
 
-    from libs.astropy_poly_helper import deserialize_poly_model
+    from igrins.libs.astropy_poly_helper import deserialize_poly_model
 
     module_name, klass_name, serialized = fit_results["fitted_model"]
     poly_2d = deserialize_poly_model(module_name, klass_name, serialized)
@@ -174,7 +174,7 @@ def save_wavelength_map(helper, band, obsids):
 
 
 
-from libs.recipe_helper import RecipeHelper
+from igrins.libs.recipe_helper import RecipeHelper
 
 from process_wvlsol_v0 import extract_spectra_multi
 from process_wvlsol_v0 import make_combined_image
@@ -226,7 +226,7 @@ def process_band(utdate, recipe_name, band, obsids, frame_types,
 
 
 
-from libs.recipe_factory import new_recipe_class, new_recipe_func
+from igrins.libs.recipe_factory import new_recipe_class, new_recipe_func
 
 _recipe_class_wvlsol_sky = new_recipe_class("RecipeWvlsolSky",
                                             "SKY", process_band)

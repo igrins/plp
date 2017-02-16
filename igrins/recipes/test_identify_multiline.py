@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from libs.recipe_helper import RecipeHelper
+from igrins.libs.recipe_helper import RecipeHelper
 
 
 def process_band(utdate, recipe_name, band, obsids, config_name):
@@ -28,7 +28,7 @@ def process_band(utdate, recipe_name, band, obsids, config_name):
     keys = []
     fitted_pixels_list = []
 
-    from libs.ref_lines_db import SkyLinesDB, HitranSkyLinesDB
+    from igrins.libs.ref_lines_db import SkyLinesDB, HitranSkyLinesDB
 
     ref_lines_db = SkyLinesDB(config=config_name)
     ref_lines_db_hitrans = HitranSkyLinesDB(config=config_name)

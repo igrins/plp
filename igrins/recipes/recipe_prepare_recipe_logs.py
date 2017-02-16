@@ -3,7 +3,7 @@ import numpy as np
 
 def prepare_recipe_logs(utdate, config_file="recipe.config"):
 
-    from libs.igrins_config import IGRINSConfig
+    from igrins.libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
 
     fn0 = config.get_value('INDATA_PATH', utdate)
@@ -102,7 +102,7 @@ def prepare_recipe_logs(utdate, config_file="recipe.config"):
 
     if obsid_map:
         print "trying to make soft links for files of different utdates"
-        from libs.load_fits import find_fits
+        from igrins.libs.load_fits import find_fits
         old_new_list = []
 
         for band in "HK":

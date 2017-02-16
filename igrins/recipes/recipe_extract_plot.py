@@ -19,14 +19,14 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
               a0v_obsid=None,
               basename_postfix=None):
 
-    from libs.igrins_config import IGRINSConfig
+    from igrins.libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
 
     if not bands in ["H", "K", "HK"]:
         raise ValueError("bands must be one of 'H', 'K' or 'HK'")
 
     fn = config.get_value('RECIPE_LOG_PATH', utdate)
-    from libs.recipes import Recipes #load_recipe_list, make_recipe_dict
+    from igrins.libs.recipes import Recipes #load_recipe_list, make_recipe_dict
     recipe = Recipes(fn)
 
     if starting_obsids is not None:
@@ -162,7 +162,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
         ax2a = fig2.add_subplot(211)
         ax2b = fig2.add_subplot(212, sharex=ax2a)
 
-        #from libs.stddev_filter import window_stdev
+        #from igrins.libs.stddev_filter import window_stdev
 
         for wvl, s, t in zip(tgt.um,
                              tgt_spec_cor,
@@ -204,7 +204,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
                                                     filename_prefix,
                                                     dirname)
         #figout = obj_path.get_secondary_path("spec", "spec_dir")
-        from libs.qa_helper import figlist_to_pngs
+        from igrins.libs.qa_helper import figlist_to_pngs
         figlist_to_pngs(figout, fig_list)
 
     # save html
@@ -241,7 +241,7 @@ def get_fixed_i1i2_list(order_indices, i1i2_list):
 
 
 def get_i1i2_list(extractor, orders_w_solutions):
-    from libs.storage_descriptions import ORDER_FLAT_JSON_DESC
+    from igrins.libs.storage_descriptions import ORDER_FLAT_JSON_DESC
     prod = extractor.igr_storage.load1(ORDER_FLAT_JSON_DESC,
                                        extractor.basenames["flat_on"])
 
@@ -297,7 +297,7 @@ def html_save(utdate, dirname, objroot, band,
 
 def save_for_html(dir, name, band, orders, wvl_sol, s_list1, s_list2):
     import pandas as pd
-    from libs.path_info import ensure_dir
+    from igrins.libs.path_info import ensure_dir
     ensure_dir(dir)
 
     # Pandas requires the byte order of data (from fits) needs to be
@@ -389,7 +389,7 @@ def get_tgt_spec_cor(tgt, a0v, threshold_a0v, multiply_model_a0v, config):
 
     if multiply_model_a0v:
         # multiply by A0V model
-        from libs.a0v_spec import A0VSpec
+        from igrins.libs.a0v_spec import A0VSpec
         a0v_model = A0VSpec(config)
 
         a0v_interp1d = a0v_model.get_flux_interp1d(1.3, 2.5,

@@ -2,7 +2,7 @@ import astropy.io.fits as pyfits
 import numpy as np
 import scipy.ndimage as ni
 
-from libs.a0v_spec import A0VSpec
+from a0v_spec import A0VSpec
 
 from scipy.interpolate import interp1d
 
@@ -128,8 +128,8 @@ class SpecFlattener(object):
 
     def get_sv_mask(self, ratio):
         # use sv_iter to derive continuum level from ratio
-        from libs.smooth_continuum import sv_iter
-        from libs.trace_flat import get_finite_boundary_indices
+        from smooth_continuum import sv_iter
+        from trace_flat import get_finite_boundary_indices
 
         # naive iterative approach.
         ratio = ratio.copy()
@@ -387,8 +387,8 @@ class SpecFlattener(object):
         ratio[-4:] = np.nan
 
         # use sv_iter to derive continuum level from ratio
-        from libs.smooth_continuum import sv_iter
-        from libs.trace_flat import get_finite_boundary_indices
+        from smooth_continuum import sv_iter
+        from trace_flat import get_finite_boundary_indices
 
         # naive iterative approach.
         for thresh in [0.05, 0.03, 0.01]:
@@ -517,7 +517,7 @@ def get_a0v_flattened(a0v_interp1d, tel_interp1d_f,
     # orderflat_response = extractor.orderflat_json["fitted_responses"]
 
 
-    #from libs.a0v_flatten import SpecFlattener, FlattenFailException
+    #from a0v_flatten import SpecFlattener, FlattenFailException
     spec_flattener = SpecFlattener(tel_interp1d_f, a0v_interp1d)
 
 
@@ -569,7 +569,7 @@ def get_a0v_flattened(a0v_interp1d, tel_interp1d_f,
 
 
     if figout is not None:
-        from libs.a0v_flatten import plot_flattend_a0v
+        from a0v_flatten import plot_flattend_a0v
 
         plot_flattend_a0v(spec_flattener, wvl, s_list, orderflat_response, data_list, fout=figout)
 

@@ -137,8 +137,8 @@ def derive_multi_gaussian_slit_profile(s, y, ye=None):
 
 
 def test_plot():
-    # from libs.igrins_config import IGRINSConfig
-    from libs.recipe_helper import RecipeHelper
+    # from igrins_config import IGRINSConfig
+    from recipe_helper import RecipeHelper
 
     config_file = "../recipe.config"
     utdate = 20151124
@@ -155,7 +155,7 @@ def test_plot():
     omap = caldb.load_resource_for(basename, ("thar", "ordermap_masked_fits"))[0].data
     slitpos = caldb.load_resource_for(basename, ("sky", "slitposmap_fits"))[0].data
 
-    from libs.aperture_helper import load_aperture
+    from aperture_helper import load_aperture
     ap = load_aperture(caldb, basename)
 
     def expand_1dspec_to_2dspec(s1d, o2d, min_order=None):

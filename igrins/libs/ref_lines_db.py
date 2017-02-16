@@ -339,7 +339,6 @@ class Test:
     def update_K(self, reidentified_lines_map,
                  orders_w_solutions,
                  wvl_solutions, s_list):
-        # import libs.master_calib as master_calib
         # fn = "hitran_bootstrap_K_%s.json" % self.refdate
         # bootstrap_name = master_calib.get_master_calib_abspath(fn)
         # import json
@@ -350,7 +349,7 @@ class Test:
                                   kind="HITRAN_BOOTSTRAP_K")
 
 
-        import libs.hitran as hitran
+        import hitran
         r, ref_pixel_list = hitran.reidentify(orders_w_solutions,
                                               wvl_solutions, s_list,
                                               bootstrap)
