@@ -231,10 +231,13 @@ from libs.recipe_factory import new_recipe_class, new_recipe_func
 _recipe_class_wvlsol_sky = new_recipe_class("RecipeWvlsolSky",
                                             "SKY", process_band)
 
-wvlsol_sky2 = new_recipe_func("wvlsol_sky2",
+wvlsol_sky = new_recipe_func("wvlsol_sky",
                               _recipe_class_wvlsol_sky)
 
-__all__ = wvlsol_sky2
+sky_wvlsol = new_recipe_func("sky_wvlsol",
+                              _recipe_class_wvlsol_sky)
+
+__all__ = wvlsol_sky, sky_wvlsol
 
 
 

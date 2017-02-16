@@ -68,9 +68,8 @@ def make_combined_image(helper, band, obsids, frame_types=None):
     d = make_combined_image_sky(helper, band, obsids, frame_types)
 
     master_obsid = obsids[0]
-    # "SKY_GENERATED_FITS"
     caldb.store_image((band, master_obsid),
-                      item_type="sky_generated_fits", data=d)
+                      item_type="combined_sky", data=d)
 
 
 def extract_spectra(helper, band, obsids):
@@ -81,7 +80,7 @@ def extract_spectra(helper, band, obsids):
 
     master_obsid = obsids[0]
     data = caldb.load_image((band, master_obsid),
-                            item_type="sky_generated_fits")
+                            item_type="combined_sky")
 
     ap = get_simple_aperture(helper, band, obsids)
 
@@ -132,7 +131,7 @@ def extract_spectra_multi(helper, band, obsids):
     master_obsid = obsids[0]
     basename = (band, master_obsid)
     data = caldb.load_image(basename,
-                            item_type="combined_image")
+                            item_type="combined_sky")
 
     # just to retrieve order information
     wvlsol_v0 = caldb.load_resource_for(basename, "wvlsol_v0")

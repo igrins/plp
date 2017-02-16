@@ -54,7 +54,7 @@ WVLSOL_V0_JSON_DESC = ("PRIMARY_CALIB_PATH", "", ".wvlsol_v0.json")
 
 # SKY
 
-SKY_GENERATED_FITS_DESC = ("OUTDATA_PATH", "SKY_", ".fits")
+COMBINED_SKY_DESC = ("OUTDATA_PATH", "", ".combined_sky.fits")
 SKY_WVLSOL_JSON_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".wvlsol_v1.json")
 SKY_WVLSOL_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_", ".wvlsol_v1.fits")
 

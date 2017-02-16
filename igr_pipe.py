@@ -4,7 +4,7 @@ import recipes.recipe_flat
 import recipes.recipe_thar
 import recipes.recipe_wvlsol_sky
 
-from recipes.recipe_wvlsol_sky2 import wvlsol_sky2
+from recipes.recipe_wvlsol_sky2 import wvlsol_sky, sky_wvlsol
 
 #from recipes.recipe_distort_sky import distortion_sky
 from recipes.recipe_extract import (a0v_ab, stellar_ab,
@@ -19,9 +19,10 @@ from recipes.recipe_make_sky import make_sky
 
 recipe_list = [recipes.recipe_flat.flat,
                #recipes.recipe_thar.thar,
-               recipes.recipe_wvlsol_sky.sky_wvlsol,
-               recipes.recipe_wvlsol_sky.wvlsol_sky,
-               wvlsol_sky2,
+               #recipes.recipe_wvlsol_sky.sky_wvlsol,
+               #recipes.recipe_wvlsol_sky.wvlsol_sky,
+               wvlsol_sky,
+               sky_wvlsol,
                #distortion_sky,
                a0v_ab,
                stellar_ab,
@@ -39,7 +40,6 @@ recipe_list = [recipes.recipe_flat.flat,
 
 from recipes.recipe_register import register_sky, register_thar, thar
 
-register_sky = argh.arg('--do-ab', default=False, action='store_true')(register_sky)
 recipe_list.extend([register_sky, register_thar, thar])
 
 from recipes.recipe_divide_a0v import divide_a0v
