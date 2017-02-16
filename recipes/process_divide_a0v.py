@@ -5,14 +5,14 @@ from libs.a0v_spec import A0V
 
 
 def generate_a0v_divided(helper, band, obsids, a0v_obsid=None,
-                         ext_prefix=None):
+                         basename_postfix=None):
 
     caldb = helper.get_caldb()
 
     master_obsid = obsids[0]
     tgt_spec_hdulist = caldb.load_item_from((band, master_obsid),
                                             "SPEC_FITS",
-                                            ext_prefix=ext_prefix)
+                                            basename_postfix=basename_postfix)
     spec = tgt_spec_hdulist[0].data
     wvl = tgt_spec_hdulist[1].data
 
@@ -24,13 +24,13 @@ def generate_a0v_divided(helper, band, obsids, a0v_obsid=None,
 
     a0v_spec_hdulist = caldb.load_item_from(a0v_basename,
                                             "SPEC_FITS",
-                                            ext_prefix=ext_prefix)
+                                            basename_postfix=basename_postfix)
 
     a0v_spec = a0v_spec_hdulist[0].data
 
     a0v_spec_flattened_hdulist = caldb.load_item_from(a0v_basename,
                                                       "SPEC_FITS_FLATTENED",
-                                                      ext_prefix=ext_prefix)
+                                                      basename_postfix=basename_postfix)
 
     a0v_fitted_continuum = a0v_spec_flattened_hdulist["FITTED_CONTINUUM"].data
 
@@ -43,14 +43,14 @@ def generate_a0v_divided(helper, band, obsids, a0v_obsid=None,
 
     
     header_updates = [("hierarch IGR_A0V_BASENAME", a0v_basename),
-                      ("hierarch IGR_EXT_PREFIX", ext_prefix),]
+                      ("hierarch IGR_BASENAME_POSTFIX", basename_postfix),]
 
     store_tgt_divide_a0v(caldb, basename,
                          master_hdu,
                          wvl, spec, a0v_spec, vega,
                          a0v_fitted_continuum,
                          header_updates=header_updates,
-                         ext_prefix=ext_prefix)
+                         basename_postfix=basename_postfix)
 
 
 def store_tgt_divide_a0v(caldb, basename,
@@ -58,7 +58,7 @@ def store_tgt_divide_a0v(caldb, basename,
                          wvl, spec, a0v_spec, vega,
                          a0v_fitted_continuum,
                          header_updates=None,
-                         ext_prefix=None):
+                         basename_postfix=None):
 
     from libs.products import PipelineImage as Image
 
@@ -82,7 +82,7 @@ def store_tgt_divide_a0v(caldb, basename,
 
     item_type = "SPEC_A0V_FITS"
     caldb.store_multi_image(basename, item_type, image_list,
-                            ext_prefix=ext_prefix)
+                            basename_postfix=basename_postfix)
 
 
 
@@ -107,12 +107,12 @@ def process_band(utdate, recipe_name, band,
                  obsids, frame_types, aux_infos,
                  config_name, 
                  a0v_obsid=None,
-                 ext_prefix=None):
+                 basename_postfix=None):
 
     helper = RecipeHelper(config_name, utdate, recipe_name)
 
     generate_a0v_divided(helper, band, obsids, a0v_obsid,
-                         ext_prefix=ext_prefix)
+                         basename_postfix=basename_postfix)
 
 
 if __name__ == "__main__":

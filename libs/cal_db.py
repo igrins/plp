@@ -82,7 +82,7 @@ class CalDB(object):
 
 
     def query_item_path(self, basename, item_type_or_desc,
-                        ext_prefix=None):
+                        basename_postfix=None):
         """
         this queries db to find relavant basename and load the related resource.
         """
@@ -91,15 +91,15 @@ class CalDB(object):
             band, master_obsid = basename
             basename = self.helper.get_basename(band, master_obsid)
 
-        if ext_prefix is not None:
-            basename += ext_prefix
+        if basename_postfix is not None:
+            basename += basename_postfix
 
         if isinstance(item_type_or_desc, str):
             item_desc = self.DESC_DICT[item_type_or_desc.upper()]
         else:
             item_desc = item_type_or_desc
 
-        prevent_split=(ext_prefix is not None)
+        prevent_split=(basename_postfix is not None)
         path = self.helper.igr_storage.get_item_path(item_desc, basename,
                                                      prevent_split=prevent_split)
 
@@ -115,13 +115,13 @@ class CalDB(object):
 
 
     def load_item_from(self, basename, item_type_or_desc,
-                       ext_prefix=None):
+                       basename_postfix=None):
         """
         this queries db to find relavant basename and load the related resource.
         """
 
         item_path = self.query_item_path(basename, item_type_or_desc,
-                                         ext_prefix)
+                                         basename_postfix)
         return self.load_item_from_path(item_path)
 
 
@@ -194,7 +194,7 @@ class CalDB(object):
                                            pipeline_image)
 
     def store_multi_image(self, basename, item_type, hdu_list,
-                          ext_prefix=None):
+                          basename_postfix=None):
         band, master_obsid = self._get_band_masterobsid(basename)
         basename = self._get_basename(basename)
 
@@ -209,7 +209,7 @@ class CalDB(object):
 
         self.helper.igr_storage.store_item(item_desc, basename,
                                            pipeline_image,
-                                           ext_prefix=ext_prefix)
+                                           basename_postfix=basename_postfix)
 
     def store_dict(self, basename, item_type, data):
         basename = self._get_basename(basename)

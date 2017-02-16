@@ -3,6 +3,12 @@ import numpy as np
 
 import logging as igr_log
 
+from argh_helper import argh
+
+@argh.arg("-b", "--bands", default="HK", choices=["H", "K", "HK"])
+@argh.arg("-s", "--starting-obsids", default=None)
+@argh.arg("-c", "--config-file", default="recipe.config")
+@argh.arg("--basename-postfix", default=None)
 def plot_spec(utdate, refdate="20140316", bands="HK",
               starting_obsids=None, interactive=False,
               recipe_name = "ALL_RECIPES",
@@ -11,7 +17,7 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
               multiply_model_a0v=False,
               html_output=False,
               a0v_obsid=None,
-              ext_prefix=None):
+              basename_postfix=None):
 
     from libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
@@ -53,7 +59,7 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
                               multiply_model_a0v=multiply_model_a0v,
                               html_output=html_output,
                               a0v_obsid=a0v_obsid,
-                              ext_prefix=ext_prefix)
+                              basename_postfix=basename_postfix)
 
 
 def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
@@ -64,7 +70,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
                       multiply_model_a0v=False,
                       html_output=False,
                       a0v_obsid=None,
-                      ext_prefix=None):
+                      basename_postfix=None):
 
     target_type, nodding_type = recipe.split("_")
 
@@ -84,7 +90,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
     igr_path = extractor.pr.igr_path
 
 
-    tgt = extractor.get_oned_spec_helper(ext_prefix=ext_prefix)
+    tgt = extractor.get_oned_spec_helper(basename_postfix=basename_postfix)
 
     orders_w_solutions = extractor.orders_w_solutions
 
@@ -102,7 +108,7 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
             print A0V_basename
 
         a0v = extractor.get_oned_spec_helper(A0V_basename,
-                                             ext_prefix=ext_prefix)
+                                             basename_postfix=basename_postfix)
 
 
         tgt_spec_cor = get_tgt_spec_cor(tgt, a0v,
@@ -192,8 +198,8 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
 
         tgt_basename = extractor.pr.tgt_basename
         dirname = "spec_"+tgt_basename
-        ext_prefix_s = ext_prefix if ext_prefix is not None else ""
-        filename_prefix = "spec_" + tgt_basename + ext_prefix_s
+        basename_postfix_s = basename_postfix if basename_postfix is not None else ""
+        filename_prefix = "spec_" + tgt_basename + basename_postfix_s
         figout = igr_path.get_section_filename_base("QA_PATH",
                                                     filename_prefix,
                                                     dirname)
@@ -204,8 +210,8 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
     # save html
 
     if html_output:
-        if ext_prefix is not None:
-            igr_log.warn("For now, no html output is generated if ext-prefix option is used")
+        if basename_postfix is not None:
+            igr_log.warn("For now, no html output is generated if basename-postfix option is used")
         else:
             dirname = config.get_value('HTML_PATH', utdate)
             objroot = "%04d" % (master_obsid,)
