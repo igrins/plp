@@ -21,12 +21,23 @@ class CalDB(object):
         for db_name in db_names:
             self.load_db(db_name)
 
+    def get_base_info(self, band, obsids):
+        return self.helper.get_base_info(band, obsids)
+
+    # def get_section_filename_base(self, db_spec_path, db_spec_name,
+    #                               subdir=None):
+    #     return self.helper.get_section_filename_base(db_spec_path,
+    #                                                  db_spec_name,
+    #                                                  subdir)
 
     def load_db(self, db_name):
         if db_name not in self.db_dict:
             db_spec_path, db_spec_name = self.DB_Specs[db_name]
-            db_path = self.helper.igr_path.get_section_filename_base(db_spec_path,
-                                                                     db_spec_name)
+            # db_path = self.helper.get_section_filename_base(db_spec_path,
+            #                                                 db_spec_name)
+            db_path = self.helper.get_item_path((db_spec_path, db_spec_name),
+                                                basename=None)
+
             db = ProductDB(db_path)
             self.db_dict[db_name] = db
         else:
@@ -40,7 +51,7 @@ class CalDB(object):
 
 
     def query_item_path(self, basename, item_type_or_desc,
-                        basename_postfix=None):
+                        basename_postfix=None, subdir=None):
         """
         this queries db to find relavant basename and load the related resource.
         """
@@ -58,8 +69,9 @@ class CalDB(object):
             item_desc = item_type_or_desc
 
         prevent_split=(basename_postfix is not None)
-        path = self.helper.igr_storage.get_item_path(item_desc, basename,
-                                                     prevent_split=prevent_split)
+        path = self.helper.get_item_path(item_desc, basename,
+                                         prevent_split=prevent_split,
+                                         subdir=subdir)
 
         return path
 
@@ -69,7 +81,7 @@ class CalDB(object):
         this queries db to find relavant basename and load the related resource.
         """
 
-        return self.helper.igr_storage.load_item_from_path(item_path)
+        return self.helper.load_item_from_path(item_path)
 
 
     def load_item_from(self, basename, item_type_or_desc,
@@ -94,7 +106,7 @@ class CalDB(object):
             basename = self.helper.get_basename(band, master_obsid)
 
         item_desc = self.DESC_DICT[item_type.upper()]
-        resource = self.helper.igr_storage.load_item(item_desc, basename)
+        resource = self.helper.load_item(item_desc, basename)
 
         return resource
 
@@ -139,7 +151,7 @@ class CalDB(object):
         from products import PipelineImageBase
         mastername = self.helper.get_filenames(band, [master_obsid])[0]
 
-        hdu = self.helper.igr_storage.get_masterhdu(mastername)
+        hdu = self.helper.get_masterhdu(mastername)
         if header is not None:
             hdu.header = header
         if card_list is not None:
@@ -148,8 +160,8 @@ class CalDB(object):
         pipeline_image = PipelineImageBase([], data,
                                            masterhdu=hdu)
 
-        self.helper.igr_storage.store_item(item_desc, basename,
-                                           pipeline_image)
+        self.helper.store_item(item_desc, basename,
+                               pipeline_image)
 
     def store_multi_image(self, basename, item_type, hdu_list,
                           basename_postfix=None):
@@ -160,14 +172,14 @@ class CalDB(object):
 
         from products import PipelineImages
         mastername = self.helper.get_filenames(band, [master_obsid])[0]
-        hdu = self.helper.igr_storage.get_masterhdu(mastername)
+        hdu = self.helper.get_masterhdu(mastername)
 
         pipeline_image = PipelineImages(hdu_list,
                                         masterhdu=hdu)
 
-        self.helper.igr_storage.store_item(item_desc, basename,
-                                           pipeline_image,
-                                           basename_postfix=basename_postfix)
+        self.helper.store_item(item_desc, basename,
+                               pipeline_image,
+                               basename_postfix=basename_postfix)
 
     def store_dict(self, basename, item_type, data):
         basename = self._get_basename(basename)
@@ -175,8 +187,8 @@ class CalDB(object):
 
         from products import PipelineDict
         pipeline_dict = PipelineDict(**data)
-        self.helper.igr_storage.store_item(item_desc, basename,
-                                           pipeline_dict)
+        self.helper.store_item(item_desc, basename,
+                               pipeline_dict)
 
     def query_resource_for(self, basename, resource_type):
         """

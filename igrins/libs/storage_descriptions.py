@@ -88,11 +88,17 @@ SPEC2D_FITS_DESC = ("OUTDATA_PATH", "", ".spec2d.fits")
 
 SPEC_A0V_FITS_DESC = ("OUTDATA_PATH", "", ".spec_a0v.fits")
 
-
 #Added by Kyle Kaplan on Feb 25, 2015
 #Save variance map as straitened out 2D datacube like spec2d.fits
 VAR2D_FITS_DESC = ("OUTDATA_PATH", "", ".var2d.fits")
 
+
+# QA
+
+QA_FLAT_APERTURE_DIR_DESC = ("QA_PATH", "aperture_", "")
+
+
+#####
 
 DB_Specs = dict(flat_on=("PRIMARY_CALIB_PATH", "flat_on.db"),
                 flat_off=("PRIMARY_CALIB_PATH", "flat_off.db"),
