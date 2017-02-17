@@ -8,18 +8,6 @@ from igrins.libs.process_flat import FlatOff, FlatOn
 
 from igrins.libs.load_fits import load_fits_data
 
-def get_data_list(helper, band, obsids):
-    _ = helper.get_base_info(band, obsids)
-    flat_off_filenames = _[0]
-
-    flat_offs_hdu_list = [load_fits_data(fn_) for fn_
-                          in flat_off_filenames]
-
-    flat_offs = [hdu.data for hdu in flat_offs_hdu_list]
-
-    return flat_offs
-
-
 def get_combined_image(data_list, destripe=True):
     # destripe=True):
 
@@ -39,29 +27,32 @@ def get_combined_image(data_list, destripe=True):
     return flat_off, flat_off_cards
 
 
-def combine_flat_off(helper, band, obsids, destripe=True):
+def combine_flat_off(obsset, destripe=True):
     # destripe=True):
 
-    data_list = get_data_list(helper, band, obsids)
+    data_list = obsset.get_data_list()
 
     flat_off, flat_off_cards = get_combined_image(data_list,
-                                                  destripe=True)
+                                                  destripe=destripe)
 
-    caldb = helper.get_caldb()
-    master_obsid = obsids[0]
-    caldb.store_image((band, master_obsid),
-                      item_type="flat_off", data=flat_off,
-                      card_list=flat_off_cards)
+    # caldb = helper.get_caldb()
+    # master_obsid = obsids[0]
+    # caldb.store_image((band, master_obsid),
+    #                   item_type="flat_off", data=flat_off,
+    #                   card_list=flat_off_cards)
+
+    obsset.store_image(item_type="flat_off", data=flat_off,
+                       card_list=flat_off_cards)
 
 
-def make_hotpix_mask(helper, band, obsids_off,
+def make_hotpix_mask(obsset,
                      sigma_clip1=100, sigma_clip2=10,
                      medfilter_size=None):
 
-    caldb = helper.get_caldb()
-    master_obsid = obsids_off[0]
+    # caldb = helper.get_caldb()
+    # master_obsid = obsset.obsids[0]
 
-    flat_off_hdu = caldb.load_item_from((band, master_obsid), "flat_off")[0]
+    flat_off_hdu = obsset.load_item("flat_off")[0]
     flat_off = flat_off_hdu.data
 
     import igrins.libs.badpixel as bp
@@ -74,37 +65,34 @@ def make_hotpix_mask(helper, band, obsids_off,
 
     flat_off_cards = [Card("BG_STD", bg_std, "IGR: stddev of combined flat")]
 
-    caldb = helper.get_caldb()
+    # caldb = helper.get_caldb()
 
-    caldb.store_image((band, master_obsid),
-                      item_type="hotpix_mask", data=hotpix_mask)
+    obsset.store_image(item_type="hotpix_mask", data=hotpix_mask)
 
-   # save fits with updated header
-    caldb.store_image((band, master_obsid),
-                      item_type="flat_off", data=flat_off,
-                      header=flat_off_hdu.header,
-                      card_list=flat_off_cards)
+    # save fits with updated header
+    obsset.store_image(item_type="flat_off", data=flat_off,
+                       header=flat_off_hdu.header,
+                       card_list=flat_off_cards)
 
 
-def process_flat_off(helper, band, obsids_off):
+def process_flat_off(obsset):
 
-    combine_flat_off(helper, band, obsids_off)
+    combine_flat_off(obsset)
 
-    make_hotpix_mask(helper, band, obsids_off,
+    make_hotpix_mask(obsset,
                      sigma_clip1=100, sigma_clip2=5)
 
 
 
 ## flat on
 
-from collections import namedtuple
-SimpleHDU = namedtuple('SimpleHDU', ['header', 'data'])
+#from collections import namedtuple
+#SimpleHDU = namedtuple('SimpleHDU', ['header', 'data'])
+from igrins.libs.simple_hdu import SimpleHDU
 
-def combine_flat_on(helper, band, obsids):
+def combine_flat_on(obsset_on):
 
-    caldb = helper.get_caldb()
-
-    data_list = get_data_list(helper, band, obsids)
+    data_list = obsset_on.get_data_list() #helper, band, obsids)
 
     flat_on, flat_on_cards = get_combined_image(data_list, destripe=False)
 
@@ -113,16 +101,18 @@ def combine_flat_on(helper, band, obsids):
     hdu_list = [SimpleHDU(flat_on_cards, flat_on),
                 SimpleHDU([], flat_std)]
 
-    master_obsid = obsids[0]
-    caldb.store_multi_image((band, master_obsid),
-                            item_type="flat_on",
-                            hdu_list=hdu_list)
+    obsset_on.store_multi_images(item_type="flat_on",
+                                 hdu_list=hdu_list)
+    # master_obsid = obsids[0]
+    # caldb.store_multi_image((band, master_obsid),
+    #                         item_type="flat_on",
+    #                         hdu_list=hdu_list)
 
-                            # item_type="flat_on", data=flat_on - flat_off,
-                            # card_list=flat_on_cards)
+    #                         # item_type="flat_on", data=flat_on - flat_off,
+    #                         # card_list=flat_on_cards)
 
 
-def make_deadpix_mask(helper, band, obsids,
+def make_deadpix_mask(obsset_on, #helper, band, obsids,
                       flat_mask_sigma=5.,
                       deadpix_thresh=0.6,
                       smooth_size=9):
@@ -133,24 +123,26 @@ def make_deadpix_mask(helper, band, obsids,
     #                            deadpix_thresh=0.6,
     #                            smooth_size=9):
 
-    caldb = helper.get_caldb()
-    master_obsid = obsids[0]
+    # caldb = helper.get_caldb()
+    # master_obsid = obsids[0]
 
-    from igrins.libs.master_calib import load_ref_data
-    f = load_ref_data(helper.config, band=band,
-                      kind="DEFAULT_DEADPIX_MASK")
+    # from igrins.libs.master_calib import load_ref_data
+    # f = load_ref_data(helper.config, band=band,
+    #                   kind="DEFAULT_DEADPIX_MASK")
+
+    f = obsset_on.load_ref_data(kind="DEFAULT_DEADPIX_MASK")
 
     deadpix_mask_old = f[0].data.astype(bool)
 
 
-    flat_on_off_hdus = caldb.load_item_from((band, master_obsid),
-                                            "flat_on")
+    # we are using flat on images without subtracting off images.
+    flat_on_off_hdus = obsset_on.load_item("flat_on")
 
     flat_on_off = flat_on_off_hdus[0].data
     flat_std = flat_on_off_hdus[1].data
 
-    hotpix_mask = caldb.load_resource_for((band, master_obsid),
-                                          "hotpix_mask").data
+
+    hotpix_mask = obsset_on.load_resource_for("hotpix_mask").data.astype(bool)
 
     if 1:
 
@@ -195,14 +187,13 @@ def make_deadpix_mask(helper, band, obsids,
 
         flat_bpixed[deadpix_mask] = np.nan
 
-        basename = (band, master_obsid)
-        caldb.store_image(basename, "flat_normed", data=flat_normed)
-        caldb.store_image(basename, "flat_bpixed", data=flat_bpixed)
-        caldb.store_image(basename, "flat_mask", data=flat_mask)
-        caldb.store_image(basename, "deadpix_mask", data=deadpix_mask)
+        obsset_on.store_image("flat_normed", data=flat_normed)
+        obsset_on.store_image("flat_bpixed", data=flat_bpixed)
+        obsset_on.store_image("flat_mask", data=flat_mask)
+        obsset_on.store_image("deadpix_mask", data=deadpix_mask)
 
-        caldb.store_dict(basename, "flaton_json",
-                         data=dict(bg_fwhm_norm=bg_fwhm_norm))
+        obsset_on.store_dict("flaton_json",
+                             data=dict(bg_fwhm_norm=bg_fwhm_norm))
 
 
 # class FlatOn(object):
@@ -296,7 +287,7 @@ from igrins.libs.trace_flat import (get_y_derivativemap,
                              identify_horizontal_line,
                              trace_centroids_chevyshev)
 
-def identify_order_boundaries(helper, band, obsids_on):
+def identify_order_boundaries(obsset_on):
 
     # flat_normed=flaton_products["flat_normed"]
     # flat_bpixed=flaton_products["flat_bpixed"]
@@ -317,14 +308,14 @@ def identify_order_boundaries(helper, band, obsids_on):
     #deadpix_mask=deadpix_mask)
 
     
-    caldb = helper.get_caldb()
-    basename = (band, obsids_on[0])
+    # caldb = helper.get_caldb()
+    # basename = (band, obsids_on[0])
 
-    flat_normed = caldb.load_image(basename, "flat_normed")
-    flat_bpixed = caldb.load_image(basename, "flat_bpixed")
-    flat_mask = caldb.load_image(basename, "flat_mask")
+    flat_normed = obsset_on.load_image("flat_normed")
+    flat_bpixed = obsset_on.load_image("flat_bpixed")
+    flat_mask = obsset_on.load_image("flat_mask")
 
-    flaton_info = caldb.load_item_from(basename, "flaton_json")
+    flaton_info = obsset_on.load_item("flaton_json")
     bg_fwhm_normed = flaton_info["bg_fwhm_norm"]
 
     from igrins.libs.trace_flat import get_y_derivativemap
@@ -346,8 +337,8 @@ def identify_order_boundaries(helper, band, obsids_on):
                 SimpleHDU([], flat_deriv_pos_msk),
                 SimpleHDU([], flat_deriv_neg_msk)]
 
-    caldb.store_multi_image(basename, item_type="flat_deriv",
-                            hdu_list=hdu_list)
+    obsset_on.store_multi_images(item_type="flat_deriv",
+                                 hdu_list=hdu_list)
 
 
 def check_boundary_orders(cent_list, nx=2048):
@@ -362,18 +353,18 @@ def check_boundary_orders(cent_list, nx=2048):
     return [cent_list[i] for i in indexes]
 
 
-def trace_order_boundaries(helper, band, obsids_on):
+def trace_order_boundaries(obsset_on):
 
-    caldb = helper.get_caldb()
+    # caldb = helper.get_caldb()
 
-    basename = (band, obsids_on[0])
-    hdu_list = caldb.load_item_from(basename, "flat_deriv")
+    # basename = (band, obsids_on[0])
+    hdu_list = obsset_on.load_item("flat_deriv")
 
     flat_deriv = hdu_list[0].data
     flat_deriv_pos_msk = hdu_list[1].data > 0
     flat_deriv_neg_msk = hdu_list[2].data > 0
 
-    flaton_info = caldb.load_item_from(basename, "flaton_json")
+    flaton_info = obsset_on.load_item("flaton_json")
     bg_fwhm_normed = flaton_info["bg_fwhm_norm"]
 
     ny, nx = flat_deriv.shape
@@ -393,20 +384,17 @@ def trace_order_boundaries(helper, band, obsids_on):
 
     cent_up_list = check_boundary_orders(cent_up_list, nx=2048)
 
-    caldb.store_dict(basename, "flatcentroids_json",
-                     dict(bottom_centroids=cent_bottom_list,
-                          up_centroids=cent_up_list))
+    obsset_on.store_dict("flatcentroids_json",
+                         dict(bottom_centroids=cent_bottom_list,
+                              up_centroids=cent_up_list))
 
 
-def stitch_up_traces(helper, band, obsids_on):
+def stitch_up_traces(obsset_on):
     # from igrins.libs.process_flat import trace_solutions
     # trace_solution_products, trace_solution_products_plot = \
     #                          trace_solutions(trace_products)
 
-    caldb = helper.get_caldb()
-    basename = (band, obsids_on[0])
-
-    centroids_dict = caldb.load_item_from(basename, "flatcentroids_json")
+    centroids_dict = obsset_on.load_item("flatcentroids_json")
     
     bottom_centroids = centroids_dict["bottom_centroids"]
     up_centroids = centroids_dict["up_centroids"]
@@ -444,7 +432,7 @@ def stitch_up_traces(helper, band, obsids_on):
              bottom_up_solutions_qa=[jsonize_cheb(bottom_up_solutions[0]),
                                      jsonize_cheb(bottom_up_solutions[1])])
 
-    caldb.store_dict(basename, "flatcentroid_sol_json", r)
+    obsset_on.store_dict("flatcentroid_sol_json", r)
 
     # from storage_descriptions import FLATCENTROID_SOL_JSON_DESC
 
@@ -465,35 +453,32 @@ def stitch_up_traces(helper, band, obsids_on):
     #                     ))
 
 
-def trace_aperture(helper, band, obsids_on):
+def trace_aperture(obsset_on):
     # now trace the orders
 
-    identify_order_boundaries(helper, band, obsids_on)
+    identify_order_boundaries(obsset_on)
     
-    trace_order_boundaries(helper, band, obsids_on)
+    trace_order_boundaries(obsset_on)
 
-    stitch_up_traces(helper, band, obsids_on)
+    stitch_up_traces(obsset_on)
 
 
-def process_flat_on(helper, band, obsids_on):
+def process_flat_on(obsset_on):
 
-    combine_flat_on(helper, band, obsids_on)
+    combine_flat_on(obsset_on)
 
-    make_deadpix_mask(helper, band, obsids_on,
+    make_deadpix_mask(obsset_on, #helper, band, obsids_on,
                       flat_mask_sigma=5.,
                       deadpix_thresh=0.6,
                       smooth_size=9)
 
-    trace_aperture(helper, band, obsids_on)
+    # trace_aperture(obsset_on.caldb.helper, obsset_on.band, obsset_on.obsids)
+    trace_aperture(obsset_on)
 
 
-def store_aux_data(helper, band, obsids_on):
+def store_aux_data(obsset_on):
 
-    caldb = helper.get_caldb()
-    basename = (band, obsids_on[0])
-
-    flatcentroid_info =caldb.load_item_from(basename,
-                                            "flatcentroid_sol_json")
+    flatcentroid_info = obsset_on.load_item("flatcentroid_sol_json")
 
     bottomup_solutions = flatcentroid_info["bottom_up_solutions"]
 
@@ -509,11 +494,11 @@ def store_aux_data(helper, band, obsids_on):
         # from igrins.libs.storage_descriptions import FLAT_MASK_DESC
         # flat_mask = igr_storage.load1(FLAT_MASK_DESC,
         #                               flat_on_filenames[0])
-        flat_mask = caldb.load_image(basename, "flat_mask")
+        flat_mask = obsset_on.load_image("flat_mask")
         bias_mask = flat_mask & (order_map2 > 0)
 
 
-        caldb.store_image(basename, "bias_mask", bias_mask)
+        obsset_on.store_image("bias_mask", bias_mask)
 
         # from igrins.libs.products import PipelineImageBase, PipelineProducts
         # pp = PipelineProducts("")
@@ -527,10 +512,10 @@ def store_aux_data(helper, band, obsids_on):
         #                   masterhdu=hdu)
 
 
-def store_qa(helper, band, obsids_off, obsids_on):
+def store_qa(obsset_on, obsset_off):
 
-    caldb = helper.get_caldb()
-    basename = (band, obsids_on[0])
+    # caldb = helper.get_caldb()
+    # basename = (band, obsids_on[0])
 
     # plot qa figures.
 
@@ -540,15 +525,14 @@ def store_qa(helper, band, obsids_off, obsids_on):
 
         fig1 = Figure(figsize=[9, 4])
 
-        flat_deriv = caldb.load_image(basename, "flat_deriv")
-        trace_dict = caldb.load_item_from(basename, "flatcentroids_json")
+        flat_deriv = obsset_on.load_image("flat_deriv")
+        trace_dict = obsset_on.load_item("flatcentroids_json")
 
         from igrins.libs.flat_qa import check_trace_order
         check_trace_order(flat_deriv, trace_dict, fig1)
 
-        flat_normed = caldb.load_image(basename, "flat_normed")
-        flatcentroid_sol_json = caldb.load_item_from(basename,
-                                                     "flatcentroid_sol_json")
+        flat_normed = obsset_on.load_image("flat_normed")
+        flatcentroid_sol_json = obsset_on.load_item("flatcentroid_sol_json")
 
         from igrins.libs.flat_qa import plot_trace_solutions
         fig2, fig3 = plot_trace_solutions(flat_normed,
@@ -557,19 +541,19 @@ def store_qa(helper, band, obsids_off, obsids_on):
     # flatoff_basename = os.path.splitext(os.path.basename(flat_off_filenames[0]))[0]
     # flaton_basename = os.path.splitext(os.path.basename(flat_on_filenames[0]))[0]
 
-    flatoff_basename = helper.get_basename(band, obsids_off[0])
-    flaton_basename = helper.get_basename(band, obsids_on[0])
-
-    igr_path = helper.igr_path
+    # flatoff_basename = helper.get_basename(band, obsids_off[0])
+    # flaton_basename = helper.get_basename(band, obsids_on[0])
 
     if 1:
         from igrins.libs.qa_helper import figlist_to_pngs
-        get_filename = igr_path.get_section_filename_base
-        aperture_figs = get_filename("QA_PATH",
-                                     "aperture_"+flaton_basename,
-                                     "aperture_"+flaton_basename)
+        # get_filename = helper.get_section_filename_base
+        dest_dir = obsset_on.query_item_path("qa_flat_aperture_dir",
+                                             subdir="aperture")
+        # aperture_figs = get_filename("QA_PATH",
+        #                              "aperture_"+flaton_basename,
+        #                              "aperture_"+flaton_basename)
 
-        figlist_to_pngs(aperture_figs, [fig1, fig2, fig3])
+        figlist_to_pngs(dest_dir, [fig1, fig2, fig3])
 
 
     # if 1: # now trace the orders
@@ -580,25 +564,22 @@ def store_qa(helper, band, obsids_off, obsids_on):
     #                       masterhdu=flat_on_hdu_list[0])
 
 
-def store_db_off(helper, band, obsids_off):
+def store_db_off(obsset_off):
 
-    caldb = helper.get_caldb()
+    # caldb = helper.get_caldb()
 
-    flatoff_basename = helper.get_basename(band, obsids_off[0])
+    # # flatoff_basename = helper.get_basename(band, obsids_off[0])
+    # flatoff_basename = 
 
     # save db
-    flatoff_db = caldb.load_db("flat_off")
-    flatoff_db.update(band, flatoff_basename)
+    flatoff_db = obsset_off.load_db("flat_off")
+    flatoff_db.update(obsset_off.band, obsset_off.basename)
 
 
-def store_db_on(helper, band, obsids_on):
+def store_db_on(obsset_on):
 
-    caldb = helper.get_caldb()
-
-    flaton_basename = helper.get_basename(band, obsids_on[0])
-
-    flaton_db = caldb.load_db("flat_on")
-    flaton_db.update(band, flaton_basename)
+    flaton_db = obsset_on.load_db("flat_on")
+    flaton_db.update(obsset_on.band, obsset_on.basename)
 
 
 def store_db(helper, band, obsids_off, obsids_on):
@@ -620,36 +601,49 @@ def store_db(helper, band, obsids_off, obsids_on):
         # flaton_db = ProductDB(flaton_db_name)
 
 
-def process_aux_off(helper, band, obsids_off):
-    store_db_off(helper, band, obsids_off)
+def process_aux_off(obsset_off):
+    store_db_off(obsset_off)
 
 
-def process_aux(helper, band, obsids_off, obsids_on):
-    store_db_on(helper, band, obsids_on)
-    store_aux_data(helper, band, obsids_on)
-    store_qa(helper, band, obsids_off, obsids_on)
+def process_aux(obsset_on, obsset_off):
+    store_db_on(obsset_on)
+    store_aux_data(obsset_on)
+    store_qa(obsset_on, obsset_off)
 
 
 def process_band(utdate, recipe_name, band,
-                 obsids_off, obsids_on, config_name):
+                 obsids, frametypes, config_name):
 
     helper = RecipeHelper(config_name, utdate, recipe_name)
+
+    caldb = helper.get_caldb()
+    # basename = (band, obsids)
+
+    from igrins.libs.obs_set import ObsSet
+    obsset = ObsSet(caldb, recipe_name, band, obsids, frametypes)
+
+
+    obsids_off = [obsid for obsid, frametype \
+                  in zip(obsids, frametypes) if frametype == "OFF"]
+    obsids_on = [obsid for obsid, frametype \
+                 in zip(obsids, frametypes) if frametype == "ON"]
+
 
     # STEP 1 :
     ## make combined image
 
-    process_flat_off(helper, band, obsids_off)
+    obsset_off = obsset.get_subset("OFF")
+    obsset_on = obsset.get_subset("ON")
 
-    process_aux_off(helper, band, obsids_off)
+    process_flat_off(obsset_off)
 
-    process_flat_on(helper, band, obsids_on)
+    process_aux_off(obsset_off)
 
-    process_aux(helper, band, obsids_off, obsids_on)
+    process_flat_on(obsset_on)
+
+    process_aux(obsset_on, obsset_off) #, helper, band, obsids_off, obsids_on)
 
     # make_combined_image(helper, band, obsids, mode=None)
-
-
-    from igrins.libs.recipe_base import RecipeBase
 
 
 from igrins.libs.recipe_base import RecipeBase
@@ -663,14 +657,9 @@ class RecipeFlat(RecipeBase):
             obsids = s[0]
             frametypes = s[1]
 
-            obsids_off = [obsid for obsid, frametype \
-                          in zip(obsids, frametypes) if frametype == "OFF"]
-            obsids_on = [obsid for obsid, frametype \
-                         in zip(obsids, frametypes) if frametype == "ON"]
-
             for band in bands:
                 process_band(utdate, self.RECIPE_NAME, band,
-                             obsids_off, obsids_on,
+                             obsids, frametypes,
                              self.config)
 
 # the end point for recipe needs to be a function so that Argh works.
