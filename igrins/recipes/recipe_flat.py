@@ -614,13 +614,9 @@ def process_aux(obsset_on, obsset_off):
 def process_band(utdate, recipe_name, band,
                  obsids, frametypes, config_name):
 
-    helper = RecipeHelper(config_name, utdate, recipe_name)
-
-    caldb = helper.get_caldb()
-    # basename = (band, obsids)
-
-    from igrins.libs.obs_set import ObsSet
-    obsset = ObsSet(caldb, recipe_name, band, obsids, frametypes)
+    from igrins import get_caldb, get_obsset
+    caldb = get_caldb(config_name, utdate)
+    obsset = get_obsset(caldb, recipe_name, band, obsids, frametypes)
 
 
     obsids_off = [obsid for obsid, frametype \

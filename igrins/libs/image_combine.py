@@ -19,7 +19,7 @@ def make_combined_image_sky_deprecated(helper, band, obsids):
     return data
 
 
-def make_combined_image_sky(helper, band, obsids, frametypes=None):
+def make_combined_image_sky_deprecated(helper, band, obsids, frametypes=None):
 
     from load_fits import get_hdus, get_combined_image
     hdus = get_hdus(helper, band, obsids)
@@ -36,6 +36,36 @@ def make_combined_image_sky(helper, band, obsids, frametypes=None):
 
         sky_data_ = a+b - abs(a-b)
     
+    from get_destripe_mask import get_destripe_mask
+    destripe_mask = get_destripe_mask(helper, band, obsids)
+
+    from image_combine import destripe_sky
+    sky_data = destripe_sky(sky_data_, destripe_mask, subtract_bg=False)
+
+    return sky_data
+
+def make_combined_sky(hdus, frametypes=None):
+
+    # from load_fits import get_hdus, get_combined_image
+    # hdus = get_hdus(helper, band, obsids)
+
+    from load_fits import get_combined_image
+
+    if frametypes is None: # do A-B
+        sky_data = get_combined_image(hdus) / len(hdus)
+    else:
+        a_and_b = dict()
+        for frame, hdu in zip(frametypes, hdus):
+            a_and_b.setdefault(frame.upper(), []).append(hdu)
+
+        a = get_combined_image(a_and_b["A"]) / len(a_and_b["A"])
+        b = get_combined_image(a_and_b["B"]) / len(a_and_b["B"])
+
+        sky_data = a+b - abs(a-b)
+    
+    return sky_data
+
+if 0:
     from get_destripe_mask import get_destripe_mask
     destripe_mask = get_destripe_mask(helper, band, obsids)
 

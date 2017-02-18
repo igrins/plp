@@ -10,21 +10,19 @@ import numpy as np
 
 from igrins.libs.recipe_helper import RecipeHelper
 
-from aperture_helper import get_simple_aperture
+from aperture_helper import get_simple_aperture_from_obsset
 
 
 #def find_affine_transform(utdate, band, obsids, config_name):
-def find_affine_transform(helper, band, obsids):
+def find_affine_transform(obsset):
 
-    master_obsid = obsids[0]
+    # As register.db has not been written yet, we cannot use
+    # obsset.get("orders")
+    orders = obsset.load_item("ORDERS_JSON")["orders"]
 
-    caldb = helper.get_caldb()
-    orders = caldb.load_resource_for((band, master_obsid), "orders")["orders"]
+    ap = get_simple_aperture_from_obsset(obsset, orders)
 
-    ap = get_simple_aperture(helper, band, obsids, orders=orders)
-
-    item_path = caldb.query_item_path((band, master_obsid),
-                                      "IDENTIFIED_LINES_JSON")
+    item_path = obsset.query_item_path("IDENTIFIED_LINES_JSON")
 
     from igrins.libs.identified_lines import IdentifiedLines
     identified_lines_tgt = IdentifiedLines.load(item_path)
@@ -33,10 +31,8 @@ def find_affine_transform(helper, band, obsids):
 
     from igrins.libs.echellogram import Echellogram
 
-
     from igrins.libs.master_calib import load_ref_data
-    echellogram_data = load_ref_data(helper.config, band,
-                                     kind="ECHELLOGRAM_JSON")
+    echellogram_data = obsset.load_ref_data(kind="ECHELLOGRAM_JSON")
 
     echellogram = Echellogram.from_dict(echellogram_data)
 
@@ -48,14 +44,12 @@ def find_affine_transform(helper, band, obsids):
     affine_tr, mm = fit_affine_clip(np.array(xy_list_ref),
                                     np.array(xy_list_tgt))
 
-    from igrins.libs.products import PipelineDict
-    d = PipelineDict(xy1f=xy_list_ref, xy2f=xy_list_tgt,
-                     affine_tr_matrix=affine_tr.get_matrix(),
-                     affine_tr_mask=mm)
+    d = dict(xy1f=xy_list_ref, xy2f=xy_list_tgt,
+             affine_tr_matrix=affine_tr.get_matrix(),
+             affine_tr_mask=mm)
 
-    caldb.store_dict((band, master_obsid),
-                     item_type="ALIGNING_MATRIX_JSON",
-                     data=d)
+    obsset.store_dict(item_type="ALIGNING_MATRIX_JSON",
+                      data=d)
 
 
 def main(utdate, band, obsids, config_name):

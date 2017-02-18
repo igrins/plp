@@ -21,7 +21,6 @@ FLAT_DERIV_DESC = ("SECONDARY_CALIB_PATH", "FLAT_", ".flat_deriv.fits")
 FLATCENTROIDS_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".centroids.json")
 
 FLATCENTROID_SOL_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".centroid_solutions.json")
-FLATCENTROID_ORDERS_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".orders.json")
 
 BIAS_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".bias_mask.fits")
 
@@ -42,6 +41,8 @@ MULTI_SPEC_FITS_DESC = ("PRIMARY_CALIB_PATH", "", ".multi_spec.fits")
 
 #COMBINED_IMAGE_DESC = ("OUTDATA_PATH", "", ".combined_image.fits")
 #ONED_SPEC_JSON_DESC = ("OUTDATA_PATH", "", ".oned_spec.json")
+
+ORDERS_JSON_DESC = ("PRIMARY_CALIB_PATH", "", ".orders.json")
 
 IDENTIFIED_LINES_JSON_DESC = ("PRIMARY_CALIB_PATH", "", ".identified_lines.json")
 
@@ -96,6 +97,7 @@ VAR2D_FITS_DESC = ("OUTDATA_PATH", "", ".var2d.fits")
 # QA
 
 QA_FLAT_APERTURE_DIR_DESC = ("QA_PATH", "aperture_", "")
+QA_ORDERFLAT_DIR_DESC = ("QA_PATH", "orderflat_", "")
 
 
 #####
@@ -120,13 +122,13 @@ def load_descriptions():
 
 _resource_definitions = dict(
     aperture_definition=("flat_on", "FLATCENTROID_SOL_JSON"),
-    orders=("flat_on", "FLATCENTROID_ORDERS_JSON"),
     deadpix_mask=("flat_on", "DEADPIX_MASK"),
     bias_mask=("flat_on", "BIAS_MASK"),
     #
     hotpix_mask=("flat_off", "HOTPIX_MASK"),
     flat_off=("flat_off", "FLAT_OFF"),
     #
+    orders=("register", "ORDERS_JSON"),
     wvlsol_v0=("register", "WVLSOL_V0_JSON"),
     #
     ordermap=("distortion", "ORDERMAP_FITS"),

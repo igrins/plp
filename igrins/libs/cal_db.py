@@ -4,6 +4,7 @@ from storage_descriptions import (load_resource_def,
                                   load_descriptions,
                                   DB_Specs)
 
+from cal_db_resources import ResourceManager
 
 class CalDB(object):
 
@@ -20,6 +21,13 @@ class CalDB(object):
 
         for db_name in db_names:
             self.load_db(db_name)
+
+        # define resource manager
+        self.resource_manager = ResourceManager(self)
+
+    # resource manager related method
+    def get(self, basename, name):
+        return self.resource_manager.get(basename, name)
 
     def get_base_info(self, band, obsids):
         return self.helper.get_base_info(band, obsids)
@@ -44,10 +52,11 @@ class CalDB(object):
             db = self.db_dict[db_name]
         return db
 
-    def db_query_basename(self, db_name, band, master_obsid):
+    def db_query_basename(self, db_name, basename):
+        band, master_obsid = self._get_band_masterobsid(basename)
         db = self.load_db(db_name)
-        basename = db.query(band, master_obsid)
-        return basename
+        resource_basename = db.query(band, master_obsid)
+        return resource_basename
 
 
     def query_item_path(self, basename, item_type_or_desc,
@@ -195,16 +204,13 @@ class CalDB(object):
         query resource from the given master_obsid.
         """
 
-        band, master_obsid = self._get_band_masterobsid(basename)
-
         try:
             db_name, item_desc = self.RESOURCE_DICT.get(resource_type,
                                                         resource_type)
         except ValueError as e:
             raise e  # it would be good if we can modify the message
 
-        resource_basename = self.db_query_basename(db_name, band,
-                                                   master_obsid)
+        resource_basename = self.db_query_basename(db_name, basename)
 
         return resource_basename, item_desc
 
@@ -227,8 +233,7 @@ class CalDB(object):
 
         db_name, item_desc = self.RESOURCE_DICT[resource_type]
 
-        band, master_obsid = self._get_band_masterobsid(basename)
-        resource_basename = self.db_query_basename(db_name, band, master_obsid)
+        resource_basename = self.db_query_basename(db_name, basename)
 
         # FIX THIS
         self.store_dict(band, resource_basename, item_desc, data)
@@ -250,7 +255,7 @@ if __name__ == "__main__":
     resource = caldb.load_resource_for((band, master_obsid),
                                        resource_type="aperture_definition")
 
-    basename = caldb.db_query_basename("flat_on", band, master_obsid)
+    basename = caldb.db_query_basename("flat_on", (band, master_obsid))
 
     resource = caldb.load_item_from(basename,
                                     "FLATCENTROID_SOL_JSON")

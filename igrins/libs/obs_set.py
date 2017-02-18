@@ -7,6 +7,9 @@ class ObsSet(object):
         self.frametypes = frametypes
         self.basename = self.caldb._get_basename((self.band, self.obsids[0]))
 
+    def get(self, name):
+        return self.caldb.get(self.basename, name)
+
     def get_base_info(self):
         return self.caldb.get_base_info(self.band, self.obsids)
 
@@ -30,13 +33,19 @@ class ObsSet(object):
         return ObsSet(self.caldb, self.recipe_name, self.band, 
                       obsids, frametypes)
 
-    def get_data_list(self):
+    def get_hdu_list(self):
 
         _ = self.get_base_info()
         filenames = _[0]
 
         from igrins.libs.load_fits import load_fits_data
         hdu_list = [load_fits_data(fn_) for fn_ in filenames]
+
+        return hdu_list
+
+    def get_data_list(self):
+
+        hdu_list = self.get_hdu_list()
 
         return [hdu.data for hdu in hdu_list]
 

@@ -87,11 +87,10 @@ def save_qa(helper, band, obsids):
         fig2.tight_layout()
 
     from igrins.libs.qa_helper import figlist_to_pngs
-    igr_path = helper.igr_path
     sky_basename = helper.get_basename(band, obsids[0])
-    sky_figs = igr_path.get_section_filename_base("QA_PATH",
-                                                  "oh_fit2d",
-                                                  "oh_fit2d_"+sky_basename)
+    sky_figs = helper.get_section_filename_base("QA_PATH",
+                                                "oh_fit2d",
+                                                "oh_fit2d_"+sky_basename)
     figlist_to_pngs(sky_figs, [fig1, fig2])
 
 

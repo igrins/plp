@@ -1,15 +1,13 @@
+""" WVLSOL_V0
+"""
+
 import os
-#import numpy as np
-
-
-import astropy.io.fits as pyfits
+import numpy as np
+# import numpy as np
 
 from igrins.libs.products import PipelineProducts, PipelineImageBase
-#from igrins.libs.apertures import Apertures
+# from igrins.libs.apertures import Apertures
 
-from igrins.libs.recipe_base import RecipeBase
-
-import numpy as np
 
 # class RecipeThAr(RecipeBase):
 #     RECIPE_NAME = "THAR"
@@ -59,39 +57,48 @@ from igrins.libs.products import ProductDB
 from igrins.libs.recipe_helper import RecipeHelper
 
 
-def make_combined_image(helper, band, obsids, frame_types=None):
+def make_combined_image(obsset):
 
-    from igrins.libs.image_combine import make_combined_image_sky
+    from igrins.libs.image_combine import make_combined_sky
 
-    caldb = helper.get_caldb()
+    # caldb = helper.get_caldb()
 
-    d = make_combined_image_sky(helper, band, obsids, frame_types)
+    if obsset.recipe_name.upper() in ["SKY"]:
+        frame_types = None
+    else:
+        frame_types = obsset.frametypes
 
-    master_obsid = obsids[0]
-    caldb.store_image((band, master_obsid),
-                      item_type="combined_sky", data=d)
+    hdus = obsset.get_hdu_list()
+    d = make_combined_sky(hdus, frame_types)
+
+    destripe_mask = obsset.get("destripe_mask")
+
+    from igrins.libs.image_combine import destripe_sky
+    sky_data = destripe_sky(d, destripe_mask, subtract_bg=False)
+
+    obsset.store_image(item_type="combined_sky", data=sky_data)
+
+    return sky_data
 
 
-def extract_spectra(helper, band, obsids):
+def extract_spectra(obsset):
+    "extract spectra"
 
-    from aperture_helper import get_simple_aperture
+    from aperture_helper import get_simple_aperture_from_obsset
 
-    caldb = helper.get_caldb()
+    # caldb = helper.get_caldb()
+    # master_obsid = obsids[0]
 
-    master_obsid = obsids[0]
-    data = caldb.load_image((band, master_obsid),
-                            item_type="combined_sky")
+    data = obsset.load_image(item_type="combined_sky")
 
-    ap = get_simple_aperture(helper, band, obsids)
+    aperture = get_simple_aperture_from_obsset(obsset)
 
-    s = ap.extract_spectra_simple(data)
+    specs = aperture.extract_spectra_simple(data)
 
-    caldb.store_dict((band, master_obsid),
-                     item_type="ONED_SPEC_JSON",
-                     data=dict(orders=ap.orders,
-                               specs=s,
-                               aperture_basename=ap.basename
-                               ))
+    obsset.store_dict(item_type="ONED_SPEC_JSON",
+                      data=dict(orders=aperture.orders,
+                                specs=specs,
+                                aperture_basename=aperture.basename))
 
 
 def _get_slices(n_slice_one_direction):
@@ -99,7 +106,6 @@ def _get_slices(n_slice_one_direction):
     given number of slices per direction, return slices for the
     center, up and down positions.
     """
-
     n_slice = n_slice_one_direction*2 + 1
     i_center = n_slice_one_direction
     slit_slice = np.linspace(0., 1., n_slice+1)
@@ -191,29 +197,26 @@ def extract_spectra_multi(helper, band, obsids):
 
 #     return thar_products
 
-def _get_ref_spec_name(helper):
-    if (helper.recipe_name in ["SKY"]) or helper.recipe_name.endswith("_AB"):
+def _get_ref_spec_name(recipe_name):
+    if (recipe_name in ["SKY"]) or recipe_name.endswith("_AB"):
         ref_spec_key = "SKY_REFSPEC_JSON"
         ref_identified_lines_key = "SKY_IDENTIFIED_LINES_V0_JSON"
-    elif helper.recipe_name in ["THAR"]:
+    elif recipe_name in ["THAR"]:
         ref_spec_key = "THAR_REFSPEC_JSON"
         ref_identified_lines_key = "THAR_IDENTIFIED_LINES_V0_JSON"
     else:
-        raise ValueError("Recipe name of '%s' is unsupported." % helper.recipe_name)
+        raise ValueError("Recipe name of '%s' is unsupported." % recipe_name)
 
     return ref_spec_key, ref_identified_lines_key
 
-def identify_orders(helper, band, obsids):
+def identify_orders(obsset):
 
-    ref_spec_key, _ = _get_ref_spec_name(helper)
+    ref_spec_key, _ = _get_ref_spec_name(obsset.recipe_name)
     from igrins.libs.master_calib import load_ref_data
-    ref_spectra = load_ref_data(helper.config, band,
-                                kind=ref_spec_key)
+    #ref_spectra = load_ref_data(helper.config, band,
+    ref_spectra = obsset.load_ref_data(kind=ref_spec_key)
 
-    caldb = helper.get_caldb()
-    master_obsid = obsids[0]
-    src_spectra = caldb.load_item_from((band, master_obsid),
-                                       "ONED_SPEC_JSON")
+    src_spectra = obsset.load_item("ONED_SPEC_JSON")
 
     from igrins.libs.process_thar import match_order
     new_orders = match_order(src_spectra, ref_spectra)
@@ -221,16 +224,13 @@ def identify_orders(helper, band, obsids):
     print  new_orders
 
     src_spectra["orders"] = new_orders
-    caldb.store_dict((band, master_obsid),
-                     item_type="ONED_SPEC_JSON",
-                     data=src_spectra
-                     )
+    obsset.store_dict(item_type="ONED_SPEC_JSON",
+                      data=src_spectra)
 
     aperture_basename = src_spectra["aperture_basename"]
-    caldb.store_dict(aperture_basename,
-                     item_type="FLATCENTROID_ORDERS_JSON",
-                     data=dict(orders=new_orders,
-                               aperture_basename=aperture_basename))
+    obsset.store_dict(item_type="ORDERS_JSON",
+                      data=dict(orders=new_orders,
+                                aperture_basename=aperture_basename))
 
 
 
@@ -263,20 +263,15 @@ def identify_orders(helper, band, obsids):
 
 
 
-def identify_lines(helper, band, obsids):
+def identify_lines(obsset):
 
-    from igrins.libs.master_calib import load_ref_data
+    ref_spec_key, ref_identified_lines_key = _get_ref_spec_name(obsset.recipe_name)
 
-    ref_spec_key, ref_identified_lines_key = _get_ref_spec_name(helper)
+    ref_spec = obsset.load_ref_data(kind=ref_spec_key)
 
-    ref_spec = load_ref_data(helper.config, band,
-                             kind=ref_spec_key)
-
-    caldb = helper.get_caldb()
-    master_obsid = obsids[0]
-    tgt_spec_path = caldb.query_item_path((band, master_obsid),
-                                          "ONED_SPEC_JSON")
-    tgt_spec = caldb.load_item_from_path(tgt_spec_path)
+    tgt_spec_path = obsset.query_item_path("ONED_SPEC_JSON")
+    tgt_spec = obsset.load_item("ONED_SPEC_JSON")
+    #tgt_spec = obsset.load_item("ONED_SPEC_JSON")
 
     from igrins.libs.process_thar import get_offset_treanform_between_2spec
     intersected_orders, d = get_offset_treanform_between_2spec(ref_spec,
@@ -286,8 +281,7 @@ def identify_lines(helper, band, obsids):
     #REF_TYPE="OH"
     #fn = "../%s_IGRINS_identified_%s_%s.json" % (REF_TYPE, band,
     #                                             helper.refdate)
-    l = load_ref_data(helper.config, band,
-                      kind=ref_identified_lines_key)
+    l = obsset.load_ref_data(kind=ref_identified_lines_key)
     #l = json.load(open(fn))
     #ref_spectra = load_ref_data(helper.config, band, kind="SKY_REFSPEC_JSON")
 
@@ -316,7 +310,7 @@ def identify_lines(helper, band, obsids):
             ref_pix_list = offsetfunc_map[o](pixpos[msk])
             pix_list, dist = match_lines1_pix(np.array(s), ref_pix_list)
 
-            pix_list[dist>1] = -1
+            pix_list[dist > 1] = -1
             pixpos[msk] = pix_list
 
         identified_lines_tgt.append_order_info(o, wvl, indices, pixpos)
@@ -327,9 +321,8 @@ def identify_lines(helper, band, obsids):
     #                                   "IDENTIFIED_LINES")
     # item_path = caldb.query_item_path((band, master_obsid),
     #                                   "IDENTIFIED_LINES")
-    caldb.store_dict((band, master_obsid),
-                     "IDENTIFIED_LINES_JSON",
-                     identified_lines_tgt.data)
+    obsset.store_dict("IDENTIFIED_LINES_JSON",
+                      identified_lines_tgt.data)
 
     #print d
 
@@ -436,24 +429,21 @@ def test_identify_lines(helper, band, obsids):
 #                                  masterhdu=hdu)
 #
 
-def save_figures(helper, band, obsids):
+def save_figures(obsset):
 
     ### THIS NEEDS TO BE REFACTORED!
 
-    caldb = helper.get_caldb()
-    master_obsid = obsids[0]
-    orders = caldb.load_resource_for((band, master_obsid), "orders")["orders"]
+    orders = obsset.load_item("ORDERS_JSON")["orders"]
 
-    thar_filenames = helper.get_filenames(band, obsids)
-    thar_basename = os.path.splitext(os.path.basename(thar_filenames[0]))[0]
-    thar_master_obsid = obsids[0]
+    # thar_filenames = helper.get_filenames(band, obsids)
+    # thar_basename = os.path.splitext(os.path.basename(thar_filenames[0]))[0]
+    # thar_master_obsid = obsids[0]
 
     if 1: # make amp and order falt
 
-        from aperture_helper import get_simple_aperture
+        from aperture_helper import get_simple_aperture_from_obsset
 
-        ap = get_simple_aperture(helper, band, obsids,
-                                 orders=orders)
+        ap = get_simple_aperture_from_obsset(obsset, orders=orders)
 
         # from igrins.libs.storage_descriptions import ONED_SPEC_JSON_DESC
 
@@ -466,112 +456,119 @@ def save_figures(helper, band, obsids):
         #flat_on_params_name = flaton_path.get_secondary_path("flat_on_params")
 
         #flaton_products = PipelineProducts.load(flat_on_params_name)
-        from igrins.libs.storage_descriptions import (FLAT_NORMED_DESC,
-                                               FLAT_MASK_DESC)
+        # from igrins.libs.storage_descriptions import (FLAT_NORMED_DESC,
+        #                                        FLAT_MASK_DESC)
 
-        flaton_db_name = helper.igr_path.get_section_filename_base("PRIMARY_CALIB_PATH",
-                                                                   "flat_on.db",
-                                                                   )
-        flaton_db = ProductDB(flaton_db_name)
+        # flaton_db_name = helper.get_section_filename_base("PRIMARY_CALIB_PATH",
+        #                                                   "flat_on.db")
+        # flaton_db = ProductDB(flaton_db_name)
 
-        flaton_basename = flaton_db.query(band, thar_master_obsid)
+        # flaton_basename = flaton_db.query(band, thar_master_obsid)
 
-        flaton_products = helper.igr_storage.load([FLAT_NORMED_DESC,
-                                                   FLAT_MASK_DESC],
-                                                  flaton_basename)
+        # flaton_products = helper.load([FLAT_NORMED_DESC,
+        #                                FLAT_MASK_DESC],
+        #                               flaton_basename)
+
+        flat_on_basename = obsset.caldb.db_query_basename("flat_on",
+                                                          obsset.basename)
+        flat_normed = obsset.caldb.load_image(flat_on_basename,
+                                              "flat_normed")
+        flat_mask = obsset.caldb.load_image(flat_on_basename,
+                                            "flat_mask") > 0
 
         from igrins.libs.process_flat import make_order_flat, check_order_flat
-        order_flat_products = make_order_flat(flaton_products,
-                                              orders, order_map)
+        order_flat_im, order_flat_json = make_order_flat(flat_normed, 
+                                                         flat_mask,
+                                                         orders, order_map)
 
-        #fn = thar_path.get_secondary_path("orderflat")
-        #order_flat_products.save(fn, masterhdu=hdu)
+        obsset.store_image("order_flat_im", order_flat_im)
+        obsset.store_dict("order_flat_json", order_flat_json)
 
-        from igrins.libs.load_fits import load_fits_data
-        hdu = load_fits_data(thar_filenames[0])
-        # hdu = pyfits.open(thar_filenames[0])[0]
+
+        # from igrins.libs.load_fits import load_fits_data
+        # hdu = load_fits_data(thar_filenames[0])
+        # # hdu = pyfits.open(thar_filenames[0])[0]
         
-        helper.igr_storage.store(order_flat_products,
-                                 mastername=flaton_basename,
-                                 masterhdu=hdu)
+        # helper.store(order_flat_products,
+        #              mastername=flaton_basename,
+        #              masterhdu=hdu)
 
-        flat_mask = helper.igr_storage.load1(FLAT_MASK_DESC,
-                                             flaton_basename)
+        # flat_mask = helper.load1(FLAT_MASK_DESC,
+        #                          flaton_basename)
         order_map2 = ap.make_order_map(mask_top_bottom=True)
-        bias_mask = flat_mask.data & (order_map2 > 0)
+        bias_mask = flat_mask & (order_map2 > 0)
 
-        pp = PipelineProducts("")
-        from igrins.libs.storage_descriptions import BIAS_MASK_DESC
-        pp.add(BIAS_MASK_DESC,
-               PipelineImageBase([], bias_mask))
+        obsset.store_image("bias_mask", bias_mask)
+        
+        # pp = PipelineProducts("")
+        # from igrins.libs.storage_descriptions import BIAS_MASK_DESC
+        # pp.add(BIAS_MASK_DESC,
+        #        PipelineImageBase([], bias_mask))
 
-        helper.igr_storage.store(pp,
-                                 mastername=flaton_basename,
-                                 masterhdu=hdu)
+        # helper.store(pp, mastername=flaton_basename, masterhdu=hdu)
 
     if 1:
-        fig_list = check_order_flat(order_flat_products)
+        fig_list = check_order_flat(order_flat_json)
 
         from igrins.libs.qa_helper import figlist_to_pngs
-        orderflat_figs = helper.igr_path.get_section_filename_base("QA_PATH",
-                                                                   "orderflat",
-                                                                   "orderflat_"+thar_basename)
-        figlist_to_pngs(orderflat_figs, fig_list)
+        dest_dir = obsset.query_item_path("qa_orderflat_dir",
+                                          subdir="orderflat")
+        figlist_to_pngs(dest_dir, fig_list)
 
 
-def save_db(helper, band, obsids):
-
-    caldb = helper.get_caldb()
-
-    flatoff_basename = helper.get_basename(band, obsids[0])
+def save_db(obsset):
 
     # save db
-    db = caldb.load_db("register")
-    db.update(band, flatoff_basename)
+    db = obsset.load_db("register")
+    db.update(obsset.band, obsset.basename)
 
 
 def process_band(utdate, recipe_name, band,
-                 obsids, frame_types, aux_infos,
+                 obsids, frametypes, aux_infos,
                  config_name, **kwargs):
 
     if not kwargs.pop("do_ab") and recipe_name.upper().endswith("_AB"):
         return
 
-    helper = RecipeHelper(config_name, utdate, recipe_name)
+    from igrins import get_caldb, get_obsset
+    caldb = get_caldb(config_name, utdate)
+    obsset = get_obsset(caldb, recipe_name, band, obsids, frametypes)
 
     # STEP 1 :
-    ## make combined image
+    # make combined image
 
     if recipe_name.upper() in ["SKY"]:
-        make_combined_image(helper, band, obsids)
+        pass
     elif recipe_name.upper().endswith("_AB"):
-        make_combined_image(helper, band, obsids, frame_types)
+        pass
     else:
-        msg = "recipe_name {} not supported for this recipe".format(recipe_name)
+        msg = ("recipe_name {} not supported "
+               "for this recipe").format(recipe_name)
         raise ValueError(msg)
+
+    make_combined_image(obsset)
 
     # Step 2
 
-    ## load simple-aperture (no order info; depends on
+    # load simple-aperture (no order info; depends on
 
-    extract_spectra(helper, band, obsids)
+    extract_spectra(obsset)
+
     ## aperture trace from Flat)
 
     ## extract 1-d spectra from ThAr
-
 
     # Step 3:
     ## compare to reference ThAr data to figure out orders of each strip
     ##  -  simple correlation w/ clipping
 
-    identify_orders(helper, band, obsids)
+    identify_orders(obsset)
 
     # Step 4:
     ##  - For each strip, measure x-displacement from the reference
     ##    spec. Fit the displacement as a function of orders.
     ##  - Using the estimated displacement, identify lines from the spectra.
-    identify_lines(helper, band, obsids)
-
+    identify_lines(obsset)
 
     # Step 6:
 
@@ -579,60 +576,19 @@ def process_band(utdate, recipe_name, band,
     ## the identified lines.
 
     from find_affine_transform import find_affine_transform
-    find_affine_transform(helper, band, obsids)
+    find_affine_transform(obsset)
 
     from igrins.libs.transform_wvlsol import transform_wavelength_solutions
-    transform_wavelength_solutions(helper, band, obsids)
+    transform_wavelength_solutions(obsset)
 
     # Step 8:
 
     ## make order_map and auxilary files.
 
-    save_figures(helper, band, obsids)
+    save_figures(obsset)
 
-    save_db(helper, band, obsids)
+    save_db(obsset)
 
-# if 0:
-
-
-
-#     # step 5:
-
-#     # Step 6:
-
-#     ## load the reference echellogram, and find the transform using
-#     ## the identified lines.
-
-#     find_initial_wvlsol(helper, band, obsids,
-#                         thar_products,
-#                         thar_reidentified_products,
-#                         new_orders)
-
-
-#     # Step 8:
-
-#     ## make order_map and auxilary files.
-
-#     save_figures(helper, band, obsids, thar_products, new_orders)
-
-#     save_db(helper, band, obsids)
-
-
-# def main():
-#     import sys
-
-#     utdate = sys.argv[1]
-#     bands = "HK"
-#     starting_obsids = None
-
-#     if len(sys.argv) >= 3:
-#         bands = sys.argv[2]
-
-#     if len(sys.argv) >= 4:
-#         starting_obsids = sys.argv[3]
-
-#     thar(utdate, refdate="20140316", bands=bands,
-#          starting_obsids=starting_obsids)
 
 
 if __name__ == "__main__":

@@ -315,13 +315,13 @@ def trace_solutions(trace_products):
 
 
 
-def make_order_flat(flaton_products, orders, order_map):
+def make_order_flat(flat_normed, flat_mask, orders, order_map):
 
-    from storage_descriptions import (FLAT_NORMED_DESC,
-                                      FLAT_MASK_DESC)
+    # from storage_descriptions import (FLAT_NORMED_DESC,
+    #                                   FLAT_MASK_DESC)
 
-    flat_normed  = flaton_products[FLAT_NORMED_DESC][0].data
-    flat_mask = flaton_products[FLAT_MASK_DESC].data
+    # flat_normed  = flaton_products[FLAT_NORMED_DESC][0].data
+    # flat_mask = flaton_products[FLAT_MASK_DESC].data
 
     import scipy.ndimage as ni
     slices = ni.find_objects(order_map)
@@ -382,28 +382,33 @@ def make_order_flat(flaton_products, orders, order_map):
     flat_im[flat_im < 0.5] = np.nan
 
 
-    from storage_descriptions import (ORDER_FLAT_IM_DESC,
-                                      ORDER_FLAT_JSON_DESC)
+    # from storage_descriptions import (ORDER_FLAT_IM_DESC,
+    #                                   ORDER_FLAT_JSON_DESC)
 
-    r = PipelineProducts("order flat")
-    r.add(ORDER_FLAT_IM_DESC, PipelineImageBase([], flat_im))
-    r.add(ORDER_FLAT_JSON_DESC,
-          PipelineDict(orders=orders,
-                       fitted_responses=fitted_responses,
-                       i1i2_list=i1i2_list,
-                       mean_order_specs=mean_order_specs))
+    # r = PipelineProducts("order flat")
+    # r.add(ORDER_FLAT_IM_DESC, PipelineImageBase([], flat_im))
+    # r.add(ORDER_FLAT_JSON_DESC,
+    #       PipelineDict(orders=orders,
+    #                    fitted_responses=fitted_responses,
+    #                    i1i2_list=i1i2_list,
+    #                    mean_order_specs=mean_order_specs))
 
-    return r
+    order_flat_dict = dict(orders=orders,
+                           fitted_responses=fitted_responses,
+                           i1i2_list=i1i2_list,
+                           mean_order_specs=mean_order_specs)
+
+    return flat_im, order_flat_dict
 
 
-def check_order_flat(order_flat_products):
+def check_order_flat(order_flat_json):
 
     from trace_flat import (prepare_order_trace_plot,
                             check_order_trace1, check_order_trace2)
 
-    from storage_descriptions import ORDER_FLAT_JSON_DESC
+    # from storage_descriptions import ORDER_FLAT_JSON_DESC
 
-    mean_order_specs = order_flat_products[ORDER_FLAT_JSON_DESC]["mean_order_specs"]
+    mean_order_specs = order_flat_json["mean_order_specs"]
 
     from trace_flat import (get_smoothed_order_spec,
                             get_order_boundary_indices,

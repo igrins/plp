@@ -1,24 +1,21 @@
 import matplotlib
 import numpy as np
 
-def transform_wavelength_solutions(helper, band, obsids):
+def transform_wavelength_solutions(obsset):
 
     # load affine transform
 
-    master_obsid = obsids[0]
+    # As register.db has not been written yet, we cannot use
+    # obsset.get("orders")
+    orders = obsset.load_item("ORDERS_JSON")["orders"]
 
-    caldb = helper.get_caldb()
-    orders = caldb.load_resource_for((band, master_obsid), "orders")["orders"]
-
-    d = caldb.load_item_from((band, master_obsid),
-                             "ALIGNING_MATRIX_JSON")
+    d = obsset.load_item("ALIGNING_MATRIX_JSON")
 
     affine_tr_matrix = d["affine_tr_matrix"]
 
     # load echellogram
     from master_calib import load_ref_data
-    echellogram_data = load_ref_data(helper.config, band,
-                                     kind="ECHELLOGRAM_JSON")
+    echellogram_data = obsset.load_ref_data(kind="ECHELLOGRAM_JSON")
 
     from echellogram import Echellogram
     echellogram = Echellogram.from_dict(echellogram_data)
@@ -28,11 +25,9 @@ def transform_wavelength_solutions(helper, band, obsids):
                                        echellogram.zdata,
                                        orders)
 
-    caldb.store_dict((band, master_obsid),
-                     item_type="WVLSOL_V0_JSON",
-                     data=dict(orders=orders,
-                               wvl_sol=wvl_sol))
-
+    obsset.store_dict(item_type="WVLSOL_V0_JSON",
+                      data=dict(orders=orders,
+                                wvl_sol=wvl_sol))
 
     return wvl_sol
 
