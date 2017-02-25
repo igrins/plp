@@ -116,7 +116,14 @@ def fitted_lines_init(ref_lines):
     if len(orders) == 1:
         order = orders[0]
     elif len(orders) == 0:
-        order = None
+        # if ref_lines has no entries (len(orders) == 0), just return empty DF.
+        fitted_lines = pd.DataFrame(dict(wavelength=[],
+                                         d_cent=[],
+                                         cent_pixel0=[],
+                                         order=[]))
+        
+        return fitted_lines
+        #order = None
     else:
         raise ValueError("")
 
