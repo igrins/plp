@@ -50,17 +50,10 @@ def _volume_poly_fit(points, scalar, orders, names):
     return p, s
 
 
-def volume_fit(helper, band, obsids):
+def volume_fit(obsset):
 
-    caldb = helper.get_caldb()
-
-    master_obsid = obsids[0]
-    basename = (band, master_obsid)
-
-    fitted_pixles_path = caldb.query_item_path(basename,
-                                               "SKY_FITTED_PIXELS_JSON")
-
-    df = pd.read_json(fitted_pixles_path, orient="split")
+    df = obsset.load_data_frame("SKY_FITTED_PIXELS_JSON",
+                                orient="split")
     index_names = ["kind", "order", "wavelength"]
     df = df.set_index(index_names)[["slit_center", "pixels"]]
 
@@ -123,26 +116,14 @@ def volume_fit(helper, band, obsids):
     out_df = out_df.reset_index()
 
     d = out_df.to_dict(orient="split")
-    output_path = caldb.query_item_path(basename, "VOLUMEFIT_COEFFS_JSON")
-    json.dump(d, open(output_path, "w"))
+    obsset.store_dict("VOLUMEFIT_COEFFS_JSON", d)
 
 
-def generate_slitoffsetmap(helper, band, obsids):
+def generate_slitoffsetmap(obsset):
 
-    caldb = helper.get_caldb()
+    ordermap_fits = obsset.load_resource_for("ordermap")
 
-    master_obsid = obsids[0]
-    basename = (band, master_obsid)
-
-    # ordermap_fits = caldb.load_resource_for(basename,
-    #                                         ("sky", "ordermap_fits"))
-
-    # slitposmap_fits = caldb.load_resource_for(basename,
-    #                                           ("sky", "slitposmap_fits"))
-
-    ordermap_fits = caldb.load_resource_for(basename, "ordermap")
-
-    slitposmap_fits = caldb.load_resource_for(basename, "slitposmap")
+    slitposmap_fits = obsset.load_resource_for("slitposmap")
 
     yy, xx = np.indices(ordermap_fits[0].data.shape)
 
@@ -152,8 +133,7 @@ def generate_slitoffsetmap(helper, band, obsids):
 
     names = ["pixel", "order", "slit"]
 
-    coeffs_path = caldb.query_item_path(basename, "VOLUMEFIT_COEFFS_JSON")
-    in_df = pd.read_json(coeffs_path, orient="split")
+    in_df = obsset.load_data_frame("VOLUMEFIT_COEFFS_JSON", orient="split")
     in_df = in_df.set_index(names)
 
     poly, coeffs = NdPolyNamed.from_pandas(in_df)
@@ -167,7 +147,7 @@ def generate_slitoffsetmap(helper, band, obsids):
     offset_map[msk] = offsets * cc0 # dd["offsets"]
     
 
-    caldb.store_image(basename, "slitoffset_fits", offset_map)
+    obsset.store_image("slitoffset_fits", offset_map)
                      
 
 from igrins.libs.recipe_helper import RecipeHelper

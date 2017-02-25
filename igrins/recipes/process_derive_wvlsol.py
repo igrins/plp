@@ -15,17 +15,10 @@ def _convert2wvlsol(p, orders_w_solutions):
     return wvl_sol
 
 
-def derive_wvlsol(helper, band, obsids):
+def derive_wvlsol(obsset):
 
-    caldb = helper.get_caldb()
-
-    master_obsid = obsids[0]
-    basename = (band, master_obsid)
-
-    fitted_pixels_path = caldb.query_item_path(basename,
-                                               "SKY_FITTED_PIXELS_JSON")
-
-    df = pd.read_json(fitted_pixels_path, orient="split")
+    df = obsset.load_data_frame("SKY_FITTED_PIXELS_JSON",
+                                orient="split")
 
     msk = df["slit_center"] == 0.5
     dfm = df[msk]
@@ -52,8 +45,7 @@ def derive_wvlsol(helper, band, obsids):
 
     p, m = fit_2dspec(xl[msk], yl[msk], zlo[msk], **fit_params)
 
-    wvlsol_json = caldb.load_item_from(basename,
-                                       "WVLSOL_V0_JSON")
+    wvlsol_json = obsset.load_item("WVLSOL_V0_JSON")
 
     orders = wvlsol_json["orders"]
 
@@ -62,7 +54,7 @@ def derive_wvlsol(helper, band, obsids):
     d = dict(orders=orders,
              wvl_sol=wvl_sol)
 
-    caldb.store_dict(basename, "SKY_WVLSOL_JSON", d)
+    obsset.store_dict("SKY_WVLSOL_JSON", d)
 
     
     from igrins.libs.astropy_poly_helper import serialize_poly_model
@@ -72,8 +64,8 @@ def derive_wvlsol(helper, band, obsids):
                        fitted_model=poly_2d,
                        fitted_mask=m)
 
-    caldb.store_dict(basename, "SKY_WVLSOL_FIT_RESULT_JSON",
-                     fit_results)
+    obsset.store_dict("SKY_WVLSOL_FIT_RESULT_JSON",
+                      fit_results)
 
 if 0:
 

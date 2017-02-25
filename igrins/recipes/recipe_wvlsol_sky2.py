@@ -5,33 +5,10 @@
 import numpy as np
 import pandas as pd
 
-def save_qa(helper, band, obsids):
+def save_qa(obsset):
 
-    caldb = helper.get_caldb()
 
-    master_obsid = obsids[0]
-    basename = (band, master_obsid)
-
-    # filter out the line indices not well fit by the surface
-
-    # keys = reidentified_lines_map.keys()
-    # di_list = [len(reidentified_lines_map[k_][0]) for k_ in keys]
-
-    # endi_list = np.add.accumulate(di_list)
-
-    # filter_mask = [m[endi-di:endi] for di, endi in zip(di_list, endi_list)]
-
-    # reidentified_lines_ = [reidentified_lines_map[k_] for k_ in keys]
-
-    # _ = [(v_[0][mm], v_[1][mm]) for v_, mm
-    #      in zip(reidentified_lines_, filter_mask)]
-
-    # reidentified_lines_map_filtered = dict(zip(orders_w_solutions, _))
-
-    fitted_pixels_path = caldb.query_item_path(basename,
-                                               "SKY_FITTED_PIXELS_JSON")
-
-    df = pd.read_json(fitted_pixels_path, orient="split")
+    df = obsset.load_data_frame("SKY_FITTED_PIXELS_JSON", orient="split")
 
     msk_ = df["slit_center"] == 0.5
     dfm_ = df[msk_]
@@ -45,12 +22,11 @@ def save_qa(helper, band, obsids):
     from matplotlib.figure import Figure
     from igrins.libs.ecfit import check_fit
 
-    d = caldb.load_item_from(basename, "SKY_WVLSOL_JSON")
+    d = obsset.load_item("SKY_WVLSOL_JSON")
 
     orders = d["orders"]
 
-    fit_results = caldb.load_item_from(basename,
-                                       "SKY_WVLSOL_FIT_RESULT_JSON")
+    fit_results = obsset.load_item("SKY_WVLSOL_FIT_RESULT_JSON")
 
     # fit_results = dict(xyz=[xl[msk], yl[msk], zl[msk]],
     #                    fit_params=fit_params,
@@ -87,33 +63,27 @@ def save_qa(helper, band, obsids):
         fig2.tight_layout()
 
     from igrins.libs.qa_helper import figlist_to_pngs
-    sky_basename = helper.get_basename(band, obsids[0])
-    sky_figs = helper.get_section_filename_base("QA_PATH",
-                                                "oh_fit2d",
-                                                "oh_fit2d_"+sky_basename)
-    figlist_to_pngs(sky_figs, [fig1, fig2])
+    dest_dir = obsset.query_item_path("qa_sky_fit2d_dir",
+                                      subdir="sky_fit2d")
+    figlist_to_pngs(dest_dir, [fig1, fig2])
+
+    # sky_basename = helper.get_basename(band, obsids[0])
+    # sky_figs = helper.get_section_filename_base("QA_PATH",
+    #                                             "oh_fit2d",
+    #                                             "oh_fit2d_"+sky_basename)
+    # figlist_to_pngs(sky_figs, [fig1, fig2])
 
 
-def save_distortion_db(helper, band, obsids):
+def save_distortion_db(obsset):
 
-    caldb = helper.get_caldb()
-
-    master_obsid = obsids[0]
-    basename = helper.get_basename(band, master_obsid)
-
-    db = caldb.load_db("distortion")
-    db.update(band, basename)
+    db = obsset.load_db("distortion")
+    db.update(obsset.band, obsset.basename)
 
 
-def save_wvlsol_db(helper, band, obsids):
+def save_wvlsol_db(obsset):
 
-    caldb = helper.get_caldb()
-
-    master_obsid = obsids[0]
-    basename = helper.get_basename(band, master_obsid)
-
-    db = caldb.load_db("wvlsol")
-    db.update(band, basename)
+    db = obsset.load_db("wvlsol")
+    db.update(obsset.band, obsset.basename)
 
 
     # if 1:
@@ -127,48 +97,38 @@ def save_wvlsol_db(helper, band, obsids):
 
 
 
-def save_ordermap_slitposmap(helper, band, obsids):
+def save_ordermap_slitposmap(obsset):
 
-    from aperture_helper import get_simple_aperture
+    from aperture_helper import get_simple_aperture_from_obsset
 
-    caldb = helper.get_caldb()
-
-    master_obsid = obsids[0]
-    basename = (band, master_obsid)
-
-    wvlsol_v0 = caldb.load_resource_for(basename, "wvlsol_v0")
+    wvlsol_v0 = obsset.load_resource_for("wvlsol_v0")
     orders = wvlsol_v0["orders"]
 
-    ap = get_simple_aperture(helper, band, obsids,
-                             orders=orders)
+    ap = get_simple_aperture_from_obsset(obsset,
+                                         orders=orders)
 
     order_map = ap.make_order_map()
     slitpos_map = ap.make_slitpos_map()
     order_map2 = ap.make_order_map(mask_top_bottom=True)
 
-    caldb.store_image(basename, "ordermap_fits", order_map)
-    caldb.store_image(basename, "slitposmap_fits", slitpos_map)
-    caldb.store_image(basename, "ordermap_masked_fits", order_map2)
+    obsset.store_image("ordermap_fits", order_map)
+    obsset.store_image("slitposmap_fits", slitpos_map)
+    obsset.store_image("ordermap_masked_fits", order_map2)
 
 
-def save_wavelength_map(helper, band, obsids):
+def save_wavelength_map(obsset):
 
-    caldb = helper.get_caldb()
-
-    master_obsid = obsids[0]
-    basename = (band, master_obsid)
-
-    fit_results = caldb.load_item_from(basename, "SKY_WVLSOL_FIT_RESULT_JSON")
+    fit_results = obsset.load_item("SKY_WVLSOL_FIT_RESULT_JSON")
 
     from igrins.libs.astropy_poly_helper import deserialize_poly_model
 
     module_name, klass_name, serialized = fit_results["fitted_model"]
     poly_2d = deserialize_poly_model(module_name, klass_name, serialized)
 
-    order_map = caldb.load_item_from(basename, "ordermap_fits")[0].data
+    order_map = obsset.load_item("ordermap_fits")[0].data
     # slitpos_map = caldb.load_item_from(basename, "slitposmap_fits")
 
-    offset_map = caldb.load_item_from(basename, "slitoffset_fits")[0].data
+    offset_map = obsset.load_item("slitoffset_fits")[0].data
 
     msk = order_map > 0
 
@@ -181,7 +141,7 @@ def save_wavelength_map(helper, band, obsids):
 
     wvlmap[msk] = wvl
 
-    caldb.store_image(basename, "WAVELENGTHMAP_FITS", wvlmap)
+    obsset.store_image("WAVELENGTHMAP_FITS", wvlmap)
 
 
 
@@ -191,48 +151,50 @@ from process_wvlsol_v0 import extract_spectra_multi
 from process_wvlsol_v0 import make_combined_image
 
 
-def process_band(utdate, recipe_name, band, obsids, frame_types,
+def process_band(utdate, recipe_name, band, obsids, frametypes,
                  aux_infos, config_name):
 
-    helper = RecipeHelper(config_name, utdate, recipe_name)
+    from igrins import get_caldb, get_obsset
+    caldb = get_caldb(config_name, utdate)
+    obsset = get_obsset(caldb, recipe_name, band, obsids, frametypes)
 
     # STEP 1 :
     ## make combined image
 
-    make_combined_image(helper, band, obsids) #, mode=None)
+    make_combined_image(obsset)
 
     # Step 2
 
-    extract_spectra_multi(helper, band, obsids)
+    extract_spectra_multi(obsset)
 
     from process_identify_multiline import identify_multiline
 
-    identify_multiline(helper, band, obsids)
+    identify_multiline(obsset)
 
     from process_wvlsol_volume_fit import volume_fit, generate_slitoffsetmap
 
-    volume_fit(helper, band, obsids)
+    volume_fit(obsset)
 
-    save_distortion_db(helper, band, obsids)
+    save_distortion_db(obsset)
 
-    save_ordermap_slitposmap(helper, band, obsids)
+    save_ordermap_slitposmap(obsset)
 
-    generate_slitoffsetmap(helper, band, obsids)
+    generate_slitoffsetmap(obsset)
 
     from process_derive_wvlsol import derive_wvlsol
-    derive_wvlsol(helper, band, obsids)
+    derive_wvlsol(obsset)
 
-    save_wvlsol_db(helper, band, obsids)
+    save_wvlsol_db(obsset)
 
-    save_wavelength_map(helper, band, obsids)
+    save_wavelength_map(obsset)
 
     from process_save_wat_header import save_wat_header
-    save_wat_header(helper, band, obsids)
+    save_wat_header(obsset)
 
     # save_wavelength_map(helper, band, obsids)
     # #fit_wvl_sol(helper, band, obsids)
 
-    save_qa(helper, band, obsids)
+    save_qa(obsset)
 
     # some of the fugures are missing.
     # save_figures()

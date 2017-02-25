@@ -125,26 +125,20 @@ from collections import namedtuple
 SimpleHDU = namedtuple('SimpleHDU', ['header', 'data'])
 
 
-def extract_spectra_multi(helper, band, obsids):
+def extract_spectra_multi(obsset):
 
     n_slice_one_direction = 2
     slice_center, slice_up, slice_down = _get_slices(n_slice_one_direction)
 
-    from aperture_helper import get_simple_aperture
+    from aperture_helper import get_simple_aperture_from_obsset
 
-    caldb = helper.get_caldb()
-
-    master_obsid = obsids[0]
-    basename = (band, master_obsid)
-    data = caldb.load_image(basename,
-                            item_type="combined_sky")
+    data = obsset.load_image(item_type="combined_sky")
 
     # just to retrieve order information
-    wvlsol_v0 = caldb.load_resource_for(basename, "wvlsol_v0")
+    wvlsol_v0 = obsset.load_resource_for("wvlsol_v0")
     orders = wvlsol_v0["orders"]
 
-    ap = get_simple_aperture(helper, band, obsids,
-                             orders=orders)
+    ap = get_simple_aperture_from_obsset(obsset, orders=orders)
 
     def make_hdu(s_up, s_down, data):
         h = [("NSLIT", n_slice_one_direction*2 + 1),
@@ -175,9 +169,8 @@ def extract_spectra_multi(helper, band, obsids):
         hdu_list.append(make_hdu(s1, s2, s))
         #s_down.append(s)
 
-    caldb.store_multi_image((band, master_obsid),
-                            item_type="MULTI_SPEC_FITS",
-                            hdu_list=hdu_list)
+    obsset.store_multi_images(item_type="MULTI_SPEC_FITS",
+                              hdu_list=hdu_list)
 
 
 # def get_thar_products_deprecated(helper, band, obsids):

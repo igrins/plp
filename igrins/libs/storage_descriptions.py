@@ -98,6 +98,7 @@ VAR2D_FITS_DESC = ("OUTDATA_PATH", "", ".var2d.fits")
 
 QA_FLAT_APERTURE_DIR_DESC = ("QA_PATH", "aperture_", "")
 QA_ORDERFLAT_DIR_DESC = ("QA_PATH", "orderflat_", "")
+QA_SKY_FIT2D_DIR_DESC = ("QA_PATH", "sky_fit2d_", "")
 
 
 #####

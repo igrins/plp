@@ -3,18 +3,12 @@ import pandas as pd
 
 from igrins.libs.recipe_helper import RecipeHelper
 
-def identify_multiline(helper, band, obsids):
+def identify_multiline(obsset):
 
-    caldb = helper.get_caldb()
-
-    master_obsid = obsids[0]
-    basename = (band, master_obsid)
-
-    multi_spec = caldb.load_item_from((band, master_obsid),
-                                      "multi_spec_fits")
+    multi_spec = obsset.load_item("multi_spec_fits")
 
     # just to retrieve order information
-    wvlsol_v0 = caldb.load_resource_for(basename, "wvlsol_v0")
+    wvlsol_v0 = obsset.load_resource_for("wvlsol_v0")
     orders = wvlsol_v0["orders"]
     wvlsol = wvlsol_v0["wvl_sol"]
 
@@ -27,8 +21,8 @@ def identify_multiline(helper, band, obsids):
 
     from igrins.libs.ref_lines_db import SkyLinesDB, HitranSkyLinesDB
 
-    ref_lines_db = SkyLinesDB(config=helper.config)
-    ref_lines_db_hitrans = HitranSkyLinesDB(config=helper.config)
+    ref_lines_db = SkyLinesDB(config=obsset.get_config())
+    ref_lines_db_hitrans = HitranSkyLinesDB(config=obsset.get_config())
 
     for hdu in multi_spec:
 
@@ -37,12 +31,13 @@ def identify_multiline(helper, band, obsids):
         spec = Spec(dict(zip(orders, hdu.data)),
                     dict(zip(orders, wvlsol)))
 
-        fitted_pixels_oh = ref_lines_db.identify(band, spec)
+        fitted_pixels_oh = ref_lines_db.identify(obsset.band, spec)
         fitted_pixels_list.append(fitted_pixels_oh)
         keys.append((slit_center, "OH"))
 
-        if band == "K":
-            fitted_pixels_hitran = ref_lines_db_hitrans.identify(band, spec)
+        if obsset.band == "K":
+            fitted_pixels_hitran = ref_lines_db_hitrans.identify(obsset.band,
+                                                                 spec)
             fitted_pixels_list.append(fitted_pixels_hitran)
             keys.append((slit_center, "Hitran"))
 
@@ -52,12 +47,9 @@ def identify_multiline(helper, band, obsids):
                                      names=["slit_center", "kind"],
                                      axis=0)
 
-    output_path = caldb.query_item_path(basename, "SKY_FITTED_PIXELS_JSON")
-
     # storing multi-index seems broken. Enforce reindexing.
-    fitted_pixels_master.reset_index().to_json(output_path,
-                                               orient="split")
-
+    _d = fitted_pixels_master.reset_index().to_dict(orient="split")
+    obsset.store_dict("SKY_FITTED_PIXELS_JSON", _d)
 
 
 def process_band(utdate, recipe_name, band, obsids, config_name):

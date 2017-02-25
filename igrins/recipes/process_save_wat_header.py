@@ -1,22 +1,16 @@
 import numpy as np
 
 
-def save_wat_header(helper, band, obsids):
+def save_wat_header(obsset):
 
-    caldb = helper.get_caldb()
-
-    master_obsid = obsids[0]
-    basename = (band, master_obsid)
-
-    d = caldb.load_item_from(basename, "SKY_WVLSOL_JSON")
+    d = obsset.load_item("SKY_WVLSOL_JSON")
     # d = dict(orders=orders,
     #          wvl_sol=wvl_sol)
 
     orders = d["orders"]
     wvl_sol = d["wvl_sol"]
 
-    fit_results = caldb.load_item_from(basename,
-                                       "SKY_WVLSOL_FIT_RESULT_JSON")
+    fit_results = obsset.load_item("SKY_WVLSOL_FIT_RESULT_JSON")
 
     # fit_results = dict(xyz=[xl[msk], yl[msk], zl[msk]],
     #                    fit_params=fit_params,
@@ -83,6 +77,5 @@ def save_wat_header(helper, band, obsids):
     # hdu = pyfits.PrimaryHDU(header=header,
     #                         data=np.array([]).reshape((0,0)))
 
-    caldb.store_image((band, master_obsid),
-                      "SKY_WVLSOL_FITS", np.array(wvl_sol),
-                      card_list=cards)
+    obsset.store_image("SKY_WVLSOL_FITS", np.array(wvl_sol),
+                       card_list=cards)
