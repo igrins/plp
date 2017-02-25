@@ -7,6 +7,9 @@ class ObsSet(object):
         self.frametypes = frametypes
         self.basename = self.caldb._get_basename((self.band, self.obsids[0]))
 
+    def get_config(self):
+        return self.caldb.get_config()
+
     def get(self, name):
         return self.caldb.get(self.basename, name)
 
@@ -63,6 +66,15 @@ class ObsSet(object):
                   basename_postfix=None):
         return self.caldb.load_item_from(self.basename, itemtype,
                                          basename_postfix=basename_postfix)
+
+    def load_data_frame(self, itemtype, orient="split",
+                        basename_postfix=None):
+        import pandas as pd
+        coeffs_path = self.query_item_path(itemtype, 
+                                           basename_postfix=basename_postfix)
+        df = pd.read_json(coeffs_path, orient=orient)
+
+        return df
 
     def load_image(self, item_type):
         "similar to load_item, but returns the image as a numpy.array"

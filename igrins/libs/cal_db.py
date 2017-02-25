@@ -26,6 +26,9 @@ class CalDB(object):
         # define resource manager
         self.resource_manager = ResourceManager(self)
 
+    def get_config(self):
+        return self.helper.config
+
     # resource manager related method
     def get(self, basename, name):
         return self.resource_manager.get(basename, name)
@@ -247,17 +250,17 @@ class CalDB(object):
 
     def get_ref_data_path(self, band, kind):
         from igrins.libs.master_calib import get_ref_data_path
-        return get_ref_data_path(self.helper.config, band, kind)
+        return get_ref_data_path(self.get_config(), band, kind)
 
     def load_ref_data(self, band, kind):
         from igrins.libs.master_calib import load_ref_data
-        f = load_ref_data(self.helper.config, band=band,
+        f = load_ref_data(self.get_config(), band=band,
                           kind=kind)
         return f
 
     def fetch_ref_data(self, band, kind):
         from igrins.libs.master_calib import fetch_ref_data
-        fn, d = fetch_ref_data(self.helper.config, band=band,
+        fn, d = fetch_ref_data(self.get_config(), band=band,
                           kind=kind)
         return fn, d
 
