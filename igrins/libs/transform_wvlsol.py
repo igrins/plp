@@ -57,6 +57,11 @@ def get_wavelength_solutions(affine_tr_matrix, zdata,
                              new_orders):
     """
     new_orders : output orders
+
+    convert (x, y) of zdata (where x, y are pixel positions and z
+    is wavelength) with affine transform, then derive a new wavelength
+    solution.
+
     """
     from ecfit import get_ordered_line_data, fit_2dspec, check_fit
 
@@ -69,22 +74,22 @@ def get_wavelength_solutions(affine_tr_matrix, zdata,
         x_T = xy_T[:,0]
         d_x_wvl[order]=(x_T, z.wvl)
 
-    xl, yl, zl = get_ordered_line_data(d_x_wvl)
-    # xl : pixel
-    # yl : order
-    # zl : wvl * order
+    _xl, _ol, _wl = get_ordered_line_data(d_x_wvl)
+    # _xl : pixel
+    # _ol : order
+    # _wl : wvl * order
 
     x_domain = [0, 2047]
-    orders_band = sorted(zdata.keys())
     #orders = igrins_orders[band]
     #y_domain = [orders_band[0]-2, orders_band[-1]+2]
     y_domain = [new_orders[0], new_orders[-1]]
-    p, m = fit_2dspec(xl, yl, zl, x_degree=4, y_degree=3,
+    p, m = fit_2dspec(_xl, _ol, _wl, x_degree=4, y_degree=3,
                       x_domain=x_domain, y_domain=y_domain)
 
     if 0:
         import matplotlib.pyplot as plt
         fig = plt.figure(figsize=(12, 7))
+        orders_band = sorted(zdata.keys())
         check_fit(fig, xl, yl, zl, p, orders_band, d_x_wvl)
         fig.tight_layout()
 

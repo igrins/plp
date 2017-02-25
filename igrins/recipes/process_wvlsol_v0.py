@@ -212,9 +212,10 @@ def _get_ref_spec_name(recipe_name):
 def identify_orders(obsset):
 
     ref_spec_key, _ = _get_ref_spec_name(obsset.recipe_name)
-    from igrins.libs.master_calib import load_ref_data
+    # from igrins.libs.master_calib import load_ref_data
     #ref_spectra = load_ref_data(helper.config, band,
-    ref_spectra = obsset.load_ref_data(kind=ref_spec_key)
+
+    ref_spec_path, ref_spectra = obsset.fetch_ref_data(kind=ref_spec_key)
 
     src_spectra = obsset.load_item("ONED_SPEC_JSON")
 
@@ -230,7 +231,8 @@ def identify_orders(obsset):
     aperture_basename = src_spectra["aperture_basename"]
     obsset.store_dict(item_type="ORDERS_JSON",
                       data=dict(orders=new_orders,
-                                aperture_basename=aperture_basename))
+                                aperture_basename=aperture_basename,
+                                ref_spec_path=ref_spec_path))
 
 
 
@@ -267,7 +269,7 @@ def identify_lines(obsset):
 
     ref_spec_key, ref_identified_lines_key = _get_ref_spec_name(obsset.recipe_name)
 
-    ref_spec = obsset.load_ref_data(kind=ref_spec_key)
+    _, ref_spec = obsset.fetch_ref_data(kind=ref_spec_key)
 
     tgt_spec_path = obsset.query_item_path("ONED_SPEC_JSON")
     tgt_spec = obsset.load_item("ONED_SPEC_JSON")
@@ -281,7 +283,7 @@ def identify_lines(obsset):
     #REF_TYPE="OH"
     #fn = "../%s_IGRINS_identified_%s_%s.json" % (REF_TYPE, band,
     #                                             helper.refdate)
-    l = obsset.load_ref_data(kind=ref_identified_lines_key)
+    _, l = obsset.fetch_ref_data(kind=ref_identified_lines_key)
     #l = json.load(open(fn))
     #ref_spectra = load_ref_data(helper.config, band, kind="SKY_REFSPEC_JSON")
 
@@ -469,12 +471,12 @@ def save_figures(obsset):
         #                                FLAT_MASK_DESC],
         #                               flaton_basename)
 
-        flat_on_basename = obsset.caldb.db_query_basename("flat_on",
-                                                          obsset.basename)
-        flat_normed = obsset.caldb.load_image(flat_on_basename,
-                                              "flat_normed")
-        flat_mask = obsset.caldb.load_image(flat_on_basename,
-                                            "flat_mask") > 0
+        # flat_on_basename = obsset.caldb.db_query_basename("flat_on",
+        #                                                   obsset.basename)
+        flat_normed = obsset.load_resource_for(("flat_on", "flat_normed"),
+                                               get_science_hdu=True).data
+        flat_mask = obsset.load_resource_for(("flat_on", "flat_mask"),
+                                               get_science_hdu=True).data > 0
 
         from igrins.libs.process_flat import make_order_flat, check_order_flat
         order_flat_im, order_flat_json = make_order_flat(flat_normed, 
@@ -540,6 +542,8 @@ def process_band(utdate, recipe_name, band,
     if recipe_name.upper() in ["SKY"]:
         pass
     elif recipe_name.upper().endswith("_AB"):
+        pass
+    elif recipe_name.upper() in ["THAR"]:
         pass
     else:
         msg = ("recipe_name {} not supported "

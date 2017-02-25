@@ -103,6 +103,12 @@ def load_ref_data(config, band, kind, ref_utdate=None):
     loader = ref_loader_dict[ext]
     return loader(fn)
 
+def fetch_ref_data(config, band, kind, ref_utdate=None):
+    fn = get_ref_data_path(config, band, kind, ref_utdate=ref_utdate)
+    fn1, ext = os.path.splitext(fn)
+
+    loader = ref_loader_dict[ext]
+    return fn, loader(fn)
 
 
 if 0:

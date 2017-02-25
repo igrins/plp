@@ -89,13 +89,16 @@ class ObsSet(object):
                                      item_type, hdu_list,
                                      basename_postfix=basename_postfix)
 
+    def load_resource_for(self, resource_type,
+                          get_science_hdu=False):
+        return self.caldb.load_resource_for(self.basename, resource_type,
+                                            get_science_hdu=get_science_hdu)
+
+    def get_ref_data_path(self, kind):
+        return self.caldb.get_ref_data_path(self.band, kind)
 
     def load_ref_data(self, kind):
-        from igrins.libs.master_calib import load_ref_data
-        f = load_ref_data(self.caldb.helper.config, band=self.band,
-                          kind=kind)
-        return f
+        return self.caldb.load_ref_data(self.band, kind)
 
-    def load_resource_for(self, resource_type):
-        return self.caldb.load_resource_for(self.basename, resource_type)
-
+    def fetch_ref_data(self, kind):
+        return self.caldb.fetch_ref_data(self.band, kind)

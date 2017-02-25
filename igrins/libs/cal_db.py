@@ -4,6 +4,7 @@ from storage_descriptions import (load_resource_def,
                                   load_descriptions,
                                   DB_Specs)
 
+from load_fits import get_first_science_hdu, open_fits
 from cal_db_resources import ResourceManager
 
 class CalDB(object):
@@ -214,7 +215,8 @@ class CalDB(object):
 
         return resource_basename, item_desc
 
-    def load_resource_for(self, basename, resource_type):
+    def load_resource_for(self, basename, resource_type,
+                          get_science_hdu=False):
         """
         this load resource from the given master_obsid.
         """
@@ -223,6 +225,9 @@ class CalDB(object):
                                                                resource_type)
 
         resource = self.load_item_from(resource_basename, item_desc)
+
+        if get_science_hdu:
+            resource = get_first_science_hdu(resource)
 
         return resource
 
@@ -240,6 +245,21 @@ class CalDB(object):
 
         return resource
 
+    def get_ref_data_path(self, band, kind):
+        from igrins.libs.master_calib import get_ref_data_path
+        return get_ref_data_path(self.helper.config, band, kind)
+
+    def load_ref_data(self, band, kind):
+        from igrins.libs.master_calib import load_ref_data
+        f = load_ref_data(self.helper.config, band=band,
+                          kind=kind)
+        return f
+
+    def fetch_ref_data(self, band, kind):
+        from igrins.libs.master_calib import fetch_ref_data
+        fn, d = fetch_ref_data(self.helper.config, band=band,
+                          kind=kind)
+        return fn, d
 
 if __name__ == "__main__":
 
