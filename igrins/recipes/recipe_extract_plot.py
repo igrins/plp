@@ -243,7 +243,7 @@ def get_fixed_i1i2_list(order_indices, i1i2_list):
 def get_i1i2_list(extractor, orders_w_solutions):
     from igrins.libs.storage_descriptions import ORDER_FLAT_JSON_DESC
     prod = extractor.igr_storage.load1(ORDER_FLAT_JSON_DESC,
-                                       extractor.basenames["flat_on"])
+                                       extractor.basenames["register"])
 
     new_orders = prod["orders"]
     i1i2_list_ = prod["i1i2_list"]

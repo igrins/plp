@@ -147,16 +147,11 @@ def load_aperture_wvlsol(extractor, band):
     helper = RecipeHelper(config, utdate, recipe_name)
     caldb = helper.get_caldb()
     #def load_resource_for(self, basename, resource_type):
-    basename = caldb.db_query_basename("flat_on", band,
-                                       extractor.pr.master_obsid)
-    d = caldb.load_item_from(basename,
-                             "FLATCENTROID_ORDERS_JSON")
+    basename = caldb.db_query_basename("flat_on", 
+                                       (band, extractor.pr.master_obsid))
 
-    #d = caldb.load_item_from
-
-    orders = d["orders"]
-
-    #_o_s = dict(zip(orders, bottomup_solutions))
+    wvlsol_v0 = caldb.load_resource_for(basename, "wvlsol_v0")
+    orders = wvlsol_v0["orders"]
 
     ap =  Apertures(orders, bottomup_solutions)
 

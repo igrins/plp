@@ -144,7 +144,7 @@ class RecipeExtractPR(object):
         from igrins.libs.storage_descriptions import ORDER_FLAT_IM_DESC
 
         orderflat_ = self.igr_storage.load1(ORDER_FLAT_IM_DESC,
-                                            self.basenames["flat_on"])
+                                            self.basenames["register"])
 
         orderflat = orderflat_.data
         orderflat[self.pix_mask] = np.nan
@@ -161,7 +161,7 @@ class RecipeExtractPR(object):
         from igrins.libs.storage_descriptions import ORDER_FLAT_JSON_DESC
 
         orderflat = self.igr_storage.load1(ORDER_FLAT_JSON_DESC,
-                                           self.basenames["flat_on"])
+                                           self.basenames["register"])
 
         return orderflat
 
