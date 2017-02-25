@@ -12,8 +12,8 @@
 Interaction
 ~~~~~~~~~~~
 """
-from argh.compat import text_type
-from argh.io import safe_input
+from .compat import text_type
+from .io import safe_input
 
 
 __all__ = ['confirm', 'safe_input']

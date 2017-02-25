@@ -12,12 +12,12 @@
 Command decorators
 ~~~~~~~~~~~~~~~~~~
 """
-from argh.assembling import _fix_compat_issue29
-from argh.constants import (ATTR_ALIASES, ATTR_ARGS, ATTR_NAME,
-                            ATTR_WRAPPED_EXCEPTIONS,
-                            ATTR_WRAPPED_EXCEPTIONS_PROCESSOR,
-                            ATTR_INFER_ARGS_FROM_SIGNATURE,
-                            ATTR_EXPECTS_NAMESPACE_OBJECT)
+from .assembling import _fix_compat_issue29
+from .constants import (ATTR_ALIASES, ATTR_ARGS, ATTR_NAME,
+                        ATTR_WRAPPED_EXCEPTIONS,
+                        ATTR_WRAPPED_EXCEPTIONS_PROCESSOR,
+                        ATTR_INFER_ARGS_FROM_SIGNATURE,
+                        ATTR_EXPECTS_NAMESPACE_OBJECT)
 
 
 __all__ = ['alias', 'aliases', 'named', 'arg', 'plain_signature', 'command',

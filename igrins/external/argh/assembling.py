@@ -17,14 +17,14 @@ Functions and classes to properly assemble your commands in a parser.
 import argparse
 import sys
 
-from argh.completion import COMPLETION_ENABLED
-from argh.compat import OrderedDict
-from argh.constants import (ATTR_ALIASES, ATTR_ARGS, ATTR_NAME,
-                            ATTR_INFER_ARGS_FROM_SIGNATURE,
-                            ATTR_EXPECTS_NAMESPACE_OBJECT,
-                            PARSER_FORMATTER, DEFAULT_ARGUMENT_TEMPLATE)
-from argh.utils import get_subparsers, get_arg_spec
-from argh.exceptions import AssemblingError
+from .completion import COMPLETION_ENABLED
+from .compat import OrderedDict
+from .constants import (ATTR_ALIASES, ATTR_ARGS, ATTR_NAME,
+                        ATTR_INFER_ARGS_FROM_SIGNATURE,
+                        ATTR_EXPECTS_NAMESPACE_OBJECT,
+                        PARSER_FORMATTER, DEFAULT_ARGUMENT_TEMPLATE)
+from .utils import get_subparsers, get_arg_spec
+from .exceptions import AssemblingError
 
 
 __all__ = ['SUPPORTS_ALIASES', 'set_default_command', 'add_commands']

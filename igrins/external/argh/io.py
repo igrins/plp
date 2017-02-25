@@ -15,7 +15,7 @@ Output Processing
 import locale
 import sys
 
-from argh import compat
+from . import compat
 
 
 __all__ = ['dump', 'encode_output', 'safe_input']

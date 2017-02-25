@@ -14,9 +14,9 @@ Helpers
 """
 import argparse
 
-from argh.completion import autocomplete
-from argh.assembling import add_commands, set_default_command
-from argh.dispatching import PARSER_FORMATTER, dispatch
+from .completion import autocomplete
+from .assembling import add_commands, set_default_command
+from .dispatching import PARSER_FORMATTER, dispatch
 
 
 __all__ = ['ArghParser']

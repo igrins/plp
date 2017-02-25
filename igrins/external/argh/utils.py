@@ -15,7 +15,7 @@ Utilities
 import argparse
 import inspect
 
-from argh import compat
+from . import compat
 
 
 def get_subparsers(parser, create=False):

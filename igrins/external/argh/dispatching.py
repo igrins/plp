@@ -16,15 +16,15 @@ import argparse
 import sys
 from types import GeneratorType
 
-from argh import compat, io
-from argh.constants import (ATTR_WRAPPED_EXCEPTIONS,
+from . import compat, io
+from .constants import (ATTR_WRAPPED_EXCEPTIONS,
                             ATTR_WRAPPED_EXCEPTIONS_PROCESSOR,
                             ATTR_EXPECTS_NAMESPACE_OBJECT,
                             PARSER_FORMATTER)
-from argh.completion import autocomplete
-from argh.assembling import add_commands, set_default_command
-from argh.exceptions import DispatchingError, CommandError
-from argh.utils import get_arg_spec
+from .completion import autocomplete
+from .assembling import add_commands, set_default_command
+from .exceptions import DispatchingError, CommandError
+from .utils import get_arg_spec
 
 
 __all__ = ['dispatch', 'dispatch_command', 'dispatch_commands',
