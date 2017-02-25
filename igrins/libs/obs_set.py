@@ -86,6 +86,19 @@ class ObsSet(object):
                                          item_type_or_desc,
                                          basename_postfix=basename_postfix)
 
+    def store_data_frame(self, itemtype, df, orient="split",
+                        basename_postfix=None):
+        # using df.to_dict and self.store_dict does not work as it may
+        # writes 'nan' which is not readable from
+        # pandas.read_json. So, we use df.to_json for now which write
+        # 'null'.
+
+        coeffs_path = self.query_item_path(itemtype, 
+                                           basename_postfix=basename_postfix)
+
+        df.to_json(coeffs_path, orient=orient)
+
+
     def store_dict(self, item_type, data):
         return self.caldb.store_dict(self.basename, item_type, data)
 

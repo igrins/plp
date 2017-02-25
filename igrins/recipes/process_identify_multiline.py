@@ -26,30 +26,41 @@ def identify_multiline(obsset):
 
     for hdu in multi_spec:
 
+        small_list = []
+        small_keys = []
+
         slit_center = hdu.header["FSLIT_CN"]
+        keys.append(slit_center)
 
         spec = Spec(dict(zip(orders, hdu.data)),
                     dict(zip(orders, wvlsol)))
 
         fitted_pixels_oh = ref_lines_db.identify(obsset.band, spec)
-        fitted_pixels_list.append(fitted_pixels_oh)
-        keys.append((slit_center, "OH"))
-
+        small_list.append(fitted_pixels_oh)
+        small_keys.append("OH")
+        
         if obsset.band == "K":
             fitted_pixels_hitran = ref_lines_db_hitrans.identify(obsset.band,
                                                                  spec)
-            fitted_pixels_list.append(fitted_pixels_hitran)
-            keys.append((slit_center, "Hitran"))
+            small_list.append(fitted_pixels_hitran)
+            small_keys.append("Hitran")
+
+        fitted_pixels_ = pd.concat(small_list,
+                                   keys=small_keys,
+                                   names=["kind"],
+                                   axis=0)
+
+        fitted_pixels_list.append(fitted_pixels_)
 
     # concatenate collected list of fitted pixels.
     fitted_pixels_master = pd.concat(fitted_pixels_list,
                                      keys=keys,
-                                     names=["slit_center", "kind"],
+                                     names=["slit_center"],
                                      axis=0)
 
     # storing multi-index seems broken. Enforce reindexing.
-    _d = fitted_pixels_master.reset_index().to_dict(orient="split")
-    obsset.store_dict("SKY_FITTED_PIXELS_JSON", _d)
+    _d = fitted_pixels_master.reset_index()
+    obsset.store_data_frame("SKY_FITTED_PIXELS_JSON", _d, orient="split")
 
 
 def process_band(utdate, recipe_name, band, obsids, config_name):
