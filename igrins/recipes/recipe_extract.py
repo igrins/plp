@@ -528,14 +528,18 @@ class ProcessABBABand(object):
         cr_mask = np.abs(sig_map) > self.cr_rejection_thresh
 
         if self.lacosmics_thresh > 0:
-            from igrins.libs.cosmics import cosmicsimage
+            from igrins.libs.lacosmics import get_cr_mask
 
-            cosmic_input = sig_map.copy()
+            # As our data is corrected for orderflat, it
+            # actually amplifies order boundary so that they
+            # can be more easily picked as CRs.  For now, we
+            # use a workaround by multiplying by the
+            # orderflat. But it would be better to improve it.
+
+            cosmic_input = sig_map.copy() *extractor.orderflat
             cosmic_input[~np.isfinite(data_minus_flattened)] = np.nan
-            c = cosmicsimage(cosmic_input,
-                             readnoise=self.lacosmics_thresh)
-            c.run()
-            cr_mask_cosmics = c.getmask()
+            cr_mask_cosmics = get_cr_mask(cosmic_input,
+                                          readnoise=self.lacosmics_thresh)
 
             cr_mask = cr_mask | cr_mask_cosmics
 
@@ -795,20 +799,24 @@ class ProcessABBABand(object):
 
                 if self.lacosmics_thresh > 0:
 
+                    from igrins.libs.lacosmics import get_cr_mask
+
                     from igrins.libs.cosmics import cosmicsimage
 
-                    cosmic_input = data_minus/(variance_map**.5)
+                    # As our data is corrected for orderflat, it
+                    # actually amplifies order boundary so that they
+                    # can be more easily picked as CRs.  For now, we
+                    # use a workaround by multiplying by the
+                    # orderflat. But it would be better to improve it.
+
+                    cosmic_input = data_minus/(variance_map**.5) *extractor.orderflat
                     lacosmics_thresh = self.lacosmics_thresh
 
-                    c = cosmicsimage(cosmic_input,
-                                     readnoise=lacosmics_thresh)
-                    c.run()
-                    cr_mask_p = c.getmask()
+                    cr_mask_p = get_cr_mask(cosmic_input,
+                                            readnoise=lacosmics_thresh)
 
-                    c = cosmicsimage(-cosmic_input,
-                                     readnoise=lacosmics_thresh)
-                    c.run()
-                    cr_mask_m = c.getmask()
+                    cr_mask_m = get_cr_mask(-cosmic_input,
+                                            readnoise=lacosmics_thresh)
 
                     cr_mask = cr_mask_p | cr_mask_m
 
