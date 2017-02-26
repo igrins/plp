@@ -26,8 +26,46 @@ class CalDB(object):
         # define resource manager
         self.resource_manager = ResourceManager(self)
 
+    def _repr_html_(self):
+        import pandas as pd
+
+        d = self.get_config_dict()
+        s = pd.DataFrame(dict(key=d.keys(), value=d.values()))
+        
+        return s._repr_html_()
+
     def get_config(self):
         return self.helper.config
+
+    def get_config_dict(self):
+
+        config = self.get_config()
+
+        from collections import OrderedDict
+        d = OrderedDict()
+
+        for k, v in config.config.defaults().iteritems():
+            d[k] = config.get_value(k, self.utdate)
+
+        return d
+
+
+    def get_master_cal_dict(self, band):
+
+        assert band in "HK"
+
+        config = self.get_config()
+
+        from collections import OrderedDict
+        d = OrderedDict()
+
+        refdate = config.config.get("MASTER_CAL", "refdate")
+        for k, v in config.config._sections["MASTER_CAL"].iteritems():
+            if k == "__name__":
+                pass
+            d[k] = config.get("MASTER_CAL", k, band=band, refdate=refdate)
+
+        return d
 
     # resource manager related method
     def get(self, basename, name):

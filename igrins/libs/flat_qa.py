@@ -1,5 +1,9 @@
+from mpl_toolkits.axes_grid.anchored_artists import AnchoredText
 
-def check_trace_order(flat_deriv, trace_dict, fig, rect=111):
+def check_trace_order(flat_deriv, trace_dict, fig, 
+                      rowcol=(1, 3),
+                      rect=111,
+                      title_fontsize=None):
     from mpl_toolkits.axes_grid1 import ImageGrid
     #from axes_grid import ImageGrid
     #d = trace_products["flat_deriv"]
@@ -10,7 +14,7 @@ def check_trace_order(flat_deriv, trace_dict, fig, rect=111):
     # d = trace_products[FLAT_DERIV_DESC].data
     # trace_dict = trace_products[FLATCENTROIDS_JSON_DESC]
 
-    grid = ImageGrid(fig, rect, (1, 3), share_all=True)
+    grid = ImageGrid(fig, rect, rowcol, share_all=True)
     ax = grid[0]
     im = ax.imshow(flat_deriv, origin="lower", interpolation="none",
                    cmap="RdBu")
@@ -31,6 +35,21 @@ def check_trace_order(flat_deriv, trace_dict, fig, rect=111):
         ax.plot(l[0], l[1], "b-")
     ax.set_xlim(0, 2048)
     ax.set_ylim(0, 2048)
+
+    if title_fontsize is None:
+        return 
+
+    for ax, title in zip(grid, 
+                         ["Derivative Image", "Traced Boundary", "Together"]):
+
+        at = AnchoredText(title,
+                          prop=dict(size=title_fontsize), frameon=True,
+                          loc=2,
+        )
+        at.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+        ax.add_artist(at)
+
+
 
 
 def plot_trace_solutions(flat_normed,

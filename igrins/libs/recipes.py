@@ -94,3 +94,80 @@ class Recipes(object):
         selected = [dict_by_1st_obsid[s1] for s1 in starting_obsids]
 
         return selected
+
+import pandas as pd
+
+def load_recipe_as_dict(fn):
+    dtype=[('OBJNAME', 'S128'), ('OBJTYPE', 'S128'), ('GROUP1', 'S128'), ('GROUP2', 'S128'), ('EXPTIME', 'f'), ('RECIPE', 'S128'), ('OBSIDS', 'S1024'),  ('FRAMETYPES', 'S1024')]
+    d = np.genfromtxt(fn, delimiter=",", names=True, comments="#",
+                      dtype=dtype)
+
+    for k in ["RECIPE", "OBJNAME", "OBJTYPE"]:
+        d[k] = [n.strip() for n in d[k]]
+
+    obsids  = [map(int, row["OBSIDS"].strip().split()) for row in d]
+    frametypes  = [row["FRAMETYPES"].strip().split() for row in d]
+    starting_obsids = [o[0] for o in obsids]
+
+    r = dict(starting_obsid=starting_obsids,
+             objname=d["OBJNAME"],
+             obstype=d["OBJTYPE"],
+             group1=d["GROUP1"],
+             group2=d["GROUP2"],
+             exptime=d["EXPTIME"],
+             recipe=d["RECIPE"],
+             obsids=obsids,
+             frametypes=frametypes)
+
+    return r
+
+class RecipeLog(pd.DataFrame):
+    def __init__(self, fn):
+        d = load_recipe_as_dict(fn)
+
+        columns = ["starting_obsid", "objname", "obstype", 
+                   "recipe", "obsids", "frametypes",
+                   "exptime", "group1", "group2"]
+        super(RecipeLog, self).__init__(d, columns=columns)
+        #self.set_index("starting_obsid", inplace=True)
+
+    def subset(self, **kwargs):
+        """
+        You can index the data frame by theie values, 
+        but obsids and frametypes are not allowed as they are inherently list.
+        """
+        bad_k = [k for k in kwargs.iterkeys()
+                 if k in ["obsids", "frametypes"]]
+
+        if bad_k:
+            raise ValueError("keyname %s cannot be selected." % bad_k)
+
+        from collections import Iterable
+
+        m_reversed = np.ones(len(self.index), dtype=bool)
+
+        for k, v in kwargs.iteritems():
+            if isinstance(v, str):
+                m = (self[k] == v)
+            elif isinstance(v, Iterable):
+                m = self[k].isin(v)
+            else:
+                m = (self[k] == v)
+
+            m_reversed &= m
+
+        #print m_reversed
+        return self.iloc[m_reversed]
+
+
+if __name__ == "__main__":
+
+    fn = "../../recipe_logs/20141023.recipes"
+    # r = load_recipe(fn)
+    r = RecipeDataFrame(fn)
+    r2 = Recipes(fn)
+
+    r.subset()
+    r.subset(starting_obsid=105)
+    r.subset(starting_obsid=[11, 105])
+    r.subset(recipe=["SKY", "EXTENDED_ONOFF"])
