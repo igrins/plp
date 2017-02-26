@@ -23,7 +23,7 @@ class IGRINSPath(object):
 
     sections_names_no_ensuredir = ["INDATA_PATH"]
 
-    def __init__(self, config, utdate):
+    def __init__(self, config, utdate, ensure_dir=False):
 
         self.config = config
         self.utdate = utdate
@@ -34,14 +34,17 @@ class IGRINSPath(object):
             d = self.config.get_value(n, utdate)
             self.sections[n] = join(self.config.root_dir, d)
 
-        for k, d in self.sections.items():
-            if k not in self.sections_names_no_ensuredir:
-                ensure_dir(d)
-
-
         # filename pattern for input files
         self.fn_pattern = join(self.sections["INDATA_PATH"],
                                "SDC%%s_%s_%%04d.fits" % (self.utdate,))
+
+        if ensure_dir:
+            self.ensure_dir()
+
+    def ensure_dir(self):
+        for k, d in self.sections.items():
+            if k not in self.sections_names_no_ensuredir:
+                ensure_dir(d)
 
     def get_section_filename_base(self, section, fn, subdir=None):
         if subdir is not None:

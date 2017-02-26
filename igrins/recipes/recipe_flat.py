@@ -615,9 +615,8 @@ def process_band(utdate, recipe_name, band,
                  obsids, frametypes, config_name):
 
     from igrins import get_caldb, get_obsset
-    caldb = get_caldb(config_name, utdate)
-    obsset = get_obsset(caldb, recipe_name, band, obsids, frametypes)
-
+    caldb = get_caldb(config_name, utdate, ensure_dir=True)
+    obsset = get_obsset(caldb, band, recipe_name, obsids, frametypes)
 
     obsids_off = [obsid for obsid, frametype \
                   in zip(obsids, frametypes) if frametype == "OFF"]

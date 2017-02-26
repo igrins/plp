@@ -1,5 +1,5 @@
 class ObsSet(object):
-    def __init__(self, caldb, recipe_name, band, obsids, frametypes):
+    def __init__(self, caldb, band, recipe_name, obsids, frametypes):
         self.caldb = caldb
         self.recipe_name = recipe_name
         self.band = band
@@ -33,7 +33,7 @@ class ObsSet(object):
                   if f == frametype]
         frametypes = [frametype] * len(obsids)
 
-        return ObsSet(self.caldb, self.recipe_name, self.band, 
+        return ObsSet(self.caldb, self.band, self.recipe_name, 
                       obsids, frametypes)
 
     def get_hdu_list(self):

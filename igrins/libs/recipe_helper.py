@@ -4,7 +4,8 @@ import os
 from cal_db import CalDB
 
 class RecipeHelper:
-    def __init__(self, config_name, utdate, recipe_name=""):
+    def __init__(self, config_name, utdate, recipe_name="",
+                 ensure_dir=False):
 
         from igrins_config import IGRINSConfig
         if isinstance(config_name, str):
@@ -15,7 +16,8 @@ class RecipeHelper:
         self.utdate = utdate
         self.refdate = self.config.get("MASTER_CAL", "REFDATE")
 
-        self._igr_path = IGRINSPath(self.config, utdate)
+        self._igr_path = IGRINSPath(self.config, utdate,
+                                    ensure_dir=ensure_dir)
 
         self._igr_storage = PipelineStorage(self._igr_path)
 

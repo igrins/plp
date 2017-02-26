@@ -156,7 +156,7 @@ def process_band(utdate, recipe_name, band, obsids, frametypes,
 
     from igrins import get_caldb, get_obsset
     caldb = get_caldb(config_name, utdate)
-    obsset = get_obsset(caldb, recipe_name, band, obsids, frametypes)
+    obsset = get_obsset(caldb, band, recipe_name, obsids, frametypes)
 
     # STEP 1 :
     ## make combined image
