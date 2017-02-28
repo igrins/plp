@@ -119,6 +119,8 @@ class ObsSet(object):
         return self.caldb.load_resource_for(self.basename, resource_type,
                                             get_science_hdu=get_science_hdu)
 
+    # Ref data related
+
     def get_ref_data_path(self, kind):
         return self.caldb.get_ref_data_path(self.band, kind)
 
@@ -127,3 +129,23 @@ class ObsSet(object):
 
     def fetch_ref_data(self, kind):
         return self.caldb.fetch_ref_data(self.band, kind)
+
+    def get_ref_spec_name(self, recipe_name=None):
+
+        if recipe_name is None:
+            recipe_name = self.recipe_name
+
+        if (recipe_name in ["SKY"]) or recipe_name.endswith("_AB"):
+            ref_spec_key = "SKY_REFSPEC_JSON"
+            ref_identified_lines_key = "SKY_IDENTIFIED_LINES_V0_JSON"
+
+        elif recipe_name in ["THAR"]:
+            ref_spec_key = "THAR_REFSPEC_JSON"
+            ref_identified_lines_key = "THAR_IDENTIFIED_LINES_V0_JSON"
+
+        else:
+            raise ValueError("Recipe name of '%s' is unsupported." % recipe_name)
+
+        return ref_spec_key, ref_identified_lines_key
+
+

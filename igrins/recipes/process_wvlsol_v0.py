@@ -204,7 +204,7 @@ def _get_ref_spec_name(recipe_name):
 
 def identify_orders(obsset):
 
-    ref_spec_key, _ = _get_ref_spec_name(obsset.recipe_name)
+    ref_spec_key, _ = obsset.get_ref_spec_name()
     # from igrins.libs.master_calib import load_ref_data
     #ref_spectra = load_ref_data(helper.config, band,
 
@@ -424,85 +424,45 @@ def test_identify_lines(helper, band, obsids):
 #                                  masterhdu=hdu)
 #
 
+
+def save_orderflat(obsset):
+    orders = obsset.get("orders")
+
+    from aperture_helper import get_simple_aperture_from_obsset
+
+    ap = get_simple_aperture_from_obsset(obsset, orders=orders)
+
+    order_map = ap.make_order_map()
+
+    flat_normed = obsset.load_resource_for(("flat_on", "flat_normed"),
+                                           get_science_hdu=True).data
+    flat_mask = obsset.load_resource_for(("flat_on", "flat_mask"),
+                                         get_science_hdu=True).data > 0
+
+    from igrins.libs.process_flat import make_order_flat
+    order_flat_im, order_flat_json = make_order_flat(flat_normed, 
+                                                     flat_mask,
+                                                     orders, order_map)
+
+    obsset.store_image("order_flat_im", order_flat_im)
+    obsset.store_dict("order_flat_json", order_flat_json)
+
+
+    order_map2 = ap.make_order_map(mask_top_bottom=True)
+    bias_mask = flat_mask & (order_map2 > 0)
+
+    obsset.store_image("bias_mask", bias_mask)
+        
+
 def save_figures(obsset):
 
     ### THIS NEEDS TO BE REFACTORED!
 
-    orders = obsset.load_item("ORDERS_JSON")["orders"]
-
-    # thar_filenames = helper.get_filenames(band, obsids)
-    # thar_basename = os.path.splitext(os.path.basename(thar_filenames[0]))[0]
-    # thar_master_obsid = obsids[0]
-
-    if 1: # make amp and order falt
-
-        from aperture_helper import get_simple_aperture_from_obsset
-
-        ap = get_simple_aperture_from_obsset(obsset, orders=orders)
-
-        # from igrins.libs.storage_descriptions import ONED_SPEC_JSON_DESC
-
-        #orders = thar_products[ONED_SPEC_JSON_DESC]["orders"]
-        order_map = ap.make_order_map()
-        #slitpos_map = ap.make_slitpos_map()
-
-
-        # load flat on products
-        #flat_on_params_name = flaton_path.get_secondary_path("flat_on_params")
-
-        #flaton_products = PipelineProducts.load(flat_on_params_name)
-        # from igrins.libs.storage_descriptions import (FLAT_NORMED_DESC,
-        #                                        FLAT_MASK_DESC)
-
-        # flaton_db_name = helper.get_section_filename_base("PRIMARY_CALIB_PATH",
-        #                                                   "flat_on.db")
-        # flaton_db = ProductDB(flaton_db_name)
-
-        # flaton_basename = flaton_db.query(band, thar_master_obsid)
-
-        # flaton_products = helper.load([FLAT_NORMED_DESC,
-        #                                FLAT_MASK_DESC],
-        #                               flaton_basename)
-
-        # flat_on_basename = obsset.caldb.db_query_basename("flat_on",
-        #                                                   obsset.basename)
-        flat_normed = obsset.load_resource_for(("flat_on", "flat_normed"),
-                                               get_science_hdu=True).data
-        flat_mask = obsset.load_resource_for(("flat_on", "flat_mask"),
-                                               get_science_hdu=True).data > 0
-
-        from igrins.libs.process_flat import make_order_flat, check_order_flat
-        order_flat_im, order_flat_json = make_order_flat(flat_normed, 
-                                                         flat_mask,
-                                                         orders, order_map)
-
-        obsset.store_image("order_flat_im", order_flat_im)
-        obsset.store_dict("order_flat_json", order_flat_json)
-
-
-        # from igrins.libs.load_fits import load_fits_data
-        # hdu = load_fits_data(thar_filenames[0])
-        # # hdu = pyfits.open(thar_filenames[0])[0]
-        
-        # helper.store(order_flat_products,
-        #              mastername=flaton_basename,
-        #              masterhdu=hdu)
-
-        # flat_mask = helper.load1(FLAT_MASK_DESC,
-        #                          flaton_basename)
-        order_map2 = ap.make_order_map(mask_top_bottom=True)
-        bias_mask = flat_mask & (order_map2 > 0)
-
-        obsset.store_image("bias_mask", bias_mask)
-        
-        # pp = PipelineProducts("")
-        # from igrins.libs.storage_descriptions import BIAS_MASK_DESC
-        # pp.add(BIAS_MASK_DESC,
-        #        PipelineImageBase([], bias_mask))
-
-        # helper.store(pp, mastername=flaton_basename, masterhdu=hdu)
+    from igrins.libs.process_flat import check_order_flat
 
     if 1:
+        order_flat_json = obsset.load_item("order_flat_json")
+
         fig_list = check_order_flat(order_flat_json)
 
         from igrins.libs.qa_helper import figlist_to_pngs
@@ -581,6 +541,10 @@ def process_band(utdate, recipe_name, band,
     # Step 8:
 
     ## make order_map and auxilary files.
+
+    save_orderflat(obsset)
+
+    # save figures
 
     save_figures(obsset)
 

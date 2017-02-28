@@ -67,9 +67,11 @@ def volume_fit(obsset):
     
     cc0 = dd["slit_center"] - 0.5
 
+    # 3d points : x-pixel, order, location on the slit
     points0 = dict(zip(names, [dd["pixels0"],
                                dd["order"],
                                cc0]))
+    # scalar is offset of the measured line from the location at slic center.
     scalar0 = dd["offsets"]
 
     
