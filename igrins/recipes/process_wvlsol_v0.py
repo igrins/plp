@@ -426,7 +426,7 @@ def test_identify_lines(helper, band, obsids):
 
 
 def save_orderflat(obsset):
-    orders = obsset.get("orders")
+    orders = obsset.load_item("orders_json")["orders"]
 
     from aperture_helper import get_simple_aperture_from_obsset
 

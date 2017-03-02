@@ -76,8 +76,8 @@ def get_offset_transform(thar_spec_src, thar_spec_dst):
         # reduce the search range for correlation peak using the model
         # prediction.
         ym = int(model_robust.predict_y(i))
-        x1 = max(0, (center - ym) - 20)
-        x2 = min((center - ym) + 20 + 1, 2048)
+        x1 = int(max(0, (center - ym) - 20))
+        x2 = int(min((center - ym) + 20 + 1, 2048))
         print i, x1, x2
         ym2 = center - (np.argmax(cor_list[i][x1:x2]) + x1)
         #print ym2
