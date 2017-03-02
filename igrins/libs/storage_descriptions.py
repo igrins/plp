@@ -30,6 +30,7 @@ ORDER_FLAT_JSON_DESC = ("PRIMARY_CALIB_PATH", "ORDERFLAT_", ".json")
 
 # image related descriptions
 
+STACKED_DESC = ("OUTDATA_PATH", "", ".stacked.fits")
 COMBINED_IMAGE_DESC = ("OUTDATA_PATH", "", ".combined_image.fits")
 COMBINED_IMAGE_A_DESC = ("OUTDATA_PATH", "", ".combined_image_a.fits")
 COMBINED_IMAGE_B_DESC = ("OUTDATA_PATH", "", ".combined_image_b.fits")

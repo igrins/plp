@@ -57,7 +57,15 @@ from igrins.libs.products import ProductDB
 from igrins.libs.recipe_helper import RecipeHelper
 
 
+
 def make_combined_image(obsset):
+    if obsset.recipe_name.upper() in ["THAR"]:
+        make_combined_image_thar(obsset)
+    else:
+        make_combined_image_sky(obsset)
+
+
+def make_combined_image_sky(obsset):
 
     from igrins.libs.image_combine import make_combined_sky
 
@@ -76,9 +84,19 @@ def make_combined_image(obsset):
     from igrins.libs.image_combine import destripe_sky
     sky_data = destripe_sky(d, destripe_mask, subtract_bg=False)
 
-    obsset.store_image(item_type="combined_sky", data=sky_data)
+    obsset.store_image(item_type="stacked", data=sky_data)
 
-    return sky_data
+
+def make_combined_image_thar(obsset):
+
+    from igrins.libs.image_combine import make_combined_thar
+
+    # caldb = helper.get_caldb()
+
+    hdus = obsset.get_hdu_list()
+    d = make_combined_thar(hdus)
+
+    obsset.store_image(item_type="stacked", data=d)
 
 
 def extract_spectra(obsset):
@@ -89,7 +107,7 @@ def extract_spectra(obsset):
     # caldb = helper.get_caldb()
     # master_obsid = obsids[0]
 
-    data = obsset.load_image(item_type="combined_sky")
+    data = obsset.load_image(item_type="stacked")
 
     aperture = get_simple_aperture_from_obsset(obsset)
 
@@ -132,7 +150,7 @@ def extract_spectra_multi(obsset):
 
     from aperture_helper import get_simple_aperture_from_obsset
 
-    data = obsset.load_image(item_type="combined_sky")
+    data = obsset.load_image(item_type="stacked")
 
     # just to retrieve order information
     wvlsol_v0 = obsset.load_resource_for("wvlsol_v0")
@@ -482,7 +500,7 @@ def process_band(utdate, recipe_name, band,
                  obsids, frametypes, aux_infos,
                  config_name, **kwargs):
 
-    if not kwargs.pop("do_ab") and recipe_name.upper().endswith("_AB"):
+    if recipe_name.upper().endswith("_AB") and not kwargs.pop("do_ab"):
         return
 
     from igrins import get_caldb, get_obsset
@@ -503,7 +521,10 @@ def process_band(utdate, recipe_name, band,
                "for this recipe").format(recipe_name)
         raise ValueError(msg)
 
-    make_combined_image(obsset)
+    if recipe_name.upper() in ["THAR"]:
+        make_combined_image_thar(obsset)
+    else:
+        make_combined_image_sky(obsset)
 
     # Step 2
 

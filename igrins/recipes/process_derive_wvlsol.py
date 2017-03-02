@@ -45,7 +45,7 @@ def derive_wvlsol(obsset):
 
     p, m = fit_2dspec(xl[msk], yl[msk], zlo[msk], **fit_params)
 
-    wvlsol_json = obsset.load_item("WVLSOL_V0_JSON")
+    wvlsol_json = obsset.load_resource_for(("register", "WVLSOL_V0_JSON"))
 
     orders = wvlsol_json["orders"]
 

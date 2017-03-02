@@ -1,8 +1,8 @@
 from igrins.recipes.argh_helper import argh
 
 import igrins.recipes.recipe_flat
-import igrins.recipes.recipe_thar
-import igrins.recipes.recipe_wvlsol_sky
+#import igrins.recipes.recipe_thar
+#import igrins.recipes.recipe_wvlsol_sky
 
 from igrins.recipes.recipe_wvlsol_sky2 import wvlsol_sky, sky_wvlsol
 
@@ -38,9 +38,8 @@ recipe_list = [igrins.recipes.recipe_flat.flat,
                make_sky
                ]
 
-from igrins.recipes.recipe_register import register_sky, register_thar, thar
-
-recipe_list.extend([register_sky, register_thar, thar])
+import igrins.recipes.recipe_register as recipe_register
+recipe_list.extend(recipe_register.get_command_list())
 
 from igrins.recipes.recipe_divide_a0v import divide_a0v
 recipe_list.extend([divide_a0v])

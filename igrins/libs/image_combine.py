@@ -65,6 +65,14 @@ def make_combined_sky(hdus, frametypes=None):
     
     return sky_data
 
+def make_combined_thar(hdus):
+
+    from load_fits import get_combined_image
+
+    thar_data = get_combined_image(hdus) / len(hdus)
+    
+    return thar_data
+
 if 0:
     from get_destripe_mask import get_destripe_mask
     destripe_mask = get_destripe_mask(helper, band, obsids)
