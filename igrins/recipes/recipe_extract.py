@@ -85,7 +85,8 @@ def extractor_factory(recipe_name):
     @argh.arg("--cr-rejection-thresh", default=30.)
     @argh.arg("--frac-slit", default="0,1")
     @argh.arg("--fill-nan", default=None)
-    @argh.arg("--lacosmics-thresh", default=0.)
+    @argh.arg("--lacosmics-thresh", default=None)
+    @argh.arg("--lacosmic-thresh", default=None)
     @argh.arg("--conserve-2d-flux", default=True)
     @argh.arg("--slit-profile-mode", choices=['auto','simple', "gauss", "gauss2d"],
               default="auto")
@@ -142,6 +143,22 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
 
     kwargs["frac_slit"] = frac_slit
 
+    lacosmics_thresh = kwargs.pop("lacosmics_thresh")
+    if lacosmics_thresh is not None:
+        msg = ("'--lacosmics-thresh' is deprecated, "
+               "please use '--lacosmics-thresh'")
+
+        if kwargs["lacosmic_thresh"] is None:
+            kwargs["lacosmic_thresh"] = float(lacosmics_thresh)
+            print msg
+        else:
+            raise ValueError(msg)
+    else:
+        if kwargs["lacosmic_thresh"] is None:
+            kwargs["lacosmic_thresh"] = 0.
+        else:
+            kwargs["lacosmic_thresh"] = float(kwargs["lacosmic_thresh"])
+
     process_abba_band = ProcessABBABand(utdate, refdate,
                                         config,
                                         **kwargs).process
@@ -168,7 +185,7 @@ class ProcessABBABand(object):
                  debug_output=False,
                  wavelength_increasing_order=False,
                  fill_nan=None,
-                 lacosmics_thresh=0,
+                 lacosmic_thresh=0,
                  subtract_interorder_background=False,
                  conserve_2d_flux=False,
                  slit_profile_mode="auto",
@@ -188,7 +205,7 @@ class ProcessABBABand(object):
 
         self.frac_slit = frac_slit
         self.cr_rejection_thresh = cr_rejection_thresh
-        self.lacosmics_thresh = lacosmics_thresh
+        self.lacosmic_thresh = lacosmic_thresh
         self.debug_output = debug_output
 
         self.fill_nan=fill_nan
@@ -527,7 +544,7 @@ class ProcessABBABand(object):
 
         cr_mask = np.abs(sig_map) > self.cr_rejection_thresh
 
-        if self.lacosmics_thresh > 0:
+        if self.lacosmic_thresh > 0:
             from igrins.libs.lacosmics import get_cr_mask
 
             # As our data is corrected for orderflat, it
@@ -539,7 +556,7 @@ class ProcessABBABand(object):
             cosmic_input = sig_map.copy() *extractor.orderflat
             cosmic_input[~np.isfinite(data_minus_flattened)] = np.nan
             cr_mask_cosmics = get_cr_mask(cosmic_input,
-                                          readnoise=self.lacosmics_thresh)
+                                          readnoise=self.lacosmic_thresh)
 
             cr_mask = cr_mask | cr_mask_cosmics
 
@@ -797,7 +814,7 @@ class ProcessABBABand(object):
 
                 # detect CRs
 
-                if self.lacosmics_thresh > 0:
+                if self.lacosmic_thresh > 0:
 
                     from igrins.libs.lacosmics import get_cr_mask
 
@@ -810,13 +827,13 @@ class ProcessABBABand(object):
                     # orderflat. But it would be better to improve it.
 
                     cosmic_input = data_minus/(variance_map**.5) *extractor.orderflat
-                    lacosmics_thresh = self.lacosmics_thresh
+                    lacosmic_thresh = self.lacosmic_thresh
 
                     cr_mask_p = get_cr_mask(cosmic_input,
-                                            readnoise=lacosmics_thresh)
+                                            readnoise=lacosmic_thresh)
 
                     cr_mask_m = get_cr_mask(-cosmic_input,
-                                            readnoise=lacosmics_thresh)
+                                            readnoise=lacosmic_thresh)
 
                     cr_mask = cr_mask_p | cr_mask_m
 
