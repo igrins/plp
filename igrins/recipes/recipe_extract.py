@@ -91,7 +91,7 @@ def extractor_factory(recipe_name):
     @argh.arg("--slit-profile-mode", choices=['auto','simple', "gauss", "gauss2d"],
               default="auto")
     @argh.arg("--subtract-interorder-background", default=False)
-    @argh.arg("--weighting-mode", choices=['auto','uniform', "optimal"],
+    @argh.arg("--extraction-mode", choices=['auto','simple', "optimal"],
               default="auto")
     @argh.arg("--n-process", default=1)
     @argh.arg("--basename-postfix", default=None)
@@ -189,7 +189,7 @@ class ProcessABBABand(object):
                  subtract_interorder_background=False,
                  conserve_2d_flux=False,
                  slit_profile_mode="auto",
-                 weighting_mode="auto",
+                 extraction_mode="auto",
                  n_process=1,
                  basename_postfix=None):
         """
@@ -216,7 +216,7 @@ class ProcessABBABand(object):
 
         self.slit_profile_mode = slit_profile_mode
 
-        self.weighting_mode = weighting_mode
+        self.extraction_mode = extraction_mode
 
         self.n_process = n_process
         self.basename_postfix = basename_postfix
@@ -579,9 +579,9 @@ class ProcessABBABand(object):
 
         s_list, v_list = _
 
-        if self.weighting_mode == "uniform":
+        if self.extraction_mode == "simple":
 
-            print "doing uniform extraction"
+            print "doing simple extraction"
             synth_map = extractor.make_synth_map(
                 ap, profile_map, s_list,
                 ordermap=ordermap,
@@ -599,7 +599,7 @@ class ProcessABBABand(object):
                                                 slitoffset_map,
                                                 debug=False)
 
-            _ = extractor.extract_spec_uniform(ap, shifted)
+            _ = extractor.extract_spec_simple(ap, shifted)
             s_list, v_list = _
 
             # regenerate synth_map using the new s_list, which will be saved.
@@ -609,7 +609,7 @@ class ProcessABBABand(object):
                 slitpos_map=slitpos_map,
                 slitoffset_map=slitoffset_map)
 
-        elif self.weighting_mode in ["auto", "optimal"]:
+        elif self.extraction_mode in ["auto", "optimal"]:
             pass
         else:
             raise RuntimeError("")
@@ -861,7 +861,7 @@ class ProcessABBABand(object):
                 weight_thresh = None
                 remove_negative = False
 
-                _ = extractor.extract_spec_uniform(ap, shifted)
+                _ = extractor.extract_spec_simp(ap, shifted)
                 # _ = extractor.extract_spec_stellar(ap, shifted,
                 #                                    weight_thresh,
                 #                                    remove_negative)

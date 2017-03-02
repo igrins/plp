@@ -214,9 +214,9 @@ class Apertures(object):
 
         return data, variance_map, profile_map, msk1
 
-    def extract_uniform_from_shifted(self, ordermap,
-                                     profile_map, variance_map,
-                                     data):
+    def extract_simple_from_shifted(self, ordermap,
+                                    profile_map, variance_map,
+                                    data):
         """
         It assumes that bad pixels in the data and the variance_map are filled.
         """

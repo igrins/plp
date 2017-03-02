@@ -610,12 +610,12 @@ class RecipeExtractBase(RecipeExtractPR):
 
         return s_list, v_list
 
-    def extract_spec_uniform(self, ap, shifted):
+    def extract_spec_simple(self, ap, shifted):
 
-        _ = ap.extract_uniform_from_shifted(self.ordermap,
-                                            shifted["profile_map"],
-                                            shifted["variance_map"],
-                                            shifted["data"])
+        _ = ap.extract_simple_from_shifted(self.ordermap,
+                                           shifted["profile_map"],
+                                           shifted["variance_map"],
+                                           shifted["data"])
         s_list, v_list = _
 
         return s_list, v_list
