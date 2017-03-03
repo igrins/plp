@@ -437,7 +437,7 @@ def process_band(utdate, recipe_name, band, obsids, config,
 
     if not interactive:
         tgt_basename = helper.get_basename(band, master_obsid)
-        figout_dir = helper.igr_path.get_section_filename_base("QA_PATH",
+        figout_dir = helper._igr_path.get_section_filename_base("QA_PATH",
                                                                "",
                                                                "tell_wvsol_"+tgt_basename)
         from igrins.libs.path_info import ensure_dir
