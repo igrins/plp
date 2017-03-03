@@ -1,0 +1,10 @@
+This directory includes a set of jupyter notebooks (still in
+development) that eventually will be used to check the quality of the
+pipeline products.
+
+> jupyter notebook
+
+Some of the notebook requires "plotly" package, e.g., if you are using conda
+
+> conda install plotly
+
