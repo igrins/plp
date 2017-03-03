@@ -86,33 +86,48 @@ def get_debug_func(axes=None):
     return _debug_func
 
 
-def multi_gaussian_fit_by_mode(mode, y, s, debug_func=None):
+def multi_gaussian_fit_by_mode(mode, y, s, 
+                               n_comp,
+                               stddev_list=None,
+                               debug_func=None):
     assert mode in ["plus", "minus"]
 
-    m = get_multi_gaussian_model(mode=mode, n=1)
-
     fit_g = fitting.LevMarLSQFitter()
+    
+    if stddev_list is None:
+        # initial fit with 1 component
+        m = get_multi_gaussian_model(mode=mode, n=1)
 
-    g = fit_g(m, y, s)
+        g = fit_g(m, y, s)
 
-    stddev = g.stddev.value
-    stddev_list = [stddev/2., stddev, stddev*2]
+        stddev = g.stddev.value
+        stddev_list = [stddev/2., stddev, stddev*2]
+
+        fixed_params = [(i, k, getattr(g, k)) 
+                        for k in ["amplitude", "stddev", "mean"]
+                        for i in [1]]
+    else:
+        fixed_params = [(i, k, v) 
+                        for k in ["stddev"]
+                        for (i, v) in enumerate(stddev_list)]
 
     m = get_multi_gaussian_model(mode=mode, 
+                                 n=n_comp, 
                                  stddev_list=stddev_list)
 
-    for k in ["amplitude", "stddev", "mean"]:
-        k1 = k + "_1"
+    for i, k, v in fixed_params:
+        k1 = k + "_%d" % i
 
-        setattr(m, k1, getattr(g, k))
+        setattr(m, k1, v)
         m.fixed[k1] = True
 
     m.amplitude_1.value *= .5
 
     g = fit_g(m, y, s)
 
-    for k in ["amplitude", "stddev", "mean"]:
-        k1 = k + "_1"
+    for i, k, v in fixed_params:
+        k1 = k + "_%d" % i
+
         g.fixed[k1] = False
 
     g = fit_g(g, y, s)
@@ -124,11 +139,16 @@ def multi_gaussian_fit_by_mode(mode, y, s, debug_func=None):
 
 
 
-def derive_multi_gaussian_slit_profile(s, y, ye=None):
+def derive_multi_gaussian_slit_profile(s, y, n_comp, stddev_list,
+                                       ye=None):
 
-    g_plus = multi_gaussian_fit_by_mode("plus", s, y)
+    g_plus = multi_gaussian_fit_by_mode("plus", s, y,
+                                        n_comp=n_comp,
+                                        stddev_list=stddev_list)
 
-    g_minus = multi_gaussian_fit_by_mode("minus", s, y)
+    g_minus = multi_gaussian_fit_by_mode("minus", s, y,
+                                         n_comp=n_comp,
+                                         stddev_list=stddev_list)
 
     g = g_plus+g_minus
     g.parameters = np.concatenate([g_plus.parameters, g_minus.parameters])

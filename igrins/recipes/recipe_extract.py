@@ -19,7 +19,7 @@ def _run_order_main(args):
     xmsk = (800 < x) & (x < 2048-800)
 
     # check if there is enough pixels to derive new slit profile
-    if len(s[xmsk]) > 8000:
+    if len(s[xmsk]) > 8000: # FIXME : ?? not sure if this was what I meant?
         from igrins.libs.slit_profile_model import derive_multi_gaussian_slit_profile
 
         g_list = derive_multi_gaussian_slit_profile(y[xmsk], s[xmsk])
@@ -88,7 +88,8 @@ def extractor_factory(recipe_name):
     @argh.arg("--lacosmics-thresh", default=None)
     @argh.arg("--lacosmic-thresh", default=None)
     @argh.arg("--conserve-2d-flux", default=True)
-    @argh.arg("--slit-profile-mode", choices=['auto','simple', "gauss", "gauss2d"],
+    @argh.arg("--slit-profile-mode", 
+              #choices=['auto','simple', "gauss", "gauss2d"],
               default="auto")
     @argh.arg("--subtract-interorder-background", default=False)
     @argh.arg("--extraction-mode", choices=['auto','simple', "optimal"],
@@ -214,12 +215,31 @@ class ProcessABBABand(object):
 
         self.subtract_interorder_background = subtract_interorder_background
 
-        self.slit_profile_mode = slit_profile_mode
+        _ = self.parse_slit_profile_mode(slit_profile_mode)
+        self.slit_profile_mode, self.slit_profile_options = _
 
         self.extraction_mode = extraction_mode
 
         self.n_process = n_process
         self.basename_postfix = basename_postfix
+
+    def parse_slit_profile_mode(self, slit_profile_mode):
+        import re
+        p = re.compile(r"^(\w+)(\([^\)]*\))?$")
+        m = p.match(slit_profile_mode)
+        if m:
+            profile_mode, _profile_options = m.groups()
+            if _profile_options is None:
+                profile_options = {}
+            else:
+                try:
+                    profile_options = eval("dict%s" % _profile_options)
+                except Exception:
+                    raise ValueError("unrecognized option: " + slit_profile_mode)
+        else:
+            raise ValueError("unrecognized option: " + slit_profile_mode)
+
+        return profile_mode, profile_options
 
     def _estimate_slit_profile_1d(self, extractor, ap,
                                   data_minus_flattened,
@@ -306,6 +326,18 @@ class ProcessABBABand(object):
 
         """
 
+
+        slit_profile_options = self.slit_profile_options.copy()
+        n_comp = slit_profile_options.pop("n_comp", None)
+        stddev_list = slit_profile_options.pop("stddev_list", None)
+        if slit_profile_options:
+            msgs = ["unrecognized options: %s" 
+                    % self.slit_profile_options,
+                    "\n",
+                    "Available options are: n_comp, stddev_list"]
+
+            raise ValueError("".join(msgs))
+
         omap, slitpos = extractor.ordermap_bpixed, extractor.slitpos_map
 
         msk1 = np.isfinite(ods) # & bias_mask
@@ -328,7 +360,9 @@ class ProcessABBABand(object):
         s_mskd = slitpos[msk]
 
         from igrins.libs.slit_profile_model import derive_multi_gaussian_slit_profile
-        g_list0 = derive_multi_gaussian_slit_profile(s_mskd, ods_mskd)
+        g_list0 = derive_multi_gaussian_slit_profile(s_mskd, ods_mskd,
+                                                     n_comp=n_comp,
+                                                     stddev_list=stddev_list)
 
         return g_list0
 
@@ -582,6 +616,11 @@ class ProcessABBABand(object):
         if self.extraction_mode == "simple":
 
             print "doing simple extraction"
+            if self.extraction_mode in ["optimal"]:
+                msg = ("optimal extraction is not supported "
+                       "for extended source")
+                print msg
+
             synth_map = extractor.make_synth_map(
                 ap, profile_map, s_list,
                 ordermap=ordermap,
@@ -861,7 +900,7 @@ class ProcessABBABand(object):
                 weight_thresh = None
                 remove_negative = False
 
-                _ = extractor.extract_spec_simp(ap, shifted)
+                _ = extractor.extract_spec_simple(ap, shifted)
                 # _ = extractor.extract_spec_stellar(ap, shifted,
                 #                                    weight_thresh,
                 #                                    remove_negative)
