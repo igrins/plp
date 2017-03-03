@@ -900,7 +900,7 @@ class ProcessABBABand(object):
                 weight_thresh = None
                 remove_negative = False
 
-                _ = extractor.extract_spec_simp(ap, shifted)
+                _ = extractor.extract_spec_simple(ap, shifted)
                 # _ = extractor.extract_spec_stellar(ap, shifted,
                 #                                    weight_thresh,
                 #                                    remove_negative)
