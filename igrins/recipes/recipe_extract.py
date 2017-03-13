@@ -1230,7 +1230,8 @@ class ProcessABBABand(object):
                       get_flattened_2dspec(variance_map_shft,
                                            ordermap_bpixed,
                                            new_bottom_up_solutions,
-                                           conserve_flux=conserve_flux)
+                                           conserve_flux=conserve_flux,
+                                           height=height_2dspec)
         d = np.array(d0_shft_list) / np.array(msk_shft_list)
         f_obj[0].data = d.astype("float32")
         from igrins.libs.storage_descriptions import VAR2D_FITS_DESC
