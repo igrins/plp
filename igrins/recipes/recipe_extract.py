@@ -96,6 +96,7 @@ def extractor_factory(recipe_name):
               default="auto")
     @argh.arg("--n-process", default=1)
     @argh.arg("--basename-postfix", default=None)
+    @argh.arg("--height-2dspec", default=0)
     def extract(utdate, refdate="20140316", bands="HK",
                 **kwargs
                 ):
@@ -192,7 +193,8 @@ class ProcessABBABand(object):
                  slit_profile_mode="auto",
                  extraction_mode="auto",
                  n_process=1,
-                 basename_postfix=None):
+                 basename_postfix=None,
+                 height_2dspec=0):
         """
         cr_rejection_thresh : pixels that deviate significantly from the profile are excluded.
         """
@@ -222,6 +224,8 @@ class ProcessABBABand(object):
 
         self.n_process = n_process
         self.basename_postfix = basename_postfix
+
+        self.height_2dspec = height_2dspec
 
     def parse_slit_profile_mode(self, slit_profile_mode):
         import re
@@ -990,7 +994,8 @@ class ProcessABBABand(object):
                           shifted["variance_map"],
                           ordermap_bpixed,
                           cr_mask=cr_mask,
-                          conserve_flux=conserve_2d_flux)
+                          conserve_flux=conserve_2d_flux,
+                          height_2dspec=self.height_2dspec)
 
 
         if DO_STD:
@@ -1171,7 +1176,8 @@ class ProcessABBABand(object):
                      variance_map_shft,
                      ordermap_bpixed,
                      cr_mask=None,
-                     conserve_flux=True):
+                     conserve_flux=True,
+                     height_2dspec=0):
 
         wvl_header, wvl_data, convert_data = \
                     self.get_wvl_header_data(igr_storage,
@@ -1201,7 +1207,8 @@ class ProcessABBABand(object):
                       get_flattened_2dspec(data_shft,
                                            ordermap_bpixed,
                                            new_bottom_up_solutions,
-                                           conserve_flux=conserve_flux)
+                                           conserve_flux=conserve_flux,
+                                           height=height_2dspec)
 
 
         d = np.array(d0_shft_list) / np.array(msk_shft_list)
