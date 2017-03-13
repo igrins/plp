@@ -213,7 +213,7 @@ class Apertures(object):
             msk1 = (msk10 > 0) & (variance_map > 0) & (msk10 > 0.2)
 
         return (np.ma.array(data, mask=~msk1).filled(np.nan),
-                Variance_map, profile_map, msk1)
+                variance_map, profile_map, msk1)
 
     def extract_simple_from_shifted(self, ordermap,
                                     profile_map, variance_map,
