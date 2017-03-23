@@ -78,34 +78,6 @@ class Recipes(object):
             _ = self.select_fnmatch(recipe_name, starting_obsids)
             selected.extend(_)
 
-    def select(self, recipe_name, starting_obsids=None):
-        if recipe_name == "ALL_RECIPES":
-            recipes_selected = []
-            for v in self.recipe_dict.values():
-                recipes_selected.extend(v)
-        elif recipe_name not in self.recipe_dict:
-            return []
-        else:
-            recipes_selected = self.recipe_dict[recipe_name]
-
-        if starting_obsids is None:
-            return recipes_selected # self.recipe_dict[recipe_name]
-
-        selected = []
-        selected_obsids = []
-        for _ in recipes_selected:
-            obsids = _[0]
-            if obsids[0] in starting_obsids:
-                selected.append(_)
-                selected_obsids.append(obsids[0])
-
-        if len(selected_obsids) != len(starting_obsids):
-            remained_obsids = set(starting_obsids) - set(selected_obsids)
-            raise RuntimeError("some obsids is not correct : %s" % \
-                               ", ".join(map(str, sorted(remained_obsids))))
-        else:
-            return selected
-
     def select_fnmatch(self, recipe_fnmatch, starting_obsids=None):
 
         if isinstance(recipe_fnmatch, str):
@@ -224,8 +196,7 @@ class RecipeLog(pd.DataFrame):
         return self.iloc[m_reversed]
 
 
-if __name__ == "__main__":
-
+def _test1():
     fn = "../../recipe_logs/20141023.recipes"
     # r = load_recipe(fn)
     r = RecipeDataFrame(fn)
@@ -235,3 +206,14 @@ if __name__ == "__main__":
     r.subset(starting_obsid=105)
     r.subset(starting_obsid=[11, 105])
     r.subset(recipe=["SKY", "EXTENDED_ONOFF"])
+
+def _test2():
+    fn = "../../recipe_logs/20141023.recipes"
+    # r = load_recipe(fn)
+    r2 = Recipes(fn)
+
+    s1 = r2.select_deprecate("A0V_AB")
+    s2 = r2.select_fnmatch("A0V_AB")
+
+if __name__ == "__main__":
+    pass

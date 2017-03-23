@@ -135,7 +135,7 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
     if starting_obsids is not None:
         starting_obsids = map(int, starting_obsids.split(","))
 
-    selected = recipe.select(recipe_name, starting_obsids)
+    selected = recipe.select_fnmatch(recipe_name, starting_obsids)
     if not selected:
         print "no recipe of with matching arguments is found"
 
@@ -169,8 +169,7 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
         print "No entry with given recipe is found : %s" % recipe_name
 
     for s in selected:
-        obsids = s[0]
-        frametypes = s[1]
+        recipe_name, obsids, frametypes = s[:3]
 
         for band in bands:
             process_abba_band(recipe_name, band,
