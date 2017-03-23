@@ -148,7 +148,7 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
     lacosmics_thresh = kwargs.pop("lacosmics_thresh")
     if lacosmics_thresh is not None:
         msg = ("'--lacosmics-thresh' is deprecated, "
-               "please use '--lacosmics-thresh'")
+               "please use '--lacosmic-thresh'")
 
         if kwargs["lacosmic_thresh"] is None:
             kwargs["lacosmic_thresh"] = float(lacosmics_thresh)
