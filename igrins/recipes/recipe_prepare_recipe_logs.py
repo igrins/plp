@@ -1,5 +1,82 @@
 import os
 import numpy as np
+import pandas as pd
+
+def _load_data_numpy(fn):
+    dtype_=[('FILENAME', 'S128'),
+            ('OBSTIME', 'S128'),
+            ('GROUP1', 'i'),
+            ('GROUP2', 'i'),
+            ('OBJNAME', 'S128'),
+            ('OBJTYPE', 'S128'),
+            ('FRAMETYPE', 'S128'),
+            ('EXPTIME', 'd'),
+            ('ROTPA', 'd'),
+            ('RA', 'S128'),
+            ('DEC', 'S128'),
+            ('AM', 'd'),
+            ('OBSDATE', 'S128'),
+            ('SEQID1', 'i'),
+            ('SEQID2', 'i'),
+            ('ALT', 'd'),
+            ('AZI', 'd'),
+            ('OBSERVER', 'S128'),
+            ('EPOCH', 'S128'),
+            ('AGPOS', 'S128'),
+            ]
+    dtype_map = dict(dtype_)
+    dtype_replace = dict(SEQID1="GROUP1", SEQID2="GROUP2")
+
+    lines = open(fn).readlines()
+    stripped_lines = [s1.strip() for s1 in lines[1].split(",")]
+    dtype = [(dtype_replace.get(s1, s1), dtype_map[s1]) for s1 in stripped_lines if s1]
+
+    l = np.genfromtxt(fn,
+                      skip_header=2, delimiter=",", dtype=dtype)
+    return l
+
+def _load_data_pandas(fn):
+    dtype_=[('FILENAME', 'S128'),
+            ('OBSTIME', 'S128'),
+            ('GROUP1', 'i'),
+            ('GROUP2', 'i'),
+            ('OBJNAME', 'S128'),
+            ('OBJTYPE', 'S128'),
+            ('FRAMETYPE', 'S128'),
+            ('EXPTIME', 'd'),
+            ('ROTPA', 'd'),
+            ('RA', 'S128'),
+            ('DEC', 'S128'),
+            ('AM', 'd'),
+            ('OBSDATE', 'S128'),
+            ('SEQID1', 'i'),
+            ('SEQID2', 'i'),
+            ('ALT', 'd'),
+            ('AZI', 'd'),
+            ('OBSERVER', 'S128'),
+            ('EPOCH', 'S128'),
+            ('AGPOS', 'S128'),
+            ]
+    dtype_map = dict(dtype_)
+    dtype_replace = dict(SEQID1="GROUP1", SEQID2="GROUP2")
+
+    lines = open(fn).readlines()
+    stripped_lines = [s1.strip() for s1 in lines[1].split(",")]
+    dtype = [(dtype_replace.get(s1, s1), dtype_map[s1]) for s1 in stripped_lines if s1]
+
+    names = [_[0] for _ in dtype]
+    dtypes = dict(dtype)
+
+    df = pd.read_csv(fn, skiprows=2, dtype=dtypes, comment="#", 
+                     names=names, escapechar="\\")
+    df["OBJNAME"] = [s.replace(",", "\\,") for s in df["OBJNAME"]]
+    l = df.to_records(index=False)
+    # l = np.genfromtxt(fn,
+    #                   skip_header=2, delimiter=",", dtype=dtype)
+    return l
+
+
+_load_data = _load_data_pandas
 
 def prepare_recipe_logs(utdate, config_file="recipe.config"):
 
@@ -27,41 +104,8 @@ def prepare_recipe_logs(utdate, config_file="recipe.config"):
     # dtype=[('FILENAME', 'S128'), ('OBSTIME', 'S128'), ('GROUP1', 'i'), ('GROUP2', 'i'), ('OBJNAME', 'S128'), ('OBJTYPE', 'S128'), ('FRAMETYPE', 'S128'), ('EXPTIME', 'd'), ('ROTPA', 'd'), ('RA', 'S128'), ('DEC', 'S128'), ('AM', 'd')]
 
     # log file format for March and May, July is different.
-    dtype_=[('FILENAME', 'S128'),
-            ('OBSTIME', 'S128'),
-            ('GROUP1', 'i'),
-            ('GROUP2', 'i'),
-            ('OBJNAME', 'S128'),
-            ('OBJTYPE', 'S128'),
-            ('FRAMETYPE', 'S128'),
-            ('EXPTIME', 'd'),
-            ('ROTPA', 'd'),
-            ('RA', 'S128'),
-            ('DEC', 'S128'),
-            ('AM', 'd'),
-            ('OBSDATE', 'S128'),
-            ('SEQID1', 'i'),
-            ('SEQID2', 'i'),
-            ('ALT', 'd'),
-            ('AZI', 'd'),
-            ('OBSERVER', 'S128'),
-            ('EPOCH', 'S128'),
-            ('AGPOS', 'S128'),
-            ]
-    dtype_map = dict(dtype_)
 
-    dtype_replace = dict(SEQID1="GROUP1", SEQID2="GROUP2")
-
-    def load_data(fn):
-        lines = open(fn).readlines()
-        stripped_lines = [s1.strip() for s1 in lines[1].split(",")]
-        dtype = [(dtype_replace.get(s1, s1), dtype_map[s1]) for s1 in stripped_lines if s1]
-
-        l = np.genfromtxt(fn,
-                          skip_header=2, delimiter=",", dtype=dtype)
-        return l
-
-    l_list = [load_data(fn) for fn in fn_list]
+    l_list = [_load_data(fn) for fn in fn_list]
     l = np.concatenate(l_list)
 
     from itertools import groupby
@@ -173,3 +217,8 @@ def prepare_recipe_logs(utdate, config_file="recipe.config"):
 
     print "A draft version of the recipe log is written to '%s'." % (fn_out,)
     print "Make an adjusment and rename it to '%s'." % (recipe_log_name,)
+
+if __name__ == "__main__":
+    fn = "/home/jjlee/annex/igrins/20170315/IGRINS_DT_Log_20170315-1_H.txt"
+    d1 = _load_data_pandas(fn)
+    # d2 = _load_data_numpy(fn)

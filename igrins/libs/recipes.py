@@ -1,7 +1,12 @@
 import numpy as np
 
-def load_recipe_list(fn):
-    dtype=[('OBJNAME', 'S128'), ('OBJTYPE', 'S128'), ('GROUP1', 'i'), ('GROUP2', 'i'), ('EXPTIME', 'f'), ('RECIPE', 'S128'), ('OBSIDS', 'S1024'),  ('FRAMETYPES', 'S1024')]
+
+
+def load_recipe_list_numpy(fn):
+    dtype=[('OBJNAME', 'S128'), ('OBJTYPE', 'S128'),
+           ('GROUP1', 'S128'), ('GROUP2', 'S128'),
+           ('EXPTIME', 'f'), ('RECIPE', 'S128'),
+           ('OBSIDS', 'S1024'),  ('FRAMETYPES', 'S1024')]
     d = np.genfromtxt(fn, delimiter=",", names=True, comments="#",
                       dtype=dtype)
     recipe_list = []
@@ -12,6 +17,32 @@ def load_recipe_list(fn):
         recipe_list.append((recipe_name, obsids, frametypes, row))
 
     return recipe_list
+
+def load_recipe_list_pandas(fn):
+    dtypes= [('OBJNAME', 'S128'), ('OBJTYPE', 'S128'),
+             ('GROUP1', 'S128'), ('GROUP2', 'S128'),
+             ('EXPTIME', 'f'), ('RECIPE', 'S128'),
+             ('OBSIDS', 'S1024'),  ('FRAMETYPES', 'S1024')]
+
+    names = [_[0] for _ in dtypes]
+    df = pd.read_csv(fn, skiprows=0, dtype=dtypes, comment="#", 
+                     # names=names, 
+                     escapechar="\\", skipinitialspace=True)
+    # df["OBJNAME"] = [s.replace(",", "\\,") for s in df["OBJNAME"]]
+    d = df.to_records(index=False)
+
+    # d = np.genfromtxt(fn, delimiter=",", names=True, comments="#",
+    #                   dtype=dtype)
+    recipe_list = []
+    for row in d:
+        recipe_name = row["RECIPE"].strip()
+        obsids  = map(int, row["OBSIDS"].strip().split())
+        frametypes  = row["FRAMETYPES"].strip().split()
+        recipe_list.append((recipe_name, obsids, frametypes, row))
+
+    return recipe_list
+
+load_recipe_list = load_recipe_list_pandas
 
 def make_recipe_dict(recipe_list):
     recipe_dict = {}
@@ -47,34 +78,6 @@ class Recipes(object):
             _ = self.select_fnmatch(recipe_name, starting_obsids)
             selected.extend(_)
 
-    def select(self, recipe_name, starting_obsids=None):
-        if recipe_name == "ALL_RECIPES":
-            recipes_selected = []
-            for v in self.recipe_dict.values():
-                recipes_selected.extend(v)
-        elif recipe_name not in self.recipe_dict:
-            return []
-        else:
-            recipes_selected = self.recipe_dict[recipe_name]
-
-        if starting_obsids is None:
-            return recipes_selected # self.recipe_dict[recipe_name]
-
-        selected = []
-        selected_obsids = []
-        for _ in recipes_selected:
-            obsids = _[0]
-            if obsids[0] in starting_obsids:
-                selected.append(_)
-                selected_obsids.append(obsids[0])
-
-        if len(selected_obsids) != len(starting_obsids):
-            remained_obsids = set(starting_obsids) - set(selected_obsids)
-            raise RuntimeError("some obsids is not correct : %s" % \
-                               ", ".join(map(str, sorted(remained_obsids))))
-        else:
-            return selected
-
     def select_fnmatch(self, recipe_fnmatch, starting_obsids=None):
 
         if isinstance(recipe_fnmatch, str):
@@ -97,7 +100,7 @@ class Recipes(object):
 
 import pandas as pd
 
-def load_recipe_as_dict(fn):
+def load_recipe_as_dict_numpy(fn):
     dtype=[('OBJNAME', 'S128'), ('OBJTYPE', 'S128'), ('GROUP1', 'S128'), ('GROUP2', 'S128'), ('EXPTIME', 'f'), ('RECIPE', 'S128'), ('OBSIDS', 'S1024'),  ('FRAMETYPES', 'S1024')]
     d = np.genfromtxt(fn, delimiter=",", names=True, comments="#",
                       dtype=dtype)
@@ -120,6 +123,39 @@ def load_recipe_as_dict(fn):
              frametypes=frametypes)
 
     return r
+
+
+def load_recipe_as_dict_pandas(fn):
+
+    dtypes= [('OBJNAME', 'S128'), ('OBJTYPE', 'S128'),
+             ('GROUP1', 'S128'), ('GROUP2', 'S128'),
+             ('EXPTIME', 'f'), ('RECIPE', 'S128'),
+             ('OBSIDS', 'S1024'),  ('FRAMETYPES', 'S1024')]
+
+    df = pd.read_csv(fn, skiprows=0, dtype=dtypes, comment="#", 
+                     escapechar="\\", skipinitialspace=True)
+    d = df.to_records(index=False)
+
+    for k in ["RECIPE", "OBJNAME", "OBJTYPE"]:
+        d[k] = [n.strip() for n in d[k]]
+
+    obsids  = [map(int, row["OBSIDS"].strip().split()) for row in d]
+    frametypes  = [row["FRAMETYPES"].strip().split() for row in d]
+    starting_obsids = [o[0] for o in obsids]
+
+    r = dict(starting_obsid=starting_obsids,
+             objname=d["OBJNAME"],
+             obstype=d["OBJTYPE"],
+             group1=d["GROUP1"],
+             group2=d["GROUP2"],
+             exptime=d["EXPTIME"],
+             recipe=d["RECIPE"],
+             obsids=obsids,
+             frametypes=frametypes)
+
+    return r
+
+load_recipe_as_dict = load_recipe_as_dict_pandas
 
 class RecipeLog(pd.DataFrame):
     def __init__(self, fn):
@@ -160,8 +196,7 @@ class RecipeLog(pd.DataFrame):
         return self.iloc[m_reversed]
 
 
-if __name__ == "__main__":
-
+def _test1():
     fn = "../../recipe_logs/20141023.recipes"
     # r = load_recipe(fn)
     r = RecipeDataFrame(fn)
@@ -171,3 +206,14 @@ if __name__ == "__main__":
     r.subset(starting_obsid=105)
     r.subset(starting_obsid=[11, 105])
     r.subset(recipe=["SKY", "EXTENDED_ONOFF"])
+
+def _test2():
+    fn = "../../recipe_logs/20141023.recipes"
+    # r = load_recipe(fn)
+    r2 = Recipes(fn)
+
+    s1 = r2.select_deprecate("A0V_AB")
+    s2 = r2.select_fnmatch("A0V_AB")
+
+if __name__ == "__main__":
+    pass
