@@ -18,7 +18,7 @@ def generate_a0v_divided(helper, band, obsids, a0v_obsid=None,
 
     print master_obsid, a0v_obsid
     if a0v_obsid is None:
-        a0v_basename = caldb.db_query_basename("a0v", band, master_obsid)
+        a0v_basename = caldb.db_query_basename("a0v", (band, master_obsid))
     else:
         a0v_basename = helper.get_basename(band, a0v_obsid)
 
