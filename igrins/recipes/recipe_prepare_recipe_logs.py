@@ -35,6 +35,31 @@ def _load_data_numpy(fn):
                       skip_header=2, delimiter=",", dtype=dtype)
     return l
 
+def convert_group_values(groups):
+
+    _cached_g = None
+
+    new_groups = []
+
+    for g in groups:
+        try:
+            from_cached = int(g) < 0
+        except ValueError:
+            from_cached = False
+
+        if from_cached:
+            if _cached_g is None:
+                raise RuntimeError("Negative group values are "
+                                   "only allowed if previous "
+                                   "group value has been defined")
+        else:
+            _cached_g = g
+
+        new_groups.append(_cached_g)
+
+    return new_groups
+
+
 def _load_data_pandas(fn):
     dtype_=[('FILENAME', 'S128'),
             ('OBSTIME', 'S128'),
@@ -70,6 +95,10 @@ def _load_data_pandas(fn):
     df = pd.read_csv(fn, skiprows=2, dtype=dtypes, comment="#", 
                      names=names, escapechar="\\")
     df["OBJNAME"] = [s.replace(",", "\\,") for s in df["OBJNAME"]]
+
+    df["GROUP1"] = convert_group_values(df["GROUP1"])
+    df["GROUP2"] = convert_group_values(df["GROUP2"])
+
     l = df.to_records(index=False)
     # l = np.genfromtxt(fn,
     #                   skip_header=2, delimiter=",", dtype=dtype)
