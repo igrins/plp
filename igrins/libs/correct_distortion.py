@@ -31,7 +31,7 @@ class ShiftX(object):
 
 
 def get_flattened_2dspec(data, order_map, bottom_up_solutions,
-                         conserve_flux=False):
+                         conserve_flux=False, height=0):
 
     #sl = slice(0, 2048), slice(0, 2048)
 
@@ -43,7 +43,7 @@ def get_flattened_2dspec(data, order_map, bottom_up_solutions,
 
     from scipy.interpolate import interp1d
 
-    def get_shifted(data, normalize=False):
+    def get_shifted(data, normalize=False, height=0):
 
         acc_data = np.add.accumulate(data, axis=0)
         ny, nx = acc_data.shape
@@ -56,17 +56,28 @@ def get_flattened_2dspec(data, order_map, bottom_up_solutions,
                          for dd in acc_data.T]
 
         bottom_up_list = []
-        max_height = 0
+
+        if height == 0:
+            max_height = 0
+
+            for c in bottom_up_solutions:
+                bottom = Polynomial(c[0][1])(xx)
+                up = Polynomial(c[1][1])(xx)
+
+                _height = up - bottom
+                max_height = max(int(np.ceil(max(_height))), max_height)
+
+            height = max_height
+
+        d_factor = 1./height
+
         for c in bottom_up_solutions:
             bottom = Polynomial(c[0][1])(xx)
             up = Polynomial(c[1][1])(xx)
-            dh = (up - bottom) * 0.05
+            dh = (up - bottom) * d_factor # * 0.02
 
-            bottom_up = zip(bottom - dh, up + dh)
+            bottom_up = zip(bottom - dh, up)
             bottom_up_list.append(bottom_up)
-
-            height = up - bottom
-            max_height = max(int(np.ceil(max(height))), max_height)
 
         d0_shft_list = []
 
@@ -80,7 +91,7 @@ def get_flattened_2dspec(data, order_map, bottom_up_solutions,
 
             #max_height = int(np.ceil(max(height)))
 
-            yy_list = [np.linspace(y1, y2, max_height+1) \
+            yy_list = [np.linspace(y1, y2, height+1) \
                   for (y1, y2) in bottom_up]
             d0_acc_shft = np.array([intp(yy) \
                                     for yy, intp in zip(yy_list, d0_acc_interp)]).T
@@ -95,8 +106,8 @@ def get_flattened_2dspec(data, order_map, bottom_up_solutions,
         return d0_shft_list
 
 
-    d0_shft_list = get_shifted(data)
-    msk_shft_list = get_shifted(msk, normalize=conserve_flux)
+    d0_shft_list = get_shifted(data, height=height)
+    msk_shft_list = get_shifted(msk, normalize=conserve_flux, height=height)
 
     return d0_shft_list, msk_shft_list
 

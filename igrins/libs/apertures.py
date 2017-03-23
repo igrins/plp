@@ -207,12 +207,13 @@ class Apertures(object):
             #     hdu_list.writeto("test_mask.fits", clobber=True)
 
             profile_map = profile_map*msk10
-            data = shiftx(data)#/msk10
-            variance_map = shiftx(variance_map)#/msk10#/msk10 #**2
+            data = shiftx(data)/msk10
+            variance_map = shiftx(variance_map)/msk10#/msk10 #**2
 
-            msk1 = (msk10 > 0) & (variance_map > 0) #& (msk10 > 0.2)
+            msk1 = (msk10 > 0) & (variance_map > 0) & (msk10 > 0.2)
 
-        return data, variance_map, profile_map, msk1
+        return (np.ma.array(data, mask=~msk1).filled(np.nan),
+                variance_map, profile_map, msk1)
 
     def extract_simple_from_shifted(self, ordermap,
                                     profile_map, variance_map,
