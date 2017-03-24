@@ -177,8 +177,9 @@ class CalDB(object):
 
     def _get_basename(self, basename):
         if not isinstance(basename, str):
-            band, master_obsid = basename
-            basename = self.helper.get_basename(band, master_obsid)
+            band, groupname = basename
+            basename = self.helper.get_basename_with_groupname(band,
+                                                               groupname)
 
         return basename
 

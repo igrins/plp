@@ -1,11 +1,14 @@
 class ObsSet(object):
-    def __init__(self, caldb, band, recipe_name, obsids, frametypes):
+    def __init__(self, caldb, band, recipe_name, obsids, frametypes,
+                 groupname=None):
         self.caldb = caldb
         self.recipe_name = recipe_name
         self.band = band
         self.obsids = obsids
         self.frametypes = frametypes
-        self.basename = self.caldb._get_basename((self.band, self.obsids[0]))
+        if groupname is None:
+            groupname = self.obsids[0]
+        self.basename = self.caldb._get_basename((self.band, groupname))
 
     def get_config(self):
         return self.caldb.get_config()

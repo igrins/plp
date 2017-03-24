@@ -35,6 +35,11 @@ class RecipeHelper:
         basename = os.path.splitext(os.path.basename(filenames[0]))[0]
         return basename
 
+    def get_basename_with_groupname(self, band, groupname):
+        if isinstance(groupname, int):
+            groupname = str(groupname)
+        return self._igr_path.get_basename(band, groupname)
+
     def get_base_info(self, band, obsids):
         filenames = self.get_filenames(band, obsids)
         basename = os.path.splitext(os.path.basename(filenames[0]))[0]

@@ -42,6 +42,7 @@ def convert_group_values(groups):
     new_groups = []
 
     for g in groups:
+        # we assume that g is string
         try:
             from_cached = int(g) < 0
         except ValueError:
@@ -107,7 +108,8 @@ def _load_data_pandas(fn):
 
 _load_data = _load_data_pandas
 
-def prepare_recipe_logs(utdate, config_file="recipe.config"):
+def prepare_recipe_logs(utdate, config_file="recipe.config",
+                        populate_group1=False):
 
     from igrins.libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
@@ -224,7 +226,11 @@ def prepare_recipe_logs(utdate, config_file="recipe.config"):
         else:
             recipe = "DEFAULT"
 
-        s1 = "%s, %s, %d, %d, %f," % lll[0]
+        ss = lll[0]
+        if populate_group1:
+            ss = ss[:2] + (obsids[0],) + ss[3:]
+
+        s1 = "%s, %s, %s, %s, %f," % ss
         s2 = "%s, %s, %s\n" % (recipe,
                                " ".join(map(str,obsids)),
                                " ".join(frametypes),

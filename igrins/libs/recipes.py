@@ -28,6 +28,25 @@ def load_recipe_list_pandas(fn):
     df = pd.read_csv(fn, skiprows=0, dtype=dtypes, comment="#", 
                      # names=names, 
                      escapechar="\\", skipinitialspace=True)
+
+    update_group1 = False
+    try:
+        if np.all(df["GROUP1"].astype("i") == 1):
+            update_group1 = True
+    except ValueError:
+        pass
+
+    if update_group1:
+        df["GROUP1"] = [r.split()[0] for r in df["OBSIDS"]]
+    else:
+        for i, row in df.iterrows(): 
+            if row["OBJTYPE"] != "TAR":
+                if row["GROUP1"] != row["OBSIDS"].split()[0]:
+                    raise ValueError("GROUP1 should be identical to "
+                                     "1st OBSIDS unless the OBJTYPE is "
+                                     "TAR")
+            
+
     # df["OBJNAME"] = [s.replace(",", "\\,") for s in df["OBJNAME"]]
     d = df.to_records(index=False)
 
@@ -143,10 +162,17 @@ def load_recipe_as_dict_pandas(fn):
     frametypes  = [row["FRAMETYPES"].strip().split() for row in d]
     starting_obsids = [o[0] for o in obsids]
 
+    group1 = d["GROUP1"]
+    try:
+        if np.all(d["GROUP1"].astype("i") == 1):
+            group1 = starting_obsids
+    except ValueError:
+        pass
+
     r = dict(starting_obsid=starting_obsids,
              objname=d["OBJNAME"],
              obstype=d["OBJTYPE"],
-             group1=d["GROUP1"],
+             group1=group1, # d["GROUP1"],
              group2=d["GROUP2"],
              exptime=d["EXPTIME"],
              recipe=d["RECIPE"],

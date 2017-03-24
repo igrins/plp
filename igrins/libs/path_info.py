@@ -3,6 +3,9 @@ import os
 from os.path import join
 import astropy.io.fits as pyfits
 
+import re
+groupname_pattern = re.compile(r"(\d+)(\D.*)")
+
 def ensure_dir(d):
     if not os.path.exists(d):
         os.makedirs(d)
@@ -37,6 +40,8 @@ class IGRINSPath(object):
         # filename pattern for input files
         self.fn_pattern = join(self.sections["INDATA_PATH"],
                                "SDC%%s_%s_%%04d.fits" % (self.utdate,))
+
+        self.basename_pattern = "SDC%%s_%s_%%s" % (self.utdate,)
 
         if ensure_dir:
             self.ensure_dir()
@@ -81,6 +86,14 @@ class IGRINSPath(object):
 
     def get_filename(self, band, runid):
         return self.fn_pattern % (band, runid)
+
+    def get_basename(self, band, groupname):
+        m = groupname_pattern.match(groupname)
+        if m:
+            m1, m2 = m.groups()
+            groupname = "%04d%s" % (int(m1), m2)
+
+        return self.basename_pattern % (band, groupname)
 
     def get_hdus(self, band, runids):
         fn_list = self.get_filenames(band, runids)
