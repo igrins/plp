@@ -79,6 +79,7 @@ def _run_order_main(args):
 def extractor_factory(recipe_name):
     @argh.arg("-b", "--bands", default="HK", choices=["H", "K", "HK"])
     @argh.arg("-s", "--starting-obsids", default=None)
+    @argh.arg("-g", "--groups", default=None)
     @argh.arg("-c", "--config-file", default="recipe.config")
     @argh.arg("-d", "--debug-output", default=False)
     @argh.arg("--wavelength-increasing-order", default=False)
@@ -121,6 +122,7 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
              ):
 
     starting_obsids = kwargs.pop("starting_obsids")
+    groups = kwargs.pop("groups")
 
     from igrins.libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(kwargs.pop("config_file"))
@@ -130,14 +132,25 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
 
     fn = config.get_value('RECIPE_LOG_PATH', utdate)
     from igrins.libs.recipes import Recipes #load_recipe_list, make_recipe_dict
-    recipe = Recipes(fn)
+    recipe = Recipes(fn, allow_duplicate_groups=False)
 
     if starting_obsids is not None:
+        if groups is not None:
+            raise ValueError("starting_obsid option is not allowed if groups option is used")
+            
         starting_obsids = map(int, starting_obsids.split(","))
+        selected = recipe.select_fnmatch(recipe_name, starting_obsids)
 
-    selected = recipe.select_fnmatch(recipe_name, starting_obsids)
+    elif groups is not None:
+        groups = [_.strip() for _ in groups.split(",")]
+
+        selected = recipe.select_fnmatch_by_groups(recipe_name, groups)
+
+    else:
+        selected = recipe.select_fnmatch_by_groups(recipe_name)
+
     if not selected:
-        print "no recipe of with matching arguments is found"
+        print "no recipe of matching arguments is found"
 
     frac_slit = map(float, kwargs["frac_slit"].split(","))
     if len(frac_slit) !=2:
@@ -168,12 +181,12 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
     if len(selected) == 0:
         print "No entry with given recipe is found : %s" % recipe_name
 
-    for s in selected:
-        recipe_name, obsids, frametypes = s[:3]
-
-        for band in bands:
+    for band in bands:
+        for s in selected:
+            recipe_name, obsids, frametypes = s[:3]
+            groupname = s[-1]["GROUP1"]
             process_abba_band(recipe_name, band,
-                              obsids, frametypes,
+                              groupname, obsids, frametypes,
                               #do_interactive_figure=interactive
                               )
 
@@ -265,7 +278,7 @@ class ProcessABBABand(object):
         else:
             profile_x, profile_y = extractor.get_norm_profile(bins, hh0)
 
-        self.store_profile(extractor.obj_filenames[0],
+        self.store_profile(extractor.mastername, # obj_filenames[0],
                            ap.orders, slit_profile_list,
                            profile_x, profile_y)
 
@@ -672,7 +685,7 @@ class ProcessABBABand(object):
         return s_list, v_list, cr_mask, aux_images
 
 
-    def process(self, recipe, band, obsids, frametypes,
+    def process(self, recipe, band, groupname, obsids, frametypes,
                 conserve_2d_flux=True):
 
         igr_storage = self.igr_storage
@@ -700,7 +713,12 @@ class ProcessABBABand(object):
 
         from recipe_extract_base import RecipeExtractBase
 
+        # mastername = extractor.obj_filenames[0]
+        mastername = self.igr_path.get_basename(band, groupname)
+        print "***", mastername
+
         extractor = RecipeExtractBase(self.utdate, band,
+                                      mastername,
                                       obsids, frametypes,
                                       self.config,
                                       ab_mode=DO_AB)
@@ -727,7 +745,6 @@ class ProcessABBABand(object):
 
         ordermap = extractor.ordermap
         slitpos_map = extractor.slitpos_map
-
 
         slitoffset_map = extractor.slitoffset_map
 
@@ -940,9 +957,6 @@ class ProcessABBABand(object):
                     sn_list.append(sn)
 
 
-
-        mastername = extractor.obj_filenames[0]
-
         from igrins.libs.products import PipelineImage as Image
         if self.debug_output:
             image_list = [Image([("EXTNAME", "DATA_CORRECTED")],
@@ -982,6 +996,7 @@ class ProcessABBABand(object):
 
         self.store_1dspec(igr_storage,
                           extractor,
+                          mastername,
                           v_list, sn_list, s_list)
 
         if not IF_POINT_SOURCE: # if point source
@@ -989,6 +1004,7 @@ class ProcessABBABand(object):
 
         self.store_2dspec(igr_storage,
                           extractor,
+                          mastername,
                           shifted["data"],
                           shifted["variance_map"],
                           ordermap_bpixed,
@@ -1123,6 +1139,7 @@ class ProcessABBABand(object):
 
     def store_1dspec(self, igr_storage,
                      extractor,
+                     mastername,
                      v_list, sn_list, s_list):
 
         wvl_header, wvl_data, convert_data = \
@@ -1134,7 +1151,8 @@ class ProcessABBABand(object):
         f_obj = open_fits(extractor.obj_filenames[0])
         f_obj[0].header.extend(wvl_header)
 
-        tgt_basename = extractor.pr.tgt_basename
+        # tgt_basename = extractor.pr.tgt_basename
+        tgt_basename = mastername
 
         from igrins.libs.storage_descriptions import (SPEC_FITS_DESC,
                                                VARIANCE_FITS_DESC,
@@ -1171,6 +1189,7 @@ class ProcessABBABand(object):
 
     def store_2dspec(self, igr_storage,
                      extractor,
+                     mastername,
                      data_shft,
                      variance_map_shft,
                      ordermap_bpixed,
@@ -1187,7 +1206,8 @@ class ProcessABBABand(object):
         f_obj = open_fits(extractor.obj_filenames[0])
         f_obj[0].header.extend(wvl_header)
 
-        tgt_basename = extractor.pr.tgt_basename
+        # tgt_basename = extractor.pr.tgt_basename
+        tgt_basename = mastername
 
         from igrins.libs.storage_descriptions import FLATCENTROID_SOL_JSON_DESC
         cent = igr_storage.load1(FLATCENTROID_SOL_JSON_DESC,
@@ -1342,6 +1362,7 @@ class ProcessABBABand(object):
         return a0v_flattened
 
     def store_a0v_results(self, igr_storage, extractor,
+                          mastername,
                           a0v_flattened_data):
 
         wvl_header, wvl_data, convert_data = \
@@ -1368,7 +1389,7 @@ class ProcessABBABand(object):
         r = PipelineProducts("flattened 1d specs")
         r.add(SPEC_FITS_FLATTENED_DESC, PipelineImages(image_list))
 
-        mastername = extractor.obj_filenames[0]
+        # mastername = extractor.obj_filenames[0]
 
         igr_storage.store(r,
                           mastername=mastername,
