@@ -4,11 +4,24 @@ from os.path import join
 import astropy.io.fits as pyfits
 
 import re
-groupname_pattern = re.compile(r"(\d+)(\D.*)")
+groupname_pattern = re.compile(r"(\d+)(\D.*)?")
 
 def ensure_dir(d):
     if not os.path.exists(d):
         os.makedirs(d)
+
+def get_zeropadded_groupname(groupname):
+    if isinstance(groupname, int):
+        groupname = "%04d" % groupname
+    else:
+        m = groupname_pattern.match(groupname)
+        if m:
+            m1, m2 = m.groups()
+            groupname = "%04d%s" % (int(m1), m2 if m2 else "")
+        else:
+            pass
+
+    return groupname
 
 class IGRINSPath(object):
     # IGRINS_CALIB_PATH="calib"
@@ -39,7 +52,7 @@ class IGRINSPath(object):
 
         # filename pattern for input files
         self.fn_pattern = join(self.sections["INDATA_PATH"],
-                               "SDC%%s_%s_%%04d.fits" % (self.utdate,))
+                               "SDC%%s_%s_%%s.fits" % (self.utdate,))
 
         self.basename_pattern = "SDC%%s_%s_%%s" % (self.utdate,)
 
@@ -85,15 +98,13 @@ class IGRINSPath(object):
         return [self.get_filename(band, i) for i in runids]
 
     def get_filename(self, band, runid):
-        return self.fn_pattern % (band, runid)
+        groupname = get_zeropadded_groupname(runid)
+        return self.fn_pattern % (band, groupname)
 
     def get_basename(self, band, groupname):
-        m = groupname_pattern.match(groupname)
-        if m:
-            m1, m2 = m.groups()
-            groupname = "%04d%s" % (int(m1), m2)
-
-        return self.basename_pattern % (band, groupname)
+        groupname = get_zeropadded_groupname(groupname)
+        basename = self.basename_pattern % (band, groupname)
+        return basename
 
     def get_hdus(self, band, runids):
         fn_list = self.get_filenames(band, runids)

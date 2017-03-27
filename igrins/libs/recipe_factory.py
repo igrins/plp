@@ -14,8 +14,10 @@ class RecipeFactoryProcessBand(RecipeBase):
                 obsids = s[1]
                 frame_types = s[2]
                 aux_infos = s[3]
+                groupname = aux_infos["GROUP1"]
 
-                self.process_band(utdate, recipe_name, band, 
+                self.process_band(utdate, recipe_name, band,
+                                  groupname,
                                   obsids, frame_types, aux_infos,
                                   self.config, **kwargs)
 
@@ -29,12 +31,15 @@ def new_recipe_func(function_name, recipe_cls):
 
     def _recipe_func(utdate, bands="HK",
                      starting_obsids=None,
+                     groups=None,
                      config_file="recipe.config",
                      **kwargs):
 
         _recipe_obj = recipe_cls()
         _recipe_obj.process(utdate, bands,
-                            starting_obsids, config_file,
+                            starting_obsids, 
+                            groups,
+                            config_file,
                             **kwargs)
 
     _recipe_func.__name__ = function_name.lower()

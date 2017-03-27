@@ -497,6 +497,7 @@ def save_db(obsset):
 
 
 def process_band(utdate, recipe_name, band,
+                 groupname,
                  obsids, frametypes, aux_infos,
                  config_name, **kwargs):
 

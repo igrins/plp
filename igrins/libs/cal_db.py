@@ -97,7 +97,7 @@ class CalDB(object):
     def db_query_basename(self, db_name, basename):
         band, master_obsid = self._get_band_masterobsid(basename)
         db = self.load_db(db_name)
-        resource_basename = db.query(band, master_obsid)
+        resource_basename = db.query(band, int(master_obsid))
         return resource_basename
 
 
@@ -109,7 +109,9 @@ class CalDB(object):
 
         if not isinstance(basename, str):
             band, master_obsid = basename
-            basename = self.helper.get_basename(band, master_obsid)
+            # basename = self.helper.get_basename(band, master_obsid)
+            basename = self.helper.get_basename_with_groupname(band,
+                                                               master_obsid)
 
         if basename_postfix is not None:
             basename += basename_postfix
@@ -185,49 +187,70 @@ class CalDB(object):
 
     def _get_band_masterobsid(self, basename):
         if isinstance(basename, str):
-            sdc_, utdate, masterobsid_ = basename.split("_")
+            sdc_, utdate, masterobsid = basename.split("_")
             band = sdc_[-1]
-            masterobsid = int(masterobsid_)
+            # masterobsid = int(masterobsid_)
         else:
             band, masterobsid = basename
 
         return band, masterobsid
 
+    def _get_master_hdu(self, basename, master_hdu):
+        if master_hdu is None:
+            band, master_obsid = self._get_band_masterobsid(basename)
+            mastername = self.helper.get_filename(band, master_obsid)
+            master_hdu = self.helper.get_masterhdu(mastername)
+        elif isinstance(master_hdu, int):
+            band, master_obsid = self._get_band_masterobsid(basename)
+            # interprete master_hdu as master_obsid
+            master_obsid = master_hdu
+            master_hdu = self.helper.get_masterhdu(mastername)
+        else:
+            pass
+
+        return master_hdu
+
     def store_image(self, basename, item_type, data,
+                    master_hdu=None,
                     header=None, card_list=None):
-        band, master_obsid = self._get_band_masterobsid(basename)
-        basename = self._get_basename(basename)
+        from products import PipelineImageBase
 
         item_desc = self.DESC_DICT[item_type.upper()]
 
-        from products import PipelineImageBase
-        mastername = self.helper.get_filenames(band, [master_obsid])[0]
+        # band, master_obsid = self._get_band_masterobsid(basename)
+        # basename = self._get_basename(basename)
 
-        hdu = self.helper.get_masterhdu(mastername)
-        if header is not None:
-            hdu.header = header
+        # mastername = self.helper.get_filenames(band, [master_obsid])[0]
+
+        # hdu = self.helper.get_masterhdu(mastername)
+
+        master_hdu = self._get_master_hdu(basename, master_hdu)
+
+        # if header is not None:
+        #     master_hdu.header = header
+
         if card_list is not None:
-            hdu.header.extend(card_list)
+            master_hdu.header.extend(card_list)
 
         pipeline_image = PipelineImageBase([], data,
-                                           masterhdu=hdu)
+                                           masterhdu=master_hdu)
 
         self.helper.store_item(item_desc, basename,
                                pipeline_image)
 
-    def store_multi_image(self, basename, item_type, hdu_list,
+    def store_multi_image(self, basename,
+                          item_type, hdu_list,
+                          master_hdu=None,
                           basename_postfix=None):
-        band, master_obsid = self._get_band_masterobsid(basename)
-        basename = self._get_basename(basename)
+        # basename = self._get_basename(basename)
 
         item_desc = self.DESC_DICT[item_type.upper()]
 
-        from products import PipelineImages
-        mastername = self.helper.get_filenames(band, [master_obsid])[0]
-        hdu = self.helper.get_masterhdu(mastername)
+        master_hdu = self._get_master_hdu(basename, master_hdu)
 
+        from products import PipelineImages
         pipeline_image = PipelineImages(hdu_list,
-                                        masterhdu=hdu)
+                                        masterhdu=master_hdu)
 
         self.helper.store_item(item_desc, basename,
                                pipeline_image,

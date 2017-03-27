@@ -661,10 +661,13 @@ class RecipeFlat(RecipeBase):
 # TODO : See if we can avoid duplicating the function signatures.
 
 def flat(utdate, bands="HK",
-         starting_obsids=None, config_file="recipe.config"):
+         starting_obsids=None,
+         groups=None,
+         config_file="recipe.config"):
 
     RecipeFlat()(utdate, bands,
-                 starting_obsids, config_file)
+                 starting_obsids, groups,
+                 config_file=config_file)
 
 if 0:
     # Step 2

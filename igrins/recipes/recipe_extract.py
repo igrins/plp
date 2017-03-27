@@ -715,7 +715,6 @@ class ProcessABBABand(object):
 
         # mastername = extractor.obj_filenames[0]
         mastername = self.igr_path.get_basename(band, groupname)
-        print "***", mastername
 
         extractor = RecipeExtractBase(self.utdate, band,
                                       mastername,
@@ -1024,6 +1023,7 @@ class ProcessABBABand(object):
             a0v_flattened = a0v_flattened_data[0][1]  #"flattened_spec"]
 
             self.store_a0v_results(igr_storage, extractor,
+                                   mastername,
                                    a0v_flattened_data)
 
 

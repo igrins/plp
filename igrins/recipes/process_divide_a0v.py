@@ -4,23 +4,28 @@ import numpy as np
 from igrins.libs.a0v_spec import A0V
 
 
-def generate_a0v_divided(helper, band, obsids, a0v_obsid=None,
-                         basename_postfix=None):
+def generate_a0v_divided(helper, band, 
+                         groupname,
+                         obsids, a0v=None,
+                         basename_postfix=None,
+                         outname_postfix=None):
 
     caldb = helper.get_caldb()
 
     master_obsid = obsids[0]
-    tgt_spec_hdulist = caldb.load_item_from((band, master_obsid),
+    #tgt_spec_hdulist = caldb.load_item_from((band, master_obsid),
+    tgt_spec_hdulist = caldb.load_item_from((band, groupname),
                                             "SPEC_FITS",
                                             basename_postfix=basename_postfix)
     spec = tgt_spec_hdulist[0].data
     wvl = tgt_spec_hdulist[1].data
 
-    print master_obsid, a0v_obsid
-    if a0v_obsid is None:
+    # print master_obsid, a0v_obsid
+    if a0v is None:
+        # we still use master_obsid for db query
         a0v_basename = caldb.db_query_basename("a0v", (band, master_obsid))
     else:
-        a0v_basename = helper.get_basename(band, a0v_obsid)
+        a0v_basename = helper.get_basename_with_groupname(band, a0v)
 
     a0v_spec_hdulist = caldb.load_item_from(a0v_basename,
                                             "SPEC_FITS",
@@ -39,7 +44,7 @@ def generate_a0v_divided(helper, band, obsids, a0v_obsid=None,
 
     master_hdu = tgt_spec_hdulist[0]
 
-    basename = helper.get_basename(band, master_obsid)
+    basename = helper.get_basename_with_groupname(band, groupname)
 
     
     header_updates = [("hierarch IGR_A0V_BASENAME", a0v_basename),
@@ -50,7 +55,7 @@ def generate_a0v_divided(helper, band, obsids, a0v_obsid=None,
                          wvl, spec, a0v_spec, vega,
                          a0v_fitted_continuum,
                          header_updates=header_updates,
-                         basename_postfix=basename_postfix)
+                         basename_postfix=outname_postfix)
 
 
 def store_tgt_divide_a0v(caldb, basename,
@@ -82,37 +87,42 @@ def store_tgt_divide_a0v(caldb, basename,
 
     item_type = "SPEC_A0V_FITS"
     caldb.store_multi_image(basename, item_type, image_list,
+                            master_hdu=master_hdu,
                             basename_postfix=basename_postfix)
 
-
-
-if 0:
-    hdulist = pyfits.open("/home/jjlee/work/igrins/plp_jjlee/outdata/20140525/SDCK_20140525_0042.spec_a0v.fits")
-
-    s = hdulist["SPEC_DIVIDE_A0V"].data
-    wvl = hdulist["WAVELENGTH"].data
-    tgt_s = hdulist["TGT_SPEC"].data
-    a0v_s = hdulist["A0V_SPEC"].data
-    vega_s = hdulist["VEGA_SPEC"].data
-
-    clf()
-    m = np.median(a0v_s)
-    for w1, s1, a0v1 in zip(wvl, s, a0v_s):
-        s1 = np.ma.array(s1, mask=a0v1<0.3*m).filled(np.nan)
-        plot(w1, s1)
 
 from igrins.libs.recipe_helper import RecipeHelper
 
 def process_band(utdate, recipe_name, band, 
-                 obsids, frame_types, aux_infos,
+                 groupname, obsids, frame_types, aux_infos,
                  config_name, 
+                 a0v=None,
                  a0v_obsid=None,
-                 basename_postfix=None):
+                 basename_postfix=None,
+                 outname_postfix=None):
+
+    # print master_obsid, a0v_obsid
+    if a0v is not None:
+        if a0v_obsid is not None:
+            raise ValueError("a0v-obsid option is not allowed "
+                             "if a0v opption is used")
+        elif str(a0v).upper() == "GROUP2":
+            a0v = aux_infos["GROUP2"]
+    else:
+        if a0v_obsid is not None:
+            a0v = a0v_obsid
+        else:
+            # a0v, a0v_obsid is all None. Keep it as None
+            pass
+
+    groupname = aux_infos["GROUP1"]
 
     helper = RecipeHelper(config_name, utdate, recipe_name)
 
-    generate_a0v_divided(helper, band, obsids, a0v_obsid,
-                         basename_postfix=basename_postfix)
+    generate_a0v_divided(helper, band, 
+                         groupname, obsids, a0v,
+                         basename_postfix=basename_postfix,
+                         outname_postfix=outname_postfix)
 
 
 if __name__ == "__main__":

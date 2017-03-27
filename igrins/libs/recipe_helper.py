@@ -30,6 +30,9 @@ class RecipeHelper:
     def get_filenames(self, band, obsids):
         return self._igr_path.get_filenames(band, obsids)
 
+    def get_filename(self, band, obsid):
+        return self._igr_path.get_filename(band, obsid)
+
     def get_basename(self, band, master_obsid):
         filenames = self.get_filenames(band, [master_obsid])
         basename = os.path.splitext(os.path.basename(filenames[0]))[0]

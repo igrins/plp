@@ -151,7 +151,9 @@ from process_wvlsol_v0 import extract_spectra_multi
 from process_wvlsol_v0 import make_combined_image
 
 
-def process_band(utdate, recipe_name, band, obsids, frametypes,
+def process_band(utdate, recipe_name, band, 
+                 groupname,
+                 obsids, frametypes,
                  aux_infos, config_name):
 
     from igrins import get_caldb, get_obsset

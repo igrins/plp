@@ -11,7 +11,11 @@ _recipe_class_divide_a0v = new_recipe_class("RecipeDivideA0V",
 divide_a0v = new_recipe_func("divide_a0v",
                              _recipe_class_divide_a0v)
 
+# FIXME: This is ugly.
+divide_a0v = argh.arg('-a', '--a0v', default=None)(divide_a0v)
 divide_a0v = argh.arg('--a0v-obsid', default=None, type=int)(divide_a0v)
 divide_a0v = argh.arg('--basename-postfix', default=None, type=str)(divide_a0v)
+divide_a0v = argh.arg('--outname-postfix', default=None, type=str)(divide_a0v)
+divide_a0v = argh.arg("-g", "--groups", default=None)(divide_a0v)
 
 __all__ = divide_a0v

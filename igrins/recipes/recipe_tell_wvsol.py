@@ -407,7 +407,8 @@ def run(filename, outfilename,
     hdulist.writeto(outfilename, clobber=True)
 
 
-def process_band(utdate, recipe_name, band, obsids, config,
+def process_band(utdate, recipe_name, band, 
+                 groupname, obsids, config,
                  interactive=True):
 
     # utdate, recipe_name, band, obsids, config = "20150525", "A0V", "H", [63, 64], "recipe.config"
@@ -419,16 +420,16 @@ def process_band(utdate, recipe_name, band, obsids, config,
     master_obsid = obsids[0]
     desc = "SPEC_FITS_FLATTENED"
     blaze_corrected=True
-    src_filename = caldb.query_item_path((band, master_obsid),
+    src_filename = caldb.query_item_path((band, groupname),
                                          desc)
 
     if not os.path.exists(src_filename):
         desc = "SPEC_FITS"
         blaze_corrected=False
-        src_filename = caldb.query_item_path((band, master_obsid),
+        src_filename = caldb.query_item_path((band, groupname),
                                              desc)
 
-    out_filename = caldb.query_item_path((band, master_obsid),
+    out_filename = caldb.query_item_path((band, groupname),
                                          "SPEC_FITS_WAVELENGTH")
 
     from igrins.libs.master_calib import get_ref_data_path
@@ -436,7 +437,7 @@ def process_band(utdate, recipe_name, band, obsids, config,
                                   kind="TELL_WVLSOL_MODEL")
 
     if not interactive:
-        tgt_basename = helper.get_basename(band, master_obsid)
+        tgt_basename = helper.get_basename(band, groupname)
         figout_dir = helper._igr_path.get_section_filename_base("QA_PATH",
                                                                "",
                                                                "tell_wvsol_"+tgt_basename)
@@ -469,6 +470,7 @@ class RecipeTellWvlsol(RecipeBase):
             for s in selected:
                 recipe_name = s[0].strip()
                 obsids = s[1]
+                groupname = s[-1]["GROUP1"]
 
                 target_type = recipe_name.split("_")[0]
 
@@ -476,13 +478,15 @@ class RecipeTellWvlsol(RecipeBase):
                     print "Unsupported recipe : %s" % recipe_name
                     continue
 
-                process_band(utdate, recipe_name, band, obsids, self.config,
+                process_band(utdate, recipe_name, band, 
+                             groupname, obsids, self.config,
                              interactive)
                 #print (utdate, recipe_name, band, obsids, self.config)
 
 
 def tell_wvsol(utdate, refdate=None, bands="HK",
-               starting_obsids=None, interactive=False,
+               starting_obsids=None, groups=None,
+               interactive=False,
                recipe_name = "A0V*",
                config_file="recipe.config",
                ):
@@ -490,10 +494,13 @@ def tell_wvsol(utdate, refdate=None, bands="HK",
     recipe = RecipeTellWvlsol(interactive=interactive)
     recipe.set_recipe_name(recipe_name)
     recipe.process(utdate, bands,
-                   starting_obsids, config_file)
+                   starting_obsids, groups, 
+                   config_file=config_file)
 
 def wvlsol_tell(utdate, refdate=None, bands="HK",
-                starting_obsids=None, interactive=False,
+                starting_obsids=None, 
+                groups=None,
+                interactive=False,
                 recipe_name = "A0V*",
                 config_file="recipe.config",
                 ):
@@ -501,7 +508,8 @@ def wvlsol_tell(utdate, refdate=None, bands="HK",
     recipe = RecipeTellWvlsol(interactive=interactive)
     recipe.set_recipe_name(recipe_name)
     recipe.process(utdate, bands,
-                   starting_obsids, config_file)
+                   starting_obsids, groups, 
+                   config_file=config_file)
 
 
 # if __name__ == "__main__":
