@@ -26,13 +26,16 @@ def make_html(utdate, dirname, config_file="recipe.config"):
             #s["obsids"] = s["obsids"].strip()
             s["nexp"] = len(obsids)
 
+            from igrins.libs.path_info import get_zeropadded_groupname
+            objroot = get_zeropadded_groupname(s["grp1"])
+
             for band in "HK":
-                p = "igrins_spec_%04d_%s.html" % (obsids[0], band)
+                p = "igrins_spec_%s_%s.html" % (objroot, band)
                 if os.path.exists(os.path.join(dirname, p)):
                     s["url_%s" % band] = p
 
             for band in "HK":
-                p = "igrins_spec_%04dA0V_%s.html" % (obsids[0], band)
+                p = "igrins_spec_%sA0V_%s.html" % (objroot, band)
                 if os.path.exists(os.path.join(dirname, p)):
                     s["url_%s_A0V" % band] = p
 

@@ -1,17 +1,23 @@
 class ObsSet(object):
-    def __init__(self, caldb, band, recipe_name, obsids, frametypes):
+    def __init__(self, caldb, band, recipe_name, obsids, frametypes,
+                 groupname=None):
         self.caldb = caldb
         self.recipe_name = recipe_name
         self.band = band
         self.obsids = obsids
         self.frametypes = frametypes
-        self.basename = self.caldb._get_basename((self.band, self.obsids[0]))
+        if groupname is None:
+            groupname = str(self.obsids[0])
+        self.basename = self.caldb._get_basename((self.band, groupname))
+        # this is for query
+        self.basename_for_query = self.caldb._get_basename((self.band, 
+                                                            obsids[0]))
 
     def get_config(self):
         return self.caldb.get_config()
 
     def get(self, name):
-        return self.caldb.get(self.basename, name)
+        return self.caldb.get(self.basename_for_query, name)
 
     def get_base_info(self):
         return self.caldb.get_base_info(self.band, self.obsids)
@@ -58,7 +64,8 @@ class ObsSet(object):
 
     def query_item_path(self, item_type_or_desc,
                         basename_postfix=None, subdir=None):
-        return self.caldb.query_item_path(self.basename, item_type_or_desc,
+        return self.caldb.query_item_path(self.basename_for_query, 
+                                          item_type_or_desc,
                                           basename_postfix=basename_postfix,
                                           subdir=subdir)
 
@@ -82,7 +89,7 @@ class ObsSet(object):
 
     def _load_item_from(self, item_type_or_desc,
                         basename_postfix=None):
-        return self.caldb.load_item_from(self, self.basename,
+        return self.caldb.load_item_from(self.basename,
                                          item_type_or_desc,
                                          basename_postfix=basename_postfix)
 
@@ -116,7 +123,8 @@ class ObsSet(object):
 
     def load_resource_for(self, resource_type,
                           get_science_hdu=False):
-        return self.caldb.load_resource_for(self.basename, resource_type,
+        return self.caldb.load_resource_for(self.basename_for_query,
+                                            resource_type,
                                             get_science_hdu=get_science_hdu)
 
     # Ref data related

@@ -273,7 +273,9 @@ class RecipeExtractPR(object):
 
 class RecipeExtractBase(RecipeExtractPR):
 
-    def __init__(self, utdate, band, obsids, frametypes,
+    def __init__(self, utdate, band, 
+                 mastername,
+                 obsids, frametypes,
                  config=None,
                  ab_mode=True, load_a0v_db=False):
         """
@@ -288,6 +290,8 @@ class RecipeExtractBase(RecipeExtractPR):
                                  utdate, band, obsids,
                                  config,
                                  load_a0v_db=load_a0v_db)
+
+        self.mastername = mastername
 
         self.frametypes = frametypes
 

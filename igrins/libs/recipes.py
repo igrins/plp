@@ -2,7 +2,7 @@ import numpy as np
 
 
 
-def load_recipe_list_numpy(fn):
+def load_recipe_list_numpy(fn, allow_duplicate_groups=False):
     dtype=[('OBJNAME', 'S128'), ('OBJTYPE', 'S128'),
            ('GROUP1', 'S128'), ('GROUP2', 'S128'),
            ('EXPTIME', 'f'), ('RECIPE', 'S128'),
@@ -18,7 +18,7 @@ def load_recipe_list_numpy(fn):
 
     return recipe_list
 
-def load_recipe_list_pandas(fn):
+def load_recipe_list_pandas(fn, allow_duplicate_groups=False):
     dtypes= [('OBJNAME', 'S128'), ('OBJTYPE', 'S128'),
              ('GROUP1', 'S128'), ('GROUP2', 'S128'),
              ('EXPTIME', 'f'), ('RECIPE', 'S128'),
@@ -28,7 +28,34 @@ def load_recipe_list_pandas(fn):
     df = pd.read_csv(fn, skiprows=0, dtype=dtypes, comment="#", 
                      # names=names, 
                      escapechar="\\", skipinitialspace=True)
+
+    update_group1 = True
+
+    if update_group1:
+        msk = (df["GROUP1"] == "1")
+        s_obsids = [(r.split()[0] if m else g) for r,g, m
+                    in zip(df["OBSIDS"], df["GROUP1"], msk)]
+
+        if np.any(msk):
+            # print "RECIPE: repacing group1 value of 1 with 1st obsids."
+            # print [s for s, m in zip(s_obsids, msk) if m ]
+
+            df["GROUP1"] = s_obsids
+
+    for i, row in df.iterrows(): 
+        if row["OBJTYPE"] != "TAR":
+            if row["GROUP1"] != row["OBSIDS"].split()[0]:
+                raise ValueError("GROUP1 should be identical to "
+                                 "1st OBSIDS unless the OBJTYPE is "
+                                 "TAR")
+
     # df["OBJNAME"] = [s.replace(",", "\\,") for s in df["OBJNAME"]]
+    if len(np.unique(df["GROUP1"])) != len(df["GROUP1"]):
+        if not allow_duplicate_groups:
+            raise ValueError("Dupicate group names in the recipe file.")
+        else:
+            pass
+
     d = df.to_records(index=False)
 
     # d = np.genfromtxt(fn, delimiter=",", names=True, comments="#",
@@ -67,9 +94,10 @@ def get_multi_fnmatch_pattern(fnmatch_list):
 
 
 class Recipes(object):
-    def __init__(self, fn):
+    def __init__(self, fn, allow_duplicate_groups=False):
         self._fn = fn
-        self.recipe_list = load_recipe_list(fn)
+        self.recipe_list = load_recipe_list(fn, 
+                                            allow_duplicate_groups)
         self.recipe_dict = make_recipe_dict(self.recipe_list)
 
     def select_multi(self, recipe_names, starting_obsids=None):
@@ -87,14 +115,36 @@ class Recipes(object):
 
         p_match = get_multi_fnmatch_pattern(recipe_fnmatch_list)
 
-        dict_by_1st_obsid = dict((recipe_item[1][0], recipe_item) \
-                                 for recipe_item in self.recipe_list \
-                                 if p_match(recipe_item[0]))
+        from collections import OrderedDict
+        dict_by_1st_obsid = OrderedDict((recipe_item[1][0], recipe_item) \
+                                        for recipe_item in self.recipe_list \
+                                        if p_match(recipe_item[0]))
 
         if starting_obsids is None:
-            starting_obsids = sorted(dict_by_1st_obsid.keys())
+            starting_obsids = dict_by_1st_obsid.keys()
 
         selected = [dict_by_1st_obsid[s1] for s1 in starting_obsids]
+
+        return selected
+
+    def select_fnmatch_by_groups(self, recipe_fnmatch, groups=None):
+
+        if isinstance(recipe_fnmatch, str):
+            recipe_fnmatch_list = [recipe_fnmatch]
+        else:
+            recipe_fnmatch_list = recipe_fnmatch
+
+        p_match = get_multi_fnmatch_pattern(recipe_fnmatch_list)
+
+        from collections import OrderedDict
+        dict_by_group = OrderedDict((recipe_item[-1]["GROUP1"], recipe_item) \
+                                    for recipe_item in self.recipe_list \
+                                    if p_match(recipe_item[0]))
+
+        if groups is None:
+            groups = dict_by_group.keys()
+
+        selected = [dict_by_group[s1] for s1 in groups]
 
         return selected
 
@@ -143,10 +193,17 @@ def load_recipe_as_dict_pandas(fn):
     frametypes  = [row["FRAMETYPES"].strip().split() for row in d]
     starting_obsids = [o[0] for o in obsids]
 
+    group1 = d["GROUP1"]
+    try:
+        if np.all(d["GROUP1"].astype("i") == 1):
+            group1 = starting_obsids
+    except ValueError:
+        pass
+
     r = dict(starting_obsid=starting_obsids,
              objname=d["OBJNAME"],
              obstype=d["OBJTYPE"],
-             group1=d["GROUP1"],
+             group1=group1, # d["GROUP1"],
              group2=d["GROUP2"],
              exptime=d["EXPTIME"],
              recipe=d["RECIPE"],

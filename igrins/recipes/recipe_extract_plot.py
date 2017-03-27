@@ -5,18 +5,25 @@ import logging as igr_log
 
 from argh_helper import argh
 
+from igrins.libs.recipe_base import filter_a0v, get_selected
+
 @argh.arg("-b", "--bands", default="HK", choices=["H", "K", "HK"])
 @argh.arg("-s", "--starting-obsids", default=None)
+@argh.arg("-g", "--groups", default=None)
 @argh.arg("-c", "--config-file", default="recipe.config")
 @argh.arg("--basename-postfix", default=None)
+@argh.arg('-a', '--a0v', default=None)
+@argh.arg('--a0v-obsid', default=None, type=int)
 def plot_spec(utdate, refdate="20140316", bands="HK",
-              starting_obsids=None, interactive=False,
-              recipe_name = "ALL_RECIPES",
+              starting_obsids=None, groups=None,
+              interactive=False,
+              recipe_name = "*",
               config_file="recipe.config",
               threshold_a0v=0.2,
               multiply_model_a0v=False,
               html_output=False,
               a0v_obsid=None,
+              a0v=None,
               basename_postfix=None):
 
     from igrins.libs.igrins_config import IGRINSConfig
@@ -27,22 +34,18 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
 
     fn = config.get_value('RECIPE_LOG_PATH', utdate)
     from igrins.libs.recipes import Recipes #load_recipe_list, make_recipe_dict
-    recipe = Recipes(fn)
+    recipes = Recipes(fn)
 
-    if starting_obsids is not None:
-        starting_obsids = map(int, starting_obsids.split(","))
+    selected = get_selected(recipes, recipe_name,
+                            starting_obsids, groups)
 
-    # recipe_name = "ALL_RECIPES"
-    selected = recipe.select(recipe_name, starting_obsids)
     if not selected:
         print "no recipe of with matching arguments is found"
 
-    selected.sort()
-    for s in selected:
-        obsids = s[0]
-        frametypes = s[1]
-        recipe_name = s[2]["RECIPE"].strip()
-        objname = s[2]["OBJNAME"].strip()
+    # selected.sort()
+    for recipe_name, obsids, frametypes, row in selected:
+        objname = row["OBJNAME"].strip()
+        groupname = row["GROUP1"]
 
         target_type = recipe_name.split("_")[0]
 
@@ -50,8 +53,11 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
             print "Unsupported recipe : %s" % recipe_name
             continue
 
+        a0v_obsid = filter_a0v(a0v, a0v_obsid, row["GROUP2"])
+
         for band in bands:
             process_abba_band(recipe_name, utdate, refdate, band,
+                              groupname,
                               obsids, frametypes, config,
                               do_interactive_figure=interactive,
                               threshold_a0v=threshold_a0v,
@@ -62,7 +68,9 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
                               basename_postfix=basename_postfix)
 
 
-def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
+def process_abba_band(recipe, utdate, refdate, band, 
+                      groupname,
+                      obsids, frametypes,
                       config,
                       do_interactive_figure=False,
                       threshold_a0v=0.1,
@@ -89,8 +97,10 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
     master_obsid = extractor.pr.master_obsid
     igr_path = extractor.pr.igr_path
 
+    mastername = igr_path.get_basename(band, groupname)
 
-    tgt = extractor.get_oned_spec_helper(basename_postfix=basename_postfix)
+    tgt = extractor.get_oned_spec_helper(mastername,
+                                         basename_postfix=basename_postfix)
 
     orders_w_solutions = extractor.orders_w_solutions
 
@@ -196,7 +206,9 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
         for fig in fig_list:
             fig.tight_layout()
 
-        tgt_basename = extractor.pr.tgt_basename
+        # tgt_basename = extractor.pr.tgt_basename
+        tgt_basename = mastername
+
         dirname = "spec_"+tgt_basename
         basename_postfix_s = basename_postfix if basename_postfix is not None else ""
         filename_prefix = "spec_" + tgt_basename + basename_postfix_s
@@ -214,13 +226,15 @@ def process_abba_band(recipe, utdate, refdate, band, obsids, frametypes,
             igr_log.warn("For now, no html output is generated if basename-postfix option is used")
         else:
             dirname = config.get_value('HTML_PATH', utdate)
-            objroot = "%04d" % (master_obsid,)
+            from igrins.libs.path_info import get_zeropadded_groupname
+
+            objroot = get_zeropadded_groupname(groupname)
             html_save(utdate, dirname, objroot, band,
                       orders_w_solutions, tgt.um,
                       tgt.spec, tgt.sn, i1i2_list)
 
             if FIX_TELLURIC:
-                objroot = "%04dA0V" % (master_obsid,)
+                objroot = get_zeropadded_groupname(groupname)+"A0V"
                 html_save(utdate, dirname, objroot, band,
                           orders_w_solutions, tgt.um,
                           a0v.flattened, tgt_spec_cor, i1i2_list,
