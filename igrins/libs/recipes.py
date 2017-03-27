@@ -29,24 +29,25 @@ def load_recipe_list_pandas(fn, allow_duplicate_groups=False):
                      # names=names, 
                      escapechar="\\", skipinitialspace=True)
 
-    update_group1 = False
-    try:
-        if np.all(df["GROUP1"].astype("i") == 1):
-            update_group1 = True
-    except ValueError:
-        pass
+    update_group1 = True
 
     if update_group1:
-        print "RECIPE: repacing groups with 1st obsids."
-        df["GROUP1"] = [r.split()[0] for r in df["OBSIDS"]]
-    else:
-        for i, row in df.iterrows(): 
-            if row["OBJTYPE"] != "TAR":
-                if row["GROUP1"] != row["OBSIDS"].split()[0]:
-                    raise ValueError("GROUP1 should be identical to "
-                                     "1st OBSIDS unless the OBJTYPE is "
-                                     "TAR")
-            
+        msk = (df["GROUP1"] == "1")
+        s_obsids = [(r.split()[0] if m else g) for r,g, m
+                    in zip(df["OBSIDS"], df["GROUP1"], msk)]
+
+        if np.any(msk):
+            # print "RECIPE: repacing group1 value of 1 with 1st obsids."
+            # print [s for s, m in zip(s_obsids, msk) if m ]
+
+            df["GROUP1"] = s_obsids
+
+    for i, row in df.iterrows(): 
+        if row["OBJTYPE"] != "TAR":
+            if row["GROUP1"] != row["OBSIDS"].split()[0]:
+                raise ValueError("GROUP1 should be identical to "
+                                 "1st OBSIDS unless the OBJTYPE is "
+                                 "TAR")
 
     # df["OBJNAME"] = [s.replace(",", "\\,") for s in df["OBJNAME"]]
     if len(np.unique(df["GROUP1"])) != len(df["GROUP1"]):
