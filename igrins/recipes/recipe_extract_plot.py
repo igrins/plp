@@ -12,7 +12,7 @@ from igrins.libs.recipe_base import filter_a0v, get_selected
 @argh.arg("-g", "--groups", default=None)
 @argh.arg("-c", "--config-file", default="recipe.config")
 @argh.arg("--basename-postfix", default=None)
-@argh.arg('-a', '--a0v', default=None)
+@argh.arg('-a', '--a0v', default="GROUP2")
 @argh.arg('--a0v-obsid', default=None, type=int)
 def plot_spec(utdate, refdate="20140316", bands="HK",
               starting_obsids=None, groups=None,
@@ -43,6 +43,8 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
         print "no recipe of with matching arguments is found"
 
     # selected.sort()
+    a0v_obsid0 = a0v_obsid
+
     for recipe_name, obsids, frametypes, row in selected:
         objname = row["OBJNAME"].strip()
         groupname = row["GROUP1"]
@@ -53,7 +55,7 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
             print "Unsupported recipe : %s" % recipe_name
             continue
 
-        a0v_obsid = filter_a0v(a0v, a0v_obsid, row["GROUP2"])
+        a0v_obsid = filter_a0v(a0v, a0v_obsid0, row["GROUP2"])
 
         for band in bands:
             process_abba_band(recipe_name, utdate, refdate, band,
@@ -111,7 +113,7 @@ def process_abba_band(recipe, utdate, refdate, band,
 
     if FIX_TELLURIC:
 
-        if a0v_obsid is None:
+        if (a0v_obsid is None) or (a0v_obsid == "1"):
             A0V_basename = extractor.basenames["a0v"]
         else:
             A0V_basename = "SDC%s_%s_%04d" % (band, utdate, int(a0v_obsid))
@@ -119,7 +121,6 @@ def process_abba_band(recipe, utdate, refdate, band,
 
         a0v = extractor.get_oned_spec_helper(A0V_basename,
                                              basename_postfix=basename_postfix)
-
 
         tgt_spec_cor = get_tgt_spec_cor(tgt, a0v,
                                         threshold_a0v,
