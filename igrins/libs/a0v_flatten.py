@@ -454,10 +454,12 @@ class SpecFlattener(object):
 
 def plot_flattend_a0v(spec_flattener, w, s_orig, of_list, data_list,
                       fout=None):
-        import matplotlib.pyplot as plt
         print "Now generating figures"
-        fig = plt.figure(0)
-        fig.clf()
+
+        from matplotlib.backends.backend_pdf import Figure, FigureCanvasPdf
+        fig = Figure()
+        FigureCanvasPdf(fig)
+
         ax1 = fig.add_subplot(211)
         ax2 = fig.add_subplot(212, sharex=ax1)
 
