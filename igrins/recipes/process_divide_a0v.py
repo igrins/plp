@@ -21,8 +21,7 @@ def generate_a0v_divided(helper, band,
     spec = tgt_spec_hdulist[0].data
     wvl = tgt_spec_hdulist[1].data
 
-    # print master_obsid, a0v_obsid
-    if a0v is None:
+    if (a0v is None) or (a0v == "1"):
         # we still use master_obsid for db query
         a0v_basename = caldb.db_query_basename("a0v", (band, master_obsid))
     else:
