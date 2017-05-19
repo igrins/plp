@@ -3,8 +3,10 @@ import numpy as np
 
 from igrins.libs.a0v_spec import A0V
 
+from igrins.libs.recipe_base import filter_a0v
 
-def generate_a0v_divided(helper, band, 
+
+def generate_a0v_divided(helper, band,
                          groupname,
                          obsids, a0v=None,
                          basename_postfix=None,
@@ -13,15 +15,13 @@ def generate_a0v_divided(helper, band,
     caldb = helper.get_caldb()
 
     master_obsid = obsids[0]
-    #tgt_spec_hdulist = caldb.load_item_from((band, master_obsid),
     tgt_spec_hdulist = caldb.load_item_from((band, groupname),
                                             "SPEC_FITS",
                                             basename_postfix=basename_postfix)
     spec = tgt_spec_hdulist[0].data
     wvl = tgt_spec_hdulist[1].data
 
-    # print master_obsid, a0v_obsid
-    if a0v is None:
+    if (a0v is None) or (a0v == "1"):
         # we still use master_obsid for db query
         a0v_basename = caldb.db_query_basename("a0v", (band, master_obsid))
     else:
@@ -93,33 +93,24 @@ def store_tgt_divide_a0v(caldb, basename,
 
 from igrins.libs.recipe_helper import RecipeHelper
 
-def process_band(utdate, recipe_name, band, 
+
+def process_band(utdate, recipe_name, band,
                  groupname, obsids, frame_types, aux_infos,
-                 config_name, 
+                 config_name,
                  a0v=None,
                  a0v_obsid=None,
                  basename_postfix=None,
                  outname_postfix=None):
 
+    a0v = filter_a0v(a0v, a0v_obsid, aux_infos["GROUP2"])
+
     # print master_obsid, a0v_obsid
-    if a0v is not None:
-        if a0v_obsid is not None:
-            raise ValueError("a0v-obsid option is not allowed "
-                             "if a0v opption is used")
-        elif str(a0v).upper() == "GROUP2":
-            a0v = aux_infos["GROUP2"]
-    else:
-        if a0v_obsid is not None:
-            a0v = a0v_obsid
-        else:
-            # a0v, a0v_obsid is all None. Keep it as None
-            pass
 
     groupname = aux_infos["GROUP1"]
 
     helper = RecipeHelper(config_name, utdate, recipe_name)
 
-    generate_a0v_divided(helper, band, 
+    generate_a0v_divided(helper, band,
                          groupname, obsids, a0v,
                          basename_postfix=basename_postfix,
                          outname_postfix=outname_postfix)
