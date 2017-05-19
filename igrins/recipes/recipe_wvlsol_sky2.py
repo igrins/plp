@@ -205,8 +205,9 @@ def process_band(utdate, recipe_name, band,
 
 from igrins.libs.recipe_factory import new_recipe_class, new_recipe_func
 
+# If the recipe is != "SKY", the resulting combined image will be A-B.
 _recipe_class_wvlsol_sky = new_recipe_class("RecipeWvlsolSky",
-                                            "SKY", process_band)
+                                            ["SKY", "SKY_AB"], process_band)
 
 wvlsol_sky = new_recipe_func("wvlsol_sky",
                               _recipe_class_wvlsol_sky)

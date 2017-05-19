@@ -137,10 +137,15 @@ class Recipes(object):
 
         p_match = get_multi_fnmatch_pattern(recipe_fnmatch_list)
 
+        _ = []
+        for recipe_item in self.recipe_list:
+            for recipe_name in recipe_item[0].split("|"):
+                if p_match(recipe_name):
+                    recipe_item_new = (recipe_name, ) + recipe_item[1:]
+                    _.append((recipe_item[-1]["GROUP1"], recipe_item_new))
+
         from collections import OrderedDict
-        dict_by_group = OrderedDict((recipe_item[-1]["GROUP1"], recipe_item) \
-                                    for recipe_item in self.recipe_list \
-                                    if p_match(recipe_item[0]))
+        dict_by_group = OrderedDict(_)
 
         if groups is None:
             groups = dict_by_group.keys()
@@ -265,6 +270,7 @@ def _test1():
     r.subset(starting_obsid=[11, 105])
     r.subset(recipe=["SKY", "EXTENDED_ONOFF"])
 
+
 def _test2():
     fn = "../../recipe_logs/20141023.recipes"
     # r = load_recipe(fn)
@@ -272,6 +278,19 @@ def _test2():
 
     s1 = r2.select_deprecate("A0V_AB")
     s2 = r2.select_fnmatch("A0V_AB")
+
+
+def _test3():
+    fn = "../../recipe_logs/20150120.recipes"
+    # r = load_recipe(fn)
+    recipes = Recipes(fn)
+
+    recipe_name = "SKY*"
+    groups_parsed = None
+    selected = recipes.select_fnmatch_by_groups(recipe_name,
+                                                groups_parsed)
+    print selected
+
 
 if __name__ == "__main__":
     pass
