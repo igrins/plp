@@ -53,4 +53,12 @@ parser.add_commands(recipe_list)
 if __name__ == '__main__':
     import numpy
     numpy.seterr(all="ignore")
-    argh.dispatch(parser)
+    import sys
+    argv = sys.argv[1:]
+    if "--debug" in argv:
+        argv.remove("--debug")
+        # print("--debug")
+        from igrins.libs.logger import set_level
+        set_level("debug")
+
+    argh.dispatch(parser, argv=argv)
