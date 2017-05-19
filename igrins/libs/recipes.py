@@ -49,12 +49,13 @@ def load_recipe_list_pandas(fn, allow_duplicate_groups=False):
                                  "1st OBSIDS unless the OBJTYPE is "
                                  "TAR")
 
-    # df["OBJNAME"] = [s.replace(",", "\\,") for s in df["OBJNAME"]]
-    if len(np.unique(df["GROUP1"])) != len(df["GROUP1"]):
-        if not allow_duplicate_groups:
-            raise ValueError("Dupicate group names in the recipe file.")
-        else:
-            pass
+    if not allow_duplicate_groups:
+        for i, row in df.groupby(["GROUP1", "RECIPE"]):
+            if len(row) > 1:
+                msg = "Dupicate group names with same recipe found: "
+                msg += "GROUP1={} OBJTYPE={}".format(row["GROUP1"],
+                                                     row["RECIPE"])
+                raise ValueError(msg)
 
     d = df.to_records(index=False)
 
