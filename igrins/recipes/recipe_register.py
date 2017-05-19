@@ -8,8 +8,7 @@ _recipe_class_register_thar = new_recipe_class("RecipeRegisterThAr",
                                                "THAR", process_band)
 
 _recipe_class_register_sky = new_recipe_class("RecipeRegisterSky",
-                                              ["SKY", "*_AB"],
-                                              #["SKY"],
+                                              ["SKY", "SKY_AB"],
                                               process_band)
 
 _command_names = []
