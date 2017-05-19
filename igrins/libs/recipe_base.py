@@ -1,5 +1,7 @@
 #from products import PipelineProducts
 
+from igrins.libs.logger import logger
+
 def _parse_starting_obsids(starting_obsids):
     if starting_obsids is not None:
         starting_obsids = map(int, starting_obsids.split(","))
@@ -34,8 +36,8 @@ def filter_a0v(a0v, a0v_obsid, group2):
 
 def get_selected(recipes, recipe_name, starting_obsids, groups):
     if starting_obsids is not None:
-        print ("'starting-obsids' option is deprecated, "
-               "please use 'groups' option.")
+        logger.warn("'starting-obsids' option is deprecated, "
+                    "please use 'groups' option.")
         if groups is not None:
             raise ValueError("'starting-obsids' option is not allowed"
                              " when 'groups' option is used.")
@@ -49,8 +51,10 @@ def get_selected(recipes, recipe_name, starting_obsids, groups):
 
         selected = recipes.select_fnmatch_by_groups(recipe_name,
                                                     groups_parsed)
+        logger.info("selected recipe: {}".format(selected))
 
     return selected
+
 
 class RecipeBase(object):
     """ The derived mus define RECIPE_NAME attribute and must implement

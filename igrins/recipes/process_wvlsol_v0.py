@@ -6,6 +6,8 @@ import numpy as np
 # import numpy as np
 
 from igrins.libs.products import PipelineProducts, PipelineImageBase
+from igrins.libs.logger import logger
+
 # from igrins.libs.apertures import Apertures
 
 
@@ -501,8 +503,10 @@ def process_band(utdate, recipe_name, band,
                  obsids, frametypes, aux_infos,
                  config_name, **kwargs):
 
-    if recipe_name.upper().endswith("_AB") and not kwargs.pop("do_ab"):
-        return
+    if recipe_name.upper() != "SKY_AB":
+        if recipe_name.upper().endswith("_AB") and not kwargs.pop("do_ab"):
+            logger.info("ignoring {}:{}".format(recipe_name, groupname))
+            return
 
     from igrins import get_caldb, get_obsset
     caldb = get_caldb(config_name, utdate)
