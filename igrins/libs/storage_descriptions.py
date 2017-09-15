@@ -144,7 +144,7 @@ def load_resource_def():
     resource_dict = {}
     desc_names = globals()
 
-    for k, (db_name, desc_prefix) in _resource_definitions.iteritems():
+    for k, (db_name, desc_prefix) in _resource_definitions.items():
         e1 = desc_names.get(desc_prefix + "_DESC")
         resource_dict[k] = (db_name, e1)
 

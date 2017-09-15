@@ -2,7 +2,7 @@ import numpy as np
 import numpy.polynomial as P
 import scipy.ndimage as ni
 
-from stsci_helper import stsci_median
+from .stsci_helper import stsci_median
 
 
 class ApCoeff(object):

@@ -1,6 +1,8 @@
-import ConfigParser
 import warnings
 import os
+from six.moves import configparser as ConfigParser
+from six.moves import cStringIO as StringIO
+
 
 default_config_content = """[DEFAULT]
 MASTER_CAL_DIR=master_calib
@@ -29,9 +31,7 @@ class IGRINSConfig(object):
 
         self.config = ConfigParser.ConfigParser()
 
-        import StringIO
-
-        fp = StringIO.StringIO(default_config_content)
+        fp = StringIO(default_config_content)
         self.config.readfp(fp)
 
         read_file = self.config.read(config_file)
@@ -41,18 +41,18 @@ class IGRINSConfig(object):
 
         self.master_cal_dir = os.path.join(self.root_dir,
                                            self.config.get("DEFAULT",
-                                                           "MASTER_CAL_DIR",
-                                                           0))
+                                                           "MASTER_CAL_DIR"))
 
         import os
         self.config.read(os.path.join(self.master_cal_dir,
                                       "master_cal.config"))
 
     def get_value(self, option, utdate):
-        return self.config.get("DEFAULT", option, 0, dict(UTDATE=utdate))
+        return self.config.get("DEFAULT", option,
+                               raw=0, vars=dict(UTDATE=utdate))
 
     def get(self, section, kind, **kwargs):
-        return self.config.get(section, kind, 0, kwargs)
+        return self.config.get(section, kind, raw=0, vars=kwargs)
 
 
 def get_config(config):
@@ -67,7 +67,7 @@ def get_config(config):
 if __name__ == "__main__":
 
     config = IGRINSConfig()
-    print config.get_value('RECIPE_LOG_PATH', "20140525")
+    print(config.get_value('RECIPE_LOG_PATH', "20140525"))
 
     # print config.get("DEFAULT", 'INDATA_PATH', 0, dict(UTDATE="20140525"))
 

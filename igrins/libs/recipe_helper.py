@@ -1,13 +1,14 @@
-from path_info import IGRINSPath
-from products import PipelineStorage
 import os
-from cal_db import CalDB
+from .path_info import IGRINSPath
+from .products import PipelineStorage
+from .cal_db import CalDB
+from .igrins_config import IGRINSConfig
+
 
 class RecipeHelper:
     def __init__(self, config_name, utdate, recipe_name="",
                  ensure_dir=False):
 
-        from igrins_config import IGRINSConfig
         if isinstance(config_name, str):
             self.config = IGRINSConfig(config_name)
         else:
@@ -51,7 +52,7 @@ class RecipeHelper:
         return filenames, basename, master_obsid
 
     def load_ref_data(self, band, spec):
-        from master_calib import load_ref_data
+        from .master_calib import load_ref_data
         s = load_ref_data(self.config, band, spec)
         return s
 

@@ -1,11 +1,11 @@
-from products import ProductDB
+from .products import ProductDB
 
-from storage_descriptions import (load_resource_def,
-                                  load_descriptions,
-                                  DB_Specs)
+from .storage_descriptions import (load_resource_def,
+                                   load_descriptions,
+                                   DB_Specs)
 
-from load_fits import get_first_science_hdu, open_fits
-from cal_db_resources import ResourceManager
+from .load_fits import get_first_science_hdu, open_fits
+from .cal_db_resources import ResourceManager
 
 class CalDB(object):
 

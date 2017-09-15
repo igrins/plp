@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 class _ResourceManagerInterface:
     def __init__(self, rmi):
@@ -57,4 +58,4 @@ class ResourceManager(object):
 
 if 0:
     rm = ResourceManager()
-    print rm._RESOURCE_MAP
+    print(rm._RESOURCE_MAP)

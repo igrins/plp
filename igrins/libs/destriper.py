@@ -1,12 +1,12 @@
 import numpy as np
 
-from stsci_helper import stsci_median
+from .stsci_helper import stsci_median
 
 class Destriper(object):
     def __init__(self):
         self.dy = dy = 128
-        self.n_dy = 2048/dy
-        self.dy_slices = [slice(iy*dy, (iy+1)*dy) for iy in range(2048/dy)]
+        self.n_dy = 2048//dy
+        self.dy_slices = [slice(iy*dy, (iy+1)*dy) for iy in range(self.n_dy)]
 
     def _remove_vertical_smooth_bg(self, d, mask=None):
         ny, nx = d.shape
@@ -27,8 +27,8 @@ class Destriper(object):
         Otherwise, 128x2048 array.
         """
         dy = 64
-        n_dy = 2048/dy
-        dy_slices = [slice(iy*dy, (iy+1)*dy) for iy in range(2048/dy)]
+        n_dy = 2048//dy
+        dy_slices = [slice(iy*dy, (iy+1)*dy) for iy in range(n_dy)]
         from itertools import cycle
         if mask is not None:
             if remove_vertical:
@@ -45,9 +45,8 @@ class Destriper(object):
             dd = [d[sl][::next(alt_sign)] for sl in dy_slices]
             ddm = np.median(dd, axis=0)
 
-
         if concatenate:
-            return np.concatenate([ddm, ddm[::-1]] * (n_dy/2))
+            return np.concatenate([ddm, ddm[::-1]] * (n_dy//2))
         else:
             return ddm
 
