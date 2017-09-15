@@ -109,7 +109,7 @@ class Destriper(object):
         return ddm
 
     def get_destriped(self, d, mask=None, hori=None, pattern=128,
-                      remove_vertical=True):
+                      remove_vertical=True, return_pattern=False):
         # if hori:
         #     s_hori = np.median(d, axis=0)
         #     d = d - s_hori
@@ -126,16 +126,20 @@ class Destriper(object):
             d_ddm = d - ddm
         elif pattern == 2048:
             ddm = self.get_stripe_pattern2048(d, mask=mask)
-            #ddm = self.get_stripe_pattern128_flat(d, mask=mask)
-            d_ddm = d - ddm[:,np.newaxis]
+            # ddm = self.get_stripe_pattern128_flat(d, mask=mask)
+            d_ddm = d - ddm[:, np.newaxis]
+        else:
+            raise ValueError("incorrect pattern value: %s" % pattern)
 
         if hori:
             d_ddm_masked = np.ma.array(d_ddm, mask=mask)
             s_hori = np.ma.median(d_ddm_masked, axis=1)
-            d_ddm = d_ddm - s_hori[:,np.newaxis]
+            d_ddm = d_ddm - s_hori[:, np.newaxis]
 
-
-        return np.array(d_ddm)
+        if return_pattern:
+            return np.array(d_ddm), ddm
+        else:
+            return np.array(d_ddm)
 
     def get_destriped_naive(self, d):
         """
