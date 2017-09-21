@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import os
 import numpy as np
 
@@ -6,7 +8,7 @@ import astropy.io.fits as pyfits
 
 from igrins.libs.products import PipelineProducts
 
-from argh_helper import argh
+from .argh_helper import argh
 
 # def _run_order_main(o):
 #     print o
@@ -14,7 +16,7 @@ from argh_helper import argh
 
 def _run_order_main(args):
     o, x, y, s, g_list0, logi = args
-    print o
+    print(o)
 
     xmsk = (800 < x) & (x < 2048-800)
 
@@ -150,7 +152,7 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
         selected = recipe.select_fnmatch_by_groups(recipe_name)
 
     if not selected:
-        print "no recipe of matching arguments is found"
+        print("no recipe of matching arguments is found")
 
     frac_slit = map(float, kwargs["frac_slit"].split(","))
     if len(frac_slit) !=2:
@@ -165,7 +167,7 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
 
         if kwargs["lacosmic_thresh"] is None:
             kwargs["lacosmic_thresh"] = float(lacosmics_thresh)
-            print msg
+            print(msg)
         else:
             raise ValueError(msg)
     else:
@@ -179,7 +181,7 @@ def abba_all(recipe_name, utdate, refdate="20140316", bands="HK",
                                         **kwargs).process
 
     if len(selected) == 0:
-        print "No entry with given recipe is found : %s" % recipe_name
+        print("No entry with given recipe is found : %s" % recipe_name)
 
     for band in bands:
         for s in selected:
@@ -472,7 +474,7 @@ class ProcessABBABand(object):
 
         #     return t
 
-        print "deriving 2d slit profiles"
+        print("deriving 2d slit profiles")
 
         args = []
         for o in ap.orders:
@@ -502,7 +504,7 @@ class ProcessABBABand(object):
                 r = _run_order_main(a)
                 _.append(r)
 
-        print "done"
+        print("done")
         # func_dict.update((k, v) )
 
         from igrins.libs.slit_profile_2d_model import get_varying_conv_gaussian_model
@@ -631,11 +633,11 @@ class ProcessABBABand(object):
 
         if self.extraction_mode == "simple":
 
-            print "doing simple extraction"
+            print("doing simple extraction")
             if self.extraction_mode in ["optimal"]:
                 msg = ("optimal extraction is not supported "
                        "for extended source")
-                print msg
+                print(msg)
 
             synth_map = extractor.make_synth_map(
                 ap, profile_map, s_list,
@@ -729,7 +731,7 @@ class ProcessABBABand(object):
         data_minus, variance_map, variance_map0 = _
 
         if self.subtract_interorder_background:
-            print "### doing sky subtraction"
+            print("### doing sky subtraction")
             data_minus_sky = extractor.estimate_interorder_background(\
                 data_minus, extractor.sky_mask)
 
@@ -778,7 +780,7 @@ class ProcessABBABand(object):
 
                 if self.slit_profile_mode in ["gauss", "gauss2d"]:
                     # now try to derive the n-gaussian profile
-                    print "updating profile using the multi gauss fit"
+                    print("updating profile using the multi gauss fit")
 
                     ods = self._derive_data_for_slit_profile(extractor, ap,
                                                              data_minus_flattened,

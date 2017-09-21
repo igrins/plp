@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import os
 import numpy as np
 import pandas as pd
@@ -62,26 +64,26 @@ def convert_group_values(groups):
 
 
 def _load_data_pandas(fn):
-    dtype_=[('FILENAME', 'S128'),
-            ('OBSTIME', 'S128'),
+    dtype_=[('FILENAME', 'U128'),
+            ('OBSTIME', 'U128'),
             ('GROUP1', 'i'),
             ('GROUP2', 'i'),
-            ('OBJNAME', 'S128'),
-            ('OBJTYPE', 'S128'),
-            ('FRAMETYPE', 'S128'),
+            ('OBJNAME', 'U128'),
+            ('OBJTYPE', 'U128'),
+            ('FRAMETYPE', 'U128'),
             ('EXPTIME', 'd'),
             ('ROTPA', 'd'),
-            ('RA', 'S128'),
-            ('DEC', 'S128'),
+            ('RA', 'U128'),
+            ('DEC', 'U128'),
             ('AM', 'd'),
-            ('OBSDATE', 'S128'),
+            ('OBSDATE', 'U128'),
             ('SEQID1', 'i'),
             ('SEQID2', 'i'),
             ('ALT', 'd'),
             ('AZI', 'd'),
-            ('OBSERVER', 'S128'),
-            ('EPOCH', 'S128'),
-            ('AGPOS', 'S128'),
+            ('OBSERVER', 'U128'),
+            ('EPOCH', 'U128'),
+            ('AGPOS', 'U128'),
             ]
     dtype_map = dict(dtype_)
     dtype_replace = dict(SEQID1="GROUP1", SEQID2="GROUP2")
@@ -94,7 +96,7 @@ def _load_data_pandas(fn):
     dtypes = dict(dtype)
 
     df = pd.read_csv(fn, skiprows=2, dtype=dtypes, comment="#", 
-                     names=names, escapechar="\\")
+                     names=names, escapechar="\\", engine="python")
     df["OBJNAME"] = [s.replace(",", "\\,") for s in df["OBJNAME"]]
 
     df["GROUP1"] = convert_group_values(df["GROUP1"])
@@ -123,7 +125,7 @@ def prepare_recipe_logs(utdate, config_file="recipe.config",
     import glob
     fn_list = glob.glob(os.path.join(fn0, "IGRINS_DT_Log_*-1_H.txt"))
     fn_list.sort()
-    print "loading DT log files:", fn_list
+    print("loading DT log files:", fn_list)
 
     #fn = os.path.join(fn0, "IGRINS_DT_Log_%s-1_H.txt" % (utdate,))
 
@@ -176,7 +178,7 @@ def prepare_recipe_logs(utdate, config_file="recipe.config",
 
 
     if obsid_map:
-        print "trying to make soft links for files of different utdates"
+        print("trying to make soft links for files of different utdates")
         from igrins.libs.load_fits import find_fits
         old_new_list = []
 
@@ -250,8 +252,8 @@ def prepare_recipe_logs(utdate, config_file="recipe.config",
     fout.writelines(s_list)
     fout.close()
 
-    print "A draft version of the recipe log is written to '%s'." % (fn_out,)
-    print "Make an adjusment and rename it to '%s'." % (recipe_log_name,)
+    print("A draft version of the recipe log is written to '%s'." % (fn_out,))
+    print("Make an adjusment and rename it to '%s'." % (recipe_log_name,))
 
 if __name__ == "__main__":
     fn = "/home/jjlee/annex/igrins/20170315/IGRINS_DT_Log_20170315-1_H.txt"

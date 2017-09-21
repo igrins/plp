@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from igrins.libs.recipe_helper import RecipeHelper
 import numpy as np
 import scipy.ndimage as ni
@@ -647,7 +649,7 @@ class RecipeFlat(RecipeBase):
     RECIPE_NAME = "FLAT"
 
     def run_selected_bands(self, utdate, selected, bands):
-        print self.config
+        print(self.config)
         for s in selected:
             obsids = s[0]
             frametypes = s[1]

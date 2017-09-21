@@ -1,14 +1,14 @@
 import numpy as np
 import scipy.ndimage as ni
 
-from stsci_helper import stsci_median
-import badpixel as bp
-from destriper import destriper
-from products import PipelineImageBase, PipelineDict, PipelineProducts
+from .stsci_helper import stsci_median
+from . import badpixel as bp
+from .destriper import destriper
+from .products import PipelineImageBase, PipelineDict, PipelineProducts
 
 Card = tuple
 
-from igrins_detector import IGRINSDetector
+from .igrins_detector import IGRINSDetector
 
 
 
@@ -61,8 +61,8 @@ class FlatOff(object):
         return r
 
 
-from trace_flat import (get_flat_normalization, get_flat_mask,
-                        get_flat_mask_auto)
+from .trace_flat import (get_flat_normalization, get_flat_mask,
+                         get_flat_mask_auto)
 
 class FlatOn(object):
     def __init__(self, ondata_list):
@@ -150,9 +150,9 @@ class FlatOn(object):
         return r
 
 
-from trace_flat import (get_y_derivativemap,
-                        identify_horizontal_line,
-                        trace_centroids_chevyshev)
+from .trace_flat import (get_y_derivativemap,
+                         identify_horizontal_line,
+                         trace_centroids_chevyshev)
 
 
 def check_boundary_orders(cent_list, nx=2048, order=2):

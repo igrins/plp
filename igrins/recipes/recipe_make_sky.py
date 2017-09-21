@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 def process_band(utdate, recipe_name, band,
                  obsids, frametypes,
@@ -79,7 +80,7 @@ class RecipeSkyMaker(RecipeBase):
                 exptime = float(aux_infos[4])
 
                 if recipe_name.endswith("_AB"):
-                    print recipe_name, obsids, frametypes, exptime
+                    print(recipe_name, obsids, frametypes, exptime)
 
                     process_band(utdate, recipe_name, band, 
                                  obsids, frametypes, aux_infos,

@@ -79,7 +79,7 @@ class RecipeBase(object):
 
     def get_recipes(self, utdate):
         fn = self.get_recipe_name(utdate)
-        from recipes import Recipes #load_recipe_list, make_recipe_dict
+        from .recipes import Recipes
         return Recipes(fn)
 
     def run_selected_bands_with_recipe(self, utdate, selected, bands):
@@ -99,7 +99,7 @@ class RecipeBase(object):
                 config_file="recipe.config",
                 **kwargs):
 
-        from igrins_config import IGRINSConfig
+        from .igrins_config import IGRINSConfig
         self.config = IGRINSConfig(config_file)
 
         self.refdate = self.config.get("MASTER_CAL", "REFDATE")

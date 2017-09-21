@@ -1,4 +1,4 @@
-from recipe_base import RecipeBase
+from .recipe_base import RecipeBase
 
 class RecipeFactoryProcessBand(RecipeBase):
     """

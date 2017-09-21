@@ -1,9 +1,11 @@
+from __future__ import print_function
+
 import os
 import numpy as np
 
 import logging as igr_log
 
-from argh_helper import argh
+from .argh_helper import argh
 
 from igrins.libs.recipe_base import filter_a0v, get_selected
 
@@ -40,7 +42,7 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
                             starting_obsids, groups)
 
     if not selected:
-        print "no recipe of with matching arguments is found"
+        print("no recipe of with matching arguments is found")
 
     # selected.sort()
     a0v_obsid0 = a0v_obsid
@@ -52,7 +54,7 @@ def plot_spec(utdate, refdate="20140316", bands="HK",
         target_type = recipe_name.split("_")[0]
 
         if target_type not in ["A0V", "STELLAR", "EXTENDED"]:
-            print "Unsupported recipe : %s" % recipe_name
+            print("Unsupported recipe : %s" % recipe_name)
             continue
 
         a0v_obsid = filter_a0v(a0v, a0v_obsid0, row["GROUP2"])
@@ -117,7 +119,7 @@ def process_abba_band(recipe, utdate, refdate, band,
             A0V_basename = extractor.basenames["a0v"]
         else:
             A0V_basename = "SDC%s_%s_%04d" % (band, utdate, int(a0v_obsid))
-            print A0V_basename
+            print(A0V_basename)
 
         a0v = extractor.get_oned_spec_helper(A0V_basename,
                                              basename_postfix=basename_postfix)

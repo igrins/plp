@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 # import Libs.manual as m
 # reload(m)
 # import Libs.ap_tracing as m2
@@ -8,9 +10,10 @@ import numpy as np
 import astropy.io.fits as pyfits
 import scipy.ndimage as ni
 
-import badpixel as bp
-
 import itertools
+
+from . import badpixel as bp
+
 
 def get_flat_normalization(flat_on_off, bg_std, bpix_mask):
 
@@ -242,7 +245,7 @@ def identify_horizontal_line(d_deriv, mmp, pad=20, bg_std=None):
         ob_id = find_nearest_object(mmp, im_labeled,
                                     slice_map, i, labels_center_column)
         if ob_id:
-            print i, ob_id
+            print(i, ob_id)
             im_labeled[im_labeled == i] = ob_id
             slice_map_update_required = True
 
@@ -1043,7 +1046,7 @@ if 0:
 
     #plot(s1)
 
-    print i1, i2
+    print(i1, i2)
     ax.plot(x, s)
     ax.plot(x, p(x))
     ax.plot(np.array(x)[[i1, i2]], np.array(s)[[i1,i2]], "o")

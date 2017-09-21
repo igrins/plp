@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from mpl_toolkits.mplot3d import Axes3D
 
 import numpy as np
@@ -188,7 +190,7 @@ def read_data(filename, debug=False):
                     #wave_factor = Units.nm/Units.angstrom
                     wave_factor = u.angstrom.to(u.nm)
                     if debug:
-                        print "Wavelength units are Angstroms. Scaling wavelength by ", wave_factor
+                        print("Wavelength units are Angstroms. Scaling wavelength by ", wave_factor)
 
     # Compile all the orders
     numorders = retdict['flux'].shape[0]
@@ -289,14 +291,14 @@ def run(filename, outfilename,
     if blaze_corrected:
         kwargs["N"] = None
     else:
-        print 'Roughly removing blaze function for {}'.format(filename)
+        print('Roughly removing blaze function for {}'.format(filename))
 
 
     filtered_orders, original_pixels = remove_blaze(orders, tell_model,
                                                     **kwargs)
 
     corrected_orders = []
-    print 'Optimizing wavelength for order ',
+    print('Optimizing wavelength for order ', end="")
     for o_n, order in zip(order_numbers, filtered_orders):
 
         l_orig = plot_spec(ax1, order[0], order[1],
@@ -305,7 +307,7 @@ def run(filename, outfilename,
                             'r-', alpha=0.6)
 
         # Use the wavelength fit function to fit the wavelength.
-        print ' {}'.format(o_n),
+        print(' {}'.format(o_n), end="")
         sys.stdout.flush()
 
         new_order = optimize_wavelength(order, tell_model,
@@ -336,7 +338,7 @@ def run(filename, outfilename,
             # fig1.savefig('{}{}-individual_order{}.png'.format(plot_dir, filename.split('/')[-1], i+1))
             ax1.cla()
 
-    print
+    print("")
 
     original_orders = [o.copy() for o in orders]
 
@@ -475,7 +477,7 @@ class RecipeTellWvlsol(RecipeBase):
                 target_type = recipe_name.split("_")[0]
 
                 if target_type not in ["A0V", "STELLAR", "EXTENDED"]:
-                    print "Unsupported recipe : %s" % recipe_name
+                    print("Unsupported recipe : %s" % recipe_name)
                     continue
 
                 process_band(utdate, recipe_name, band, 
