@@ -43,7 +43,7 @@ def find_peaks(s, sigma=3, ax=None):
         com_list = ni.center_of_mass(s, emission_feature_label,
                                      range(1, label_max+1))
 
-        from fit_gaussian import fit_gaussian_simple
+        from .fit_gaussian import fit_gaussian_simple
         x = np.arange(len(s))
         sol_list = []
         for com in com_list:
@@ -115,13 +115,13 @@ def fitgaussian(s, lines, sigma_init=1.5, do_plot=False):
         ax.plot(xx, yy)
         ax.plot(xx, _gauss0(sol_[0]))
         ax.vlines(sol_[0][0]+d_centers0, 0, 1)
-        print d_centers0
+        # print d_centers0
     return sol_
 
 
 
 # standard deviation filter
-from stddev_filter import window_stdev
+from .stddev_filter import window_stdev
 
 import scipy.ndimage as ni
 

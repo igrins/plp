@@ -486,7 +486,7 @@ def store_aux_data(obsset_on):
 
     if 1:
 
-        orders = range(len(bottomup_solutions))
+        orders = list(range(len(bottomup_solutions)))
 
         from igrins.libs.apertures import Apertures
         ap =  Apertures(orders, bottomup_solutions)
@@ -718,8 +718,8 @@ if 0:
 if __name__ == "__main__":
 
     utdate = "20160226"
-    obsids_off = range(11, 21)
-    obsids_on = range(583, 593)
+    obsids_off = list(range(11, 21))
+    obsids_on = list(range(583, 593))
 
     recipe_name = "FLAT"
 

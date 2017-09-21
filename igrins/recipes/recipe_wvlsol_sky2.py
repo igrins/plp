@@ -20,7 +20,7 @@ def save_qa(obsset):
                      for o, _ in dfm.groupby("order"))
 
     from matplotlib.figure import Figure
-    from igrins.libs.ecfit import check_fit
+    from ..libs.ecfit import check_fit
 
     d = obsset.load_item("SKY_WVLSOL_JSON")
 
@@ -45,7 +45,7 @@ def save_qa(obsset):
                               for o, _ in dfm[m].groupby("order"))
 
     modeul_name, class_name, serialized = fit_results["fitted_model"]
-    from igrins.libs.astropy_poly_helper import deserialize_poly_model
+    from ..libs.astropy_poly_helper import deserialize_poly_model
    
     p = deserialize_poly_model(modeul_name, class_name, serialized)
 
@@ -62,7 +62,7 @@ def save_qa(obsset):
                   lines_map_filtered)
         fig2.tight_layout()
 
-    from igrins.libs.qa_helper import figlist_to_pngs
+    from ..libs.qa_helper import figlist_to_pngs
     dest_dir = obsset.query_item_path("qa_sky_fit2d_dir",
                                       subdir="sky_fit2d")
     figlist_to_pngs(dest_dir, [fig1, fig2])
@@ -99,7 +99,7 @@ def save_wvlsol_db(obsset):
 
 def save_ordermap_slitposmap(obsset):
 
-    from aperture_helper import get_simple_aperture_from_obsset
+    from .aperture_helper import get_simple_aperture_from_obsset
 
     wvlsol_v0 = obsset.load_resource_for("wvlsol_v0")
     orders = wvlsol_v0["orders"]
@@ -120,7 +120,7 @@ def save_wavelength_map(obsset):
 
     fit_results = obsset.load_item("SKY_WVLSOL_FIT_RESULT_JSON")
 
-    from igrins.libs.astropy_poly_helper import deserialize_poly_model
+    from ..libs.astropy_poly_helper import deserialize_poly_model
 
     module_name, klass_name, serialized = fit_results["fitted_model"]
     poly_2d = deserialize_poly_model(module_name, klass_name, serialized)
@@ -145,7 +145,7 @@ def save_wavelength_map(obsset):
 
 
 
-from igrins.libs.recipe_helper import RecipeHelper
+from ..libs.recipe_helper import RecipeHelper
 
 from .process_wvlsol_v0 import (extract_spectra_multi,
                                 make_combined_image)
@@ -156,7 +156,7 @@ def process_band(utdate, recipe_name, band,
                  obsids, frametypes,
                  aux_infos, config_name):
 
-    from igrins import get_caldb, get_obsset
+    from .. import get_caldb, get_obsset
     caldb = get_caldb(config_name, utdate)
     obsset = get_obsset(caldb, band, recipe_name, obsids, frametypes)
 
@@ -169,11 +169,11 @@ def process_band(utdate, recipe_name, band,
 
     extract_spectra_multi(obsset)
 
-    from process_identify_multiline import identify_multiline
+    from .process_identify_multiline import identify_multiline
 
     identify_multiline(obsset)
 
-    from process_wvlsol_volume_fit import volume_fit, generate_slitoffsetmap
+    from .process_wvlsol_volume_fit import volume_fit, generate_slitoffsetmap
 
     volume_fit(obsset)
 
@@ -183,14 +183,14 @@ def process_band(utdate, recipe_name, band,
 
     generate_slitoffsetmap(obsset)
 
-    from process_derive_wvlsol import derive_wvlsol
+    from .process_derive_wvlsol import derive_wvlsol
     derive_wvlsol(obsset)
 
     save_wvlsol_db(obsset)
 
     save_wavelength_map(obsset)
 
-    from process_save_wat_header import save_wat_header
+    from .process_save_wat_header import save_wat_header
     save_wat_header(obsset)
 
     # save_wavelength_map(helper, band, obsids)
@@ -203,7 +203,7 @@ def process_band(utdate, recipe_name, band,
 
 
 
-from igrins.libs.recipe_factory import new_recipe_class, new_recipe_func
+from ..libs.recipe_factory import new_recipe_class, new_recipe_func
 
 # If the recipe is != "SKY", the resulting combined image will be A-B.
 _recipe_class_wvlsol_sky = new_recipe_class("RecipeWvlsolSky",

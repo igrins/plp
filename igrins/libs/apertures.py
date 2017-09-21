@@ -61,8 +61,6 @@ class Apertures(object):
     def make_order_map(self, frac1=0., frac2=1.,
                        mask_top_bottom=False):
 
-        from itertools import izip
-
         xx, yy = self.xi, self.yi
 
         bottom_list = [self.apcoeffs[o](xx, frac1) for o in self.orders]
@@ -71,8 +69,8 @@ class Apertures(object):
         if mask_top_bottom is False:
             def _g(i1):
                 order_map1 = np.zeros(len(xx), dtype="i")
-                for order, bottom, top in izip(self.orders,
-                                               bottom_list, top_list):
+                for order, bottom, top in zip(self.orders,
+                                              bottom_list, top_list):
                     m_up = yy>bottom[i1]
                     m_down = yy<top[i1]
                     order_map1[m_up & m_down] = order
@@ -81,8 +79,8 @@ class Apertures(object):
         else:
             def _g(i1):
                 order_map1 = np.zeros(len(xx), dtype="i")
-                for order, bottom, top in izip(self.orders,
-                                               bottom_list, top_list):
+                for order, bottom, top in zip(self.orders,
+                                              bottom_list, top_list):
                     m_up = yy>bottom[i1]
                     m_down = yy<top[i1]
                     order_map1[m_up & m_down] = order
@@ -96,7 +94,6 @@ class Apertures(object):
         return order_map
 
     def make_slitpos_map(self):
-        from itertools import izip
 
         xx, yy = self.xi, self.yi
 
@@ -106,8 +103,8 @@ class Apertures(object):
         def _g(i1):
             slitpos_map1 = np.empty(len(xx), dtype="d")
             slitpos_map1.fill(np.nan)
-            for order, bottom, top in izip(self.orders,
-                                           bottom_list, top_list):
+            for order, bottom, top in zip(self.orders,
+                                          bottom_list, top_list):
                 m_up = yy>bottom[i1]
                 m_down = yy<top[i1]
                 m_order = m_up & m_down

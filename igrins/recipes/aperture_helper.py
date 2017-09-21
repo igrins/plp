@@ -24,7 +24,7 @@ def get_simple_aperture(helper, band, obsids, orders=None):
                                                           master_obsid)
 
     if orders is None:
-        orders = range(len(bottomup_solutions))
+        orders = list(range(len(bottomup_solutions)))
 
     ap =  Apertures(orders, bottomup_solutions, basename=basename)
 
@@ -42,7 +42,7 @@ def get_simple_aperture_from_obsset(obsset, orders=None):
     bottomup_solutions = resource["bottom_up_solutions"]
 
     if orders is None:
-        orders = range(len(bottomup_solutions))
+        orders = list(range(len(bottomup_solutions)))
 
     aperture = Apertures(orders, bottomup_solutions,
                          basename=obsset.basename)

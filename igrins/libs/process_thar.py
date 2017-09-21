@@ -2,10 +2,10 @@ import os
 import numpy as np
 
 import astropy.io.fits as pyfits
-from stsci_helper import stsci_median
+from .stsci_helper import stsci_median
 
 #from products import PipelineProducts
-from products import PipelineImageBase, PipelineDict, PipelineProducts
+from .products import PipelineImageBase, PipelineDict, PipelineProducts
 
 
 # FLAT_BPIXED_DESC = ("PRIMARY_CALIB_PATH", "FLAT_", ".flat_bpixed.fits")
@@ -32,17 +32,17 @@ class ThAr(object):
 
 def get_1d_median_specs(fits_names, ap):
     #hdu_list = [pyfits.open(fn)[0] for fn in fits_names]
-    from load_fits import load_fits_data
+    from .load_fits import load_fits_data
     hdu_list = [load_fits_data(fn) for fn in fits_names]
     _data = stsci_median([hdu.data for hdu in hdu_list])
 
-    from destriper import destriper
+    from .destriper import destriper
     data = destriper.get_destriped(_data)
 
     s = ap.extract_spectra_v2(data)
 
-    from storage_descriptions import (COMBINED_IMAGE_DESC,
-                                      ONED_SPEC_JSON_DESC)
+    from .storage_descriptions import (COMBINED_IMAGE_DESC,
+                                       ONED_SPEC_JSON_DESC)
 
     r = PipelineProducts("1d median specs")
     r.add(COMBINED_IMAGE_DESC,
@@ -63,13 +63,13 @@ def match_order_thar(thar_products, thar_ref_data):
     # load spec
     #s_list_ = json.load(open("arc_spec_thar_%s_%s.json" % (band, date)))
 
-    from storage_descriptions import ONED_SPEC_JSON_DESC
+    from .storage_descriptions import ONED_SPEC_JSON_DESC
 
     s_list_ = thar_products[ONED_SPEC_JSON_DESC]["specs"]
     s_list_dst = [np.array(s) for s in s_list_]
 
     # match the orders of s_list_src & s_list_dst
-    from reidentify_thar_lines import match_orders
+    from .reidentify_thar_lines import match_orders
     delta_indx, orders_dst = match_orders(orders_src, s_list_src,
                                           s_list_dst)
 
@@ -86,7 +86,7 @@ def match_order(src_spectra, ref_spectra):
     s_list = [np.array(s) for s in s_list_]
 
     # match the orders of s_list_src & s_list_dst
-    from reidentify_thar_lines import match_orders
+    from .reidentify_thar_lines import match_orders
     delta_indx, orders = match_orders(orders_ref, s_list_ref,
                                       s_list)
 
@@ -117,7 +117,7 @@ def get_offset_treanform_between_2spec(ref_spec, tgt_spec):
     s_list_tgt_filtered = filter_order(orders_tgt, s_list_tgt,
                                        orders_intersection)
 
-    from reidentify_thar_lines import get_offset_transform
+    from .reidentify_thar_lines import get_offset_transform
     offset_transform = get_offset_transform(s_list_ref_filtered,
                                             s_list_tgt_filtered)
 
@@ -133,7 +133,7 @@ def reidentify_ThAr_lines(thar_products, thar_ref_data):
     # load spec
     #s_list_ = json.load(open("arc_spec_thar_%s_%s.json" % (band, date)))
 
-    from storage_descriptions import ONED_SPEC_JSON_DESC
+    from .storage_descriptions import ONED_SPEC_JSON_DESC
 
     orders_dst = thar_products[ONED_SPEC_JSON_DESC]["orders"]
     s_list_ = thar_products[ONED_SPEC_JSON_DESC]["specs"]
@@ -155,11 +155,11 @@ def reidentify_ThAr_lines(thar_products, thar_ref_data):
 
     orders = sorted(orders_intersection)
 
-    from reidentify_thar_lines import get_offset_transform
+    from .reidentify_thar_lines import get_offset_transform
     # get offset function from source spectra to target specta.
     sol_list_transform = get_offset_transform(s_list_src, s_list_dst)
 
-    from reidentify import reidentify_lines_all2
+    from .reidentify import reidentify_lines_all2
 
     #ref_lines_map = dict(zip(orders_src, ref_lines_list))
 
@@ -170,7 +170,7 @@ def reidentify_ThAr_lines(thar_products, thar_ref_data):
                                                        ref_lines_list,
                                                        sol_list_transform)
 
-    from storage_descriptions import THAR_REID_JSON_DESC
+    from .storage_descriptions import THAR_REID_JSON_DESC
 
     r = PipelineProducts("initial reidentification of ThAr lines")
     r.add(THAR_REID_JSON_DESC,
@@ -183,11 +183,11 @@ def reidentify_ThAr_lines(thar_products, thar_ref_data):
     return r
 
 
-from master_calib import get_master_calib_abspath
+from .master_calib import get_master_calib_abspath
 
 
 def load_echelogram(ref_date, band):
-    from echellogram import Echellogram
+    from .echellogram import Echellogram
 
     echel_name = get_master_calib_abspath("fitted_echellogram_sky_%s_%s.json" % (band, ref_date))
     echel = Echellogram.from_json_fitted_echellogram_sky(echel_name)
@@ -197,8 +197,8 @@ def load_echelogram(ref_date, band):
 
 def align_echellogram_thar(thar_reidentified_products, echel, band, ap):
 
-    from storage_descriptions import (THAR_REID_JSON_DESC,
-                                      THAR_ALIGNED_JSON_DESC)
+    from .storage_descriptions import (THAR_REID_JSON_DESC,
+                                       THAR_ALIGNED_JSON_DESC)
 
     orders = thar_reidentified_products[THAR_REID_JSON_DESC]["orders"]
 
@@ -222,7 +222,7 @@ def align_echellogram_thar(thar_reidentified_products, echel, band, ap):
     xy1f, nan_mask = echel.get_xy_list_filtered(wvl_list)
     xy2f = ap.get_xy_list(pixel_list, nan_mask)
 
-    from align_echellogram_thar import fit_affine_clip
+    from .align_echellogram_thar import fit_affine_clip
     affine_tr, mm = fit_affine_clip(xy1f, xy2f)
 
     r = PipelineProducts("ThAr aligned echellogram products")
@@ -280,8 +280,8 @@ def check_dx2(ax, x, y, dx):
 def check_thar_transorm(thar_products, thar_echell_products):
     # to check the fit results.
 
-    from storage_descriptions import (COMBINED_IMAGE_DESC,
-                                      THAR_ALIGNED_JSON_DESC)
+    from .storage_descriptions import (COMBINED_IMAGE_DESC,
+                                       THAR_ALIGNED_JSON_DESC)
 
     combined_im = thar_products[COMBINED_IMAGE_DESC].data
 
@@ -326,7 +326,7 @@ def check_thar_transorm(thar_products, thar_echell_products):
         yi = np.linspace(0, 2048, 256+1)
         # yi = np.linspace(orders_band[0]-1, orders_band[-1]+1,
         #                  len(orders_band)*10)
-        from grid_interpolator import GridInterpolator
+        from .grid_interpolator import GridInterpolator
         gi = GridInterpolator(xi, yi)
 
         from mpl_toolkits.axes_grid1 import ImageGrid
@@ -372,9 +372,9 @@ def get_wavelength_solutions_deprecated(thar_echellogram_products, echel,
     """
     new_orders : output orders
     """
-    from ecfit import get_ordered_line_data, fit_2dspec, check_fit
+    from .ecfit import get_ordered_line_data, fit_2dspec, check_fit
 
-    from storage_descriptions import THAR_ALIGNED_JSON_DESC
+    from .storage_descriptions import THAR_ALIGNED_JSON_DESC
 
     affine_tr = thar_echellogram_products[THAR_ALIGNED_JSON_DESC]["affine_tr"]
 
@@ -417,7 +417,7 @@ def get_wavelength_solutions_deprecated(thar_echellogram_products, echel,
                   open("wvl_sol_phase0_%s_%s.json" % \
                        (band, igrins_log.date), "w"))
 
-    from storage_descriptions import THAR_WVLSOL_JSON_DESC
+    from .storage_descriptions import THAR_WVLSOL_JSON_DESC
 
     r = PipelineProducts("wavelength solution from ThAr")
     r.add(THAR_WVLSOL_JSON_DESC,
@@ -430,7 +430,7 @@ def get_wavelength_solutions_deprecated(thar_echellogram_products, echel,
 def get_wavelength_solutions(thar_echellogram_products, echelle,
                              new_orders):
 
-    from storage_descriptions import THAR_ALIGNED_JSON_DESC
+    from .storage_descriptions import THAR_ALIGNED_JSON_DESC
 
     affine_tr = thar_echellogram_products[THAR_ALIGNED_JSON_DESC]["affine_tr"]
 
@@ -439,7 +439,7 @@ def get_wavelength_solutions(thar_echellogram_products, echelle,
                                         new_orders)
 
 
-    from storage_descriptions import THAR_WVLSOL_JSON_DESC
+    from .storage_descriptions import THAR_WVLSOL_JSON_DESC
 
     r = PipelineProducts("wavelength solution from ThAr")
     r.add(THAR_WVLSOL_JSON_DESC,
@@ -454,7 +454,7 @@ def get_wavelength_solutions2(affine_tr, zdata,
     """
     new_orders : output orders
     """
-    from ecfit import get_ordered_line_data, fit_2dspec, check_fit
+    from .ecfit import get_ordered_line_data, fit_2dspec, check_fit
 
 
     d_x_wvl = {}

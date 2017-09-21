@@ -14,10 +14,10 @@ def transform_wavelength_solutions(obsset):
     affine_tr_matrix = d["affine_tr_matrix"]
 
     # load echellogram
-    from master_calib import load_ref_data
+    from .master_calib import load_ref_data
     echellogram_data = obsset.load_ref_data(kind="ECHELLOGRAM_JSON")
 
-    from echellogram import Echellogram
+    from .echellogram import Echellogram
     echellogram = Echellogram.from_dict(echellogram_data)
 
 
@@ -34,7 +34,7 @@ def transform_wavelength_solutions(obsset):
 def get_wavelength_solutions_old(thar_echellogram_products, echelle,
                              new_orders):
 
-    from storage_descriptions import THAR_ALIGNED_JSON_DESC
+    from .storage_descriptions import THAR_ALIGNED_JSON_DESC
 
     affine_tr = thar_echellogram_products[THAR_ALIGNED_JSON_DESC]["affine_tr"]
 
@@ -43,7 +43,7 @@ def get_wavelength_solutions_old(thar_echellogram_products, echelle,
                                         new_orders)
 
 
-    from storage_descriptions import THAR_WVLSOL_JSON_DESC
+    from .storage_descriptions import THAR_WVLSOL_JSON_DESC
 
     r = PipelineProducts("wavelength solution from ThAr")
     r.add(THAR_WVLSOL_JSON_DESC,
@@ -63,7 +63,7 @@ def get_wavelength_solutions(affine_tr_matrix, zdata,
     solution.
 
     """
-    from ecfit import get_ordered_line_data, fit_2dspec, check_fit
+    from .ecfit import get_ordered_line_data, fit_2dspec, check_fit
 
     affine_tr = matplotlib.transforms.Affine2D()
     affine_tr.set_matrix(affine_tr_matrix)

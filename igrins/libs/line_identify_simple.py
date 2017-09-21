@@ -41,7 +41,7 @@ def match_lines1_pix(s, ref_pix_list):
     """
 
     # find centroids of s
-    from find_peak import find_peaks
+    from .find_peak import find_peaks
     sol_list = find_peaks(s, sigma=3)
     cent_list = np.array([sol[0] for sol in sol_list])
 
@@ -64,7 +64,7 @@ def match_lines1(s, wvl, ref_line_list):
     """
 
     # find centroids of s
-    from find_peak import find_peaks
+    from .find_peak import find_peaks
     sol_list = find_peaks(s, sigma=3)
     cent_list = np.array([sol[0] for sol in sol_list])
 
@@ -91,7 +91,7 @@ def match_lines2(s, wvl, ref_line_list):
     """
 
     # find centroids of s
-    from find_peak import find_peaks
+    from .find_peak import find_peaks
     sol_list = find_peaks(s, sigma=3)
     cent_list = np.array([sol[0] for sol in sol_list])
 
@@ -178,7 +178,7 @@ if 0:
         d["ref_indices_list"].append(matched_indices)
         d["pixpos_list"].append(centroids)
 
-    from json_helper import json_dump
+    from .json_helper import json_dump
     json_dump(d, open("%s_IGRINS_identified_%s_%s.json" % (REF_TYPE, band, utdate),"w"))
 
     for wvl, s, _ in zip(wvl_sol, s_list, ddd_list):
@@ -205,4 +205,3 @@ if 0:
     ax.vlines(wvl_thar[matched_indices],
               ymin=0, ymax=-s_thar[matched_indices], color="r")
     ax.set_ylim(-30, 30)
-    print matched_indices

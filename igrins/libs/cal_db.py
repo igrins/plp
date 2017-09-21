@@ -213,7 +213,7 @@ class CalDB(object):
     def store_image(self, basename, item_type, data,
                     master_hdu=None,
                     header=None, card_list=None):
-        from products import PipelineImageBase
+        from .products import PipelineImageBase
 
         item_desc = self.DESC_DICT[item_type.upper()]
 
@@ -248,7 +248,7 @@ class CalDB(object):
 
         master_hdu = self._get_master_hdu(basename, master_hdu)
 
-        from products import PipelineImages
+        from .products import PipelineImages
         pipeline_image = PipelineImages(hdu_list,
                                         masterhdu=master_hdu)
 
@@ -260,7 +260,7 @@ class CalDB(object):
         basename = self._get_basename(basename)
         item_desc = self.DESC_DICT[item_type.upper()]
 
-        from products import PipelineDict
+        from .products import PipelineDict
         pipeline_dict = PipelineDict(**data)
         self.helper.store_item(item_desc, basename,
                                pipeline_dict)
@@ -311,11 +311,11 @@ class CalDB(object):
         return resource
 
     def get_ref_data_path(self, band, kind):
-        from igrins.libs.master_calib import get_ref_data_path
+        from .master_calib import get_ref_data_path
         return get_ref_data_path(self.get_config(), band, kind)
 
     def load_ref_data(self, band, kind):
-        from igrins.libs.master_calib import load_ref_data
+        from .master_calib import load_ref_data
         f = load_ref_data(self.get_config(), band=band,
                           kind=kind)
         return f

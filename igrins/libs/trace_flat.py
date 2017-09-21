@@ -186,9 +186,9 @@ def identify_horizontal_line(d_deriv, mmp, pad=20, bg_std=None):
     label_indx = np.arange(1, label_max+1, dtype="i")
     objects_found = ni.find_objects(im_labeled)
 
-    from itertools import izip, compress
+    from itertools import compress
 
-    slice_map = dict(izip(label_indx, objects_found))
+    slice_map = dict(zip(label_indx, objects_found))
 
     if 0:
         # make labeld image with small objects delted.
@@ -210,7 +210,7 @@ def identify_horizontal_line(d_deriv, mmp, pad=20, bg_std=None):
     # labels_center_column = [i for i, _ in groupby(im_labeled[:,nx/2]) if i>0]
 
     thre_dx = 30
-    center_cut = im_labeled[:,nx/2-thre_dx:nx/2+thre_dx]
+    center_cut = im_labeled[:,nx//2-thre_dx:nx//2+thre_dx]
     labels_ = list(set(np.unique(center_cut)) - set([0]))
 
     if True:  # remove flase detections
@@ -251,7 +251,7 @@ def identify_horizontal_line(d_deriv, mmp, pad=20, bg_std=None):
 
     if slice_map_update_required:
         objects_found = ni.find_objects(im_labeled)
-        slice_map = dict(izip(label_indx, objects_found))
+        slice_map = dict(zip(label_indx, objects_found))
 
     # im_labeled is now updated
 
@@ -334,7 +334,7 @@ def get_matched_slices(yc_down_list, yc_up_list):
 def trace_centroids_chevyshev(centroid_bottom_list,
                               centroid_up_list,
                               domain, ref_x=None):
-    from trace_aperture import trace_aperture_chebyshev
+    from .trace_aperture import trace_aperture_chebyshev
 
     if ref_x is None:
         ref_x = 0.5 * (domain[0] + domain[-1])
@@ -566,12 +566,12 @@ def plot_solutions1(flat,
     ax.imshow(flat, origin="lower") #, cmap="gray_r")
     #ax.set_autoscale_on(False)
 
-    next_color = itertools.cycle("rg").next
+    colors = itertools.cycle("rg")
     for bottom_sol, up_sol in bottom_up_solutions:
         y_bottom = bottom_sol(x_indices)
         y_up = up_sol(x_indices)
 
-        c = next_color()
+        c = next(colors)
         ax.plot(x_indices, y_bottom, "-", color=c)
         ax.plot(x_indices, y_up, "-", color=c)
 
@@ -616,7 +616,7 @@ def plot_solutions2(cent_bottomup_list,
 
 def process_flat(ondata_list, offdata_list):
 
-    from stsci_helper import stsci_median
+    from .stsci_helper import stsci_median
 
     return_object = {}
 
@@ -943,7 +943,7 @@ def prepare_order_trace_plot(s_list, row_col=(3, 2)):
 
     from matplotlib.figure import Figure
     #from mpl_toolkits.axes_grid1 import Grid
-    from axes_grid_patched import Grid
+    from .axes_grid_patched import Grid
 
     row, col = row_col
 

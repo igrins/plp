@@ -52,7 +52,7 @@ def fit_gaussian_simple(x, s, lines, xminmax=None, sigma_init=1.5,
     params_max = np.array([xmax, 6*sigma_init, 2*ymax, ymax])
     from scipy.optimize import fmin_tnc
     sol_ = fmin_tnc(_gauss, params0,
-                    bounds=zip(params_min, params_max),
+                    bounds=list(zip(params_min, params_max)),
                     approx_grad=True, disp=0,
                     )
 
@@ -130,7 +130,6 @@ def plot_sol(ax, sol):
         ax.plot(xx, yy)
         ax.plot(xx, _gauss0(sol_[0]))
         ax.vlines(sol_[0][0]+d_centers0, 0, 1)
-        print d_centers0
 
 if __name__ == "__main__":
 

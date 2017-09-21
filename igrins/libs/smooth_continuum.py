@@ -126,7 +126,7 @@ def get_smooth_continuum(s, wvl=None):
     wvl : required for masking our some absorption features
     """
 
-    from trace_flat import get_finite_boundary_indices
+    from .trace_flat import get_finite_boundary_indices
     k1, k2 = get_finite_boundary_indices(s)
     if k1 == k2:
         r = np.empty(len(s), dtype="d")
@@ -221,7 +221,7 @@ if 0:
         #s1 = specs[ii]
         #a0v1 = dd[ii]
 
-        from trace_flat import get_finite_boundary_indices
+        from .trace_flat import get_finite_boundary_indices
         k1, k2 = get_finite_boundary_indices(s1)
         sl = slice(k1, k2+1)
 

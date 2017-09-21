@@ -26,8 +26,8 @@ def get_wat_spec(orders, wvl_sol):
     specN_tmpl = "{ap} {beam} {dtype} {w1} {dw} {nw} {z} {aplow} {aphigh}"
     function_i_tmpl = "{wt_i} {w0_i} {ftype_i} {parameters} {coefficients}"
     specN_list = []
-    from itertools import izip, count
-    for ap_num, o, wsol in izip(count(1), orders, wvl_sol):
+    from itertools import count
+    for ap_num, o, wsol in zip(count(1), orders, wvl_sol):
         specN = "spec%d" % ap_num
 
         d = dict(ap=ap_num,

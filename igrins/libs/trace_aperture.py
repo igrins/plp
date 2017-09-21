@@ -1,5 +1,7 @@
+from __future__ import print_function
+
 import numpy as np
-from polyfitr import polyfitr
+from .polyfitr import polyfitr
 #reload(polyfitr)
 
 
@@ -90,7 +92,7 @@ def trace_aperture_chebyshev(xy_list, domain=None):
         f = cheb.Chebyshev.fit(xx, y_m, x_degree, domain=domain)
         if next_orders: # if not the last order
             if np.all(y_thresh(y_m)):
-                print "all negative at ", oi
+                print("all negative at ", oi)
                 next_orders = next_orders[:1]
 
         return oi, f, next_orders
@@ -100,7 +102,7 @@ def trace_aperture_chebyshev(xy_list, domain=None):
         y_m = p(xx, oo+oi)
         f = cheb.Chebyshev.fit(xx, y_m, x_degree, domain=domain)
         if np.all(y_thresh(y_m)):
-            print "all negative at ", oi
+            print("all negative at ", oi)
             next_orders = []
 
         return oi, f, next_orders
@@ -133,14 +135,14 @@ def trace_aperture_chebyshev(xy_list, domain=None):
         f = cheb.Chebyshev.fit(xx, y_m, x_degree, domain=domain)
         if go_down_orders: # if not the last order
             if np.all(y_m < domain[0]):
-                print "all negative at ", ooo[0]-oi
+                print("all negative at ", ooo[0]-oi)
                 go_down_orders = [oi+1]
             else:
                 f_list_down.append(f)
         else:
             f_list_down.append(f)
 
-    print o_list_down[::-1] + ooo + o_list_up
+    print(o_list_down[::-1] + ooo + o_list_up)
     return f_list, f_list_down[::-1] + f_list + f_list_up
 
 
@@ -269,7 +271,7 @@ if 0: # testing code with B-spline
             coeffs[1:-1][m1] = spl.get_coeffs()[1:-1]
 
         coeffs_list.append([coeffs])
-        print len(spl.get_knots()), len(spl.get_coeffs())
+        print(len(spl.get_knots()), len(spl.get_coeffs()))
         plot(x1, y1)
         plot(xx, spl(xx))
     aa = np.concatenate(coeffs_list, axis=0)

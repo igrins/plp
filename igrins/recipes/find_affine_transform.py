@@ -10,7 +10,7 @@ import numpy as np
 
 from igrins.libs.recipe_helper import RecipeHelper
 
-from aperture_helper import get_simple_aperture_from_obsset
+from .aperture_helper import get_simple_aperture_from_obsset
 
 
 #def find_affine_transform(utdate, band, obsids, config_name):
@@ -24,14 +24,14 @@ def find_affine_transform(obsset):
 
     item_path = obsset.query_item_path("IDENTIFIED_LINES_JSON")
 
-    from igrins.libs.identified_lines import IdentifiedLines
+    from ..libs.identified_lines import IdentifiedLines
     identified_lines_tgt = IdentifiedLines.load(item_path)
 
     xy_list_tgt = identified_lines_tgt.get_xy_list_from_pixlist(ap)
 
-    from igrins.libs.echellogram import Echellogram
+    from ..libs.echellogram import Echellogram
 
-    from igrins.libs.master_calib import load_ref_data
+    from ..libs.master_calib import load_ref_data
     echellogram_data = obsset.load_ref_data(kind="ECHELLOGRAM_JSON")
 
     echellogram = Echellogram.from_dict(echellogram_data)
@@ -40,7 +40,7 @@ def find_affine_transform(obsset):
 
     assert len(xy_list_tgt) == len(xy_list_ref)
 
-    from igrins.libs.align_echellogram_thar import fit_affine_clip
+    from ..libs.align_echellogram_thar import fit_affine_clip
     affine_tr, mm = fit_affine_clip(np.array(xy_list_ref),
                                     np.array(xy_list_tgt))
 

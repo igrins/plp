@@ -14,7 +14,7 @@ def load_recipe_list_numpy(fn, allow_duplicate_groups=False):
     recipe_list = []
     for row in d:
         recipe_name = row["RECIPE"].strip()
-        obsids = map(int, row["OBSIDS"].strip().split())
+        obsids = [int(v) for v in row["OBSIDS"].strip().split()]
         frametypes = row["FRAMETYPES"].strip().split()
         recipe_list.append((recipe_name, obsids, frametypes, row))
 
@@ -22,14 +22,15 @@ def load_recipe_list_numpy(fn, allow_duplicate_groups=False):
 
 
 def load_recipe_list_pandas(fn, allow_duplicate_groups=False):
-    dtypes = [('OBJNAME', 'S128'), ('OBJTYPE', 'S128'),
-              ('GROUP1', 'S128'), ('GROUP2', 'S128'),
-              ('EXPTIME', 'f'), ('RECIPE', 'S128'),
-              ('OBSIDS', 'S1024'),  ('FRAMETYPES', 'S1024')]
+    dtypes = [('OBJNAME', 'U128'), ('OBJTYPE', 'U128'),
+              ('GROUP1', 'U128'), ('GROUP2', 'U128'),
+              ('EXPTIME', 'f'), ('RECIPE', 'U128'),
+              ('OBSIDS', 'U1024'),  ('FRAMETYPES', 'U1024')]
 
     # names = [_[0] for _ in dtypes]
-    df = pd.read_csv(fn, skiprows=0, dtype=dtypes, comment="#",
-                     escapechar="\\", skipinitialspace=True)
+    df = pd.read_csv(fn, skiprows=0, dtype=dict(dtypes), comment="#",
+                     escapechar="\\", skipinitialspace=True,
+                     engine="python")
 
     update_group1 = True
 
@@ -47,9 +48,12 @@ def load_recipe_list_pandas(fn, allow_duplicate_groups=False):
     for i, row in df.iterrows():
         if row["OBJTYPE"] != "TAR":
             if row["GROUP1"] != row["OBSIDS"].split()[0]:
-                raise ValueError("GROUP1 should be identical to "
-                                 "1st OBSIDS unless the OBJTYPE is "
-                                 "TAR")
+                msg = ("GROUP1 should be identical to "
+                       "1st OBSIDS unless the OBJTYPE is "
+                       "TAR : "
+                       "GROUP1=%s, OBSID[0]=%s")
+                raise ValueError(msg % (row["GROUP1"],
+                                        row["OBSIDS"].split()[0]))
 
     if not allow_duplicate_groups:
         for i, row in df.groupby(["GROUP1", "RECIPE"]):
@@ -66,7 +70,7 @@ def load_recipe_list_pandas(fn, allow_duplicate_groups=False):
     recipe_list = []
     for row in d:
         recipe_name = row["RECIPE"].strip()
-        obsids = map(int, row["OBSIDS"].strip().split())
+        obsids = [int(v) for v in row["OBSIDS"].strip().split()]
         frametypes = row["FRAMETYPES"].strip().split()
         recipe_list.append((recipe_name, obsids, frametypes, row))
 
@@ -179,7 +183,7 @@ def load_recipe_as_dict_numpy(fn):
     for k in ["RECIPE", "OBJNAME", "OBJTYPE"]:
         d[k] = [n.strip() for n in d[k]]
 
-    obsids = [map(int, row["OBSIDS"].strip().split()) for row in d]
+    obsids = [[int(v) for v in  row["OBSIDS"].strip().split()] for row in d]
     frametypes = [row["FRAMETYPES"].strip().split() for row in d]
     starting_obsids = [o[0] for o in obsids]
 
@@ -210,7 +214,7 @@ def load_recipe_as_dict_pandas(fn):
     for k in ["RECIPE", "OBJNAME", "OBJTYPE"]:
         d[k] = [n.strip() for n in d[k]]
 
-    obsids = [map(int, row["OBSIDS"].strip().split()) for row in d]
+    obsids = [[int(v) for v in row["OBSIDS"].strip().split()] for row in d]
     frametypes = [row["FRAMETYPES"].strip().split() for row in d]
     starting_obsids = [o[0] for o in obsids]
 
@@ -309,5 +313,18 @@ def _test3():
     print(selected)
 
 
+def _test4():
+    # names = [_[0] for _ in dtypes]
+    fn = "../../recipe_logs/20150120.recipes"
+    dtypes = [('OBJNAME', 'U128'), ('OBJTYPE', 'U128'),
+              ('GROUP1', 'U128'), ('GROUP2', 'U128'),
+              ('EXPTIME', 'f'), ('RECIPE', 'U128'),
+              ('OBSIDS', 'U1024'),  ('FRAMETYPES', 'U1024')]
+
+    df = pd.read_csv(fn, skiprows=0, dtype=dict(dtypes), comment="#",
+                     escapechar="\\", skipinitialspace=True,
+                     engine="python")
+    print(df)
+
 if __name__ == "__main__":
-    pass
+    _test3()

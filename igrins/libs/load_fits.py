@@ -73,7 +73,7 @@ def get_combined_image(hdus): #, destripe=True):
 
     data_list = [hdu.data for hdu in hdus]
 
-    from stsci_helper import stsci_median
+    from .stsci_helper import stsci_median
     im = stsci_median(data_list)
 
     return im

@@ -49,7 +49,7 @@ def load_sky_ref_data(config, band):
     ref_ohline_indices = dict((int(k), v) for k, v \
                               in ref_ohline_indices.items())
 
-    from oh_lines import OHLines
+    from .oh_lines import OHLines
     fn = get_ref_data_path(config, band, kind="OHLINES_JSON")
     #fn = get_master_calib_abspath("ohlines.dat")
     ohlines = OHLines(fn)
@@ -118,7 +118,7 @@ if 0:
     ref_ohline_indices = dict((int(k), v) for k, v \
                               in ref_ohline_indices.items())
 
-    from oh_lines import OHLines
+    from .oh_lines import OHLines
     fn = get_master_calib_abspath("ohlines.dat")
     ohlines = OHLines(fn)
 

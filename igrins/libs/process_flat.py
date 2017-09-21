@@ -346,22 +346,22 @@ def make_order_flat(flat_normed, flat_mask, orders, order_map):
         mean_order_specs.append(ss)
 
 
-    from trace_flat import (get_smoothed_order_spec,
-                            get_order_boundary_indices,
-                            get_order_flat1d)
+    from .trace_flat import (get_smoothed_order_spec,
+                             get_order_boundary_indices,
+                             get_order_flat1d)
 
     s_list = [get_smoothed_order_spec(s) for s in mean_order_specs]
     i1i2_list = [get_order_boundary_indices(s, s0) \
                  for s, s0 in zip(mean_order_specs, s_list)]
     #p_list = [get_order_flat1d(s, i1, i2) for s, (i1, i2) \
     #          in zip(s_list, i1i2_list)]
-    from smooth_continuum import get_smooth_continuum
+    from .smooth_continuum import get_smooth_continuum
     s2_list = [get_smooth_continuum(s) for s, (i1, i2) \
                in zip(s_list, i1i2_list)]
 
 
     # make flat
-    x = np.arange(len(s))
+    x = np.arange(len(s_list[-1]))
     flat_im = np.ones(flat_normed.shape, "d")
     #flat_im.fill(np.nan)
 
@@ -403,16 +403,16 @@ def make_order_flat(flat_normed, flat_mask, orders, order_map):
 
 def check_order_flat(order_flat_json):
 
-    from trace_flat import (prepare_order_trace_plot,
-                            check_order_trace1, check_order_trace2)
+    from .trace_flat import (prepare_order_trace_plot,
+                             check_order_trace1, check_order_trace2)
 
     # from storage_descriptions import ORDER_FLAT_JSON_DESC
 
     mean_order_specs = order_flat_json["mean_order_specs"]
 
-    from trace_flat import (get_smoothed_order_spec,
-                            get_order_boundary_indices,
-                            get_order_flat1d)
+    from .trace_flat import (get_smoothed_order_spec,
+                             get_order_boundary_indices,
+                             get_order_flat1d)
 
     # these are duplicated from make_order_flat
     s_list = [get_smoothed_order_spec(s) for s in mean_order_specs]
@@ -421,7 +421,7 @@ def check_order_flat(order_flat_json):
     # p_list = [get_order_flat1d(s, i1, i2) for s, (i1, i2) \
     #           in zip(s_list, i1i2_list)]
 
-    from smooth_continuum import get_smooth_continuum
+    from .smooth_continuum import get_smooth_continuum
     s2_list = [get_smooth_continuum(s) for s, (i1, i2) \
                in zip(s_list, i1i2_list)]
 
@@ -449,8 +449,8 @@ def plot_trace_solutions(flaton_products,
                          trace_solution_products_plot
                          ):
 
-    from storage_descriptions import (FLAT_NORMED_DESC,
-                                      FLATCENTROID_SOL_JSON_DESC)
+    from .storage_descriptions import (FLAT_NORMED_DESC,
+                                       FLATCENTROID_SOL_JSON_DESC)
 
     flat_normed = flaton_products[FLAT_NORMED_DESC].data
     _d = trace_solution_products[FLATCENTROID_SOL_JSON_DESC]
@@ -465,7 +465,7 @@ def plot_trace_solutions(flaton_products,
         dp = P.Polynomial(d[1])
         bottom_up_solutions.append((bp, dp))
 
-    from trace_flat import plot_solutions1, plot_solutions2
+    from .trace_flat import plot_solutions1, plot_solutions2
     fig2 = plot_solutions1(flat_normed,
                            bottom_up_solutions)
 

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import json
 
-from nd_poly import NdPolyNamed
+from .nd_poly import NdPolyNamed
 
 from numpy.linalg import lstsq
 
@@ -152,7 +152,7 @@ def generate_slitoffsetmap(obsset):
     obsset.store_image("slitoffset_fits", offset_map)
                      
 
-from igrins.libs.recipe_helper import RecipeHelper
+from ..libs.recipe_helper import RecipeHelper
 
 def process_band_make_offset_map(utdate, recipe_name, band,
                                  obsids, config_name):

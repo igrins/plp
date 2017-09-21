@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 def polyfitr(x, y, N, s, fev=100, w=None, diag=False, clip='both', \
                  verbose=False, plotfit=False, plotall=False):
     """Matplotlib's polyfit with weights and sigma-clipping rejection.
@@ -58,7 +60,7 @@ def polyfitr(x, y, N, s, fev=100, w=None, diag=False, clip='both', \
     yy = yy[goodind]
     ww = ww[goodind]
 
-    while (ii<fev and (nrej<>0)):
+    while (ii<fev and (nrej!=0)):
         if noweights:
             p = polyfit(xx,yy,N)
         else:
@@ -86,7 +88,7 @@ def polyfitr(x, y, N, s, fev=100, w=None, diag=False, clip='both', \
             title('Iter. #' + str(ii) + ' -- Close all windows to continue....')
 
         if verbose:
-            print str(len(x)-len(xx)) + ' points rejected on iteration #' + str(ii)
+            print(str(len(x)-len(xx)) + ' points rejected on iteration #' + str(ii))
 
     if (plotfit or plotall):
         plot(x,y, '.', xx,yy, 'x', x, polyval(p, x), '--')

@@ -106,7 +106,7 @@ def make_combined_image_thar(obsset):
 def extract_spectra(obsset):
     "extract spectra"
 
-    from aperture_helper import get_simple_aperture_from_obsset
+    from .aperture_helper import get_simple_aperture_from_obsset
 
     # caldb = helper.get_caldb()
     # master_obsid = obsids[0]
@@ -152,7 +152,7 @@ def extract_spectra_multi(obsset):
     n_slice_one_direction = 2
     slice_center, slice_up, slice_down = _get_slices(n_slice_one_direction)
 
-    from aperture_helper import get_simple_aperture_from_obsset
+    from .aperture_helper import get_simple_aperture_from_obsset
 
     data = obsset.load_image(item_type="stacked")
 
@@ -234,7 +234,7 @@ def identify_orders(obsset):
 
     src_spectra = obsset.load_item("ONED_SPEC_JSON")
 
-    from igrins.libs.process_thar import match_order
+    from ..libs.process_thar import match_order
     new_orders = match_order(src_spectra, ref_spectra)
 
     print(new_orders)
@@ -290,7 +290,7 @@ def identify_lines(obsset):
     tgt_spec = obsset.load_item("ONED_SPEC_JSON")
     #tgt_spec = obsset.load_item("ONED_SPEC_JSON")
 
-    from igrins.libs.process_thar import get_offset_treanform_between_2spec
+    from ..libs.process_thar import get_offset_treanform_between_2spec
     intersected_orders, d = get_offset_treanform_between_2spec(ref_spec,
                                                                tgt_spec)
 
@@ -304,7 +304,7 @@ def identify_lines(obsset):
 
     offsetfunc_map = dict(zip(intersected_orders, d["sol_list"]))
 
-    from igrins.libs.identified_lines import IdentifiedLines
+    from ..libs.identified_lines import IdentifiedLines
 
     identified_lines_ref = IdentifiedLines(l)
     ref_map = identified_lines_ref.get_dict()
@@ -314,7 +314,7 @@ def identify_lines(obsset):
                                      pixpos_list=[], orders=[],
                                      spec_path=tgt_spec_path))
 
-    from igrins.libs.line_identify_simple import match_lines1_pix
+    from ..libs.line_identify_simple import match_lines1_pix
 
     for o, s in zip(tgt_spec["orders"], tgt_spec["specs"]):
         if (o not in ref_map) or (o not in offsetfunc_map):
@@ -370,7 +370,7 @@ def identify_lines(obsset):
 def test_identify_lines(helper, band, obsids):
 
 
-    from igrins.libs.master_calib import load_ref_data
+    from ..libs.master_calib import load_ref_data
     ref_spec = load_ref_data(helper.config, band,
                              kind="SKY_REFSPEC_JSON")
 
@@ -379,7 +379,7 @@ def test_identify_lines(helper, band, obsids):
     tgt_spec = caldb.load_item_from((band, master_obsid),
                                     "ONED_SPEC_JSON")
 
-    from igrins.libs.process_thar import get_offset_treanform_between_2spec
+    from ..libs.process_thar import get_offset_treanform_between_2spec
     d = get_offset_treanform_between_2spec(ref_spec, tgt_spec)
 
     print(d)
@@ -450,7 +450,7 @@ def test_identify_lines(helper, band, obsids):
 def save_orderflat(obsset):
     orders = obsset.load_item("orders_json")["orders"]
 
-    from aperture_helper import get_simple_aperture_from_obsset
+    from .aperture_helper import get_simple_aperture_from_obsset
 
     ap = get_simple_aperture_from_obsset(obsset, orders=orders)
 
@@ -461,7 +461,7 @@ def save_orderflat(obsset):
     flat_mask = obsset.load_resource_for(("flat_on", "flat_mask"),
                                          get_science_hdu=True).data > 0
 
-    from igrins.libs.process_flat import make_order_flat
+    from ..libs.process_flat import make_order_flat
     order_flat_im, order_flat_json = make_order_flat(flat_normed, 
                                                      flat_mask,
                                                      orders, order_map)
@@ -480,14 +480,14 @@ def save_figures(obsset):
 
     ### THIS NEEDS TO BE REFACTORED!
 
-    from igrins.libs.process_flat import check_order_flat
+    from ..libs.process_flat import check_order_flat
 
     if 1:
         order_flat_json = obsset.load_item("order_flat_json")
 
         fig_list = check_order_flat(order_flat_json)
 
-        from igrins.libs.qa_helper import figlist_to_pngs
+        from ..libs.qa_helper import figlist_to_pngs
         dest_dir = obsset.query_item_path("qa_orderflat_dir",
                                           subdir="orderflat")
         figlist_to_pngs(dest_dir, fig_list)
@@ -510,7 +510,7 @@ def process_band(utdate, recipe_name, band,
             logger.info("ignoring {}:{}".format(recipe_name, groupname))
             return
 
-    from igrins import get_caldb, get_obsset
+    from .. import get_caldb, get_obsset
     caldb = get_caldb(config_name, utdate)
     obsset = get_obsset(caldb, band, recipe_name, obsids, frametypes)
 
@@ -560,10 +560,10 @@ def process_band(utdate, recipe_name, band,
     ## load the reference echellogram, and find the transform using
     ## the identified lines.
 
-    from find_affine_transform import find_affine_transform
+    from .find_affine_transform import find_affine_transform
     find_affine_transform(obsset)
 
-    from igrins.libs.transform_wvlsol import transform_wavelength_solutions
+    from ..libs.transform_wvlsol import transform_wavelength_solutions
     transform_wavelength_solutions(obsset)
 
     # Step 8:

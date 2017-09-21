@@ -69,8 +69,7 @@ class PipelineImageBase(object):
         hdu_rest = [get_image_hdu(d_) for d_ in d_list2[1:]]
 
         hdu = pyfits.HDUList([hdu0] + hdu_rest)
-        from itertools import izip
-        for hdu1, (h, d) in izip(hdu, self.iter_header_data()):
+        for hdu1, (h, d) in zip(hdu, self.iter_header_data()):
             hdu1.header.extend(h)
 
         #fn0 = "".join([fn, ".fits"])
