@@ -67,7 +67,8 @@ def get_config(config):
 if __name__ == "__main__":
 
     config = IGRINSConfig()
-    print(config.get_value('RECIPE_LOG_PATH', "20140525"))
+    s = config.get_value('RECIPE_LOG_PATH', "20140525")
+    print(s, type(s))
 
     # print config.get("DEFAULT", 'INDATA_PATH', 0, dict(UTDATE="20140525"))
 

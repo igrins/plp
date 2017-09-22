@@ -41,7 +41,7 @@ class TelluricTransmission(object):
 class A0VSpec(object):
     def __init__(self, config):
 
-        from master_calib import load_ref_data
+        from .master_calib import load_ref_data
         d = load_ref_data(config, "", "VEGA_SPEC")
 
         wvl, flux, cont = (d[:,i] for i in [0, 1, 2])

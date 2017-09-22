@@ -186,7 +186,7 @@ class Apertures(object):
 
         # it would be easier if shift data before all this?
         if slitoffset_map is not None:
-            from correct_distortion import ShiftX
+            from .correct_distortion import ShiftX
             shiftx = ShiftX(slitoffset_map)
 
             data, variance_map = data.copy(), variance_map.copy()
@@ -486,7 +486,7 @@ class Apertures(object):
 
         # it would be easier if shift data before all this?
         if slitoffset_map is not None:
-            from correct_distortion import ShiftX
+            from .correct_distortion import ShiftX
             shiftx = ShiftX(slitoffset_map)
 
             data, variance_map = data.copy(), variance_map.copy()

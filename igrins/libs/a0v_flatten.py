@@ -1,8 +1,10 @@
+from __future__ import print_function
+
 import astropy.io.fits as pyfits
 import numpy as np
 import scipy.ndimage as ni
 
-from a0v_spec import A0VSpec
+from .a0v_spec import A0VSpec
 
 from scipy.interpolate import interp1d
 
@@ -13,7 +15,6 @@ def air2vac(x0):
     f = 10000.0
     x = x0*f
     n = 1.0 + 2.735182e-4 + 131.4182 / x ** 2 + 2.76249e8 / x ** 4
-    print n
     return x0*n
 
 class TelluricTransmission(object):
@@ -128,8 +129,8 @@ class SpecFlattener(object):
 
     def get_sv_mask(self, ratio):
         # use sv_iter to derive continuum level from ratio
-        from smooth_continuum import sv_iter
-        from trace_flat import get_finite_boundary_indices
+        from .smooth_continuum import sv_iter
+        from .trace_flat import get_finite_boundary_indices
 
         # naive iterative approach.
         ratio = ratio.copy()
@@ -169,13 +170,13 @@ class SpecFlattener(object):
 
         if weight_func is None:
             finite_frac = 1 - np.mean(msk) #float(np.sum((msk)))/len(msk)
-            print finite_frac
+            print(finite_frac)
             finite_frac = np.clip(finite_frac , 0.1, 0.8)
             rad1 = 15./ finite_frac
             #rad1 = 150
             rad2 = 160.
             frac = 0.5 * (1. - finite_frac)
-            print "frac, rad1, A = %d, %3f, %3f" % (finite_frac, int(rad1), frac),
+            print("frac, rad1, A = %d, %3f, %3f" % (finite_frac, int(rad1), frac),)
             def weight_func(dist, rad1=rad1, rad2=rad2):
                 return np.exp(-(dist/(2.*rad1))**2) + frac*np.exp(-(dist/(2.*rad2))**2)
 
@@ -287,9 +288,9 @@ class SpecFlattener(object):
             # plot raw spec
             try:
                 color_next = ax1._get_lines.color_cycle
-                prop_next = dict(color=color_next.next())
+                prop_next = dict(color=next(color_next))
             except AttributeError:
-                prop_next = ax1._get_lines.prop_cycler.next()
+                prop_next = next(ax1._get_lines.prop_cycler)
 
             ax1.plot(w1, s1_orig, alpha=0.3, **prop_next)
             # plot mask
@@ -387,8 +388,8 @@ class SpecFlattener(object):
         ratio[-4:] = np.nan
 
         # use sv_iter to derive continuum level from ratio
-        from smooth_continuum import sv_iter
-        from trace_flat import get_finite_boundary_indices
+        from .smooth_continuum import sv_iter
+        from .trace_flat import get_finite_boundary_indices
 
         # naive iterative approach.
         for thresh in [0.05, 0.03, 0.01]:
@@ -454,7 +455,6 @@ class SpecFlattener(object):
 
 def plot_flattend_a0v(spec_flattener, w, s_orig, of_list, data_list,
                       fout=None):
-        print "Now generating figures"
 
         from matplotlib.backends.backend_pdf import Figure, FigureCanvasPdf
         fig = Figure()
@@ -530,10 +530,10 @@ def get_a0v_flattened(a0v_interp1d, tel_interp1d_f,
     _interim_result = []
 
 
-    print "flattening ...",
+    print("flattening ...", end="")
     for w1, s1_orig, of in zip(wvl, s_list, orderflat_response):
 
-        print "(%5.3f~%5.3f)" % (w1[0], w1[-1]),
+        print("(%5.3f~%5.3f)" % (w1[0], w1[-1]), end="")
         s1_a0v = spec_flattener.get_s_a0v(w1, dw_opt)
         tt1 = spec_flattener.get_tel_trans(w1, dw_opt, gw_opt)
 
@@ -550,7 +550,7 @@ def get_a0v_flattened(a0v_interp1d, tel_interp1d_f,
             msk_i, msk_sv, fitted_continuum = _
             ccc.append((fitted_continuum, msk_sv, s1_a0v, tt1))
 
-    print " - Done."
+    print(" - Done.")
 
     continuum_array = np.array([c for c, m, a, t in ccc])
     mask_array = np.array([m for c, m, a, t in ccc])
@@ -571,7 +571,7 @@ def get_a0v_flattened(a0v_interp1d, tel_interp1d_f,
 
 
     if figout is not None:
-        from a0v_flatten import plot_flattend_a0v
+        from .a0v_flatten import plot_flattend_a0v
 
         plot_flattend_a0v(spec_flattener, wvl, s_list, orderflat_response, data_list, fout=figout)
 

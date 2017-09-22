@@ -112,10 +112,10 @@ class PipelineStorage(object):
 
     @classmethod
     def from_utdate(cls, utdate, config=None):
-        from path_info import IGRINSPath
+        from .path_info import IGRINSPath
 
         if config is None:
-            from igrins_config import IGRINSConfig
+            from .igrins_config import IGRINSConfig
             config = IGRINSConfig()
 
         igr_path = IGRINSPath(config, utdate)

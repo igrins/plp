@@ -5,7 +5,7 @@ def get_variance_map0(a_minus_b, bias_mask2, pix_mask):
     #a_minus_b = a-b
     msk = bias_mask2 | pix_mask | ~np.isfinite(a_minus_b)
 
-    from destriper import destriper
+    from .destriper import destriper
     variance0 = destriper.get_destriped(a_minus_b,
                                         msk,
                                         pattern=64,
@@ -59,7 +59,7 @@ def get_variance_map2(a_plus_b, a_minus_b, bias_mask2, pix_mask, gain):
     #a_minus_b = a-b
     msk = bias_mask2 | pix_mask | ~np.isfinite(a_minus_b)
 
-    from destriper import destriper
+    from .destriper import destriper
     variance0 = destriper.get_destriped(a_minus_b,
                                         msk,
                                         pattern=64,
