@@ -154,15 +154,16 @@ class Recipes(object):
             for recipe_name in recipe_item[0].split("|"):
                 if p_match(recipe_name):
                     recipe_item_new = (recipe_name, ) + recipe_item[1:]
-                    _.append((recipe_item[-1]["GROUP1"], recipe_item_new))
+                    _.append((recipe_item[-1]["GROUP1"],
+                              recipe_item_new))
 
-        from collections import OrderedDict
-        dict_by_group = OrderedDict(_)
+        # from collections import OrderedDict
+        # dict_by_group = OrderedDict(_)
 
         if groups is None:
-            groups = dict_by_group.keys()
-
-        selected = [dict_by_group[s1] for s1 in groups]
+            selected = [s1[1] for s1 in _]
+        else:
+            selected = [s1[1] for s1 in _ if s1[0] in groups]
 
         return selected
 
