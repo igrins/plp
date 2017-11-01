@@ -7,6 +7,7 @@ def fig_to_png(rootname, fig, postfix=None):
     FigureCanvasAgg(fig)
     fig.savefig("%s%s.png" % (rootname, postfix))
 
+
 def figlist_to_pngs(rootname, figlist, postfixes=None):
     from matplotlib.backends.backend_agg import FigureCanvasAgg
     from itertools import count
@@ -19,6 +20,7 @@ def figlist_to_pngs(rootname, figlist, postfixes=None):
         fig.savefig("%s_%s.png" % (rootname, postfix))
         #fig2.savefig("align_zemax_%s_fig2_fit.png" % postfix)
         #fig3.savefig("align_zemax_%s_fig3_hist_dlambda.png" % postfix)
+
 
 def figlist_to_json(rootname, figlist, postfixes=None):
     from matplotlib.backends.backend_agg import FigureCanvasAgg

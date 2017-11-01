@@ -4,8 +4,9 @@ from .storage_descriptions import (load_resource_def,
                                    load_descriptions,
                                    DB_Specs)
 
-from .load_fits import get_first_science_hdu, open_fits
+from .load_fits import get_first_science_hdu
 from .cal_db_resources import ResourceManager
+
 
 class CalDB(object):
 
@@ -248,8 +249,20 @@ class CalDB(object):
 
         master_hdu = self._get_master_hdu(basename, master_hdu)
 
+        from ..libs.simple_hdu import SimpleHDU
+        new_hdu_list = []
+        for hdu in hdu_list:
+            try:
+                card_list, im = hdu
+            except TypeError:
+                pass
+            else:
+                hdu = SimpleHDU(card_list, im)
+
+            new_hdu_list.append(hdu)
+
         from .products import PipelineImages
-        pipeline_image = PipelineImages(hdu_list,
+        pipeline_image = PipelineImages(new_hdu_list,
                                         masterhdu=master_hdu)
 
         self.helper.store_item(item_desc, basename,

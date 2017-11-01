@@ -1,3 +1,7 @@
+"""
+ObsSet: Helper class for a single obsid, and its derived products.
+"""
+
 class ObsSet(object):
     def __init__(self, caldb, band, recipe_name, obsids, frametypes,
                  groupname=None):
@@ -10,7 +14,7 @@ class ObsSet(object):
             groupname = str(self.obsids[0])
         self.basename = self.caldb._get_basename((self.band, groupname))
         # this is for query
-        self.basename_for_query = self.caldb._get_basename((self.band, 
+        self.basename_for_query = self.caldb._get_basename((self.band,
                                                             obsids[0]))
 
     def get_config(self):
@@ -100,16 +104,15 @@ class ObsSet(object):
         # pandas.read_json. So, we use df.to_json for now which write
         # 'null'.
 
-        coeffs_path = self.query_item_path(itemtype, 
+        coeffs_path = self.query_item_path(itemtype,
                                            basename_postfix=basename_postfix)
 
         df.to_json(coeffs_path, orient=orient)
 
-
     def store_dict(self, item_type, data):
         return self.caldb.store_dict(self.basename, item_type, data)
 
-    def store_image(self, item_type, data, 
+    def store_image(self, item_type, data,
                     header=None, card_list=None):
         return self.caldb.store_image(self.basename,
                                       item_type=item_type, data=data,
@@ -152,8 +155,7 @@ class ObsSet(object):
             ref_identified_lines_key = "THAR_IDENTIFIED_LINES_V0_JSON"
 
         else:
-            raise ValueError("Recipe name of '%s' is unsupported." % recipe_name)
+            raise ValueError("Recipe name of '%s' is unsupported."
+                             % recipe_name)
 
         return ref_spec_key, ref_identified_lines_key
-
-
