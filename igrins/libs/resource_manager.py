@@ -1,49 +1,9 @@
-# import os
 
-# from .products import ProductDB
-
-# from .storage_descriptions import (load_resource_def,
-#                                    load_descriptions,
-#                                    DB_Specs)
-
-# from .load_fits import get_first_science_hdu
-# from .cal_db_resources import ResourceManager
-
-# from . import cal_db
-
-import astropy.io.fits as pyfits
-
-import json
-from io import BytesIO
-
-
-# class Storage(object):
-#     def get_stream(self, section, fn):
-#         pass
-
-#     def get_fileobject(self, section, fn):
-
-#         s = self.get_stream(section, fn)
-
-#         buf = BytesIO()
-#         for d in s.stream():
-#             buf.write(d)
-
-#         buf.seek(0)
-
-#         return buf
-
-#     def put_stream(self, section, fn, stream):
-#         pass
-
-#     def put_fileobject(self, section, fn, stream):
-#         pass
-
-from cal_db_context import CalDBContextStack
+from resource_context import ResourceContextStack
 # from item_convert import ItemConverterBase
 
 
-class CalDB(object):
+class ResourceManager(object):
 
     """
     categories:
@@ -53,20 +13,23 @@ class CalDB(object):
       items
     """
 
-    def __init__(self, storage, caldb_spec,
+    def __init__(self, storage, resource_spec,
+                 resource_db,
                  item_converter_class=None,
                  qa_generator=None):
 
-        self._caldb_spec = caldb_spec
+        self._resource_spec = resource_spec
 
         if item_converter_class is None:
             self.storage = storage
         else:
             self.storage = item_converter_class(storage)
 
+        self.resource_db = resource_db
+
         self.qa_generator = qa_generator
 
-        self.context_stack = CalDBContextStack(self.storage)
+        self.context_stack = ResourceContextStack(self.storage)
 
     # Context
     def new_context(self, context_name):
@@ -112,6 +75,31 @@ class CalDB(object):
         self.context_stack.store(section, fn, data, item_type=item_type)
 
     # resources
+
+    def query_resource_for(self, basename, resource_type):
+        """
+        query resource from the given basename
+        """
+
+        _ = self.resource_db.query_resource_for(basename, resource_type)
+        resource_basename, item_desc = _
+
+        return resource_basename, item_desc
+
+    def load_resource_for(self, basename, resource_type):
+        """
+        this load resource from the given master_obsid.
+        """
+
+        resource_basename, item_desc = self.query_resource_for(basename,
+                                                               resource_type)
+
+        resource = self.load(resource_basename, item_desc)
+
+        return resource
+
+    def update_db(self, db_name, basename):
+        self.resource_db.update(db_name, basename)
 
 
 if __name__ == "__main__":

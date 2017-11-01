@@ -14,7 +14,7 @@ class ReadCache(object):
         return d
 
 
-class CalDBContext():
+class ResourceContext():
     def __init__(self, name, read_cache=None):
         self.name = name
         self._cache = {}
@@ -48,7 +48,7 @@ class CalDBContext():
         return self._cache[(section, fn, item_type)]
 
 
-class CalDBContextStack():
+class ResourceContextStack():
     def __init__(self, storage):
         self.storage = storage
 
@@ -56,7 +56,7 @@ class CalDBContextStack():
         self.read_cache = None
 
     def new_context(self, context_name, reset_read_cache=False):
-        context = CalDBContext(context_name, read_cache=self.read_cache)
+        context = ResourceContext(context_name, read_cache=self.read_cache)
         self.context_list.append(context)
 
         if reset_read_cache or (self.read_cache is None):

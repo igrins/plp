@@ -6,9 +6,11 @@ import astropy.io.fits as pyfits
 import re
 groupname_pattern = re.compile(r"(\d+)(\D.*)?")
 
+
 def ensure_dir(d):
     if not os.path.exists(d):
         os.makedirs(d)
+
 
 def get_zeropadded_groupname(groupname):
     if isinstance(groupname, int):
@@ -22,6 +24,7 @@ def get_zeropadded_groupname(groupname):
             pass
 
     return groupname
+
 
 class IGRINSPath(object):
     # IGRINS_CALIB_PATH="calib"
@@ -64,6 +67,9 @@ class IGRINSPath(object):
             if k not in self.sections_names_no_ensuredir:
                 ensure_dir(d)
 
+    def get_section_path(self, section):
+        return self.sections[section]
+
     def get_section_filename_base(self, section, fn, subdir=None):
         if subdir is not None:
             dirpath = join(self.sections[section],
@@ -92,7 +98,6 @@ class IGRINSPath(object):
         #     dirpath = self.secondary_calib_path
         # return join(dirpath,
         #             os.path.basename(fn))
-
 
     def get_filenames(self, band, runids):
         return [self.get_filename(band, i) for i in runids]
