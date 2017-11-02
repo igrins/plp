@@ -15,6 +15,7 @@ HTML_PATH=html/%(UTDATE)s
 RECIPE_LOG_PATH=recipe_logs/%(UTDATE)s.recipes
 """
 
+
 class IGRINSConfig(object):
     def __init__(self, config_file=None):
 
