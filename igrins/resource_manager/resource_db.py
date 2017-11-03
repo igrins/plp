@@ -17,8 +17,9 @@ class ResourceDBSet(object):
                  db_factory, resource_def):
 
         self.resource_spec = resource_spec
-
         self.resource_def = resource_def
+
+        self.db_factory = db_factory
 
         self.db_set = {}
 

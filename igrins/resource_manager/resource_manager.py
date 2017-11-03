@@ -13,7 +13,7 @@ class ResourceManager(object):
       items
     """
 
-    def __init__(self, storage, resource_spec,
+    def __init__(self, resource_spec, storage,
                  resource_db,
                  item_converter_class=None,
                  qa_generator=None):
