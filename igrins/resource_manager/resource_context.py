@@ -9,7 +9,7 @@ class ReadCache(object):
             d = self.storage.load(section, fn, item_type=item_type)
             self._cache[(section, fn, item_type)] = d
         else:
-            d = self._cache[(section, fn, item_type)] = d
+            d = self._cache[(section, fn, item_type)]
 
         return d
 
@@ -52,8 +52,10 @@ class ResourceContextStack():
     def __init__(self, storage):
         self.storage = storage
 
+        self.current = None
         self.context_list = []
-        self.read_cache = None
+        self.default_read_cache = ReadCache(self.storage)
+        self.read_cache = self.default_read_cache
 
     def new_context(self, context_name, reset_read_cache=False):
         context = ResourceContext(context_name, read_cache=self.read_cache)
@@ -74,17 +76,25 @@ class ResourceContextStack():
         else:
             self.current.close()
 
-    @property
-    def current(self):
-        if self.context_list:
-            return self.context_list[-1]
-        else:
-            return None
+        self.current = None
+        self.read_cache = self.default_read_cache
+
+    # @property
+    # def current(self):
+    #     if self.context_list:
+    #         return self.context_list[-1]
+    #     else:
+    #         return None
 
     def store(self, section, fn, buf, item_type=None,
               cache_only=False):
-        self.current.store(section, fn, buf, item_type=item_type,
-                           cache_only=cache_only)
+        if self.current is not None:
+            self.current.store(section, fn, buf, item_type=item_type,
+                               cache_only=cache_only)
+
+        else:
+            self.storage.store(section, fn, buf,
+                               item_type=item_type)
 
     def load(self, section, fn, item_type=None):
         # check the write cache in the context_stack

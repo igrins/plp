@@ -1,10 +1,8 @@
-
 from resource_context import ResourceContextStack
 # from item_convert import ItemConverterBase
 
 
-class ResourceManager(object):
-
+class ResourceStack(object):
     """
     categories:
       config
@@ -13,8 +11,7 @@ class ResourceManager(object):
       items
     """
 
-    def __init__(self, resource_spec, storage,
-                 resource_db,
+    def __init__(self, resource_spec, storage, resource_db,
                  item_converter_class=None,
                  qa_generator=None):
 
@@ -31,7 +28,8 @@ class ResourceManager(object):
 
         self.context_stack = ResourceContextStack(self.storage)
 
-    # Context
+    # CONTEXT
+
     def new_context(self, context_name):
         self.context_stack.new_context(context_name)
 
@@ -55,6 +53,7 @@ class ResourceManager(object):
     #     return self.item_converter.get_from_item(item_type)
 
     def get_section_n_fn(self, basename, item_desc, postfix=""):
+
         (section, tmpl) = item_desc
         fn = tmpl.format(basename=basename, postfix=postfix)
 
@@ -74,32 +73,102 @@ class ResourceManager(object):
 
         self.context_stack.store(section, fn, data, item_type=item_type)
 
-    # resources
+    # RESOURCE
 
-    def query_resource_for(self, basename, resource_type):
+    def query_resource_for(self, basename, resource_type, postfix=""):
         """
         query resource from the given basename
         """
 
-        _ = self.resource_db.query_resource_for(basename, resource_type)
+        _ = self.resource_db.query_resource_for(basename, resource_type,
+                                                postfix=postfix)
         resource_basename, item_desc = _
 
         return resource_basename, item_desc
 
-    def load_resource_for(self, basename, resource_type):
+    def load_resource_for(self, basename, resource_type,
+                          item_type=None, postfix="",
+                          resource_postfix=""):
         """
         this load resource from the given master_obsid.
         """
 
         resource_basename, item_desc = self.query_resource_for(basename,
-                                                               resource_type)
+                                                               resource_type,
+                                                               postfix=postfix)
 
-        resource = self.load(resource_basename, item_desc)
+        resource = self.load(resource_basename, item_desc,
+                             item_type=item_type, postfix=resource_postfix)
 
         return resource
 
     def update_db(self, db_name, basename):
-        self.resource_db.update(db_name, basename)
+        self.resource_db.update_db(db_name, basename)
+
+
+class ResourceStackWithBasename(ResourceStack):
+    """
+    categories:
+      config
+      refdata (or master cal data)
+      resource
+      items
+    """
+
+    def __init__(self, resource_spec, storage, resource_db,
+                 basename_helper,
+                 item_converter_class=None,
+                 qa_generator=None):
+
+        ResourceStack.__init__(self, resource_spec, storage, resource_db,
+                               item_converter_class=item_converter_class,
+                               qa_generator=qa_generator)
+
+        self.basename_helper = basename_helper
+
+    def get_section_n_fn(self, basename, item_desc, postfix=""):
+        basename = self.basename_helper.to_basename(basename)
+
+        return ResourceStack.get_section_n_fn(self, basename, item_desc,
+                                              postfix=postfix)
+
+    # RESOURCE
+
+    def query_resource_for(self, basename, resource_type, postfix=""):
+        """
+        query resource from the given basename
+        """
+
+        basename = self.basename_helper.to_basename(basename)
+
+        _ = ResourceStack.query_resource_for(self, basename, resource_type,
+                                             postfix=postfix)
+        resource_basename, item_desc = _
+
+        resource_basename = self.basename_helper.from_basename(resource_basename)
+
+        return resource_basename, item_desc
+
+    def load_resource_for(self, basename, resource_type,
+                          item_type=None, postfix="",
+                          resource_postfix=""):
+        """
+        this load resource from the given master_obsid.
+        """
+
+        resource_basename, item_desc = self.query_resource_for(basename,
+                                                               resource_type,
+                                                               postfix=postfix)
+
+        resource = self.load(resource_basename, item_desc,
+                             item_type=item_type, postfix=resource_postfix)
+
+        return resource
+
+    def update_db(self, db_name, basename):
+        basename = self.basename_helper.to_basename(basename)
+
+        self.resource_db.update_db(db_name, basename)
 
 
 if __name__ == "__main__":

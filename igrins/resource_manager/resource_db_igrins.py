@@ -1,12 +1,12 @@
 import os
 
 from ..libs.storage_descriptions import DB_Specs
-from igrins.libs.path_info import IGRINSPath
+from ..libs.path_info import IGRINSPath, ensure_dir
 
 
 def get_igrins_db_factory(config, resource_spec):
-    utdate = resource_spec[0]
-    path_info = IGRINSPath(config, utdate)
+    utdate, band = resource_spec
+    path_info = IGRINSPath(config, utdate, band)
     return DBFactory(resource_spec, db_specs=DB_Specs,
                      path_info=path_info)
 
@@ -56,21 +56,23 @@ class ResourceDBFile(ResourceDBBase):
         #                                     basename=None)
         # self.dbname = dbname
 
-    def update(self, basename):
+    def update(self, basename, postfix=""):
         if os.path.exists(self.dbpath):
             mode = "a"
         else:
             dirname = os.path.dirname(self.dbpath)
 
-            from path_info import ensure_dir
             ensure_dir(dirname)
 
             mode = "w"
 
         with open(self.dbpath, mode) as myfile:
-            myfile.write("%s %s\n" % (self.db_kind, basename))
+            if postfix:
+                myfile.write("%s %s %s\n" % (self.db_kind, basename, postfix))
+            else:
+                myfile.write("%s %s\n" % (self.db_kind, basename))
 
-    def query(self, basename):
+    def query(self, basename, postfix=""):
         import numpy as np
         import os
         if not os.path.exists(self.dbpath):
@@ -83,12 +85,23 @@ class ResourceDBFile(ResourceDBBase):
             basename_list = []
             for l0 in myfile.readlines():
                 b_l1 = l0.strip().split()
-                if len(b_l1) != 2:
+                if len(b_l1) == 3:
+                    b, l1, pf = b_l1
+                elif len(b_l1) == 2:
+                    b, l1 = b_l1
+                    pf = ""
+                else:
+                    raise RuntimeError("")
+
+                if (b, pf) != (self.db_kind, postfix):
                     continue
-                b, l1 = b_l1
-                if b != self.db_kind:
+
+                try:
+                    obsid = int(l1.strip().split("_")[-1])
+                except ValueError:
                     continue
-                obsid_list.append(int(l1.strip().split("_")[-1]))
+
+                obsid_list.append(obsid)
                 basename_list.append(l1.strip())
 
             if obsid_list:

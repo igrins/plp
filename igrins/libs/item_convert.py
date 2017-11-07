@@ -17,12 +17,18 @@ class ItemConverterBase(object):
         self.storage = storage
 
     def load(self, section, fn, item_type=None):
+        if item_type is None:
+            item_type = self.guess_item_type(fn)
+
         d = self.storage.load(section, fn, item_type=item_type)
 
         convert_to = self.get_to_item(item_type)
         return convert_to(d)
 
     def store(self, section, fn, data, item_type=None):
+
+        if item_type is None:
+            item_type = self.guess_item_type(fn)
 
         convert_from = self.get_from_item(item_type)
         buf = convert_from(data)
@@ -77,12 +83,15 @@ class ItemConverter(ItemConverterBase):
 
         if isinstance(item_desc, tuple):
             fname = item_desc[-1]
-            if fname.endswith("mask.fits"):
-                item_type = "fits"
-            if fname.endswith(".fits"):
-                item_type = "fits"
-            elif fname.endswith(".json"):
-                item_type = "json"
+        else:
+            fname = item_desc
+
+        if fname.endswith("mask.fits"):
+            item_type = "fits"
+        if fname.endswith(".fits"):
+            item_type = "fits"
+        elif fname.endswith(".json"):
+            item_type = "json"
 
         return item_type
 

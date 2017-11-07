@@ -3,7 +3,7 @@ from ..libs.path_info import IGRINSPath
 
 
 def get_storage(config, resource_spec):
-    utdate = resource_spec[0]
-    path_info = IGRINSPath(config, utdate)
+    utdate, band = resource_spec
+    path_info = IGRINSPath(config, utdate, band)
 
     return FileStorage(resource_spec, path_info)

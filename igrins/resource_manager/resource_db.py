@@ -32,19 +32,19 @@ class ResourceDBSet(object):
 
         return self.db_set[db_type]
 
-    def update_db(self, db_type, basename):
+    def update_db(self, db_type, basename, postfix=""):
         db = self._get_db(db_type)
-        db.update(basename)
+        db.update(basename, postfix=postfix)
 
-    def query_resource_basename(self, db_type, basename):
+    def query_resource_basename(self, db_type, basename, postfix=""):
         """
         query basename from the given basename
         """
 
         db = self._get_db(db_type)
-        return db.query(basename)
+        return db.query(basename, postfix=postfix)
 
-    def query_resource_for(self, basename, resource_type):
+    def query_resource_for(self, basename, resource_type, postfix=""):
         """
         query resource from the given basename
         """
@@ -52,6 +52,7 @@ class ResourceDBSet(object):
         db_type, item_desc = self.resource_def.get(resource_type,
                                                    resource_type)
 
-        resource_basename = self.query_resource_basename(db_type, basename)
+        resource_basename = self.query_resource_basename(db_type, basename,
+                                                         postfix=postfix)
 
         return resource_basename, item_desc

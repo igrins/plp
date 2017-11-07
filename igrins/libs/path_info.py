@@ -26,6 +26,25 @@ def get_zeropadded_groupname(groupname):
     return groupname
 
 
+class IGRINSBasenameHelper(object):
+
+    def __init__(self, obsdate, band):
+        self.obsdate = obsdate
+        self.band = band
+
+        prefix = "SDC{band}_{obsdate}".format(obsdate=obsdate,
+                                              band=band)
+
+        self.basename_pattern = prefix + "_{obsid:04d}"
+
+    def get_section_n_fn(self, obsid, item_desc, postfix=""):
+        basename = self.basename_pattern.format(obsid=obsid)
+        (section, tmpl) = item_desc
+        fn = tmpl.format(basename=basename, postfix=postfix)
+
+        return section, fn
+
+
 class IGRINSPath(object):
     # IGRINS_CALIB_PATH="calib"
     # IGRINS_REDUCE_DATE=""
@@ -42,10 +61,11 @@ class IGRINSPath(object):
 
     sections_names_no_ensuredir = ["INDATA_PATH"]
 
-    def __init__(self, config, utdate, ensure_dir=False):
+    def __init__(self, config, utdate, band, ensure_dir=False):
 
         self.config = config
         self.utdate = utdate
+        self.band = band
 
         self.sections = dict()
 
@@ -99,22 +119,22 @@ class IGRINSPath(object):
         # return join(dirpath,
         #             os.path.basename(fn))
 
-    def get_filenames(self, band, runids):
+    def get_filenames(self, runids):
         return [self.get_filename(band, i) for i in runids]
 
-    def get_filename(self, band, runid):
+    def get_filename(self, runid):
         groupname = get_zeropadded_groupname(runid)
-        return self.fn_pattern % (band, groupname)
+        return self.fn_pattern % (self.band, groupname)
 
-    def get_basename(self, band, groupname):
+    def get_basename(self, groupname):
         groupname = get_zeropadded_groupname(groupname)
-        basename = self.basename_pattern % (band, groupname)
+        basename = self.basename_pattern % (self.band, groupname)
         return basename
 
-    def get_hdus(self, band, runids):
-        fn_list = self.get_filenames(band, runids)
-        hdu_list = [pyfits.open(fn)[0] for fn in fn_list]
-        return hdu_list
+    # def get_hdus(self, runids):
+    #     fn_list = self.get_filenames(runids)
+    #     hdu_list = [pyfits.open(fn)[0] for fn in fn_list]
+    #     return hdu_list
 
 
 
