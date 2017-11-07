@@ -4,8 +4,9 @@ to_item, from_item is the basic interface.
 """
 
 from io import BytesIO
-import json
 import astropy.io.fits as pyfits
+import json
+from ..libs.json_helper import json_dumps
 
 
 def null_function(buf):
@@ -22,16 +23,22 @@ class ItemConverterBase(object):
 
         d = self.storage.load(section, fn, item_type=item_type)
 
-        convert_to = self.get_to_item(item_type)
-        return convert_to(d)
+        if item_type is not None:
+            convert_to = self.get_to_item(item_type)
+            d = convert_to(d)
+
+        return d
 
     def store(self, section, fn, data, item_type=None):
 
         if item_type is None:
             item_type = self.guess_item_type(fn)
 
-        convert_from = self.get_from_item(item_type)
-        buf = convert_from(data)
+        if item_type is not None:
+            convert_from = self.get_from_item(item_type)
+            buf = convert_from(data)
+        else:
+            buf = data
 
         self.storage.store(section, fn, buf, item_type=item_type)
 
@@ -87,12 +94,11 @@ class ItemConverter(ItemConverterBase):
             fname = item_desc
 
         if fname.endswith("mask.fits"):
-            item_type = "fits"
-        if fname.endswith(".fits"):
+            item_type = "mask"
+        elif fname.endswith(".fits"):
             item_type = "fits"
         elif fname.endswith(".json"):
             item_type = "json"
-
         return item_type
 
     @staticmethod
@@ -112,7 +118,7 @@ class ItemConverter(ItemConverterBase):
 
     @staticmethod
     def _from_json(j):
-        return json.dumps(j)
+        return json_dumps(j)
 
     @classmethod
     def _to_mask(cls, buf):
@@ -124,5 +130,5 @@ class ItemConverter(ItemConverterBase):
 
     @classmethod
     def _from_mask(cls, m):
-        d = m.astype("int8")
+        d = m.astype("uint8")
         return cls._from_fits(pyfits.PrimaryHDU(data=d))

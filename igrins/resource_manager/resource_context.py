@@ -13,6 +13,10 @@ class ReadCache(object):
 
         return d
 
+    def describe(self):
+        for (section, fn, item_type) in self._cache.keys():
+            print("read-cache")
+            print(section, fn, item_type)
 
 class ResourceContext():
     def __init__(self, name, read_cache=None):
@@ -23,15 +27,26 @@ class ResourceContext():
 
         self._cache_only_items = set()
 
+    def describe(self):
+        print("context: {}".format(self.name))
+        for k, (item_type, buf) in self._cache.items():
+            if k not in self._cache_only_items:
+                print(k)
+            else:
+                print(k, "cache-only")
+
     def close(self, e="close"):
         self.status = e
 
     def debug(self, msg, data):
         pass
 
+    def iter_cache(self):
+        return self._cache.items()
+
     def store(self, section, fn, buf, item_type=None, cache_only=False):
-        k = (section, fn, item_type)
-        self._cache[k] = buf
+        k = (section, fn)
+        self._cache[k] = (item_type, buf)
         self.debug("store", dict(section=section, fn=fn,
                                  item_type=item_type, buf=buf))
 
@@ -45,7 +60,8 @@ class ResourceContext():
         self.debug("load", dict(section=section, fn=fn,
                                 item_type=item_type))
 
-        return self._cache[(section, fn, item_type)]
+        item_type, buf = self._cache[(section, fn)]
+        return buf
 
 
 class ResourceContextStack():
@@ -58,26 +74,27 @@ class ResourceContextStack():
         self.read_cache = self.default_read_cache
 
     def new_context(self, context_name, reset_read_cache=False):
-        context = ResourceContext(context_name, read_cache=self.read_cache)
-        self.context_list.append(context)
+        self.current = ResourceContext(context_name, read_cache=self.read_cache)
+        self.context_list.append(self.current)
 
         if reset_read_cache or (self.read_cache is None):
             self.read_cache = ReadCache(self.storage)
 
     def close_context(self):
         try:
-            for k, buf in self.current._cache.items():
+            for k, (item_type, buf) in self.current.iter_cache():
                 if k not in self.current._cache_only_items:
-                    section, fn, item_type = k
+                    section, fn = k
                     self.storage.store(section, fn, buf,
                                        item_type=item_type)
         except Exception as e:
             self.current.close(e)
+            raise
         else:
             self.current.close()
 
         self.current = None
-        self.read_cache = self.default_read_cache
+        # self.read_cache = self.default_read_cache
 
     # @property
     # def current(self):
@@ -105,4 +122,8 @@ class ResourceContextStack():
                 pass
 
         # then check the read cache.
-        return self.read_cache.load(section, fn, item_type)
+        if self.current is not None:
+            return self.read_cache.load(section, fn, item_type)
+        else:
+            return self.storage.load(section, fn, item_type)
+

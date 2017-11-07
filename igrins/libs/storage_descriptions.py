@@ -8,7 +8,7 @@ RAWIMAGE_DESC = ("INDATA_PATH", "{basename}{postfix}.fits")
 # FLAT_OFF related
 
 FLAT_OFF_DESC = ("OUTDATA_PATH", "{basename}{postfix}.flat_off.fits")
-HOTPIX_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_.{basename}{postfix}hotpix_mask.fits")
+HOTPIX_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_{basename}{postfix}.hotpix_mask.fits")
 FLATOFF_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT_{basename}{postfix}.flat_off.json")
 
 
@@ -114,11 +114,15 @@ DB_Specs = dict(flat_on=("PRIMARY_CALIB_PATH", "flat_on.db"),
                 )
 
 
+class UpperDict(dict):
+    def __getitem__(self, k):
+        return dict.__getitem__(self, k.upper())
+
 def load_descriptions():
     storage_descriptions = globals()
     desc_list = [n for n in storage_descriptions if n.endswith("_DESC")]
-    desc_dict = dict((n[:-5].upper(),
-                      storage_descriptions[n]) for n in desc_list)
+    desc_dict = UpperDict((n[:-5].upper(),
+                           storage_descriptions[n]) for n in desc_list)
 
     return desc_dict
 

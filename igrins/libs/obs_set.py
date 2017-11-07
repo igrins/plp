@@ -2,6 +2,7 @@
 ObsSet: Helper class for a single obsid, and its derived products.
 """
 
+
 class ObsSet(object):
     def __init__(self, caldb, band, recipe_name, obsids, frametypes,
                  groupname=None):

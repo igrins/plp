@@ -10,6 +10,26 @@ from ..resource_manager.resource_db_igrins \
 from .storage_descriptions import load_resource_def
 
 
+class IGRINSRefLoader(object):
+    def __init__(self, config, band):
+        self.config = config
+
+        self.band = band
+
+    def load(self, kind):
+        from .master_calib import load_ref_data
+        f = load_ref_data(self.config, band=self.band,
+                          kind=kind)
+        return f
+
+    def fetch(self, kind):
+        from .master_calib import fetch_ref_data
+        fn, d = fetch_ref_data(self.config, band=self.band,
+                          kind=kind)
+        return fn, d
+
+
+
 class IgrinsBasenameHelper():
     p = re.compile(r"SDC(\w)_(\d+\w*)_(\d+)([^_]*)")
     p_obsid = re.compile(r"(\d+)(.*)")
@@ -51,6 +71,8 @@ def get_resource_db(config, resource_spec):
 
 def get_resource_manager(config, resource_spec, basename_helper=None):
 
+    obsdate, band = resource_spec
+
     base_storage = get_file_storage(config, resource_spec)
 
     from ..libs.item_convert import ItemConverter
@@ -58,13 +80,17 @@ def get_resource_manager(config, resource_spec, basename_helper=None):
 
     resource_db = get_resource_db(config, resource_spec)
 
+    master_ref_loader = IGRINSRefLoader(config, band)
+
     if basename_helper is None:
         resource_manager = ResourceStack(resource_spec, storage,
-                                         resource_db)
+                                         resource_db,
+                                         master_ref_loader=master_ref_loader)
     else:
         resource_manager = ResourceStackWithBasename(resource_spec, storage,
                                                      resource_db,
-                                                     basename_helper)
+                                                     basename_helper,
+                                                     master_ref_loader=master_ref_loader)
 
     return resource_manager
 

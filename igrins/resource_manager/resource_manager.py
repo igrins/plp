@@ -12,6 +12,7 @@ class ResourceStack(object):
     """
 
     def __init__(self, resource_spec, storage, resource_db,
+                 master_ref_loader=None,
                  item_converter_class=None,
                  qa_generator=None):
 
@@ -22,6 +23,7 @@ class ResourceStack(object):
         else:
             self.storage = item_converter_class(storage)
 
+        self.master_ref_loader = master_ref_loader
         self.resource_db = resource_db
 
         self.qa_generator = qa_generator
@@ -30,8 +32,8 @@ class ResourceStack(object):
 
     # CONTEXT
 
-    def new_context(self, context_name):
-        self.context_stack.new_context(context_name)
+    def new_context(self, context_name, reset_read_cache=False):
+        self.context_stack.new_context(context_name, reset_read_cache=reset_read_cache)
 
     def close_context(self, context_name=None):
         if context_name is not None:
@@ -39,7 +41,11 @@ class ResourceStack(object):
 
         self.context_stack.close_context()
 
-    # # conversion
+    def describe_context(self):
+        self.context_stack.read_cache.describe()
+        self.context_stack.current.describe()
+
+            # # conversion
     # def get_convert_to(self, item_desc, item_type):
     #     item_type = item_type if item_type else \
     #                 self.item_converter.guess_item_type(item_desc)
@@ -67,11 +73,12 @@ class ResourceStack(object):
         return d
 
     def store(self, basename, item_desc, data, item_type=None,
-              postfix=""):
+              postfix="", cache_only=False):
 
         section, fn = self.get_section_n_fn(basename, item_desc, postfix)
 
-        self.context_stack.store(section, fn, data, item_type=item_type)
+        self.context_stack.store(section, fn, data, item_type=item_type,
+                                 cache_only=cache_only)
 
     # RESOURCE
 
@@ -105,6 +112,23 @@ class ResourceStack(object):
     def update_db(self, db_name, basename):
         self.resource_db.update_db(db_name, basename)
 
+    # master ref
+    def load_ref_data(self, kind):
+        return self.master_ref_loader.load(kind)
+
+    #     from .master_calib import load_ref_data
+    #     f = load_ref_data(self.get_config(), band=band,
+    #                       kind=kind)
+    #     return f
+
+    # def fetch_ref_data(self, band, kind):
+    #     from igrins.libs.master_calib import fetch_ref_data
+    #     fn, d = fetch_ref_data(self.get_config(), band=band,
+    #                       kind=kind)
+    #     return fn, d
+
+
+
 
 class ResourceStackWithBasename(ResourceStack):
     """
@@ -117,10 +141,12 @@ class ResourceStackWithBasename(ResourceStack):
 
     def __init__(self, resource_spec, storage, resource_db,
                  basename_helper,
+                 master_ref_loader=None,
                  item_converter_class=None,
                  qa_generator=None):
 
         ResourceStack.__init__(self, resource_spec, storage, resource_db,
+                               master_ref_loader=master_ref_loader,
                                item_converter_class=item_converter_class,
                                qa_generator=qa_generator)
 
