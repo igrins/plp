@@ -1,7 +1,6 @@
 from resource_context import ResourceContextStack
 # from item_convert import ItemConverterBase
 
-
 class ResourceStack(object):
     """
     categories:
@@ -215,3 +214,4 @@ if __name__ == "__main__":
 
     resource = caldb.load_item_from(basename,
                                     "FLATCENTROID_SOL_JSON")
+

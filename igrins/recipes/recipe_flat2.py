@@ -7,22 +7,9 @@ import scipy.ndimage as ni
 
 from astropy.io.fits import Card
 
-# from ..libs.load_fits import load_fits_data
-from ..libs.recipe_helper import RecipeHelper
-# from ..libs.process_flat import FlatOff, FlatOn
 from ..libs.stsci_helper import stsci_median
 
 from igrins import DESCS
-
-class Step():
-    def __init__(self, name, f, **kwargs):
-        self.name = name
-        self.f = f
-        self.kwargs = kwargs
-
-    def __call__(self, obsset):
-        self.f(obsset, **self.kwargs)
-
 
 def combine_flat_off(obsset, destripe=True):
     # destripe=True):
@@ -35,7 +22,7 @@ def combine_flat_off(obsset, destripe=True):
     flat_off = stsci_median(data_list)
 
     if destripe:
-        from igrins.libs.destriper import destriper
+        from ..libs.destriper import destriper
         flat_off = destriper.get_destriped(flat_off)
 
         cards.append(Card("HISTORY",
@@ -69,7 +56,6 @@ def make_hotpix_mask(obsset,
 
     # caldb = helper.get_caldb()
 
-    print(hotpix_mask.dtype)
     # hdul = obsset.get_hdul_to_write(([], hotpix_mask))
     obsset_off.store(DESCS["HOTPIX_MASK"], hotpix_mask, item_type="mask")
 
@@ -358,9 +344,7 @@ def update_db(obsset):
     obsset_off.add_to_db("flat_off")
     obsset_on.add_to_db("flat_on")
 
-
 ####
-
 
 
 def store_qa(obsset_on, obsset_off):
@@ -404,58 +388,23 @@ def store_qa(obsset_on, obsset_off):
     #                       mastername=flat_on_filenames[0],
     #                       masterhdu=flat_on_hdu_list[0])
 
-
-
 ###
 
-
-def process_band(obsset):
-
-    # STEP 1 :
-    ## make combined image
-
-    steps = [Step("Combine Flat-Off", combine_flat_off),
-             Step("Hotpix Mask", make_hotpix_mask,
-                  sigma_clip1=100, sigma_clip2=5),
-             Step("Combine Flat-On", combine_flat_on),
-             Step("Deadpix Mask", make_deadpix_mask,
-                  deadpix_thresh=0.6, smooth_size=9),
-             Step("Identify Order Boundary", identify_order_boundaries),
-             Step("Trace Order Boundary", trace_order_boundaries),
-             Step("Stitch Up Traces", stitch_up_traces),
-             Step("Bias Mask", make_bias_mask),
-             Step("Update DB", update_db),
-    ]
-
-    for context_id, step in enumerate(steps):
-        if hasattr(step, "name"):
-            context_name = step.name
-        else:
-            context_name = "Undefined Context {}".format(context_id)
-
-        obsset.rs.new_context(context_name, reset_read_cache=True)
-        step(obsset)
-        obsset.rs.describe_context()
-        obsset.rs.close_context(context_name)
+from ..driver import Step
 
 
-def process_band_wrap(utdate, recipe_name, band,
-                      obsids, frametypes, config_name):
-
-    from igrins.libs.igrins_config import IGRINSConfig
-    from igrins.libs.resource_manager import get_igrins_resource_manager
-    # from igrins import get_obsset
-    # caldb = get_caldb(config_name, utdate, ensure_dir=True)
-
-    config = IGRINSConfig(config_name)
-
-    resource_manager = get_igrins_resource_manager(config, (utdate, band))
-
-    print(resource_manager)
-    from igrins.libs.obs_set2 import ObsSet
-    obsset = ObsSet(resource_manager, recipe_name, obsids, frametypes)
-
-    process_band(obsset)
+steps = [Step("Combine Flat-Off", combine_flat_off),
+         Step("Hotpix Mask", make_hotpix_mask,
+              sigma_clip1=100, sigma_clip2=5),
+         Step("Combine Flat-On", combine_flat_on),
+         Step("Deadpix Mask", make_deadpix_mask,
+              deadpix_thresh=0.6, smooth_size=9),
+         Step("Identify Order Boundary", identify_order_boundaries),
+         Step("Trace Order Boundary", trace_order_boundaries),
+         Step("Stitch Up Traces", stitch_up_traces),
+         Step("Bias Mask", make_bias_mask),
+         Step("Update DB", update_db),
+]
 
 
 if __name__ == "__main__":
