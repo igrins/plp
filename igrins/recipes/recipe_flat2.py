@@ -160,7 +160,7 @@ def make_deadpix_mask(obsset,  # helper, band, obsids,
 
     hotpix_mask = obsset_off.load(DESCS["HOTPIX_MASK"])
 
-    f = obsset.rs.load_ref_data(kind="DEFAULT_DEADPIX_MASK")
+    f = obsset.load_ref_data(kind="DEFAULT_DEADPIX_MASK")
 
     deadpix_mask_old = f[0].data.astype(bool)
 

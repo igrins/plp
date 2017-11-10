@@ -1,6 +1,7 @@
 from resource_context import ResourceContextStack
 # from item_convert import ItemConverterBase
 
+
 class ResourceStack(object):
     """
     categories:
@@ -94,26 +95,37 @@ class ResourceStack(object):
 
     def load_resource_for(self, basename, resource_type,
                           item_type=None, postfix="",
-                          resource_postfix=""):
+                          resource_postfix="",
+                          check_self=False):
         """
         this load resource from the given master_obsid.
         """
+
+        if check_self:
+            db_type, item_desc = self.resource_db.resource_def.get(resource_type,
+                                                               resource_type)
+
+            try:
+                r = self.load(basename, item_desc, postfix=postfix)
+                return r
+            except Exception:
+                pass
 
         resource_basename, item_desc = self.query_resource_for(basename,
                                                                resource_type,
                                                                postfix=postfix)
 
-        resource = self.load(resource_basename, item_desc,
-                             item_type=item_type, postfix=resource_postfix)
+        r = self.load(resource_basename, item_desc,
+                      item_type=item_type, postfix=resource_postfix)
 
-        return resource
+        return r
 
     def update_db(self, db_name, basename):
         self.resource_db.update_db(db_name, basename)
 
     # master ref
-    def load_ref_data(self, kind):
-        return self.master_ref_loader.load(kind)
+    def load_ref_data(self, kind, get_path=False):
+        return self.master_ref_loader.load(kind, get_path=get_path)
 
     #     from .master_calib import load_ref_data
     #     f = load_ref_data(self.get_config(), band=band,
@@ -174,21 +186,21 @@ class ResourceStackWithBasename(ResourceStack):
 
         return resource_basename, item_desc
 
-    def load_resource_for(self, basename, resource_type,
-                          item_type=None, postfix="",
-                          resource_postfix=""):
-        """
-        this load resource from the given master_obsid.
-        """
+    # def load_resource_for(self, basename, resource_type,
+    #                       item_type=None, postfix="",
+    #                       resource_postfix=""):
+    #     """
+    #     this load resource from the given master_obsid.
+    #     """
 
-        resource_basename, item_desc = self.query_resource_for(basename,
-                                                               resource_type,
-                                                               postfix=postfix)
+    #     resource_basename, item_desc = self.query_resource_for(basename,
+    #                                                            resource_type,
+    #                                                            postfix=postfix)
 
-        resource = self.load(resource_basename, item_desc,
-                             item_type=item_type, postfix=resource_postfix)
+    #     resource = self.load(resource_basename, item_desc,
+    #                          item_type=item_type, postfix=resource_postfix)
 
-        return resource
+    #     return resource
 
     def update_db(self, db_name, basename):
         basename = self.basename_helper.to_basename(basename)

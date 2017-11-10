@@ -35,6 +35,7 @@ ORDER_FLAT_JSON_DESC = ("PRIMARY_CALIB_PATH", "ORDERFLAT_{basename}{postfix}.jso
 # image related descriptions
 
 STACKED_DESC = ("OUTDATA_PATH", "{basename}{postfix}.stacked.fits")
+COMBINED_SKY_DESC = ("OUTDATA_PATH", "{basename}{postfix}.combined_sky.fits")
 COMBINED_IMAGE_DESC = ("OUTDATA_PATH", "{basename}{postfix}.combined_image.fits")
 COMBINED_IMAGE_A_DESC = ("OUTDATA_PATH", "{basename}{postfix}.combined_image_a.fits")
 COMBINED_IMAGE_B_DESC = ("OUTDATA_PATH", "{basename}{postfix}.combined_image_b.fits")
@@ -128,6 +129,9 @@ def load_descriptions():
 
 
 _resource_definitions = dict(
+    flat_normed=("flat_on", "FLAT_NORMED"),
+    flat_mask=("flat_on", "FLAT_MASK"),
+    #
     aperture_definition=("flat_on", "FLATCENTROID_SOL_JSON"),
     deadpix_mask=("flat_on", "DEADPIX_MASK"),
     bias_mask=("flat_on", "BIAS_MASK"),

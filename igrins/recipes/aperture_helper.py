@@ -30,13 +30,13 @@ def get_simple_aperture(helper, band, obsids, orders=None):
 
     return ap
 
+
 def get_simple_aperture_from_obsset(obsset, orders=None):
 
     # master_obsid = obsset.obsids[0]
 
     resource_type = "aperture_definition"
-    #basename, item_desc = obsset.query_resource_for(resource_type)
-
+    basename, item_desc = obsset.query_resource_for(resource_type)
     resource = obsset.load_resource_for(resource_type)
 
     bottomup_solutions = resource["bottom_up_solutions"]
@@ -45,6 +45,6 @@ def get_simple_aperture_from_obsset(obsset, orders=None):
         orders = list(range(len(bottomup_solutions)))
 
     aperture = Apertures(orders, bottomup_solutions,
-                         basename=obsset.basename)
+                         basename=basename)
 
     return aperture

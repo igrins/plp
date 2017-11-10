@@ -1,22 +1,23 @@
 from igrins.driver import get_obsset, apply_steps
-import igrins.recipes.recipe_flat2 as flat
+import igrins.recipes.recipe_register2 as register_sky
 
 def test_main():
     config_name = "recipe.config.igrins128"
 
     obsdate = "20150120"
-    obsids = list(range(6, 26))
+    obsids = [65, 68]
 
-    frametypes = (["OFF"] * 10) + (["ON"] * 10)
+    # frametypes = ["ON", "ON"]
+    frametypes = None
 
-    recipe_name = "FLAT"
+    recipe_name = "SKY"
 
     band = "H"
 
     obsset = get_obsset(obsdate, recipe_name, band,
                         obsids, frametypes, config_name)
 
-    apply_steps(obsset, flat.steps)
+    apply_steps(obsset, register_sky.steps)
 
 
 

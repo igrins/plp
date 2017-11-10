@@ -6,10 +6,10 @@ class IdentifiedLines(object):
             self.update(json)
 
     @classmethod
-    def load(klass, fn):
-        k = klass()
-        import json
-        j = json.load(open(fn))
+    def load(cls, j):
+        k = cls()
+        # import json
+        # j = json.load(open(fn))
         k.update(j)
 
         return k

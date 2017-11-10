@@ -16,17 +16,24 @@ class IGRINSRefLoader(object):
 
         self.band = band
 
-    def load(self, kind):
-        from .master_calib import load_ref_data
-        f = load_ref_data(self.config, band=self.band,
-                          kind=kind)
-        return f
+    def load(self, kind, get_path=False):
 
-    def fetch(self, kind):
-        from .master_calib import fetch_ref_data
-        fn, d = fetch_ref_data(self.config, band=self.band,
-                          kind=kind)
-        return fn, d
+        from .master_calib import load_ref_data, fetch_ref_data
+
+        if get_path:
+            fn, d = fetch_ref_data(self.config, band=self.band,
+                                   kind=kind)
+            return fn, d
+        else:
+            d = load_ref_data(self.config, band=self.band,
+                              kind=kind)
+            return d
+
+    # def fetch(self, kind):
+    #     from .master_calib import fetch_ref_data
+    #     fn, d = fetch_ref_data(self.config, band=self.band,
+    #                            kind=kind)
+    #     return fn, d
 
 
 

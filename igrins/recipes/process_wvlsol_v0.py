@@ -456,7 +456,7 @@ def save_orderflat(obsset):
 
     order_map = ap.make_order_map()
 
-    flat_normed = obsset.load_resource_for(("flat_on", "flat_normed"),
+    flat_normed = obsset.load_resource_for("flat_normed", # ("flat_on", "flat_normed"),
                                            get_science_hdu=True).data
     flat_mask = obsset.load_resource_for(("flat_on", "flat_mask"),
                                          get_science_hdu=True).data > 0
@@ -474,7 +474,7 @@ def save_orderflat(obsset):
     bias_mask = flat_mask & (order_map2 > 0)
 
     obsset.store_image("bias_mask", bias_mask)
-        
+
 
 def save_figures(obsset):
 
@@ -496,8 +496,7 @@ def save_figures(obsset):
 def save_db(obsset):
 
     # save db
-    db = obsset.load_db("register")
-    db.update(obsset.band, obsset.basename)
+    obsset.add_to_db("register")
 
 
 def process_band(utdate, recipe_name, band,
