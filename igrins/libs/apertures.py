@@ -153,7 +153,12 @@ class Apertures(object):
             down = np.clip((yy1+0.5).astype("i"), 0, 2048)
             up = np.clip((yy2+0.5).astype("i"), 0, 2048)
 
-            s = [np.nanmedian(data[down[i]:up[i], i]) for i in range(2048)]
+            import warnings
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', r'Mean of empty slice')
+
+                s = [np.nanmedian(data[down[i]:up[i], i]) for i in range(2048)]
+
             s_list.append(s)
 
         return s_list

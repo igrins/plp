@@ -341,8 +341,14 @@ def make_order_flat(flat_normed, flat_mask, orders, order_map):
         mask_list.append(ff)
 
         mmm = order_map[sl] == o
-        ss = [np.nanmean(d_sl[2:-2][:,i][mmm[:,i][2:-2]]) \
-              for i in range(2048)]
+
+        import warnings
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', r'Mean of empty slice')
+
+            ss = [np.nanmean(d_sl[2:-2][:,i][mmm[:,i][2:-2]]) \
+                  for i in range(2048)]
+
         mean_order_specs.append(ss)
 
 
@@ -375,11 +381,14 @@ def make_order_flat(flat_normed, flat_mask, orders, order_map):
 
         d_div = d_sl / px
         px2d = px * np.ones_like(d_div) # better way to broadcast px?
-        d_div[px2d < 0.05*px.max()] = 1.
+        with np.errstate(invalid="ignore"):
+            d_div[px2d < 0.05*px.max()] = 1.
+
         flat_im[sl][msk] = (d_sl / px)[msk]
         fitted_responses.append(px)
 
-    flat_im[flat_im < 0.5] = np.nan
+    with np.errstate(invalid="ignore"):
+        flat_im[flat_im < 0.5] = np.nan
 
 
     # from storage_descriptions import (ORDER_FLAT_IM_DESC,

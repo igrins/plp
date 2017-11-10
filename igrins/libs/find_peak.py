@@ -12,10 +12,13 @@ def find_feature_mask_simple(s_msk, sigma=1, ax=None, x_values=None):
     #smoothed_std = get_smoothed_std(filtered_spec,
     #                                rad=3, smooth_length=3)
     std = np.nanstd(filtered_spec)
-    for i in [0, 1]:
-        std = filtered_spec[np.abs(filtered_spec)<3*std].std()
 
-    emission_feature_msk_ = filtered_spec > sigma*std
+    with np.errstate(invalid="ignore"):
+        for i in [0, 1]:
+            std = filtered_spec[np.abs(filtered_spec)<3*std].std()
+
+        emission_feature_msk_ = filtered_spec > sigma*std
+
     #emission_feature_msk_ = ni.binary_closing(emission_feature_msk_)
     emission_feature_msk = ni.binary_opening(emission_feature_msk_,
                                              iterations=1)

@@ -767,7 +767,8 @@ def get_finite_boundary_indices(s1):
     #k1, k2 = np.nonzero(np.isfinite(s1))[0][[0, -1]]
 
     #k1, k2 = np.nonzero(s1>0.)[0][[0, -1]]
-    nonzero_indices = np.nonzero(s1>0.)[0] #[[0, -1]]
+    with np.errstate(invalid="ignore"):
+        nonzero_indices = np.nonzero(s1 > 0.)[0] #[[0, -1]]
 
    # # return meaningless indices if non-zero spectra is too short
    #  if len(nonzero_indices) < 5:
@@ -786,11 +787,14 @@ def get_order_boundary_indices(s1, s0=None):
     # chip boundary.
     s1 = np.array(s1)
     #k1, k2 = np.nonzero(np.isfinite(s1))[0][[0, -1]]
-    nonzero_indices = np.nonzero(s1>0.05)[0] #[[0, -1]]
+
+    with np.errstate(invalid="ignore"):
+        nonzero_indices = np.nonzero(s1 > 0.05)[0] #[[0, -1]]
 
    # return meaningless indices if non-zero spectra is too short
-    if len(nonzero_indices) < 5:
-        return 4, 4
+    with np.errstate(invalid="ignore"):
+        if len(nonzero_indices) < 5:
+            return 4, 4
 
     k1, k2 = nonzero_indices[[0, -1]]
     k1 = max(k1, 4)

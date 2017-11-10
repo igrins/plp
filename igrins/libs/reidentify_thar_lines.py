@@ -31,7 +31,12 @@ def match_orders(orders, s_list_src, s_list_dst):
         s_list_dst_clip = [np.clip(s, -0.1*s_std, s_std)/s_std for (s, s_std) \
                            in zip(s_list_dst_filtered, std_list)]
         cor_list = [correlate(center_s_clip, s, mode="same") for s in s_list_dst_clip]
-        cor_max_list = [np.nanmax(cor) for cor in cor_list]
+
+        import warnings
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', r'All-NaN (slice|axis) encountered')
+
+            cor_max_list = [np.nanmax(cor) for cor in cor_list]
 
         center_indx_dst = np.nanargmax(cor_max_list)
 

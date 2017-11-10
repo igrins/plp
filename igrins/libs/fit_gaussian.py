@@ -37,8 +37,10 @@ def fit_gaussian_simple(x, s, lines, xminmax=None, sigma_init=1.5,
         center, sigma, height, background = params
 
         y_models = []
-        for d_center in d_centers0:
-            y_models.append(np.exp(-(((xx - (center + d_center))/sigma)**2*0.5)))
+        with np.errstate(divide="ignore"):
+            for d_center in d_centers0:
+                y_models.append(np.exp(-(((xx - (center + d_center))/sigma)**2*0.5)))
+
         return height*np.array(y_models).sum(axis=0) + background
         #return (height*np.array(s).sum(axis=0) + background)
 
