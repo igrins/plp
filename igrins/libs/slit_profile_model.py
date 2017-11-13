@@ -55,7 +55,6 @@ def get_debug_func(axes=None):
     else:
         def _get_axes():
             return axes
-        
 
     def _debug_func(m0, m1, y, s):
 
@@ -80,20 +79,20 @@ def get_debug_func(axes=None):
         # ax2.plot(y, s - m1(y), ".")
         import scipy.ndimage as ni
         _d = ni.gaussian_filter(sp2d[0], sigma=2)
-        ax2.imshow(_d, extent=[0, 1, -0.04, 0.04], 
+        ax2.imshow(_d, extent=[0, 1, -0.04, 0.04],
                    aspect="auto", interpolation="none")
 
     return _debug_func
 
 
-def multi_gaussian_fit_by_mode(mode, y, s, 
+def multi_gaussian_fit_by_mode(mode, y, s,
                                n_comp,
                                stddev_list=None,
                                debug_func=None):
     assert mode in ["plus", "minus"]
 
     fit_g = fitting.LevMarLSQFitter()
-    
+
     if stddev_list is None:
         # initial fit with 1 component
         m = get_multi_gaussian_model(mode=mode, n=1)
@@ -103,16 +102,16 @@ def multi_gaussian_fit_by_mode(mode, y, s,
         stddev = g.stddev.value
         stddev_list = [stddev/2., stddev, stddev*2]
 
-        fixed_params = [(i, k, getattr(g, k)) 
+        fixed_params = [(i, k, getattr(g, k))
                         for k in ["amplitude", "stddev", "mean"]
                         for i in [1]]
     else:
-        fixed_params = [(i, k, v) 
+        fixed_params = [(i, k, v)
                         for k in ["stddev"]
                         for (i, v) in enumerate(stddev_list)]
 
-    m = get_multi_gaussian_model(mode=mode, 
-                                 n=n_comp, 
+    m = get_multi_gaussian_model(mode=mode,
+                                 n=n_comp,
                                  stddev_list=stddev_list)
 
     for i, k, v in fixed_params:

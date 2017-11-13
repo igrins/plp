@@ -188,20 +188,20 @@ class RecipeExtractPR(object):
         return ordermap_bpixed
 
 
-    @lazyprop
-    def pix_mask(self):
-        from ..libs.storage_descriptions import (HOTPIX_MASK_DESC,
-                                               DEADPIX_MASK_DESC)
+    # @lazyprop
+    # def pix_mask(self):
+    #     from ..libs.storage_descriptions import (HOTPIX_MASK_DESC,
+    #                                            DEADPIX_MASK_DESC)
 
-        hotpix_mask = self.igr_storage.load1(HOTPIX_MASK_DESC,
-                                             self.basenames["flat_off"])
+    #     hotpix_mask = self.igr_storage.load1(HOTPIX_MASK_DESC,
+    #                                          self.basenames["flat_off"])
 
-        deadpix_mask = self.igr_storage.load1(DEADPIX_MASK_DESC,
-                                              self.basenames["flat_on"])
+    #     deadpix_mask = self.igr_storage.load1(DEADPIX_MASK_DESC,
+    #                                           self.basenames["flat_on"])
 
-        pix_mask  = hotpix_mask.data | deadpix_mask.data
+    #     pix_mask  = hotpix_mask.data | deadpix_mask.data
 
-        return pix_mask
+    #     return pix_mask
 
 
     @lazyprop
@@ -232,17 +232,17 @@ class RecipeExtractPR(object):
                                            self.basenames["flat_on"]).data
         return bias_mask
 
-    @lazyprop
-    def destripe_mask(self):
-        bias_mask = self.bias_mask
+    # @lazyprop
+    # def destripe_mask(self):
+    #     bias_mask = self.bias_mask
 
-        #bias_mask[-100:,:] = False
-        bias_mask[self.pix_mask] = True
-        bias_mask[:4] = True
-        bias_mask[-4:] = True
+    #     #bias_mask[-100:,:] = False
+    #     bias_mask[self.pix_mask] = True
+    #     bias_mask[:4] = True
+    #     bias_mask[-4:] = True
 
-        destripe_mask = bias_mask
-        return destripe_mask
+    #     destripe_mask = bias_mask
+    #     return destripe_mask
 
 
     def __init__(self, utdate, band, obsids,

@@ -31,8 +31,7 @@ def find_affine_transform(obsset):
 
     from ..libs.echellogram import Echellogram
 
-    from ..libs.master_calib import load_ref_data
-    echellogram_data = obsset.load_ref_data(kind="ECHELLOGRAM_JSON")
+    echellogram_data = obsset.rs.load_ref_data(kind="ECHELLOGRAM_JSON")
 
     echellogram = Echellogram.from_dict(echellogram_data)
 

@@ -37,6 +37,19 @@ ORDER_FLAT_JSON_DESC = ("PRIMARY_CALIB_PATH", "ORDERFLAT_{basename}{postfix}.jso
 STACKED_DESC = ("OUTDATA_PATH", "{basename}{postfix}.stacked.fits")
 COMBINED_SKY_DESC = ("OUTDATA_PATH", "{basename}{postfix}.combined_sky.fits")
 COMBINED_IMAGE_DESC = ("OUTDATA_PATH", "{basename}{postfix}.combined_image.fits")
+
+# below 4 are cache only
+COMBINED_IMAGE1_DESC = ("OUTDATA_PATH", "{basename}{postfix}.combined_image1.fits")
+COMBINED_VARIANCE1_DESC = ("OUTDATA_PATH",
+                          "{basename}{postfix}.combined_variance1.fits")
+COMBINED_VARIANCE0_DESC = ("OUTDATA_PATH",
+                           "{basename}{postfix}.combined_variance0.fits")
+INTERORDER_BACKGROUND_DESC = ("OUTDATA_PATH",
+                              "{basename}{postfix}.interorder_background.fits")
+
+SLITPROFILE_FITS_DESC = ("OUTDATA_PATH",
+                        "{basename}{postfix}.slitprofile.fits")
+
 COMBINED_IMAGE_A_DESC = ("OUTDATA_PATH", "{basename}{postfix}.combined_image_a.fits")
 COMBINED_IMAGE_B_DESC = ("OUTDATA_PATH", "{basename}{postfix}.combined_image_b.fits")
 WVLCOR_IMAGE_DESC = ("OUTDATA_PATH", "{basename}{postfix}.wvlcor_image.fits")
@@ -61,7 +74,6 @@ WVLSOL_V0_JSON_DESC = ("PRIMARY_CALIB_PATH", "{basename}{postfix}.wvlsol_v0.json
 
 # SKY
 
-COMBINED_SKY_DESC = ("OUTDATA_PATH", "{basename}{postfix}.combined_sky.fits")
 SKY_WVLSOL_JSON_DESC = ("PRIMARY_CALIB_PATH", "SKY_{basename}{postfix}.wvlsol_v1.json")
 SKY_WVLSOL_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_{basename}{postfix}.wvlsol_v1.fits")
 
@@ -145,8 +157,10 @@ _resource_definitions = dict(
     #
     ordermap=("distortion", "ORDERMAP_FITS"),
     slitposmap=("distortion", "SLITPOSMAP_FITS"),
+    slitoffsetmap=("distortion", "SLITOFFSET_FITS"),
     #
     wvlsol=("wvlsol", "SKY_WVLSOL_JSON"),
+    wvlsol_fits=("wvlsol", "SKY_WVLSOL_FITS"),
 )
 
 

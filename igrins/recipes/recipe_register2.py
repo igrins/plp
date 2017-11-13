@@ -7,58 +7,11 @@ import scipy.ndimage as ni
 
 from astropy.io.fits import Card
 
-from ..libs.stsci_helper import stsci_median
-
 from .. import DESCS
 from ..libs.resource_helper_igrins import ResourceHelper
 from ..libs.load_fits import get_first_science_hdu
 
-from .aperture_helper import get_simple_aperture_from_obsset
-
-
-def _get_combined_image(obsset):
-    data_list = [hdu.data for hdu in obsset.get_hdus()]
-    return stsci_median(data_list)
-
-def make_combined_image_sky(obsset):
-
-    if obsset.recipe_name.endswith("AB"): # do A-B
-        obsset_a = obsset.get_subset("A")
-        obsset_b = obsset.get_subset("B")
-
-        a = _get_combined_image(obsset_a)
-        b = _get_combined_image(obsset_b)
-
-        sky_data = a+b - abs(a-b)
-    else:
-        sky_data = _get_combined_image(obsset)
-
-    helper = ResourceHelper(obsset)
-    destripe_mask = helper.get("destripe_mask")
-
-    from ..libs.image_combine import destripe_sky
-    sky_data = destripe_sky(sky_data, destripe_mask, subtract_bg=False)
-
-    hdul = obsset.get_hdul_to_write(([], sky_data))
-    obsset.store(DESCS["combined_sky"], data=hdul)
-
-
-def extract_spectra(obsset):
-    "extract spectra"
-
-    # caldb = helper.get_caldb()
-    # master_obsid = obsids[0]
-
-    data = obsset.load_fits_sci_hdu(DESCS["combined_sky"]).data
-
-    aperture = get_simple_aperture_from_obsset(obsset)
-
-    specs = aperture.extract_spectra_simple(data)
-
-    obsset.store(DESCS["oned_spec_json"],
-                 data=dict(orders=aperture.orders,
-                           specs=specs,
-                           aperture_basename=aperture.basename))
+from .sky_spec import make_combined_image_sky, extract_spectra
 
 
 def _get_ref_spec_name(recipe_name):
@@ -87,8 +40,8 @@ def identify_orders(obsset):
     # from igrins.libs.master_calib import load_ref_data
     #ref_spectra = load_ref_data(helper.config, band,
 
-    ref_spec_path, ref_spectra = obsset.load_ref_data(ref_spec_key,
-                                                      get_path=True)
+    ref_spec_path, ref_spectra = obsset.rs.load_ref_data(ref_spec_key,
+                                                         get_path=True)
 
     src_spectra = obsset.load(DESCS["ONED_SPEC_JSON"])
 
@@ -112,7 +65,7 @@ def identify_lines(obsset):
 
     ref_spec_key, ref_identified_lines_key = _get_ref_spec_name(obsset.recipe_name)
 
-    ref_spec = obsset.load_ref_data(ref_spec_key)
+    ref_spec = obsset.rs.load_ref_data(ref_spec_key)
 
     tgt_spec = obsset.load(DESCS["ONED_SPEC_JSON"])
     # tgt_spec_path = obsset.query_item_path("ONED_SPEC_JSON")
@@ -126,7 +79,7 @@ def identify_lines(obsset):
     #REF_TYPE="OH"
     #fn = "../%s_IGRINS_identified_%s_%s.json" % (REF_TYPE, band,
     #                                             helper.refdate)
-    l = obsset.load_ref_data(ref_identified_lines_key)
+    l = obsset.rs.load_ref_data(ref_identified_lines_key)
     #l = json.load(open(fn))
     #ref_spectra = load_ref_data(helper.config, band, kind="SKY_REFSPEC_JSON")
 
@@ -264,9 +217,6 @@ from .find_affine_transform import find_affine_transform
 
 from ..libs.transform_wvlsol import transform_wavelength_solutions
 
-from ..driver import Step
-
-
 def save_orderflat(obsset):
 
     helper = ResourceHelper(obsset)
@@ -305,6 +255,9 @@ def update_db(obsset):
 
     # save db
     db = obsset.add_to_db("register")
+
+
+from ..driver import Step
 
 
 steps = [Step("Make Combined Sky", make_combined_image_sky),

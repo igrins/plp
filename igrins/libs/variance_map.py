@@ -21,10 +21,11 @@ def get_variance_map0(a_minus_b, bias_mask2, pix_mask):
     variance_ = variance0.copy()
     variance_[msk] = np.nan
 
-    st = np.nanstd(variance_)
-    st = np.nanstd(variance_[np.abs(variance_) < 3*st])
+    with np.errstate(invalid="ignore"):
+        st = np.nanstd(variance_)
+        st = np.nanstd(variance_[np.abs(variance_) < 3*st])
 
-    variance_[np.abs(variance_-ss) > 3*st] = np.nan
+        variance_[np.abs(variance_ - ss) > 3*st] = np.nan
 
     import scipy.ndimage as ni
     x_std = ni.median_filter(np.nanstd(variance_, axis=0), 11)

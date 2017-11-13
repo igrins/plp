@@ -20,7 +20,7 @@ def transform_wavelength_solutions(obsset):
     affine_tr_matrix = d["affine_tr_matrix"]
 
     # load echellogram
-    echellogram_data = obsset.load_ref_data(kind="ECHELLOGRAM_JSON")
+    echellogram_data = obsset.rs.load_ref_data(kind="ECHELLOGRAM_JSON")
 
     from .echellogram import Echellogram
     echellogram = Echellogram.from_dict(echellogram_data)

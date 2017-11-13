@@ -1,11 +1,14 @@
 import numpy as np
 import pandas as pd
 
-from igrins.libs.recipe_helper import RecipeHelper
+# from igrins.libs.recipe_helper import RecipeHelper
+
+from ..libs.ref_lines_db import SkyLinesDB, HitranSkyLinesDB
+
 
 def identify_multiline(obsset):
 
-    multi_spec = obsset.load_item("multi_spec_fits")
+    multi_spec = obsset.load("multi_spec_fits")
 
     # just to retrieve order information
     wvlsol_v0 = obsset.load_resource_for("wvlsol_v0")
@@ -19,10 +22,13 @@ def identify_multiline(obsset):
     keys = []
     fitted_pixels_list = []
 
-    from igrins.libs.ref_lines_db import SkyLinesDB, HitranSkyLinesDB
+    # ref_lines_db = SkyLinesDB(config=obsset.get_config())
+    ref_lines_db = SkyLinesDB(obsset.rs.master_ref_loader)
 
-    ref_lines_db = SkyLinesDB(config=obsset.get_config())
-    ref_lines_db_hitrans = HitranSkyLinesDB(config=obsset.get_config())
+    if obsset.rs.get_resource_spec()[1] == "K":
+        ref_lines_db_hitrans = HitranSkyLinesDB(obsset.rs.master_ref_loader)
+    else:
+        ref_lines_db_hitrans = None
 
     for hdu in multi_spec:
 
@@ -35,13 +41,13 @@ def identify_multiline(obsset):
         spec = Spec(dict(zip(orders, hdu.data)),
                     dict(zip(orders, wvlsol)))
 
-        fitted_pixels_oh = ref_lines_db.identify(obsset.band, spec)
+        fitted_pixels_oh = ref_lines_db.identify(spec)
         small_list.append(fitted_pixels_oh)
         small_keys.append("OH")
-        
-        if obsset.band == "K":
-            fitted_pixels_hitran = ref_lines_db_hitrans.identify(obsset.band,
-                                                                 spec)
+
+        # if obsset.band == "K":
+        if ref_lines_db_hitrans is not None:
+            fitted_pixels_hitran = ref_lines_db_hitrans.identify(spec)
             small_list.append(fitted_pixels_hitran)
             small_keys.append("Hitran")
 
@@ -59,8 +65,8 @@ def identify_multiline(obsset):
                                      axis=0)
 
     # storing multi-index seems broken. Enforce reindexing.
-    _d = fitted_pixels_master.reset_index()
-    obsset.store_data_frame("SKY_FITTED_PIXELS_JSON", _d, orient="split")
+    _d = fitted_pixels_master.reset_index().to_dict(orient="split")
+    obsset.store("SKY_FITTED_PIXELS_JSON", _d)
 
 
 def process_band(utdate, recipe_name, band, obsids, config_name):

@@ -25,7 +25,7 @@ def my_namedtuple(n, names):
 
 class NdPoly(object):
     def _setup(self, orders, orderT, names):
-        po_list = [orderT(_) for _ in product(*(range(o+1) for o in orders))]
+        po_list = [orderT(_) for _ in product(*list(range(o + 1) for o in orders))]
 
         self.orders = orderT(orders)
         self.names = names

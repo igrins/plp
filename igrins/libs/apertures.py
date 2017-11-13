@@ -198,21 +198,22 @@ class Apertures(object):
             data[~msk1] = 0
             variance_map[~msk1] = 0
 
-            msk10 = shiftx(msk1)
-            # if debug:
-            #     import astropy.io.fits as pyfits
-            #     hdu_list = pyfits.HDUList()
-            #     #hdu_list.append(pyfits.PrimaryHDU(data=msk1.astype("i4")))
-            #     hdu_list.append(pyfits.PrimaryHDU(data=np.array(msk1, dtype="i")))
-            #     #hdu_list.append(pyfits.ImageHDU(data=np.array(msk1, dtype="i")))
-            #     hdu_list.append(pyfits.ImageHDU(data=msk10))
-            #     hdu_list.writeto("test_mask.fits", clobber=True)
+            with np.errstate(invalid="ignore"):
+                msk10 = shiftx(msk1)
+                # if debug:
+                #     import astropy.io.fits as pyfits
+                #     hdu_list = pyfits.HDUList()
+                #     #hdu_list.append(pyfits.PrimaryHDU(data=msk1.astype("i4")))
+                #     hdu_list.append(pyfits.PrimaryHDU(data=np.array(msk1, dtype="i")))
+                #     #hdu_list.append(pyfits.ImageHDU(data=np.array(msk1, dtype="i")))
+                #     hdu_list.append(pyfits.ImageHDU(data=msk10))
+                #     hdu_list.writeto("test_mask.fits", clobber=True)
 
-            profile_map = profile_map*msk10
-            data = shiftx(data)/msk10
-            variance_map = shiftx(variance_map)/msk10#/msk10 #**2
+                profile_map = profile_map*msk10
+                data = shiftx(data)/msk10
+                variance_map = shiftx(variance_map) / msk10#/msk10 #**2
 
-            msk1 = (msk10 > 0) & (variance_map > 0) & (msk10 > 0.2)
+                msk1 = (msk10 > 0) & (variance_map > 0) & (msk10 > 0.2)
 
         return (np.ma.array(data, mask=~msk1).filled(np.nan),
                 variance_map, profile_map, msk1)
@@ -325,12 +326,11 @@ class Apertures(object):
             #sum_variance1 = variance_map1.sum(axis=0)
             #sum_weights1[sum_variance1 < 0.1*np.nanmax(sum_variance1)] = np.nan
 
-            s = sum_weighted_spectra1 / sum_weights1
+            with np.errstate(invalid="ignore"):
+                s = sum_weighted_spectra1 / sum_weights1
+                v = sum_profile1 / sum_weights1
 
             s_list.append(s)
-
-            v = sum_profile1 / sum_weights1
-
             v_list.append(v)
 
             if SAVE_PROFILE:
@@ -474,7 +474,8 @@ class Apertures(object):
                               )
             if normalize:
                 nn = np.histogram(slitpos_map[sl][msk][finite_mask], bins=bins)
-                hh0 = hh[0] / nn[0]
+                with np.errstate(invalid="ignore"):
+                    hh0 = hh[0] / nn[0]
             else:
                 hh0 = hh[0]
 
@@ -586,7 +587,8 @@ class Apertures(object):
             profile1[msk] = lsf(o, ix[sl][msk], slitpos_map[sl][msk])
             # TODO :make sure that renormalization is good thing to do.
             profile_sum = np.abs(profile1).sum(axis=0)
-            profile1 /= profile_sum
+            with np.errstate(invalid="ignore"):
+                profile1 /= profile_sum
 
             profile_map[sl][msk] = profile1[msk]
 

@@ -9,6 +9,8 @@ from ..resource_manager.resource_db_igrins \
 
 from .storage_descriptions import load_resource_def
 
+from .master_calib import query_ref_value, query_ref_data_path
+
 
 class IGRINSRefLoader(object):
     def __init__(self, config, band):
@@ -16,17 +18,23 @@ class IGRINSRefLoader(object):
 
         self.band = band
 
+    def query_value(self, kind):
+        kind += "_{}".format(self.band)
+        return query_ref_value(self.config, band=self.band, kind=kind)
+
+    def query(self, kind):
+
+        return query_ref_data_path(self.config, band=self.band, kind=kind)
+
     def load(self, kind, get_path=False):
 
-        from .master_calib import load_ref_data, fetch_ref_data
+        fn = query_ref_data_path(self.config, self.band, kind)
+        loader = get_ref_loader(fn)
+        d =  loader(fn)
 
         if get_path:
-            fn, d = fetch_ref_data(self.config, band=self.band,
-                                   kind=kind)
             return fn, d
         else:
-            d = load_ref_data(self.config, band=self.band,
-                              kind=kind)
             return d
 
     # def fetch(self, kind):
@@ -76,14 +84,20 @@ def get_resource_db(config, resource_spec):
                          db_factory, resource_def)
 
 
-def get_resource_manager(config, resource_spec, basename_helper=None):
+def get_resource_manager(config, resource_spec,
+                         basename_helper=None, item_converter_class="auto"):
 
     obsdate, band = resource_spec
 
     base_storage = get_file_storage(config, resource_spec)
 
-    from ..libs.item_convert import ItemConverter
-    storage = ItemConverter(base_storage)
+    if item_converter_class is None:
+        storage = base_storage
+    elif item_converter_class == "auto":
+        from ..libs.item_convert import ItemConverter
+        storage = ItemConverter(base_storage)
+    else:
+        storage = item_converter_class(base_storage)
 
     resource_db = get_resource_db(config, resource_spec)
 

@@ -168,7 +168,8 @@ def test_resource_manager_w_storage(config):
 
     resource_spec = (utdate, band)
 
-    resource_manager = get_resource_manager(config, resource_spec)
+    resource_manager = get_resource_manager(config, resource_spec,
+                                            item_converter_class=None)
 
     resource_manager.new_context("1st Context")
 
@@ -239,7 +240,8 @@ def test_resource_stack_w_basename(config):
 
     basename_helper = BasenameHelper(utdate, band)
     resource_manager = get_resource_manager(config, resource_spec,
-                                            basename_helper)
+                                            basename_helper,
+                                            item_converter_class=None)
 
     resource_manager.new_context("1st Context")
 

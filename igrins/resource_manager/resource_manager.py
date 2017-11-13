@@ -30,10 +30,19 @@ class ResourceStack(object):
 
         self.context_stack = ResourceContextStack(self.storage)
 
+    def get_resource_spec(self):
+        return self._resource_spec
+
     # CONTEXT
 
     def new_context(self, context_name, reset_read_cache=False):
         self.context_stack.new_context(context_name, reset_read_cache=reset_read_cache)
+
+    def abort_context(self, context_name):
+        if context_name is not None:
+            assert self.context_stack.current.name == context_name
+
+        self.context_stack.abort_context(context_name)
 
     def close_context(self, context_name=None):
         if context_name is not None:
@@ -124,6 +133,12 @@ class ResourceStack(object):
         self.resource_db.update_db(db_name, basename)
 
     # master ref
+    def query_ref_value(self, kind):
+        return self.master_ref_loader.query_value(kind)
+
+    def query_ref_data_path(self, kind):
+        return self.master_ref_loader.query(kind)
+
     def load_ref_data(self, kind, get_path=False):
         return self.master_ref_loader.load(kind, get_path=get_path)
 

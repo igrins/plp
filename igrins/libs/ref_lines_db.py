@@ -192,41 +192,39 @@ def fitted_lines_reidentify(fitted_lines, ref_lines, s, x,
 # ref_lines : pandas DataFrame
 
 class RefLinesDBBase:
-    def __init__(self, config):
-        self._refdata = {}
-        from .igrins_config import get_config
-        self.config = get_config(config)
+    def __init__(self, ref_loader):
+        self._refdata = None
+        self.ref_loader = ref_loader
+        # from .igrins_config import get_config
+        # self.config = get_config(config)
 
-    def _get_refdata(self, band):
+    def _get_refdata(self):
 
-        try:
-            return self._refdata[band]
-        except KeyError:
-            pass
+        if self._refdata is not None:
+            return self._refdata
 
-        refdata = self._load_refdata(band)
-        self._refdata[band] = refdata
+        refdata = self._load_refdata()
+        self._refdata = refdata
 
         return refdata
 
-    def _load_refdata(self, band):
+    def _load_refdata(self):
         pass
 
-    def get_ref_lines(self, band, o, wvl, x):
+    def get_ref_lines(self, o, wvl, x):
         pass
 
-    def get_ref_lines_collection(self, band,
-                                 order_list, wvl_list, x):
+    def get_ref_lines_collection(self, order_list, wvl_list, x):
         """
         return RefLinesCollection instance
         """
-        ref_lines_list = [self.get_ref_lines(band, o, wvl, x)
+        ref_lines_list = [self.get_ref_lines(o, wvl, x)
                           for o, wvl in zip(order_list, wvl_list)]
 
         ref_lines_coll = RefLinesCollection(ref_lines_list)
         return ref_lines_coll
 
-    def identify_single_order(self, band, o, spec):
+    def identify_single_order(self, o, spec):
         """
         spec : an object with wvl_map & s_map attributes. Both are
         dictionary contains wavelength and spectra for each order
@@ -237,7 +235,7 @@ class RefLinesDBBase:
         wvl, s = spec.wvl_map[o], spec.s_map[o]
         x = np.arange(len(wvl))
 
-        ref_lines = ref_lines_db.get_ref_lines(band, o, wvl, x)
+        ref_lines = ref_lines_db.get_ref_lines(o, wvl, x)
         ref_lines.line_centroids
 
         fitted_pixels_ = ref_lines.fit(s, x, update_self=True)
@@ -248,7 +246,7 @@ class RefLinesDBBase:
 
         return fitted_pixels
 
-    def identify(self, band, spec):
+    def identify(self, spec):
 
         ref_lines_db = self
         order_list = sorted(spec.wvl_map.keys())
@@ -257,7 +255,7 @@ class RefLinesDBBase:
 
         x = np.arange(len(wvl_list[10]))
 
-        ref_lines_col = ref_lines_db.get_ref_lines_collection(band, order_list,
+        ref_lines_col = ref_lines_db.get_ref_lines_collection(order_list,
                                                               wvl_list, x)
 
         fitted_pixels_col = ref_lines_col.fit(s_list, x, update_self=True)
@@ -276,17 +274,17 @@ class RefLinesDBBase:
 
 
 class SkyLinesDB(RefLinesDBBase):
-    def _load_refdata(self, band):
-        from .master_calib import load_sky_ref_data
-        sky_refdata = load_sky_ref_data(self.config, band)
-
+    def _load_refdata(self):
+        from ..recipes.ref_data_sky import load_sky_ref_data
+        # sky_refdata = load_sky_ref_data(self.config, band)
+        sky_refdata = load_sky_ref_data(self.ref_loader)
         return sky_refdata
 
-    def get_ref_lines(self, band, o, wvl, x):
+    def get_ref_lines(self, o, wvl, x):
         """
         return RefLines instance
         """
-        sky_ref_data = self._get_refdata(band)
+        sky_ref_data = self._get_refdata()
 
         ohlines_db = sky_ref_data["ohlines_db"]
         try:
@@ -305,23 +303,21 @@ class SkyLinesDB(RefLinesDBBase):
 
 
 class HitranSkyLinesDB(RefLinesDBBase):
-    def _load_refdata(self, band):
-        if band != "K":
+    def _load_refdata(self):
+        if self.ref_loader.band != "K":
             raise ValueError("only K band is supported")
 
-        from .master_calib import load_ref_data
-        refdata0 = load_ref_data(self.config, band="K",
-                                 kind="HITRAN_BOOTSTRAP_K")
+        refdata0 = self.ref_loader.load("HITRAN_BOOTSTRAP_K")
 
         refdata = dict((int(k), v) for k, v in refdata0.items())
 
         return refdata
 
-    def get_ref_lines(self, band, o, wvl, x):
+    def get_ref_lines(self, o, wvl, x):
         """
         return RefLines instance
         """
-        ref_data = self._get_refdata(band)
+        ref_data = self._get_refdata()
 
         try:
             ref_wvl = ref_data[o]["wavelength_grouped"]

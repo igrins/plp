@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 import json
 
-from .nd_poly import NdPolyNamed
-
 from numpy.linalg import lstsq
+
+from .nd_poly import NdPolyNamed
 
 
 def _get_center(key_list):
@@ -52,8 +52,9 @@ def _volume_poly_fit(points, scalar, orders, names):
 
 def volume_fit(obsset):
 
-    df = obsset.load_data_frame("SKY_FITTED_PIXELS_JSON",
-                                orient="split")
+    d = obsset.load("SKY_FITTED_PIXELS_JSON")
+    df = pd.DataFrame(**d)
+
     index_names = ["kind", "order", "wavelength"]
     df = df.set_index(index_names)[["slit_center", "pixels"]]
 
@@ -64,7 +65,7 @@ def volume_fit(obsset):
 
     # because the offset at slit center should be 0, we divide the
     # offset by slit_pos, and fit the data then multiply by slit_pos.
-    
+
     cc0 = dd["slit_center"] - 0.5
 
     # 3d points : x-pixel, order, location on the slit
@@ -74,7 +75,6 @@ def volume_fit(obsset):
     # scalar is offset of the measured line from the location at slic center.
     scalar0 = dd["offsets"]
 
-    
     msk = abs(cc0) > 0.
 
     points = dict(zip(names, [dd["pixels0"][msk],
@@ -82,7 +82,6 @@ def volume_fit(obsset):
                               cc0[msk]]))
 
     scalar = dd["offsets"][msk] / cc0[msk]
-
 
     poly, params = _volume_poly_fit(points, scalar, orders, names)
 
@@ -112,45 +111,15 @@ def volume_fit(obsset):
         # clf()
         # scatter(dd["pixels0"], dd["order"] + dd["slit_center"] + doffsets, color="g")
         # scatter(dd["pixels0"], dd["order"] + dd["slit_center"], color="r")
-        
+
     # save
     out_df = poly.to_pandas(coeffs=params[0])
     out_df = out_df.reset_index()
 
     d = out_df.to_dict(orient="split")
-    obsset.store_dict("VOLUMEFIT_COEFFS_JSON", d)
+    obsset.store("VOLUMEFIT_COEFFS_JSON", d)
 
 
-def generate_slitoffsetmap(obsset):
-
-    ordermap_fits = obsset.load_resource_for("ordermap")
-
-    slitposmap_fits = obsset.load_resource_for("slitposmap")
-
-    yy, xx = np.indices(ordermap_fits[0].data.shape)
-
-    msk = np.isfinite(ordermap_fits[0].data) & (ordermap_fits[0].data > 0)
-    pixels, orders, slit_pos = (xx[msk], ordermap_fits[0].data[msk],
-                                slitposmap_fits[0].data[msk])
-
-    names = ["pixel", "order", "slit"]
-
-    in_df = obsset.load_data_frame("VOLUMEFIT_COEFFS_JSON", orient="split")
-    in_df = in_df.set_index(names)
-
-    poly, coeffs = NdPolyNamed.from_pandas(in_df)
-
-    cc0 = slit_pos - 0.5
-    values = dict(zip(names, [pixels, orders, cc0]))
-    offsets = poly.multiply(values, coeffs) # * cc0
-
-    offset_map = np.empty(ordermap_fits[0].data.shape, dtype=np.float64)
-    offset_map.fill(np.nan)
-    offset_map[msk] = offsets * cc0 # dd["offsets"]
-    
-
-    obsset.store_image("slitoffset_fits", offset_map)
-                     
 
 from ..libs.recipe_helper import RecipeHelper
 

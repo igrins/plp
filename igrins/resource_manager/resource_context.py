@@ -70,6 +70,9 @@ class ResourceContextStack():
 
         self.current = None
         self.context_list = []
+        self._reset_read_cache()
+
+    def _reset_read_cache(self):
         self.default_read_cache = ReadCache(self.storage)
         self.read_cache = self.default_read_cache
 
@@ -79,6 +82,18 @@ class ResourceContextStack():
 
         if reset_read_cache or (self.read_cache is None):
             self.read_cache = ReadCache(self.storage)
+
+    def abort_context(self, context_name,
+                      pop_last_context=True, reset_read_cache=True):
+        indx = -1
+        context = self.context_list[indx]
+        assert context.name == context_name
+
+        if pop_last_context:
+            self.context_list.pop(indx)
+
+        if reset_read_cache:
+            self._reset_read_cache()
 
     def close_context(self):
         try:

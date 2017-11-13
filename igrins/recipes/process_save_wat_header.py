@@ -1,24 +1,18 @@
 import numpy as np
+from igrins.libs.astropy_poly_helper import deserialize_poly_model
 
 
 def save_wat_header(obsset):
 
-    d = obsset.load_item("SKY_WVLSOL_JSON")
-    # d = dict(orders=orders,
-    #          wvl_sol=wvl_sol)
+    d = obsset.load("SKY_WVLSOL_JSON")
 
     orders = d["orders"]
     wvl_sol = d["wvl_sol"]
 
-    fit_results = obsset.load_item("SKY_WVLSOL_FIT_RESULT_JSON")
-
-    # fit_results = dict(xyz=[xl[msk], yl[msk], zl[msk]],
-    #                    fit_params=fit_params,
-    #                    fitted_model=poly_2d)
+    fit_results = obsset.load("SKY_WVLSOL_FIT_RESULT_JSON")
 
     modeul_name, class_name, serialized = fit_results["fitted_model"]
-    from igrins.libs.astropy_poly_helper import deserialize_poly_model
-   
+
     p = deserialize_poly_model(modeul_name, class_name, serialized)
 
     # save as WAT fits header
@@ -77,5 +71,5 @@ def save_wat_header(obsset):
     # hdu = pyfits.PrimaryHDU(header=header,
     #                         data=np.array([]).reshape((0,0)))
 
-    obsset.store_image("SKY_WVLSOL_FITS", np.array(wvl_sol),
-                       card_list=cards)
+    hdul = obsset.get_hdul_to_write((cards, np.array(wvl_sol)))
+    obsset.store("SKY_WVLSOL_FITS", hdul)
