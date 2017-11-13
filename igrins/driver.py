@@ -11,7 +11,7 @@ class Step():
         self.f(obsset, **self.kwargs)
 
 
-def apply_steps(obsset, steps):
+def apply_steps(obsset, steps, nskip=0, save_context_name=None):
 
     # STEP 1 :
     ## make combined image
@@ -25,18 +25,27 @@ def apply_steps(obsset, steps):
         else:
             context_name = "Undefined Context {}".format(context_id)
 
+        if context_id < nskip:
+            continue
+
         obsset.rs.new_context(context_name, reset_read_cache=True)
         print("  * ({}/{}) {}...".format(context_id + 1,
                                          n_steps, context_name))
-        step(obsset)
-        # obsset.rs.describe_context()
-        obsset.rs.close_context(context_name)
+        try:
+            step(obsset)
+        except:
+            obsset.rs.abort_context(context_name)
+            if save_context_name is not None:
+                import cPickle as pickle
+                pickle.dump(obsset.rs, open(save_context_name, "wb"))
+            raise
+        else:
+            obsset.rs.close_context(context_name)
 
-    import pickle
-    pickle.dump(obsset.rs, open("test_context.pickle", "wb"))
 
 def get_obsset(utdate, recipe_name, band,
-               obsids, frametypes, config_name):
+               obsids, frametypes, config_name,
+               saved_context_name=None):
 
     from .libs.igrins_config import IGRINSConfig
     from .libs.resource_manager import get_igrins_resource_manager
@@ -45,7 +54,11 @@ def get_obsset(utdate, recipe_name, band,
 
     config = IGRINSConfig(config_name)
 
-    resource_manager = get_igrins_resource_manager(config, (utdate, band))
+    if saved_context_name is not None:
+        import cPickle as pickle
+        resource_manager = pickle.load(open(saved_context_name, "rb"))
+    else:
+        resource_manager = get_igrins_resource_manager(config, (utdate, band))
 
     from .libs.obs_set2 import ObsSet
     obsset = ObsSet(resource_manager, recipe_name, obsids, frametypes)
