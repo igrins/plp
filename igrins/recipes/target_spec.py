@@ -1,14 +1,8 @@
 import numpy as np
 import scipy.ndimage as ni
 
-from .. import DESCS
-
 from ..libs.stsci_helper import stsci_median
 from ..libs.resource_helper_igrins import ResourceHelper
-from ..libs.image_combine import destripe_sky
-
-
-from .aperture_helper import get_simple_aperture_from_obsset
 
 
 def _get_combined_image(obsset):
@@ -32,7 +26,6 @@ def get_destriped(obsset,
         destrip_mask = ~np.isfinite(data_minus) | _destripe_mask
     else:
         destrip_mask = None
-
 
     data_minus_d = destriper.get_destriped(data_minus,
                                            destrip_mask,
@@ -95,7 +88,8 @@ def make_combined_images(obsset,
 
     data_plus = (a_data + (a_b**2)*b_data)
 
-    variance_map0, variance_map = get_variance_map(obsset, data_minus, data_plus)
+    variance_map0, variance_map = get_variance_map(obsset,
+                                                   data_minus, data_plus)
 
     hdul = obsset.get_hdul_to_write(([], data_minus))
     obsset.store("combined_image1", data=hdul, cache_only=True)
@@ -136,8 +130,12 @@ def estimate_slit_profile(obsset,
     if mode == "1d":
         from .slit_profile import estimate_slit_profile_1d
         estimate_slit_profile_1d(obsset, x1=x1, x2=x2, do_ab=do_ab)
+    elif mode == "uniform":
+        from .slit_profile import estimate_slit_profile_uniform
+        estimate_slit_profile_uniform(obsset, do_ab=do_ab)
     else:
-        raise ValueError("Unknwon mode ({}) in slit_profile estimation".format(mode))
+        msg = "Unknwon mode ({}) in slit_profile estimation".format(mode)
+        raise ValueError(msg)
 
 
 def get_wvl_header_data(obsset, wavelength_increasing_order=False):
@@ -151,10 +149,14 @@ def get_wvl_header_data(obsset, wavelength_increasing_order=False):
     if wavelength_increasing_order:
         from ..libs import iraf_helper
         header = iraf_helper.invert_order(hdu.header)
-        convert_data = lambda d: d[::-1]
+
+        def convert_data(d):
+            return d[::-1]
     else:
         header = hdu.header
-        convert_data = lambda d: d
+
+        def convert_data(d):
+            return d
 
     return header, hdu.data, convert_data
 
@@ -163,8 +165,7 @@ def store_1dspec(obsset, v_list, s_list, sn_list=None):
 
     basename_postfix = ""
 
-    wvl_header, wvl_data, convert_data = \
-                get_wvl_header_data(obsset)
+    wvl_header, wvl_data, convert_data = get_wvl_header_data(obsset)
 
     d = np.array(v_list)
     v_data = convert_data(d.astype("float32"))
@@ -198,7 +199,86 @@ def store_1dspec(obsset, v_list, s_list, sn_list=None):
                  postfix=basename_postfix)
 
 
-def extract_stellar_spec(obsset):
+def store_2dspec(obsset,
+                 conserve_flux=True,
+                 height_2dspec=0):
+
+    from .spec_extract_w_profile import ShiftedImages
+    hdul = obsset.load("WVLCOR_IMAGE")
+    shifted = ShiftedImages.from_hdul(hdul)
+
+    data_shft = shifted.image
+    variance_map_shft = shifted.variance
+
+    wvl_header, wvl_data, convert_data = get_wvl_header_data(obsset)
+
+    # wvl_header, wvl_data, convert_data = \
+    #             self.get_wvl_header_data(igr_storage,
+    #                                      extractor)
+
+    # from ..libs.load_fits import open_fits
+    # f_obj = open_fits(extractor.obj_filenames[0])
+    # f_obj[0].header.extend(wvl_header)
+
+    # # tgt_basename = extractor.pr.tgt_basename
+    # tgt_basename = mastername
+
+    # from ..libs.storage_descriptions import FLATCENTROID_SOL_JSON_DESC
+    # cent = igr_storage.load1(FLATCENTROID_SOL_JSON_DESC,
+    #                          extractor.basenames["flat_on"])
+    # fn = ("calib/primary/20140525/"
+    #       "FLAT_SDCK_20140525_0074.centroid_solutions.json")
+    # #cent = json.load(open(fn))
+    # _bottom_up_solutions = cent["bottom_up_solutions"]
+    # old_orders = extractor.get_old_orders()
+    # _o_s = dict(zip(old_orders, _bottom_up_solutions))
+    # new_bottom_up_solutions = [_o_s[o] for o in \
+    #                            extractor.orders_w_solutions]
+
+    bottom_up_solutions_ = obsset.load_resource_for("aperture_definition")
+    bottom_up_solutions = bottom_up_solutions_["bottom_up_solutions"]
+
+    helper = ResourceHelper(obsset)
+    ordermap_bpixed = helper.get("ordermap_bpixed")
+
+    from ..libs.correct_distortion import get_rectified_2dspec
+    _ = get_rectified_2dspec(data_shft,
+                             ordermap_bpixed,
+                             bottom_up_solutions,
+                             conserve_flux=conserve_flux,
+                             height=height_2dspec)
+    d0_shft_list, msk_shft_list = _
+
+    with np.errstate(invalid="ignore"):
+        d = np.array(d0_shft_list) / np.array(msk_shft_list)
+
+    hdul = obsset.get_hdul_to_write(([], convert_data(d.astype("float32"))))
+    # wvl_header.update(hdul[0].header)
+    hdul[0].header = wvl_header
+
+    obsset.store("SPEC2D_FITS", hdul)  # FIXME : add basename_postfix
+
+    # OUTPUT VAR2D, added by Kyle Kaplan Feb 25, 2015 to get variance map
+    # outputted as a datacube
+    _ = get_rectified_2dspec(variance_map_shft,
+                             ordermap_bpixed,
+                             bottom_up_solutions,
+                             conserve_flux=conserve_flux,
+                             height=height_2dspec)
+    d0_shft_list, msk_shft_list = _
+
+    with np.errstate(invalid="ignore"):
+        d = np.array(d0_shft_list) / np.array(msk_shft_list)
+
+    hdul = obsset.get_hdul_to_write(([], convert_data(d.astype("float32"))))
+    # wvl_header.update(hdul[0].header)
+    hdul[0].header = wvl_header
+
+    obsset.store("VAR2D_FITS", hdul)  # FIXME : add basename_postfix
+
+
+def extract_stellar_spec(obsset, extraction_mode="optimal", height_2dspec=0,
+                         conserve_2d_flux=True):
 
     # refactored from recipe_extract.ProcessABBABand.process
 
@@ -234,10 +314,12 @@ def extract_stellar_spec(obsset):
                                    variance_map,
                                    variance_map0,
                                    data_minus_flattened,
+                                   orderflat,
                                    ordermap, ordermap_bpixed,
                                    slitpos_map,
                                    slitoffset_map,
                                    gain,
+                                   extraction_mode=extraction_mode,
                                    debug=False)
 
     s_list, v_list, cr_mask, aux_images = _
@@ -250,13 +332,115 @@ def extract_stellar_spec(obsset):
 
             dw = np.gradient(wvl)
             pixel_per_res_element = (wvl/40000.)/dw
-            #print pixel_per_res_element[1024]
+            # print pixel_per_res_element[1024]
+            # len(pixel_per_res_element) = 2047. But we ignore it.
+
+            with np.errstate(invalid="ignore"):
+                sn = (s/v**.5)*(pixel_per_res_element**.5)
+
+            sn_list.append(sn)
+
+    store_1dspec(obsset, v_list, s_list, sn_list=sn_list)
+
+    shifted = aux_images["shifted"]
+
+    _hdul = shifted.to_hdul()
+    hdul = obsset.get_hdul_to_write(*_hdul)
+    obsset.store("WVLCOR_IMAGE", hdul)
+
+    # store_2dspec(obsset,
+    #              shifted.image,
+    #              shifted.variance,
+    #              ordermap_bpixed,
+    #              cr_mask=cr_mask,
+    #              conserve_flux=conserve_2d_flux,
+    #              height_2dspec=height_2dspec)
+
+
+def extract_extended_spec(obsset, lacosmic_thresh=0.):
+
+    # refactored from recipe_extract.ProcessABBABand.process
+
+    helper = ResourceHelper(obsset)
+
+    ap = helper.get("aperture")
+
+    data_minus = obsset.load_fits_sci_hdu("COMBINED_IMAGE1").data
+
+    orderflat = helper.get("orderflat")
+    data_minus_flattened = data_minus / orderflat
+
+    variance_map = obsset.load_fits_sci_hdu("combined_variance1").data
+    variance_map0 = obsset.load_fits_sci_hdu("combined_variance0").data
+
+    slitoffset_map = helper.get("slitoffsetmap")
+
+    ordermap = helper.get("ordermap")
+    ordermap_bpixed = helper.get("ordermap_bpixed")
+    slitpos_map = helper.get("slitposmap")
+
+    wvl_solutions = helper.get("wvl_solutions")
+
+    # from .slit_profile import get_profile_func
+    # profile = get_profile_func(obsset)
+
+    gain = float(obsset.rs.query_ref_value("gain"))
+
+    profile_map = obsset.load_fits_sci_hdu("slitprofile_fits").data
+
+    from .spec_extract_w_profile import extract_spec_uniform
+    # _ = extract_spec_using_profile(ap, profile_map,
+    #                                variance_map,
+    #                                variance_map0,
+    #                                data_minus_flattened,
+    #                                ordermap, ordermap_bpixed,
+    #                                slitpos_map,
+    #                                slitoffset_map,
+    #                                gain,
+    #                                debug=False)
+    _ = extract_spec_uniform(ap, profile_map,
+                             variance_map,
+                             variance_map0,
+                             data_minus_flattened,
+                             data_minus, orderflat,  #
+                             ordermap, ordermap_bpixed,
+                             slitpos_map,
+                             slitoffset_map,
+                             gain,
+                             lacosmic_thresh=lacosmic_thresh,
+                             debug=False)
+
+    s_list, v_list, cr_mask, aux_images = _
+
+    if 1:
+        # calculate S/N per resolution
+        sn_list = []
+        for wvl, s, v in zip(wvl_solutions,
+                             s_list, v_list):
+
+            dw = np.gradient(wvl)
+            pixel_per_res_element = (wvl/40000.)/dw
+            # print pixel_per_res_element[1024]
             # len(pixel_per_res_element) = 2047. But we ignore it.
             sn = (s/v**.5)*(pixel_per_res_element**.5)
 
             sn_list.append(sn)
 
     store_1dspec(obsset, v_list, s_list, sn_list=sn_list)
+
+    shifted = aux_images["shifted"]
+
+    _hdul = shifted.to_hdul()
+    hdul = obsset.get_hdul_to_write(*_hdul)
+    obsset.store("WVLCOR_IMAGE", hdul)
+
+    # store_2dspec(obsset,
+    #              shifted.image,
+    #              shifted.variance_map,
+    #              ordermap_bpixed,
+    #              cr_mask=cr_mask,
+    #              conserve_flux=conserve_2d_flux,
+    #              height_2dspec=height_2dspec)
 
 
 def _derive_data_for_slit_profile(ap, data_minus_flattened,
@@ -279,11 +463,11 @@ def _derive_data_for_slit_profile(ap, data_minus_flattened,
 
     # correction factors for aperture width
     ds0 = np.array([ap(o, ap.xi, 1.) - ap(o, ap.xi, 0.) for o in ap.orders])
-    ds = ds0 / 50. # 50 is just a typical width.
+    ds = ds0 / 50.  # 50 is just a typical width.
 
     # try to estimate threshold to mask the spectra
-    s_max = np.nanpercentile(spec1d / ds0, 90) # mean counts per pixel
-    s_cut = 0.03 * s_max # 3 % of s_max
+    s_max = np.nanpercentile(spec1d / ds0, 90)  # mean counts per pixel
+    s_cut = 0.03 * s_max  # 3 % of s_max
 
     ss_cut = s_cut * ds0
     with np.errstate(invalid="ignore"):
@@ -303,7 +487,7 @@ def _get_slit_profile_options(slit_profile_options):
     stddev_list = slit_profile_options.pop("stddev_list", None)
     if slit_profile_options:
         msgs = ["unrecognized options: %s"
-                % self.slit_profile_options,
+                % slit_profile_options,
                 "\n",
                 "Available options are: n_comp, stddev_list"]
 
@@ -328,7 +512,7 @@ def _estimate_slit_profile_glist(ap, ods,
 
     # omap, slitpos = extractor.ordermap_bpixed, extractor.slitpos_map
 
-    msk1 = np.isfinite(ods) # & bias_mask
+    msk1 = np.isfinite(ods)  # & bias_mask
 
     x_min, x_max = x1, x2
     y_min, y_max = 128, 2048-128
@@ -341,8 +525,7 @@ def _estimate_slit_profile_glist(ap, ods,
     msk2[:, :x_min] = False
     msk2[:, x_max:] = False
 
-
-    msk = msk1 & msk2 # & (slitpos < 0.5)
+    msk = msk1 & msk2  # & (slitpos < 0.5)
 
     ods_mskd = ods[msk]
     s_mskd = slitpos_map[msk]
@@ -362,12 +545,15 @@ def _run_order_main(args):
     xmsk = (800 < x) & (x < 2048-800)
 
     # check if there is enough pixels to derive new slit profile
-    if len(s[xmsk]) > 8000: # FIXME : ?? not sure if this was what I meant?
-        from ..libs.slit_profile_model import derive_multi_gaussian_slit_profile
+    if len(s[xmsk]) > 8000:  # FIXME : ?? not sure if this was what I meant?
+        from ..libs.slit_profile_model import (
+            derive_multi_gaussian_slit_profile
+        )
 
-        g_list = derive_multi_gaussian_slit_profile(y[xmsk], s[xmsk],
-                                                    n_comp=4,
-                                                    stddev_list=[0.02, 0.04, 0.1, 0.2])
+        g_list = derive_multi_gaussian_slit_profile(
+            y[xmsk], s[xmsk],
+            n_comp=4, stddev_list=[0.02, 0.04, 0.1, 0.2]
+        )
     else:
         g_list = g_list0
 
@@ -429,7 +615,7 @@ def _estimate_slit_profile_gauss_2d(ap, ods, g_list0,
                                     n_process=1):
     _, xx = np.indices(ods.shape)
 
-    msk1 = np.isfinite(ods) # & np.isfinite(ode) & bias_mask
+    msk1 = np.isfinite(ods)  # & np.isfinite(ode) & bias_mask
 
     from ..libs.slit_profile_2d_model import Logger
     logger = Logger("test.pdf")
@@ -453,8 +639,9 @@ def _estimate_slit_profile_gauss_2d(ap, ods, g_list0,
 
     #     # check if there is enough pixels to derive new slit profile
     #     if len(s[xmsk]) > 8000:
-    #         from igrins.libs.slit_profile_model import derive_multi_gaussian_slit_profile
-
+    #         from igrins.libs.slit_profile_model import (
+    #                  derive_multi_gaussian_slit_profile
+    #         )
     #         g_list = derive_multi_gaussian_slit_profile(y[xmsk], s[xmsk])
     #     else:
     #         g_list = g_list0
@@ -473,7 +660,8 @@ def _estimate_slit_profile_gauss_2d(ap, ods, g_list0,
     #         debug_func = slit_profile_model.get_debug_func()
     #         debug_func(g_list, g_list, y, s)
 
-    #     from igrins.libs.slit_profile_2d_model import get_varying_conv_gaussian_model
+    #     from igrins.libs.slit_profile_2d_model import
+    #          get_varying_conv_gaussian_model
     #     Varying_Conv_Gaussian_Model = get_varying_conv_gaussian_model(g_list)
     #     vcg = Varying_Conv_Gaussian_Model()
 
@@ -514,7 +702,7 @@ def _estimate_slit_profile_gauss_2d(ap, ods, g_list0,
     for o in ap.orders:
         msk2 = ordermap_bpixed == o
 
-        msk = msk1 & msk2 # & (slitpos < 0.5)
+        msk = msk1 & msk2  # & (slitpos < 0.5)
 
         x = xx[msk]
         y = slitpos_map[msk]
@@ -525,11 +713,10 @@ def _estimate_slit_profile_gauss_2d(ap, ods, g_list0,
 
         args.append((o, x, y, s, g_list0, logi))
 
-
     # n_process = 4
     if n_process > 1:
         from multiprocessing import Pool
-        #from multiprocessing.pool import ThreadPool as Pool
+        # from multiprocessing.pool import ThreadPool as Pool
         p = Pool(n_process)
         _ = p.map(_run_order_main, args)
     else:
@@ -545,7 +732,8 @@ def _estimate_slit_profile_gauss_2d(ap, ods, g_list0,
 
     func_dict = {}
     for o, v in zip(ap.orders, _):
-        if v is None: continue
+        if v is None:
+            continue
 
         g_list_parameters, vcg_parameters = v
         g_list = type(g_list0)()
@@ -614,7 +802,8 @@ def update_slit_profile(obsset, slit_profile_mode="gauss2d", frac_slit=None):
         def profile(order, x_pixel, slitpos):
             return glist(slitpos)
     else:
-        raise ValueError("unexpected slit_profile_mode: %s" % self.slit_profile_mode)
+        msg = "unexpected slit_profile_mode: %s" % slit_profile_mode
+        raise ValueError(msg)
 
     # profile_map = extractor.make_profile_map(ap,
     #                                          profile,
@@ -629,35 +818,32 @@ def update_slit_profile(obsset, slit_profile_mode="gauss2d", frac_slit=None):
     obsset.store("slitprofile_fits", hdul, cache_only=True)
 
 
-if 0:
-                    # _ = self._extract_spec_using_profile(extractor,
-                    #                                      ap, profile_map,
-                    #                                      variance_map,
-                    #                                      variance_map0,
-                    #                                      data_minus_flattened,
-                    #                                      ordermap,
-                    #                                      slitpos_map,
-                    #                                      slitoffset_map,
-                    #                                      debug=False)
+# if 0:
+#                 # _ = self._extract_spec_using_profile(extractor,
+#                 #                                      ap, profile_map,
+#                 #                                      variance_map,
+#                 #                                      variance_map0,
+#                 #                                      data_minus_flattened,
+#                 #                                      ordermap,
+#                 #                                      slitpos_map,
+#                 #                                      slitoffset_map,
+#                 #                                      debug=False)
 
-                    # s_list, v_list, cr_mask, aux_images = _
-
-
-                sig_map = aux_images["sig_map"]
-                synth_map = aux_images["synth_map"]
-                shifted = aux_images["shifted"]
-
-                if 0: # save aux files
-                    synth_map = ap.make_synth_map(ordermap, slitpos_map,
-                                                  profile_map, s_list,
-                                                  slitoffset_map=slitoffset_map
-                                                  )
-
-                    shifted = extractor.get_shifted_all(ap, profile_map,
-                                                        variance_map,
-                                                        synth_map,
-                                                        slitoffset_map,
-                                                        debug=False)
+#                 # s_list, v_list, cr_mask, aux_images = _
 
 
+#                 sig_map = aux_images["sig_map"]
+#                 synth_map = aux_images["synth_map"]
+#                 shifted = aux_images["shifted"]
 
+#                 if 0: # save aux files
+#                     synth_map = ap.make_synth_map(ordermap, slitpos_map,
+#                                                   profile_map, s_list,
+#                                                   slitoffset_map=slitoffset_map
+#                                                   )
+
+#                     shifted = extractor.get_shifted_all(ap, profile_map,
+#                                                         variance_map,
+#                                                         synth_map,
+#                                                         slitoffset_map,
+#                                                         debug=False)

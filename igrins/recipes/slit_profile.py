@@ -2,7 +2,6 @@ import numpy as np
 from scipy.interpolate import UnivariateSpline
 
 
-
 def _get_norm_profile_ab(bins, hh0):
     peak1, peak2 = max(hh0), -min(hh0)
     profile_x = 0.5*(bins[1:]+bins[:-1])
@@ -181,3 +180,39 @@ def get_profile_func(obsset):
     return _get_profile_func(slit_profile_dict)
 
 
+def get_profile_func_extended(obsset, do_ab):
+    if do_ab:
+        delta = 0.01
+        profile_ = UnivariateSpline([0, 0.5-delta, 0.5+delta, 1],
+                                    [1., 1., -1., -1.],
+                                    k=1, s=0,
+                                    bbox=[0, 1])
+    else:
+        profile_ = UnivariateSpline([0, 1], [1., 1.],
+                                    k=1, s=0,
+                                    bbox=[0, 1])
+
+    def profile(o, x, slitpos):
+        return profile_(slitpos)
+
+    return profile
+
+
+def estimate_slit_profile_uniform(obsset,
+                                  do_ab=True):
+
+    from ..libs.resource_helper_igrins import ResourceHelper
+    helper = ResourceHelper(obsset)
+
+    ap = helper.get("aperture")
+
+    ordermap = helper.get("ordermap")
+    slitpos_map = helper.get("slitposmap")
+
+    profile = get_profile_func_extended(obsset, do_ab=do_ab)
+    profile_map = make_slitprofile_map(ap, profile,
+                                       ordermap, slitpos_map,
+                                       frac_slit=None)
+
+    hdul = obsset.get_hdul_to_write(([], profile_map))
+    obsset.store("slitprofile_fits", hdul, cache_only=True)

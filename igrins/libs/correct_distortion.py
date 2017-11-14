@@ -30,7 +30,7 @@ class ShiftX(object):
         return d0_shft
 
 
-def get_flattened_2dspec(data, order_map, bottom_up_solutions,
+def get_rectified_2dspec(data, order_map, bottom_up_solutions,
                          conserve_flux=False, height=0):
 
     #sl = slice(0, 2048), slice(0, 2048)

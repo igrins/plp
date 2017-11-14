@@ -247,12 +247,11 @@ class Apertures(object):
 
             sum_weighted_variance = np.nansum(map_weighted_variance, axis=0)
 
-            s = sum_weighted_spectra1 / sum_weights1
+            with np.errstate(invalid="ignore"):
+                s = sum_weighted_spectra1 / sum_weights1
+                v = sum_weighted_variance / sum_weights1
 
             s_list.append(s)
-
-            v = sum_weighted_variance / sum_weights1
-
             v_list.append(v)
 
         return s_list, v_list
@@ -269,11 +268,11 @@ class Apertures(object):
         v_list = []
         slices = ni.find_objects(ordermap_bpixed)
 
-        SAVE_PROFILE = False
-        if SAVE_PROFILE:
-            import astropy.io.fits as pyfits
-            hl = pyfits.HDUList()
-            hl.append(pyfits.PrimaryHDU())
+        # SAVE_PROFILE = False
+        # if SAVE_PROFILE:
+        #     import astropy.io.fits as pyfits
+        #     hl = pyfits.HDUList()
+        #     hl.append(pyfits.PrimaryHDU())
 
         for o in self.orders:
             sl = slices[o-1][0], slice(0, 2048)
@@ -298,7 +297,10 @@ class Apertures(object):
             map_weighted_spectra1[~msk] = 0.
             map_weights1[~msk] = 0.
 
-            mmm = np.isfinite(map_weighted_spectra1) & np.isfinite(map_weights1) & np.isfinite(profile_map1)
+            mmm = (np.isfinite(map_weighted_spectra1)
+                   & np.isfinite(map_weights1)
+                   & np.isfinite(profile_map1))
+
             map_weighted_spectra1[~mmm] = 0.
             map_weights1[~mmm] = 0.
             profile_map1[~mmm] = 0.
@@ -333,16 +335,15 @@ class Apertures(object):
             s_list.append(s)
             v_list.append(v)
 
-            if SAVE_PROFILE:
-                hl.append(pyfits.ImageHDU(np.array([sum_weighted_spectra1,
-                                                    sum_weights1,
-                                                    sum_profile1,
-                                                    ])))
+            # if SAVE_PROFILE:
+            #     hl.append(pyfits.ImageHDU(np.array([sum_weighted_spectra1,
+            #                                         sum_weights1,
+            #                                         sum_profile1,
+            #                                         ])))
 
+        # if SAVE_PROFILE:
+        #     hl.writeto("test_profile.fits", clobber=True)
 
-
-        if SAVE_PROFILE:
-            hl.writeto("test_profile.fits", clobber=True)
         return s_list, v_list
 
 
