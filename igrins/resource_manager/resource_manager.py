@@ -33,6 +33,12 @@ class ResourceStack(object):
     def get_resource_spec(self):
         return self._resource_spec
 
+    def save_pickle(self, fo):
+        self.context_stack.garbage_collect()
+        import pickle
+        pickle.dump(self, fo)
+
+
     # CONTEXT
 
     def new_context(self, context_name, reset_read_cache=False):

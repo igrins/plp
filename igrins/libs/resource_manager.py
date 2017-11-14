@@ -9,7 +9,8 @@ from ..resource_manager.resource_db_igrins \
 
 from .storage_descriptions import load_resource_def
 
-from .master_calib import query_ref_value, query_ref_data_path
+from .master_calib import (query_ref_value, query_ref_data_path,
+                           get_ref_loader)
 
 
 class IGRINSRefLoader(object):
@@ -30,7 +31,7 @@ class IGRINSRefLoader(object):
 
         fn = query_ref_data_path(self.config, self.band, kind)
         loader = get_ref_loader(fn)
-        d =  loader(fn)
+        d = loader(fn)
 
         if get_path:
             return fn, d

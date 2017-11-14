@@ -154,6 +154,7 @@ _resource_definitions = dict(
     orders=("register", "ORDERS_JSON"),
     wvlsol_v0=("register", "WVLSOL_V0_JSON"),
     order_flat=("register", "ORDER_FLAT_IM"),
+    order_flat_json=("register", "ORDER_FLAT_JSON"),
     #
     ordermap=("distortion", "ORDERMAP_FITS"),
     slitposmap=("distortion", "SLITPOSMAP_FITS"),

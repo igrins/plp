@@ -35,12 +35,12 @@ def apply_steps(obsset, steps, nskip=0, save_context_name=None):
             step(obsset)
         except:
             obsset.rs.abort_context(context_name)
-            if save_context_name is not None:
-                import cPickle as pickle
-                pickle.dump(obsset.rs, open(save_context_name, "wb"))
             raise
         else:
             obsset.rs.close_context(context_name)
+
+    if save_context_name is not None:
+        obsset.rs.save_pickle(open(save_context_name, "wb"))
 
 
 def get_obsset(utdate, recipe_name, band,

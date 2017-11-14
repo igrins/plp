@@ -76,8 +76,21 @@ class ResourceContextStack():
         self.default_read_cache = ReadCache(self.storage)
         self.read_cache = self.default_read_cache
 
+    def garbage_collect(self):
+        self._reset_read_cache()
+
+        for context in self.context_list:
+            kill_list = []
+            for k, (item_type, buf) in context.iter_cache():
+                if k not in context._cache_only_items:
+                    kill_list.append(k)
+            for k in kill_list:
+                print("kill {}/{}".format(context.name, k))
+                del context._cache[k]
+
     def new_context(self, context_name, reset_read_cache=False):
-        self.current = ResourceContext(context_name, read_cache=self.read_cache)
+        self.current = ResourceContext(context_name)
+                                       # read_cache=self.read_cache)
         self.context_list.append(self.current)
 
         if reset_read_cache or (self.read_cache is None):

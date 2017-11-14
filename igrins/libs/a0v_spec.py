@@ -33,18 +33,15 @@ class TelluricTransmission(object):
 
         return spl
 
-        #trans = spl(wvl_a0v[mask_igr])
-
-
-
 
 class A0VSpec(object):
-    def __init__(self, config):
 
-        from .master_calib import load_ref_data
-        d = load_ref_data(config, "", "VEGA_SPEC")
+    def __init__(self, vega_data):
+        # vega_data : array of [wvl, flux, cont]
+        # from .master_calib import load_ref_data
+        # d = load_ref_data(config, "", "VEGA_SPEC")
 
-        wvl, flux, cont = (d[:,i] for i in [0, 1, 2])
+        wvl, flux, cont = (vega_data[:, i] for i in [0, 1, 2])
         wvl = wvl/1000.
 
         self.wvl = wvl
