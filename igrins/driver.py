@@ -7,18 +7,26 @@ class Step():
         self.f = f
         self.kwargs = kwargs
 
+    def apply(self, obsset, kwargs):
+        kwargs0 = self.kwargs.copy()
+        for k in kwargs0:
+            if k in kwargs:
+                kwargs0[k] = kwargs[k]
+
+        self.f(obsset, **kwargs0)
+
     def __call__(self, obsset):
         self.f(obsset, **self.kwargs)
 
 
-def apply_steps(obsset, steps, nskip=0, save_context_name=None):
+def apply_steps(obsset, steps, kwargs=None, nskip=0):
 
-    # STEP 1 :
-    ## make combined image
+    if kwargs is None:
+        kwargs = {}
 
     n_steps = len(steps)
 
-    print("[{}]".format(obsset.obsids[0]))
+    print("[{}]".format(obsset))
     for context_id, step in enumerate(steps):
         if hasattr(step, "name"):
             context_name = step.name
@@ -28,19 +36,20 @@ def apply_steps(obsset, steps, nskip=0, save_context_name=None):
         if context_id < nskip:
             continue
 
-        obsset.rs.new_context(context_name, reset_read_cache=True)
+        obsset.new_context(context_name)
         print("  * ({}/{}) {}...".format(context_id + 1,
                                          n_steps, context_name))
         try:
-            step(obsset)
+            # step(obsset)
+            step.apply(obsset, kwargs)
         except:
-            obsset.rs.abort_context(context_name)
+            obsset.abort_context(context_name)
             raise
         else:
-            obsset.rs.close_context(context_name)
+            obsset.close_context(context_name)
 
-    if save_context_name is not None:
-        obsset.rs.save_pickle(open(save_context_name, "wb"))
+    # if save_context_name is not None:
+    #     obsset.rs.save_pickle(open(save_context_name, "wb"))
 
 
 def get_obsset(utdate, recipe_name, band,

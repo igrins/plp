@@ -501,7 +501,6 @@ def store_db(helper, band, obsids_off, obsids_on):
     store_db_off(helper, band, obsids_off)
     store_db_on(helper, band, obsids_on)
 
-    
         # from igrins.libs.products import ProductDB
         # flatoff_db_name = get_filename("PRIMARY_CALIB_PATH",
         #                                "flat_off.db")

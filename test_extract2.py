@@ -1,6 +1,7 @@
 from igrins.driver import get_obsset, apply_steps
 import igrins.recipes.recipe_extract4 as extract
 
+
 def test_main():
     config_name = "recipe.config.igrins128"
 
@@ -29,10 +30,11 @@ def test_main():
                         saved_context_name=saved_context_name)
 
     apply_steps(obsset, extract.steps[:],
-                nskip=nskip,
-                save_context_name=save_context_name)
+                nskip=nskip)
+
+    if save_context_name is not None:
+        obsset.rs.save_pickle(open(save_context_name, "wb"))
 
 
 if __name__ == "__main__":
     test_main()
-
