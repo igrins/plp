@@ -1,3 +1,3 @@
-from .pipeline_helper import create_pipeline
+from .steps import create_pipeline_from_steps
 
-__ALL__ = ["create_pipeline"]
+__ALL__ = ["create_pipeline_from_steps"]

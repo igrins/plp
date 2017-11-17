@@ -11,6 +11,7 @@ from ..libs.stsci_helper import stsci_median
 
 from igrins import DESCS
 
+
 def combine_flat_off(obsset, destripe=True):
     # destripe=True):
 
@@ -88,13 +89,13 @@ DeadpixMaskResult = namedtuple("DeadpixMaskResult", ["flat_normed",
                                                      "deadpix_mask",
                                                      "flat_info"])
 
+
 def _make_deadpix_mask(flat_on, flat_std, hotpix_mask,
                        deadpix_mask_old=None,
                        deadpix_thresh=0.6, smooth_size=9):
 
     # normalize it
     from ..libs.trace_flat import (get_flat_normalization,
-                                   get_flat_mask,
                                    get_flat_mask_auto,
                                    estimate_bg_mean_std)
 
@@ -104,12 +105,13 @@ def _make_deadpix_mask(flat_on, flat_std, hotpix_mask,
 
     flat_normed = flat_on / norm_factor
     flat_std_normed = ni.median_filter(flat_std / norm_factor,
-                                       size=(3,3))
+                                       size=(3, 3))
     bg_fwhm_norm = bg_fwhm/norm_factor
 
     # mask out bpix
-    flat_bpixed = flat_normed.astype("d")  # by default, astype
-                                           # returns new array.
+    flat_bpixed = flat_normed.astype("d")
+    # by default, astype returns new array.
+
     flat_bpixed[hotpix_mask] = np.nan
 
     flat_mask = get_flat_mask_auto(flat_bpixed)
@@ -380,7 +382,6 @@ def store_qa(obsset_on, obsset_off):
 
     figlist_to_pngs(dest_dir, [fig1, fig2, fig3])
 
-
     # if 1: # now trace the orders
 
     #     #del trace_solution_products["bottom_up_solutions"]
@@ -390,7 +391,8 @@ def store_qa(obsset_on, obsset_off):
 
 ###
 
-from ..driver import Step
+
+from ..pipeline.steps import Step
 
 
 steps = [Step("Combine Flat-Off", combine_flat_off),

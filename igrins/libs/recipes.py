@@ -168,6 +168,67 @@ class Recipes(object):
         return selected
 
 
+class Recipes2(object):
+    def __init__(self, fn, allow_duplicate_groups=False):
+        self._fn = fn
+        self.recipe_list = load_recipe_list(fn,
+                                            allow_duplicate_groups)
+
+    # def select_multi(self, recipe_names, starting_obsids=None):
+    #     selected = []
+    #     for recipe_name in recipe_names:
+    #         _ = self.select_fnmatch(recipe_name, starting_obsids)
+    #         selected.extend(_)
+
+    # def select_fnmatch(self, recipe_fnmatch, starting_obsids=None):
+
+    #     if isinstance(recipe_fnmatch, str):
+    #         recipe_fnmatch_list = [recipe_fnmatch]
+    #     else:
+    #         recipe_fnmatch_list = recipe_fnmatch
+
+    #     p_match = get_multi_fnmatch_pattern(recipe_fnmatch_list)
+
+    #     from collections import OrderedDict
+    #     dict_by_1st_obsid = OrderedDict((recipe_item[1][0], recipe_item)
+    #                                     for recipe_item in self.recipe_list
+    #                                     if p_match(recipe_item[0]))
+
+    #     if starting_obsids is None:
+    #         starting_obsids = dict_by_1st_obsid.keys()
+
+    #     selected = [dict_by_1st_obsid[s1] for s1 in starting_obsids]
+
+    #     return selected
+
+    def select_fnmatch_by_groups(self, recipe_fnmatch, groups=None):
+
+        if isinstance(recipe_fnmatch, str):
+            recipe_fnmatch_list = [recipe_fnmatch]
+        else:
+            recipe_fnmatch_list = recipe_fnmatch
+
+        p_match = get_multi_fnmatch_pattern(recipe_fnmatch_list)
+
+        _ = []
+        for recipe_item in self.recipe_list:
+            for recipe_name in recipe_item[0].split("|"):
+                if p_match(recipe_name):
+                    recipe_item_new = (recipe_name, ) + recipe_item[1:]
+                    _.append((recipe_item[-1]["GROUP1"],
+                              recipe_item_new))
+
+        # from collections import OrderedDict
+        # dict_by_group = OrderedDict(_)
+
+        if groups is None:
+            selected = [s1[1] for s1 in _]
+        else:
+            selected = [s1[1] for s1 in _ if s1[0] in groups]
+
+        return selected
+
+
 def load_recipe_as_dict_numpy(fn):
     dtype = [('OBJNAME', 'S128'),
              ('OBJTYPE', 'S128'),
