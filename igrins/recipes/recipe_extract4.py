@@ -25,43 +25,31 @@ from .a0v_flatten import flatten_a0v
 from ..driver import Step
 
 
-steps = [Step("Make Combined Images", make_combined_images),
-         # Step("Subtract Interorder Background",
-         # subtract_interorder_background),
-         Step("Estimate slit profile", estimate_slit_profile,
-              mode="1d"),
-         # Step("X-shift images", xshift_images),
-         Step("Extract spectra (for stellar)", extract_stellar_spec,
-              extraction_mode="simple"),
-         Step("Generate Rectified 2d-spec", store_2dspec),
-         Step("Flatten A0V", flatten_a0v),
-         # Step("Identify lines in multi-slit", identify_multiline),
-         # Step("Fit wvlsol volume", volume_fit),
-         # Step("Make Ordermap/Slitposmap", make_ordermap_slitposmap),
-         # Step("Make Slitoffset map", make_slitoffsetmap),
-         # Step("Derive wvlsol", derive_wvlsol),
-         # Step("Update distortion db", update_distortion_db),
-         # Step("Update wvlsol db", update_wvlsol_db),
-         # Step("Make wvlmap", make_wavelength_map),
-         # Step("Save WAT header", save_wat_header),
+steps_stellar = [Step("Make Combined Images", make_combined_images),
+                 Step("Estimate slit profile", estimate_slit_profile,
+                      slit_profile_mode="1d"),
+                 # Step("Extract spectra (for extendeded)",
+                 #      extract_extended_spec),
+                 Step("Extract spectra (for stellar)",
+                      extract_stellar_spec,
+                      extraction_mode="optimal"),
+                 Step("Generate Rectified 2d-spec", store_2dspec),
 ]
 
-# extended
-steps2 = [Step("Make Combined Images", make_combined_images),
-         Step("Estimate slit profile", estimate_slit_profile,
-              mode="uniform"),
-         Step("Extract spectra (for extendeded)", extract_extended_spec),
-         Step("Generate Rectified 2d-spec", store_2dspec),
-         # Step("Update slit profile", update_slit_profile),
-         # Step("Identify lines in multi-slit", identify_multiline),
-         # Step("Fit wvlsol volume", volume_fit),
-         # Step("Make Ordermap/Slitposmap", make_ordermap_slitposmap),
-         # Step("Make Slitoffset map", make_slitoffsetmap),
-         # Step("Derive wvlsol", derive_wvlsol),
-         # Step("Update distortion db", update_distortion_db),
-         # Step("Update wvlsol db", update_wvlsol_db),
-         # Step("Make wvlmap", make_wavelength_map),
-         # Step("Save WAT header", save_wat_header),
+
+steps_a0v = steps_stellar + [Step("Flatten A0V", flatten_a0v),
+]
+
+
+steps_extended = [Step("Make Combined Images", make_combined_images),
+                  Step("Estimate slit profile", estimate_slit_profile,
+                       slit_profile_mode="uniform"),
+                  Step("Extract spectra (for extendeded)",
+                       extract_extended_spec,
+                       extraction_mode="simple"),
+                  # Step("Extract spectra (for stellar)",
+                  #      extract_stellar_spec),
+                  Step("Generate Rectified 2d-spec", store_2dspec),
 ]
 
 

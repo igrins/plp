@@ -1,5 +1,5 @@
 from .argh_helper import arg
-from .driver import get_obsset  # , apply_steps
+from .driver import get_obsset, get_obsset_from_context  # , apply_steps
 from .steps import apply_steps
 
 
@@ -57,22 +57,52 @@ def iter_obsset(replace_name_fnmatch,
 driver_args = [arg("-b", "--bands", default="HK"),
                arg("-g", "--groups", default=None),
                arg("-c", "--config-file", default=None),
-               arg("-v", "--verbose", default=None),
+               arg("-v", "--verbose", default=0),
+               arg("--resume-from-context-file", default=None),
+               arg("--save-context-on-exception", default=False),
                arg("-d", "--debug", default=False)]
 
 
 def driver_func(steps, recipe_name_fnmatch, obsdate,
                 bands="HK", groupname=None,
                 config_file=None, debug=False, verbose=None,
+                resume_from_context_file=None, save_context_on_exception=False,
                 **kwargs):
+
+    if resume_from_context_file is not None:
+        import pickle
+        p = pickle.load(open(resume_from_context_file, "rb"))
+        resource_context = p["resource_context"]
+        context_id = p["context_id"]
+        obsset_desc = p["obsset_desc"]
+
+        obsset = get_obsset_from_context(obsset_desc, resource_context)
+        apply_steps(obsset, steps,
+                    nskip=context_id, kwargs=kwargs)
+        return
 
     for obsset in iter_obsset(recipe_name_fnmatch, obsdate,
                               config_file, bands, groupname):
-        apply_steps(obsset, steps, nskip=0, kwargs=kwargs)
-        # print(obsset)
+        context_id = apply_steps(obsset, steps, nskip=0, kwargs=kwargs)
 
+        if context_id is not None:  # if an exception is raised
+            obsset_desc = obsset.get_descriptions()
+            print("execution failed during step {context_id} of {obsset_desc}"
+                  .format(context_id=context_id + 1, obsset_desc=obsset_desc))
+            if save_context_on_exception:
+                obsset.rs.context_stack.garbage_collect()
+                p = dict(obsdate=obsdate,
+                         resource_context=obsset.rs,
+                         obsset_desc=obsset_desc,
+                         context_id=context_id
+                )
 
-
+                import pickle
+                pickle.dump(p, open("obsset_context.pickle", "wb"))
+            return
+        else:
+            pass
+        # print("No error")
 
 # def execute_recipe(obsdate, recipe_name, **kwargs):
 #     config_name = "recipe.config.igrins128"

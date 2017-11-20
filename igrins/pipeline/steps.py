@@ -43,11 +43,12 @@ def apply_steps(obsset, steps, kwargs=None, nskip=0):
         try:
             # step(obsset)
             step.apply(obsset, kwargs)
+            obsset.close_context(context_name)
         except:
             obsset.abort_context(context_name)
-            raise
-        else:
-            obsset.close_context(context_name)
+            import traceback
+            traceback.print_exc()
+            return context_id
 
     # if save_context_name is not None:
     #     obsset.rs.save_pickle(open(save_context_name, "wb"))

@@ -30,3 +30,14 @@ def get_obsset(utdate, recipe_name, band,
     return obsset
 
 
+def get_obsset_from_context(obsset_desc, resource_manager):
+
+    recipe_name = obsset_desc["recipe_name"]
+    obsids = obsset_desc["obsids"]
+    frametypes = obsset_desc["frametypes"]
+    groupname = obsset_desc["groupname"]
+    from ..libs.obs_set2 import ObsSet
+    obsset = ObsSet(resource_manager, recipe_name, obsids, frametypes,
+                    groupname=groupname)  # ``, recipe_entry=recipe_entry)
+
+    return obsset

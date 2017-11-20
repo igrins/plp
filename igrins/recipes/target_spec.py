@@ -126,15 +126,16 @@ def subtract_interorder_background(obsset, di=24, min_pixel=40):
 
 def estimate_slit_profile(obsset,
                           x1=800, x2=2048-800,
-                          do_ab=True, mode="1d"):
-    if mode == "1d":
+                          do_ab=True, slit_profile_mode="1d"):
+    if slit_profile_mode == "1d":
         from .slit_profile import estimate_slit_profile_1d
         estimate_slit_profile_1d(obsset, x1=x1, x2=x2, do_ab=do_ab)
-    elif mode == "uniform":
+    elif slit_profile_mode == "uniform":
         from .slit_profile import estimate_slit_profile_uniform
         estimate_slit_profile_uniform(obsset, do_ab=do_ab)
     else:
-        msg = "Unknwon mode ({}) in slit_profile estimation".format(mode)
+        msg = ("Unknwon mode ({}) in slit_profile estimation"
+               .format(slit_profile_mode))
         raise ValueError(msg)
 
 
@@ -158,7 +159,7 @@ def get_wvl_header_data(obsset, wavelength_increasing_order=False):
         def convert_data(d):
             return d
 
-    return header, hdu.data, convert_data
+    return header.copy(), hdu.data, convert_data
 
 
 def store_1dspec(obsset, v_list, s_list, sn_list=None):
@@ -389,15 +390,6 @@ def extract_extended_spec(obsset, lacosmic_thresh=0.):
     profile_map = obsset.load_fits_sci_hdu("slitprofile_fits").data
 
     from .spec_extract_w_profile import extract_spec_uniform
-    # _ = extract_spec_using_profile(ap, profile_map,
-    #                                variance_map,
-    #                                variance_map0,
-    #                                data_minus_flattened,
-    #                                ordermap, ordermap_bpixed,
-    #                                slitpos_map,
-    #                                slitoffset_map,
-    #                                gain,
-    #                                debug=False)
     _ = extract_spec_uniform(ap, profile_map,
                              variance_map,
                              variance_map0,

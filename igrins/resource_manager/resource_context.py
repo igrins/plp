@@ -108,6 +108,9 @@ class ResourceContextStack():
         if reset_read_cache:
             self._reset_read_cache()
 
+        self.current.close()
+        self.current = None
+
     def close_context(self):
         try:
             for k, (item_type, buf) in self.current.iter_cache():
