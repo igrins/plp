@@ -1,37 +1,33 @@
-# This is to use new framework. Let's use this to measure flexure
-# between emission spectra (e.g., sky, UNe, etc.)
-
-#import os
 from __future__ import print_function
 
+from ..procedures.sky_spec import (make_combined_image_sky,
+                                   extract_spectra_multi)
+from ..procedures.process_identify_multiline import identify_multiline
+from ..procedures.process_wvlsol_volume_fit import volume_fit
 
-from .sky_spec import make_combined_image_sky, extract_spectra_multi
-from .process_identify_multiline import identify_multiline
-from .process_wvlsol_volume_fit import volume_fit
 
+from ..procedures.generate_wvlsol_maps import (make_ordermap_slitposmap,
+                                               make_slitoffsetmap,
+                                               make_wavelength_map)
 
-from .generate_wvlsol_maps import make_ordermap_slitposmap
-from .generate_wvlsol_maps import make_slitoffsetmap
-
-from .process_derive_wvlsol import derive_wvlsol
+from ..procedures.process_derive_wvlsol import derive_wvlsol
 
 # update_distortion_db : see below
 # update_wvlsol_db : see below
 
-from .generate_wvlsol_maps import make_wavelength_map
-from .process_save_wat_header import save_wat_header
+from ..procedures.process_save_wat_header import save_wat_header
+
+from ..pipeline.steps import Step
 
 
 def update_distortion_db(obsset):
 
-    db = obsset.add_to_db("distortion")
+    obsset.add_to_db("distortion")
 
 
 def update_wvlsol_db(obsset):
 
-    db = obsset.add_to_db("wvlsol")
-
-from ..pipeline.steps import Step
+    obsset.add_to_db("wvlsol")
 
 
 steps = [Step("Make Combined Sky", make_combined_image_sky),

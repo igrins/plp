@@ -15,8 +15,8 @@ p_extract = re.compile(r'(\w+)-(ab|onoff)')
 def get_pipeline_steps(recipe_name):
     import igrins.igrins_recipes.recipe_flat as recipe_flat
     import igrins.igrins_recipes.recipe_register as recipe_register
-    # import igrins.recipes.recipe_wvlsol_sky4 as recipe_wvlsol_sky
-    # import igrins.recipes.recipe_extract4 as recipe_extract
+    import igrins.igrins_recipes.recipe_wvlsol as recipe_wvlsol_sky
+    import igrins.igrins_recipes.recipe_extract as recipe_extract
 
     m = p_extract.match(recipe_name)
     if m:
@@ -24,10 +24,10 @@ def get_pipeline_steps(recipe_name):
 
     steps = {"flat": recipe_flat.steps,
              "register-sky": recipe_register.steps,
-             # "wvlsol-sky": recipe_wvlsol_sky.steps,
-             # "extended": recipe_extract.steps_extended,
-             # "stellar": recipe_extract.steps_stellar,
-             # "a0v": recipe_extract.steps_a0v
+             "wvlsol-sky": recipe_wvlsol_sky.steps,
+             "extended": recipe_extract.steps_extended,
+             "stellar": recipe_extract.steps_stellar,
+             "a0v": recipe_extract.steps_a0v
     }
 
     return steps[recipe_name]
@@ -44,13 +44,13 @@ def create_argh_command(recipe_name, recipe_name_fnmatch=None):
 
 recipe_list = [create_argh_command("flat"),
                create_argh_command("register-sky", ["SKY", "SKY_AB"]),
-               # create_argh_command("wvlsol-sky", ["SKY", "SKY_AB"]),
-               # create_argh_command("a0v-ab", ["A0V_AB"]),
-               # create_argh_command("a0v-onoff", ["A0V_ONOFF"]),
-               # create_argh_command("stellar-ab", ["STELLAR_AB"]),
-               # create_argh_command("stellar-onoff", ["STELLAR_ONOFF"]),
-               # create_argh_command("a0v", ["A0V_*"]),
-               # create_argh_command("stellar", ["STELLAR_*"])
+               create_argh_command("wvlsol-sky", ["SKY", "SKY_AB"]),
+               create_argh_command("a0v-ab", ["A0V_AB"]),
+               create_argh_command("a0v-onoff", ["A0V_ONOFF"]),
+               create_argh_command("stellar-ab", ["STELLAR_AB"]),
+               create_argh_command("stellar-onoff", ["STELLAR_ONOFF"]),
+               create_argh_command("a0v", ["A0V_*"]),
+               create_argh_command("stellar", ["STELLAR_*"])
 ]
 
 parser = argh.ArghParser()

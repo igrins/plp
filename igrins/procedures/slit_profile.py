@@ -115,7 +115,7 @@ def estimate_slit_profile_1d(obsset,
 
     """
 
-    from ..libs.resource_helper_igrins import ResourceHelper
+    from ..igrins_libs.resource_helper_igrins import ResourceHelper
     helper = ResourceHelper(obsset)
 
     orderflat = helper.get("orderflat")
@@ -201,7 +201,7 @@ def get_profile_func_extended(obsset, do_ab):
 def estimate_slit_profile_uniform(obsset,
                                   do_ab=True):
 
-    from ..libs.resource_helper_igrins import ResourceHelper
+    from ..igrins_libs.resource_helper_igrins import ResourceHelper
     helper = ResourceHelper(obsset)
 
     ap = helper.get("aperture")

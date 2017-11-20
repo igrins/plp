@@ -3,7 +3,7 @@ import pandas as pd
 
 from scipy.interpolate import interp1d
 
-from .utils import flatten
+from ..utils.list_utils import flatten
 
 
 def get_group_flag_generator():
@@ -501,7 +501,7 @@ class RefLinesCollection:
 #         return ref_lines_master, fitted_lines_master
 
 
-from .recipe_helper import RecipeHelper
+# from .recipe_helper import RecipeHelper
 
 
 def helper_load_spec(helper, band, obsid):

@@ -19,7 +19,7 @@ def _convert2wvlsol(p, orders_w_solutions):
 def fit_wvlsol(df, xdeg=4, ydeg=3):
     """
     df: pixels, order, wavelength"""
-    from ..libs.ecfit import fit_2dspec
+    from .ecfit import fit_2dspec
 
     xl = df["pixels"].values
     yl = df["order"].values
@@ -61,7 +61,7 @@ def derive_wvlsol(obsset):
 
     p, fit_results = fit_wvlsol(dfm)
 
-    from ..libs.resource_helper_igrins import ResourceHelper
+    from ..igrins_libs.resource_helper_igrins import ResourceHelper
     helper = ResourceHelper(obsset)
     orders = helper.get("orders")
 

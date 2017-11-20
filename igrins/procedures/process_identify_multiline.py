@@ -3,7 +3,7 @@ import pandas as pd
 
 # from igrins.libs.recipe_helper import RecipeHelper
 
-from ..libs.ref_lines_db import SkyLinesDB, HitranSkyLinesDB
+from ..procedures.ref_lines_db import SkyLinesDB, HitranSkyLinesDB
 
 
 def identify_multiline(obsset):

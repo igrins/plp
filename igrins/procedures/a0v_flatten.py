@@ -3,7 +3,7 @@ import numpy as np
 
 def _get_a0v_interp1d(obsset):
     vega_data = obsset.rs.load_ref_data("VEGA_SPEC")
-    from ..libs.a0v_spec import A0VSpec
+    from .a0v_spec import A0VSpec
     a0v_spec = A0VSpec(vega_data)
     a0v_interp1d = a0v_spec.get_flux_interp1d(1.3, 2.5,
                                               flatten=False,
@@ -14,7 +14,7 @@ def _get_a0v_interp1d(obsset):
 def flatten_a0v(obsset, fill_nan=None):  # refactor of get_a0v_flattened
     "This is the main function to do flattening"
 
-    from ..libs.resource_helper_igrins import ResourceHelper
+    from ..igrins_libs.resource_helper_igrins import ResourceHelper
     helper = ResourceHelper(obsset)
 
     wvl_solutions = helper.get("wvl_solutions")  # extractor.wvl_solutionsw
@@ -28,7 +28,7 @@ def flatten_a0v(obsset, fill_nan=None):  # refactor of get_a0v_flattened
 
     s_list = obsset.load_fits_sci_hdu("SPEC_FITS").data
 
-    from igrins.libs.a0v_flatten import get_a0v_flattened
+    from .a0v_flatten_telluric import get_a0v_flattened
     data_list = get_a0v_flattened(a0v_interp1d, tel_interp1d_f,
                                   wvl_solutions, s_list, orderflat_response)
 
@@ -59,25 +59,25 @@ def store_a0v_results(obsset, a0v_flattened_data):
     obsset.store("spec_fits_flattened", hdul)
 
 
-if 0:
+# if 0:
 
-    # orderflat_response = extractor.orderflat_json["fitted_responses"]
+#     # orderflat_response = extractor.orderflat_json["fitted_responses"]
 
-    # tgt_basename = extractor.pr.tgt_basename
-    # igr_path = extractor.igr_path
-    # figout = igr_path.get_section_filename_base("QA_PATH",
-    #                                             "flattened_"+tgt_basename) + ".pdf"
+#     # tgt_basename = extractor.pr.tgt_basename
+#     # igr_path = extractor.igr_path
+#     # figout = igr_path.get_section_filename_base("QA_PATH",
+#     #                                             "flattened_"+tgt_basename) + ".pdf"
 
-    from igrins.libs.a0v_flatten import get_a0v_flattened
-    data_list = get_a0v_flattened(a0v_interp1d, tel_interp1d_f,
-                                    wvl, s_list, orderflat_response,
-                                    figout=figout)
+#     from igrins.libs.a0v_flatten import get_a0v_flattened
+#     data_list = get_a0v_flattened(a0v_interp1d, tel_interp1d_f,
+#                                     wvl, s_list, orderflat_response,
+#                                     figout=figout)
 
-    if self.fill_nan is not None:
-        flattened_s = data_list[0][1]
-        flattened_s[~np.isfinite(flattened_s)] = self.fill_nan
+#     if self.fill_nan is not None:
+#         flattened_s = data_list[0][1]
+#         flattened_s[~np.isfinite(flattened_s)] = self.fill_nan
 
-    return data_list
+#     return data_list
 
 
 def get_tel_interp1d_f(obsset, wvl_solutions):
@@ -95,7 +95,7 @@ def get_tel_interp1d_f(obsset, wvl_solutions):
     #     dd = np.genfromtxt(telfit_outname)
     #     np.save(open(telfit_outname_npy, "w"), dd[::10])
 
-    from ..libs.a0v_flatten import TelluricTransmission
+    from .a0v_flatten_telluric import TelluricTransmission
     # _fn = get_master_calib_abspath(telfit_outname_npy)
     tel_trans = TelluricTransmission(telfit_outname_npy)
 

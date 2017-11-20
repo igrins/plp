@@ -1,13 +1,13 @@
 import numpy as np
 import scipy.ndimage as ni
 
-from ..libs.stsci_helper import stsci_median
-from ..libs.resource_helper_igrins import ResourceHelper
+from ..utils.image_combine import image_median
+from ..igrins_libs.resource_helper_igrins import ResourceHelper
 
 
 def _get_combined_image(obsset):
     data_list = [hdu.data for hdu in obsset.get_hdus()]
-    return stsci_median(data_list)
+    return image_median(data_list)
 
 
 def get_destriped(obsset,
@@ -17,7 +17,7 @@ def get_destriped(obsset,
                   sub_horizontal_median=True,
                   remove_vertical=False):
 
-    from ..libs.destriper import destriper
+    from .destriper import destriper
 
     if use_destripe_mask:
         helper = ResourceHelper(obsset)
@@ -42,8 +42,8 @@ def get_variance_map(obsset, data_minus, data_plus):
 
     bias_mask2 = ni.binary_dilation(_destripe_mask)
 
-    from ..libs.variance_map import (get_variance_map,
-                                     get_variance_map0)
+    from .variance_map import (get_variance_map,
+                               get_variance_map0)
 
     _pix_mask = helper.get("badpix_mask")
     variance_map0 = get_variance_map0(data_minus,
@@ -108,8 +108,8 @@ def subtract_interorder_background(obsset, di=24, min_pixel=40):
     helper = ResourceHelper(obsset)
     sky_mask = helper.get("sky_mask")
 
-    from ..libs.estimate_sky import (estimate_background,
-                                     get_interpolated_cubic)
+    from .estimate_sky import (estimate_background,
+                               get_interpolated_cubic)
 
     xc, yc, v, std = estimate_background(data_minus, sky_mask,
                                          di=di, min_pixel=min_pixel)
@@ -148,7 +148,7 @@ def get_wvl_header_data(obsset, wavelength_increasing_order=False):
 
     hdu = obsset.load_resource_sci_hdu_for("wvlsol_fits")
     if wavelength_increasing_order:
-        from ..libs import iraf_helper
+        from ..utils import iraf_helper
         header = iraf_helper.invert_order(hdu.header)
 
         def convert_data(d):
@@ -242,7 +242,7 @@ def store_2dspec(obsset,
     helper = ResourceHelper(obsset)
     ordermap_bpixed = helper.get("ordermap_bpixed")
 
-    from ..libs.correct_distortion import get_rectified_2dspec
+    from .correct_distortion import get_rectified_2dspec
     _ = get_rectified_2dspec(data_shft,
                              ordermap_bpixed,
                              bottom_up_solutions,
@@ -522,7 +522,7 @@ def _estimate_slit_profile_glist(ap, ods,
     ods_mskd = ods[msk]
     s_mskd = slitpos_map[msk]
 
-    from ..libs.slit_profile_model import derive_multi_gaussian_slit_profile
+    from .slit_profile_model import derive_multi_gaussian_slit_profile
     g_list0 = derive_multi_gaussian_slit_profile(s_mskd, ods_mskd,
                                                  n_comp=n_comp,
                                                  stddev_list=stddev_list)
@@ -538,7 +538,7 @@ def _run_order_main(args):
 
     # check if there is enough pixels to derive new slit profile
     if len(s[xmsk]) > 8000:  # FIXME : ?? not sure if this was what I meant?
-        from ..libs.slit_profile_model import (
+        from .slit_profile_model import (
             derive_multi_gaussian_slit_profile
         )
 
@@ -559,7 +559,7 @@ def _run_order_main(args):
 
     if 0:
 
-        from ..libs import slit_profile_model as slit_profile_model
+        from . import slit_profile_model as slit_profile_model
         debug_func = slit_profile_model.get_debug_func()
         debug_func(g_list, g_list, y, s)
 

@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import json
+# import json
 
 from numpy.linalg import lstsq
 
@@ -120,11 +120,10 @@ def volume_fit(obsset):
     obsset.store("VOLUMEFIT_COEFFS_JSON", d)
 
 
+# from ..libs.recipe_helper import RecipeHelper
 
-from ..libs.recipe_helper import RecipeHelper
+# def process_band_make_offset_map(utdate, recipe_name, band,
+#                                  obsids, config_name):
 
-def process_band_make_offset_map(utdate, recipe_name, band,
-                                 obsids, config_name):
-
-    from igrins.libs.recipe_helper import RecipeHelper
-    helper = RecipeHelper(config_name, utdate, recipe_name)
+#     from igrins.libs.recipe_helper import RecipeHelper
+#     helper = RecipeHelper(config_name, utdate, recipe_name)

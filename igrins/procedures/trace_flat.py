@@ -610,3 +610,23 @@ def get_order_boundary_indices(s1, s0=None):
         i2 = dd2
 
     return k1+i1, k1+i2
+
+
+def get_finite_boundary_indices(s1):
+    # select finite number only. This may happen when orders go out of
+    # chip boundary.
+    s1 = np.array(s1)
+    # k1, k2 = np.nonzero(np.isfinite(s1))[0][[0, -1]]
+
+    # k1, k2 = np.nonzero(s1>0.)[0][[0, -1]]
+    with np.errstate(invalid="ignore"):
+        nonzero_indices = np.nonzero(s1 > 0.)[0]  # [[0, -1]]
+
+    # # return meaningless indices if non-zero spectra is too short
+    #  if len(nonzero_indices) < 5:
+    #      return 4, 4
+
+    k1, k2 = nonzero_indices[[0, -1]]
+    k1 = max(k1, 4)
+    k2 = min(k2, 2047-4)
+    return k1, k2

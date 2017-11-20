@@ -2,36 +2,35 @@ import numpy as np
 
 import astropy.io.fits as pyfits
 from scipy.interpolate import interp1d
-from .master_calib import get_master_calib_abspath
 
 import scipy.ndimage as ni
 
 from astropy.modeling import models, fitting
 
-class TelluricTransmission(object):
-    def __init__(self):
-        fn = get_master_calib_abspath("telluric/LBL_A15_s0_w050_R0060000_T.fits")
-        self.telluric = pyfits.open(fn)[1].data
-        self.trans = self.telluric["trans"]
-        self.wvl = self.telluric["lam"]
 
-    def get_telluric_trans_interp1d(self, wvl1, wvl2, gw=None):
-        mask = (wvl1 < self.wvl) & (self.wvl < wvl2)
-        # spl = UnivariateSpline(telluric_lam[tel_mask_igr],
-        #                        telluric["trans"][tel_mask_igr],
-        #                        k=1,s=0)
+# class TelluricTransmission(object):
+#     def __init__(self, fn):
+#         self.telluric = pyfits.open(fn)[1].data
+#         self.trans = self.telluric["trans"]
+#         self.wvl = self.telluric["lam"]
 
-        if gw is not None:
-            from scipy.ndimage import gaussian_filter1d
-            trans = gaussian_filter1d(self.trans[mask], gw)
-        else:
-            trans = self.trans[mask]
-        spl = interp1d(self.wvl[mask],
-                       trans,
-                       bounds_error=False
-                       )
+#     def get_telluric_trans_interp1d(self, wvl1, wvl2, gw=None):
+#         mask = (wvl1 < self.wvl) & (self.wvl < wvl2)
+#         # spl = UnivariateSpline(telluric_lam[tel_mask_igr],
+#         #                        telluric["trans"][tel_mask_igr],
+#         #                        k=1,s=0)
 
-        return spl
+#         if gw is not None:
+#             from scipy.ndimage import gaussian_filter1d
+#             trans = gaussian_filter1d(self.trans[mask], gw)
+#         else:
+#             trans = self.trans[mask]
+#         spl = interp1d(self.wvl[mask],
+#                        trans,
+#                        bounds_error=False
+#                        )
+
+#         return spl
 
 
 class A0VSpec(object):
@@ -83,31 +82,29 @@ class A0VSpec(object):
         return spl
 
 
-class A0V(object):
+# class A0V(object):
 
-    a0v_dict = {}
+#     a0v_dict = {}
 
-    @staticmethod
-    def get_config_key(config):
-        return config.config_file
+#     @staticmethod
+#     def get_config_key(config):
+#         return config.config_file
 
-    @classmethod
-    def get_flux_interp1d(kls, config):
-        k = kls.get_config_key(config)
-        r = kls.a0v_dict.get(k, None)
+#     @classmethod
+#     def get_flux_interp1d(kls, config):
+#         k = kls.get_config_key(config)
+#         r = kls.a0v_dict.get(k, None)
 
-        if r is None:
-            a0v_model = A0VSpec(config)
-            a0v_interp1d = a0v_model.get_flux_interp1d(1.3, 2.5,
-                                                       flatten=False,
-                                                       smooth_pixel=32)
-            r = kls.a0v_dict[k] = a0v_interp1d
+#         if r is None:
+#             a0v_model = A0VSpec(config)
+#             a0v_interp1d = a0v_model.get_flux_interp1d(1.3, 2.5,
+#                                                        flatten=False,
+#                                                        smooth_pixel=32)
+#             r = kls.a0v_dict[k] = a0v_interp1d
 
-        return r
+#         return r
 
 
-
-#a0v_wvl, a0v_tel_trans
 def get_a0v(a0v_spec, wvl1, wvl2, tel_trans, flatten=True):
 
     a0v_interp1d = a0v_spec.get_flux_interp1d(wvl1, wvl2,

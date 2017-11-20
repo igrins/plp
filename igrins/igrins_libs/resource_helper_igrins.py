@@ -108,8 +108,8 @@ class ResourceHelper(object):
 
         msk[:4] = True
         msk[-4:] = True
-        msk[:,:4] = True
-        msk[:,-4:] = True
+        msk[:, :4] = True
+        msk[:, -4:] = True
 
         return msk
 
@@ -125,7 +125,7 @@ class ResourceHelper(object):
 
     @resource("aperture")
     def get_aperture(self, obsset):
-        from ..recipes.aperture_helper import get_aperture_from_obsset
+        from ..procedures.aperture_helper import get_aperture_from_obsset
         orders = self.get("orders")
         ap = get_aperture_from_obsset(obsset, orders=orders)
         return ap

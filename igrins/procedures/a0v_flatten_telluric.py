@@ -8,6 +8,7 @@ from .a0v_spec import A0VSpec
 
 from scipy.interpolate import interp1d
 
+
 def air2vac(x0):
     """
     x in angstrom
@@ -16,6 +17,7 @@ def air2vac(x0):
     x = x0*f
     n = 1.0 + 2.735182e-4 + 131.4182 / x ** 2 + 2.76249e8 / x ** 4
     return x0*n
+
 
 class TelluricTransmission(object):
     def __init__(self, fn):
@@ -504,10 +506,10 @@ def plot_flattend_a0v(spec_flattener, w, s_orig, of_list, data_list,
                 ax1.set_xlim(min(w1), max(w1))
                 pdf.savefig(figure=fig)
 
-
-
 # def get_a0v_flattened(self, extractor, ap,
 #                       s_list, wvl):
+
+
 def get_a0v_flattened(a0v_interp1d, tel_interp1d_f,
                       wvl, s_list, orderflat_response,
                       figout=None):
