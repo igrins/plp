@@ -1,3 +1,6 @@
+from ..utils.list_utils import compress_list
+
+
 class IdentifiedLines(object):
     def __init__(self, json=None):
         self.data = dict(wvl_list=[], ref_indices_list=[],
@@ -34,12 +37,11 @@ class IdentifiedLines(object):
 
     def save(self, fn):
         from .json_helper import json_dump
-        json_dump(self.data, open(fn,"w"))
-
+        json_dump(self.data, open(fn, "w"))
 
     def _get_msk_list(self):
         pixpos_list = self.data["pixpos_list"]
-        msk_list = [[(p>=0) for p in pl] for pl in pixpos_list]
+        msk_list = [[(p >= 0) for p in pl] for pl in pixpos_list]
 
         return msk_list
 
@@ -48,9 +50,8 @@ class IdentifiedLines(object):
         pixpos_list = self.data["pixpos_list"]
         msk_list = self._get_msk_list()
 
-        from .utils import compress_list
-        pixpos_list2 = [compress_list(msk, pl) for (msk, pl) in zip(msk_list,
-                                                                    pixpos_list)]
+        pixpos_list2 = [compress_list(msk, pl) for (msk, pl)
+                        in zip(msk_list, pixpos_list)]
 
         xy_list = ap.get_xy_list(dict(zip(self.data["orders"],
                                           pixpos_list2)))
@@ -60,8 +61,6 @@ class IdentifiedLines(object):
     def get_xy_list_from_wvllist(self, echellogram):
 
         msk_list = self._get_msk_list()
-
-        from .utils import compress_list
 
         wvl_list = self.data["wvl_list"]
         wvl_list2 = [compress_list(msk, wl) for (msk, wl) in zip(msk_list,

@@ -179,7 +179,7 @@ def identify_lines(obsset):
 
     offsetfunc_map = dict(zip(intersected_orders, d["sol_list"]))
 
-    from ..libs.identified_lines import IdentifiedLines
+    from .identified_lines import IdentifiedLines
 
     identified_lines_ref = IdentifiedLines(l)
     ref_map = identified_lines_ref.get_dict()
@@ -189,7 +189,7 @@ def identify_lines(obsset):
                                      pixpos_list=[], orders=[],
                                      groupname=obsset.groupname))
 
-    from ..libs.line_identify_simple import match_lines1_pix
+    from .line_identify_simple import match_lines1_pix
 
     for o, s in zip(tgt_spec["orders"], tgt_spec["specs"]):
         if (o not in ref_map) or (o not in offsetfunc_map):
@@ -315,7 +315,7 @@ def find_affine_transform(obsset):
 
     lines_data = obsset.load(DESCS["IDENTIFIED_LINES_JSON"])
 
-    from ..libs.identified_lines import IdentifiedLines
+    from .identified_lines import IdentifiedLines
     identified_lines_tgt = IdentifiedLines.load(lines_data)
 
     xy_list_tgt = identified_lines_tgt.get_xy_list_from_pixlist(ap)

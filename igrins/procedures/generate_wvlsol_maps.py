@@ -4,7 +4,7 @@ import pandas as pd
 
 from .aperture_helper import get_simple_aperture_from_obsset
 
-from ..libs.astropy_poly_helper import deserialize_poly_model
+from .astropy_poly_helper import deserialize_poly_model
 
 from .nd_poly import NdPolyNamed
 

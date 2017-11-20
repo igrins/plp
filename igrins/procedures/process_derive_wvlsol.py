@@ -41,7 +41,7 @@ def fit_wvlsol(df, xdeg=4, ydeg=3):
 
     p, m = fit_2dspec(xl[msk], yl[msk], zlo[msk], **fit_params)
 
-    from igrins.libs.astropy_poly_helper import serialize_poly_model
+    from .astropy_poly_helper import serialize_poly_model
     poly_2d = serialize_poly_model(p)
     fit_results = dict(xyz=[xl[msk], yl[msk], zlo[msk]],
                        fit_params=fit_params,
@@ -76,72 +76,72 @@ def derive_wvlsol(obsset):
                  fit_results)
 
 
-if 0:
+# if 0:
 
-    ordermap_fits = caldb.load_resource_for(basename,
-                                            ("sky", "ordermap_fits"))
+#     ordermap_fits = caldb.load_resource_for(basename,
+#                                             ("sky", "ordermap_fits"))
 
-    slitposmap_fits = caldb.load_resource_for(basename,
-                                              ("sky", "slitposmap_fits"))
+#     slitposmap_fits = caldb.load_resource_for(basename,
+#                                               ("sky", "slitposmap_fits"))
 
-    # slitoffset_fits = caldb.load_resource_for(basename,
-    #                                           ("sky", "slitoffset_fits"))
+#     # slitoffset_fits = caldb.load_resource_for(basename,
+#     #                                           ("sky", "slitoffset_fits"))
 
-    yy, xx = np.indices(ordermap_fits[0].data.shape)
+#     yy, xx = np.indices(ordermap_fits[0].data.shape)
 
-    msk = np.isfinite(ordermap_fits[0].data) & (ordermap_fits[0].data > 0)
-    pixels, orders, slit_pos = (xx[msk], ordermap_fits[0].data[msk],
-                                slitposmap_fits[0].data[msk])
+#     msk = np.isfinite(ordermap_fits[0].data) & (ordermap_fits[0].data > 0)
+#     pixels, orders, slit_pos = (xx[msk], ordermap_fits[0].data[msk],
+#                                 slitposmap_fits[0].data[msk])
 
-    # load coeffs
-    # This needs to be fixed
-    names = ["pixel", "order", "slit"]
+#     # load coeffs
+#     # This needs to be fixed
+#     names = ["pixel", "order", "slit"]
 
-    in_df = pd.read_json("coeffs.json", orient="split")
-    in_df = in_df.set_index(names)
+#     in_df = pd.read_json("coeffs.json", orient="split")
+#     in_df = in_df.set_index(names)
 
-    poly, coeffs = NdPolyNamed.from_pandas(in_df)
+#     poly, coeffs = NdPolyNamed.from_pandas(in_df)
 
-    cc0 = slit_pos - 0.5
-    values = dict(zip(names, [pixels, orders, cc0]))
-    offsets = poly.multiply(values, coeffs) # * cc0
+#     cc0 = slit_pos - 0.5
+#     values = dict(zip(names, [pixels, orders, cc0]))
+#     offsets = poly.multiply(values, coeffs) # * cc0
 
-    offset_map = np.empty(ordermap_fits[0].data.shape, dtype=np.float64)
-    offset_map.fill(np.nan)
-    offset_map[msk] = offsets * cc0 # dd["offsets"]
-
-
-def process_band(utdate, recipe_name, band, obsids, config_name):
-
-    from igrins.libs.recipe_helper import RecipeHelper
-    helper = RecipeHelper(config_name, utdate, recipe_name)
-
-    derive_wvlsol(helper, band, obsids)
+#     offset_map = np.empty(ordermap_fits[0].data.shape, dtype=np.float64)
+#     offset_map.fill(np.nan)
+#     offset_map[msk] = offsets * cc0 # dd["offsets"]
 
 
-if __name__ == "__main__":
+# def process_band(utdate, recipe_name, band, obsids, config_name):
 
-    utdate = "20140709"
-    obsids = [62, 63]
+#     from igrins.libs.recipe_helper import RecipeHelper
+#     helper = RecipeHelper(config_name, utdate, recipe_name)
 
-    utdate = "20140525"
-    obsids = [29]
-
-    utdate = "20150525"
-    obsids = [52]
+#     derive_wvlsol(helper, band, obsids)
 
 
-    recipe_name = "SKY"
+# if __name__ == "__main__":
+
+#     utdate = "20140709"
+#     obsids = [62, 63]
+
+#     utdate = "20140525"
+#     obsids = [29]
+
+#     utdate = "20150525"
+#     obsids = [52]
 
 
-    # utdate = "20150525"
-    # obsids = [32]
+#     recipe_name = "SKY"
 
-    # recipe_name = "THAR"
 
-    band = "K"
+#     # utdate = "20150525"
+#     # obsids = [32]
 
-    #helper = RecipeHelper("../recipe.config", utdate)
-    config_name = "../recipe.config"
+#     # recipe_name = "THAR"
 
-    process_band(utdate, recipe_name, band, obsids, config_name)
+#     band = "K"
+
+#     #helper = RecipeHelper("../recipe.config", utdate)
+#     config_name = "../recipe.config"
+
+#     process_band(utdate, recipe_name, band, obsids, config_name)

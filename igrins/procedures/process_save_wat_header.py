@@ -1,5 +1,6 @@
 import numpy as np
-from igrins.libs.astropy_poly_helper import deserialize_poly_model
+from .astropy_poly_helper import deserialize_poly_model
+from ..utils.iraf_helper import get_wat_spec, default_header_str
 
 
 def save_wat_header(obsset):
@@ -38,7 +39,6 @@ def save_wat_header(obsset):
         p1d = fit_p1d(p_init1d, xx_plus1, wvl)
         p1d_list.append(p1d)
 
-    from igrins.libs.iraf_helper import get_wat_spec, default_header_str
     wat_list = get_wat_spec(orders, p1d_list)
 
     # cards = [pyfits.Card.fromstring(l.strip()) \

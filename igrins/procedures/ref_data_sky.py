@@ -1,6 +1,6 @@
 import numpy as np
 
-from ..libs import ohline_grouped
+from . import ohline_grouped
 
 
 class OHLines(object):

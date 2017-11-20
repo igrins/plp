@@ -275,7 +275,7 @@ class RefLinesDBBase:
 
 class SkyLinesDB(RefLinesDBBase):
     def _load_refdata(self):
-        from ..recipes.ref_data_sky import load_sky_ref_data
+        from .ref_data_sky import load_sky_ref_data
         # sky_refdata = load_sky_ref_data(self.config, band)
         sky_refdata = load_sky_ref_data(self.ref_loader)
         return sky_refdata

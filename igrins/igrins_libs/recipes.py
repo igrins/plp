@@ -106,66 +106,66 @@ def get_multi_fnmatch_pattern(fnmatch_list):
     return p_match
 
 
-class Recipes(object):
-    def __init__(self, fn, allow_duplicate_groups=False):
-        self._fn = fn
-        self.recipe_list = load_recipe_list(fn,
-                                            allow_duplicate_groups)
-        self.recipe_dict = make_recipe_dict(self.recipe_list)
+# class Recipes(object):
+#     def __init__(self, fn, allow_duplicate_groups=False):
+#         self._fn = fn
+#         self.recipe_list = load_recipe_list(fn,
+#                                             allow_duplicate_groups)
+#         self.recipe_dict = make_recipe_dict(self.recipe_list)
 
-    def select_multi(self, recipe_names, starting_obsids=None):
-        selected = []
-        for recipe_name in recipe_names:
-            _ = self.select_fnmatch(recipe_name, starting_obsids)
-            selected.extend(_)
+#     def select_multi(self, recipe_names, starting_obsids=None):
+#         selected = []
+#         for recipe_name in recipe_names:
+#             _ = self.select_fnmatch(recipe_name, starting_obsids)
+#             selected.extend(_)
 
-    def select_fnmatch(self, recipe_fnmatch, starting_obsids=None):
+#     def select_fnmatch(self, recipe_fnmatch, starting_obsids=None):
 
-        if isinstance(recipe_fnmatch, str):
-            recipe_fnmatch_list = [recipe_fnmatch]
-        else:
-            recipe_fnmatch_list = recipe_fnmatch
+#         if isinstance(recipe_fnmatch, str):
+#             recipe_fnmatch_list = [recipe_fnmatch]
+#         else:
+#             recipe_fnmatch_list = recipe_fnmatch
 
-        p_match = get_multi_fnmatch_pattern(recipe_fnmatch_list)
+#         p_match = get_multi_fnmatch_pattern(recipe_fnmatch_list)
 
-        from collections import OrderedDict
-        dict_by_1st_obsid = OrderedDict((recipe_item[1][0], recipe_item)
-                                        for recipe_item in self.recipe_list
-                                        if p_match(recipe_item[0]))
+#         from collections import OrderedDict
+#         dict_by_1st_obsid = OrderedDict((recipe_item[1][0], recipe_item)
+#                                         for recipe_item in self.recipe_list
+#                                         if p_match(recipe_item[0]))
 
-        if starting_obsids is None:
-            starting_obsids = dict_by_1st_obsid.keys()
+#         if starting_obsids is None:
+#             starting_obsids = dict_by_1st_obsid.keys()
 
-        selected = [dict_by_1st_obsid[s1] for s1 in starting_obsids]
+#         selected = [dict_by_1st_obsid[s1] for s1 in starting_obsids]
 
-        return selected
+#         return selected
 
-    def select_fnmatch_by_groups(self, recipe_fnmatch, groups=None):
+#     def select_fnmatch_by_groups(self, recipe_fnmatch, groups=None):
 
-        if isinstance(recipe_fnmatch, str):
-            recipe_fnmatch_list = [recipe_fnmatch]
-        else:
-            recipe_fnmatch_list = recipe_fnmatch
+#         if isinstance(recipe_fnmatch, str):
+#             recipe_fnmatch_list = [recipe_fnmatch]
+#         else:
+#             recipe_fnmatch_list = recipe_fnmatch
 
-        p_match = get_multi_fnmatch_pattern(recipe_fnmatch_list)
+#         p_match = get_multi_fnmatch_pattern(recipe_fnmatch_list)
 
-        _ = []
-        for recipe_item in self.recipe_list:
-            for recipe_name in recipe_item[0].split("|"):
-                if p_match(recipe_name):
-                    recipe_item_new = (recipe_name, ) + recipe_item[1:]
-                    _.append((recipe_item[-1]["GROUP1"],
-                              recipe_item_new))
+#         _ = []
+#         for recipe_item in self.recipe_list:
+#             for recipe_name in recipe_item[0].split("|"):
+#                 if p_match(recipe_name):
+#                     recipe_item_new = (recipe_name, ) + recipe_item[1:]
+#                     _.append((recipe_item[-1]["GROUP1"],
+#                               recipe_item_new))
 
-        # from collections import OrderedDict
-        # dict_by_group = OrderedDict(_)
+#         # from collections import OrderedDict
+#         # dict_by_group = OrderedDict(_)
 
-        if groups is None:
-            selected = [s1[1] for s1 in _]
-        else:
-            selected = [s1[1] for s1 in _ if s1[0] in groups]
+#         if groups is None:
+#             selected = [s1[1] for s1 in _]
+#         else:
+#             selected = [s1[1] for s1 in _ if s1[0] in groups]
 
-        return selected
+#         return selected
 
 
 class Recipes2(object):
