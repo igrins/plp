@@ -3,11 +3,12 @@ import re
 from ..resource_manager import (ResourceStack, ResourceStackWithBasename,
                                 ResourceDBSet)
 
-from ..resource_manager.file_storage_igrins import get_storage
-from ..resource_manager.resource_db_igrins \
-    import get_igrins_db_factory
+from .file_storage_igrins import get_storage
+
+from .resource_db_igrins import get_igrins_db_factory
 
 from .storage_descriptions import load_resource_def
+from .item_convert import ItemConverter
 
 from .master_calib import (query_ref_value, query_ref_data_path,
                            get_ref_loader)
@@ -95,7 +96,6 @@ def get_resource_manager(config, resource_spec,
     if item_converter_class is None:
         storage = base_storage
     elif item_converter_class == "auto":
-        from ..libs.item_convert import ItemConverter
         storage = ItemConverter(base_storage)
     else:
         storage = item_converter_class(base_storage)

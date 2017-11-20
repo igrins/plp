@@ -4,7 +4,7 @@ import os
 
 ### NEW
 
-from .libs.storage_descriptions import load_descriptions
+from .igrins_libs.storage_descriptions import load_descriptions
 
 DESCS = load_descriptions()
 

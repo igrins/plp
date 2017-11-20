@@ -1,7 +1,7 @@
 import os
 
-from ..libs.storage_descriptions import DB_Specs
-from ..libs.path_info import IGRINSPath, ensure_dir
+from .storage_descriptions import DB_Specs
+from .path_info import IGRINSPath, ensure_dir
 
 
 def get_igrins_db_factory(config, resource_spec):

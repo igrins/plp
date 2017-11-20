@@ -1,5 +1,5 @@
 from ..resource_manager.file_storage import FileStorage
-from ..libs.path_info import IGRINSPath
+from .path_info import IGRINSPath
 
 
 def get_storage(config, resource_spec):

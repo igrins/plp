@@ -24,7 +24,7 @@ def get_selected(recipes, recipe_name, groups):
 def iter_obsset(replace_name_fnmatch,
                 obsdate, config_file, bands, groups):
 
-    from ..libs.igrins_config import IGRINSConfig
+    from ..igrins_libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
 
     fn = config.get_value('RECIPE_LOG_PATH', obsdate)

@@ -6,7 +6,7 @@ to_item, from_item is the basic interface.
 from io import BytesIO
 import astropy.io.fits as pyfits
 import json
-from ..libs.json_helper import json_dumps
+from ..utils.json_helper import json_dumps
 
 
 def null_function(buf):
@@ -122,7 +122,7 @@ class ItemConverter(ItemConverterBase):
 
     @classmethod
     def _to_mask(cls, buf):
-        from .load_fits import get_first_science_hdu
+        from ..utils.load_fits import get_first_science_hdu
 
         hdulist = cls._to_fits(buf)
         hdu = get_first_science_hdu(hdulist)

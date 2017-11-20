@@ -1,8 +1,8 @@
 """ Pipeline Driver """
 
-from ..libs.resource_manager import get_igrins_resource_manager
-from ..libs.igrins_config import IGRINSConfig
-from ..libs.obs_set2 import ObsSet
+from ..igrins_libs.resource_manager import get_igrins_resource_manager
+from ..igrins_libs.igrins_config import IGRINSConfig
+from ..igrins_libs.obs_set import ObsSet
 
 
 def get_obsset(utdate, recipe_name, band,

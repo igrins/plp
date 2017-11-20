@@ -1,6 +1,7 @@
 import numpy as np
 
-from .stsci_helper import stsci_median
+from ..utils.image_combine import image_median
+
 
 class Destriper(object):
     def __init__(self):
@@ -12,10 +13,10 @@ class Destriper(object):
         ny, nx = d.shape
         iy = np.arange(ny)
         import scipy.ndimage as ni
-        md = ni.median_filter(d, [1,7])
+        md = ni.median_filter(d, [1, 7])
         mask2 = mask & np.isfinite(md)
-        p_list = [np.polyfit(iy[~mask2[:,ix]],
-                             md[:,ix][~mask2[:,ix]], 4) for ix in range(nx)]
+        p_list = [np.polyfit(iy[~mask2[:, ix]],
+                             md[:, ix][~mask2[:, ix]], 4) for ix in range(nx)]
         dd = np.vstack([np.polyval(p, iy) for p in p_list])
         return d - dd.T
 
@@ -37,9 +38,9 @@ class Destriper(object):
             dd = [d[sl][::next(alt_sign)] for sl in dy_slices]
             alt_sign = cycle([1, -1])
             msk = [mask[sl][::next(alt_sign)] for sl in dy_slices]
-            ddm = stsci_median(dd, badmasks=msk)
-            #dd1 = np.ma.array(dd, mask=msk)
-            #ddm = np.ma.median(dd1, axis=0)
+            ddm = image_median(dd, badmasks=msk)
+            # dd1 = np.ma.array(dd, mask=msk)
+            # ddm = np.ma.median(dd1, axis=0)
         else:
             alt_sign = cycle([1, -1])
             dd = [d[sl][::next(alt_sign)] for sl in dy_slices]
@@ -55,7 +56,7 @@ class Destriper(object):
         if concatenate is True, return 2048x2048 array.
         Otherwise, 128x2048 array.
         """
-        dy_slices=self.dy_slices
+        dy_slices = self.dy_slices
         if mask is not None:
             dd = [d[sl] for sl in dy_slices]
             msk = [mask[sl] for sl in dy_slices]
@@ -64,7 +65,6 @@ class Destriper(object):
         else:
             dd = [d[sl] for sl in dy_slices]
             ddm = np.median(dd, axis=0)
-
 
         if concatenate:
             return np.concatenate([ddm] * self.n_dy)
@@ -76,7 +76,7 @@ class Destriper(object):
         if concatenate is True, return 2048x2048 array.
         Otherwise, 128x2048 array.
         """
-        dy_slices=self.dy_slices
+        dy_slices = self.dy_slices
         if mask is not None:
             dd = [d[sl] for sl in dy_slices]
             msk = [mask[sl] for sl in dy_slices]
@@ -88,12 +88,10 @@ class Destriper(object):
             dd2 = dd.transpose([1, 0, 2]).reshape((self.dy, -1))
             ddm = np.median(dd2, axis=1)
 
-
         if concatenate:
             return np.concatenate([ddm] * self.n_dy)
         else:
             return ddm
-
 
     def get_stripe_pattern2048(self, d, mask=None):
         """
@@ -147,89 +145,15 @@ class Destriper(object):
         Otherwise, 128x2048 array.
         """
         s_vert = np.median(d, axis=0)
-        d_vert = d - s_vert[ np.newaxis,:]
+        d_vert = d - s_vert[np.newaxis, :]
 
         s_hori = np.median(d_vert, axis=1)
-        d_hori = d_vert - s_hori[:,np.newaxis]
+        d_hori = d_vert - s_hori[:, np.newaxis]
 
         return d_hori
 
+
 destriper = Destriper()
-
-    # if 0:
-    #     destriper = Destriper()
-
-    #     hdu_list = igrins_log.get_cal_hdus(band, "flat_off")
-    #     hdu = hdu_list[0]
-
-    #     from mpl_toolkits.axes_grid1 import ImageGrid
-    #     fig = plt.figure(figsize=(13, 5))
-    #     grid = ImageGrid(fig, 111, (1, 3),
-    #                      share_all=True,
-    #                      label_mode="1",axes_pad=0.1)
-    #     from matplotlib.colors import Normalize
-    #     norm = Normalize(vmin=-15, vmax=30)
-    #     im = grid[0].imshow(hdu.data, norm=norm,
-    #                         origin="lower", cmap="gray_r",
-    #                         interpolation="none")
-    #     hh1 = destriper.get_destriped(hdu.data, pattern=2048)
-    #     im2 = grid[1].imshow(hh1, norm=norm,
-    #                          origin="lower", cmap="gray_r",
-    #                          interpolation="none")
-
-    #     hh2 = destriper.get_destriped(hdu.data, pattern=64)
-    #     im3 = grid[2].imshow(hh2, norm=norm,
-    #                          origin="lower", cmap="gray_r",
-    #                          interpolation="none")
-
-    #     grid[0].set_xlabel("x-pixel")
-    #     grid[0].set_ylabel("y-pixel")
-    #     fig.tight_layout()
-
-
-
-    # if 0:
-    #     destriper = Destriper()
-
-    #     hdu_list = igrins_log.get_cal_hdus(band, "flat_off")
-    #     hdu = hdu_list[0]
-
-
-    #     hh1 = destriper.get_destriped(hdu.data, mask=bias_mask,
-    #                                   pattern=2048)
-    #     hh2 = destriper.get_destriped(hdu.data,
-    #                                   pattern=64, mask=bias_mask)
-
-    #     from matplotlib.colors import Normalize
-
-    #     from mpl_toolkits.axes_grid1 import ImageGrid
-    #     fig = plt.figure(figsize=(13, 5))
-    #     grid = ImageGrid(fig, 111, (1, 3),
-    #                      share_all=True,
-    #                      label_mode="1",axes_pad=0.1,
-    #                      cbar_mode="single")
-
-    #     norm = Normalize(vmin=-15, vmax=30)
-    #     for ax, dd in zip(grid, [hdu.data, hh1, hh2]):
-    #         im = ax.imshow(dd, norm=norm,
-    #                        origin="lower", cmap="gray_r",
-    #                        interpolation="none")
-    #     plt.colorbar(im, cax=grid[0].cax)
-
-    #     grid[0].set_xlabel("x-pixel")
-    #     grid[0].set_ylabel("y-pixel")
-    #     fig.tight_layout()
-
-    #     fig = plt.figure()
-    #     grid = Grid(fig, 111, (3, 1),
-    #                 share_x=True, share_y=True, share_all=True,
-    #                 label_mode="1",axes_pad=0.1)
-    #     for ax, dd in zip(grid, [hdu.data, hh1, hh2]):
-    #         s = np.median(dd[:,1024-128:1024+128], axis=1)
-    #         ax.plot(s)
-    #         ax.axhline(0, color="0.5")
-    #     grid[2].set_xlim(0, 2048)
-
 
 
 def check_readout_pattern(fig, hdu_list, axis=1):
@@ -263,9 +187,9 @@ def check_readout_pattern(fig, hdu_list, axis=1):
 
 
 def check_destriper(hdu, bias_mask, vmin, vmax):
+    import matplotlib.pyplot as plt
+
     destriper = Destriper()
-
-
 
     hh1 = destriper.get_destriped(hdu.data, mask=bias_mask,
                                   pattern=2048)
@@ -278,7 +202,7 @@ def check_destriper(hdu, bias_mask, vmin, vmax):
     fig1 = plt.figure(figsize=(13, 5))
     grid = ImageGrid(fig1, 111, (1, 3),
                      share_all=True,
-                     label_mode="1",axes_pad=0.1,
+                     label_mode="1", axes_pad=0.1,
                      cbar_mode="single")
 
     norm = Normalize(vmin=vmin, vmax=vmax)
@@ -295,9 +219,9 @@ def check_destriper(hdu, bias_mask, vmin, vmax):
     fig2 = plt.figure()
     grid = Grid(fig2, 111, (3, 1),
                 share_x=True, share_y=True, share_all=True,
-                label_mode="1",axes_pad=0.1)
+                label_mode="1", axes_pad=0.1)
     for ax, dd in zip(grid, [hdu.data, hh1, hh2]):
-        s = np.median(dd[:,1024-128:1024+128], axis=1)
+        s = np.median(dd[:, 1024-128:1024+128], axis=1)
         ax.plot(s)
         ax.axhline(0, color="0.5")
     grid[2].set_xlim(0, 2048)
@@ -307,66 +231,66 @@ def check_destriper(hdu, bias_mask, vmin, vmax):
     return fig1, fig2
 
 
-if __name__ == "__main__":
-    from igrins_log import IGRINSLog
+# if __name__ == "__main__":
+#     from igrins_log import IGRINSLog
 
-    log_20140525 = dict(flat_off=range(64, 74),
-                        flat_on=range(74, 84),
-                        thar=range(3, 8))
-
-
-    igrins_log = IGRINSLog("20140525", log_20140525)
-
-    band = "K"
+#     log_20140525 = dict(flat_off=range(64, 74),
+#                         flat_on=range(74, 84),
+#                         thar=range(3, 8))
 
 
-    if 1: # check ro pattern
-        hdu_list = igrins_log.get_cal_hdus(band, "flat_off")
+#     igrins_log = IGRINSLog("20140525", log_20140525)
 
-        import matplotlib.pyplot as plt
-        fig = plt.figure(figsize=(9, 8))
-        check_readout_pattern(fig, hdu_list, axis=1)
-        fig.tight_layout()
-
-        fig2 = plt.figure(figsize=(9, 8))
-        check_readout_pattern(fig2, hdu_list, axis=0)
-        fig2.tight_layout()
-
-        fig.savefig("readout_horizontal_pattern_%s.png" % band)
-        fig2.savefig("readout_vertical_pattern_%s.png" % band)
-
-    if 1: # check destriper
-        # with mask
-        import pickle
-        r = pickle.load(open("flat_info_20140316_%s.pickle" % band))
-
-        from trace_flat import get_mask_bg_pattern
-        bias_mask = get_mask_bg_pattern(r["flat_mask"],
-                                        r["bottomup_solutions"])
-
-        if 1:
-            fig = plt.figure()
-            ax=fig.add_subplot(111)
-            ax.imshow(bias_mask, origin="lower", cmap="gray_r",
-                       vmin=0, vmax=1)
-            fig.savefig("destriper_mask_%s.png"%band, bbox_inches="tight")
-
-        hdu_list = igrins_log.get_cal_hdus(band, "flat_off")
-        hdu = hdu_list[0]
-
-        fig11, fig12 = check_destriper(hdu, None, vmin=-25, vmax=30)
-        fig13, fig14 = check_destriper(hdu, bias_mask, vmin=-25, vmax=30)
-
-        fig11.savefig("destriper_test_image_flat_off_wo_mask_%s.png" % band)
-        fig12.savefig("destriper_test_cut_flat_off_wo_mask_%s.png" % band)
-        fig13.savefig("destriper_test_image_flat_off_w_mask_%s.png" % band)
-        fig14.savefig("destriper_test_cut_flat_off_w_mask_%s.png" % band)
+#     band = "K"
 
 
-        hdu_list = igrins_log.get_cal_hdus(band, "thar")
-        hdu = hdu_list[-1]
+#     if 1: # check ro pattern
+#         hdu_list = igrins_log.get_cal_hdus(band, "flat_off")
 
-        fig15, fig16 = check_destriper(hdu, bias_mask, vmin=-30, vmax=80)
+#         import matplotlib.pyplot as plt
+#         fig = plt.figure(figsize=(9, 8))
+#         check_readout_pattern(fig, hdu_list, axis=1)
+#         fig.tight_layout()
 
-        fig15.savefig("destriper_test_image_thar_w_mask_%s.png" % band)
-        fig16.savefig("destriper_test_cut_thar_w_mask_%s.png" % band)
+#         fig2 = plt.figure(figsize=(9, 8))
+#         check_readout_pattern(fig2, hdu_list, axis=0)
+#         fig2.tight_layout()
+
+#         fig.savefig("readout_horizontal_pattern_%s.png" % band)
+#         fig2.savefig("readout_vertical_pattern_%s.png" % band)
+
+#     if 1: # check destriper
+#         # with mask
+#         import pickle
+#         r = pickle.load(open("flat_info_20140316_%s.pickle" % band))
+
+#         from trace_flat import get_mask_bg_pattern
+#         bias_mask = get_mask_bg_pattern(r["flat_mask"],
+#                                         r["bottomup_solutions"])
+
+#         if 1:
+#             fig = plt.figure()
+#             ax=fig.add_subplot(111)
+#             ax.imshow(bias_mask, origin="lower", cmap="gray_r",
+#                        vmin=0, vmax=1)
+#             fig.savefig("destriper_mask_%s.png"%band, bbox_inches="tight")
+
+#         hdu_list = igrins_log.get_cal_hdus(band, "flat_off")
+#         hdu = hdu_list[0]
+
+#         fig11, fig12 = check_destriper(hdu, None, vmin=-25, vmax=30)
+#         fig13, fig14 = check_destriper(hdu, bias_mask, vmin=-25, vmax=30)
+
+#         fig11.savefig("destriper_test_image_flat_off_wo_mask_%s.png" % band)
+#         fig12.savefig("destriper_test_cut_flat_off_wo_mask_%s.png" % band)
+#         fig13.savefig("destriper_test_image_flat_off_w_mask_%s.png" % band)
+#         fig14.savefig("destriper_test_cut_flat_off_w_mask_%s.png" % band)
+
+
+#         hdu_list = igrins_log.get_cal_hdus(band, "thar")
+#         hdu = hdu_list[-1]
+
+#         fig15, fig16 = check_destriper(hdu, bias_mask, vmin=-30, vmax=80)
+
+#         fig15.savefig("destriper_test_image_thar_w_mask_%s.png" % band)
+#         fig16.savefig("destriper_test_cut_thar_w_mask_%s.png" % band)

@@ -7,9 +7,9 @@ import scipy.ndimage as ni
 
 from astropy.io.fits import Card
 
-from ..libs.stsci_helper import stsci_median
+from ..utils.image_combine import image_median as stsci_median
 
-from igrins import DESCS
+from .. import DESCS
 
 
 def combine_flat_off(obsset, destripe=True):
@@ -23,7 +23,7 @@ def combine_flat_off(obsset, destripe=True):
     flat_off = stsci_median(data_list)
 
     if destripe:
-        from ..libs.destriper import destriper
+        from .destriper import destriper
         flat_off = destriper.get_destriped(flat_off)
 
         cards.append(Card("HISTORY",
@@ -40,12 +40,13 @@ def make_hotpix_mask(obsset,
     # caldb = helper.get_caldb()
     # master_obsid = obsset.obsids[0]
 
+    from . import badpixel as bp
+
     obsset_off = obsset.get_subset("OFF")
 
     flat_off_hdu = obsset_off.load_fits_sci_hdu(DESCS["FLAT_OFF"])
     flat_off = flat_off_hdu.data
 
-    from ..libs import badpixel as bp
     hotpix_mask = bp.badpixel_mask(flat_off,
                                    sigma_clip1=sigma_clip1,
                                    sigma_clip2=sigma_clip2,
@@ -95,9 +96,9 @@ def _make_deadpix_mask(flat_on, flat_std, hotpix_mask,
                        deadpix_thresh=0.6, smooth_size=9):
 
     # normalize it
-    from ..libs.trace_flat import (get_flat_normalization,
-                                   get_flat_mask_auto,
-                                   estimate_bg_mean_std)
+    from .trace_flat import (get_flat_normalization,
+                             get_flat_mask_auto,
+                             estimate_bg_mean_std)
 
     bg_mean, bg_fwhm = estimate_bg_mean_std(flat_on)
     norm_factor = get_flat_normalization(flat_on,
@@ -187,7 +188,7 @@ def make_deadpix_mask(obsset,  # helper, band, obsids,
 
 def identify_order_boundaries(obsset):
 
-    from ..libs.trace_flat import get_y_derivativemap
+    from .trace_flat import get_y_derivativemap
 
     obsset_on = obsset.get_subset("ON")
 
@@ -230,7 +231,7 @@ def _check_boundary_orders(cent_list, nx=2048):
 
 def trace_order_boundaries(obsset):
 
-    from ..libs.trace_flat import identify_horizontal_line
+    from .trace_flat import identify_horizontal_line
 
     obsset_on = obsset.get_subset("ON")
 
@@ -269,10 +270,9 @@ def stitch_up_traces(obsset):
     # trace_solution_products, trace_solution_products_plot = \
     #                          trace_solutions(trace_products)
 
-    from ..libs.igrins_detector import IGRINSDetector
+    from .igrins_detector import IGRINSDetector
+    from .trace_flat import trace_centroids_chevyshev
     nx = IGRINSDetector.nx
-
-    from ..libs.trace_flat import trace_centroids_chevyshev
 
     obsset_on = obsset.get_subset("ON")
 
@@ -323,7 +323,7 @@ def make_bias_mask(obsset):
 
     orders = list(range(len(bottomup_solutions)))
 
-    from ..libs.apertures import Apertures
+    from .apertures import Apertures
     ap = Apertures(orders, bottomup_solutions)
 
     order_map2 = ap.make_order_map(mask_top_bottom=True)

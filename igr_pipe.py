@@ -1,48 +1,57 @@
+import sys
+
 from igrins.recipes.argh_helper import argh
+import igrins.libs.logger as logger
 
-import igrins.recipes.recipe_flat
-#import igrins.recipes.recipe_thar
-#import igrins.recipes.recipe_wvlsol_sky
+from igrins.pipeline.main_recipe import driver_func, driver_args
+from igrins.pipeline.steps import create_argh_command_from_steps
 
-from igrins.recipes.recipe_wvlsol_sky2 import wvlsol_sky, sky_wvlsol
+# from igrins.pipeline.sample_steps import get_pipeline_steps
 
-#from igrins.recipes.recipe_distort_sky import distortion_sky
-from igrins.recipes.recipe_extract import (a0v_ab, stellar_ab,
-                                    a0v_onoff, stellar_onoff,
-                                    extended_ab, extended_onoff)
-from igrins.recipes.recipe_extract_plot import plot_spec
-from igrins.recipes.recipe_publish_html import publish_html
+import re
+p_extract = re.compile(r'(\w+)-(ab|onoff)')
 
-from igrins.recipes.recipe_prepare_recipe_logs import prepare_recipe_logs
-from igrins.recipes.recipe_tell_wvsol import tell_wvsol, wvlsol_tell
-from igrins.recipes.recipe_make_sky import make_sky
 
-recipe_list = [igrins.recipes.recipe_flat.flat,
-               #igrins.recipes.recipe_thar.thar,
-               #igrins.recipes.recipe_wvlsol_sky.sky_wvlsol,
-               #igrins.recipes.recipe_wvlsol_sky.wvlsol_sky,
-               wvlsol_sky,
-               sky_wvlsol,
-               #distortion_sky,
-               a0v_ab,
-               stellar_ab,
-               a0v_onoff,
-               stellar_onoff,
-               extended_ab,
-               extended_onoff,
-               plot_spec,
-               publish_html,
-               prepare_recipe_logs,
-               tell_wvsol,
-               wvlsol_tell,
-               make_sky
-               ]
+def get_pipeline_steps(recipe_name):
+    import igrins.igrins_recipes.recipe_flat as recipe_flat
+    import igrins.igrins_recipes.recipe_register as recipe_register
+    # import igrins.recipes.recipe_wvlsol_sky4 as recipe_wvlsol_sky
+    # import igrins.recipes.recipe_extract4 as recipe_extract
 
-import igrins.recipes.recipe_register as recipe_register
-recipe_list.extend(recipe_register.get_command_list())
+    m = p_extract.match(recipe_name)
+    if m:
+        recipe_name = m.group(1)
 
-from igrins.recipes.recipe_divide_a0v import divide_a0v
-recipe_list.extend([divide_a0v])
+    steps = {"flat": recipe_flat.steps,
+             "register-sky": recipe_register.steps,
+             # "wvlsol-sky": recipe_wvlsol_sky.steps,
+             # "extended": recipe_extract.steps_extended,
+             # "stellar": recipe_extract.steps_stellar,
+             # "a0v": recipe_extract.steps_a0v
+    }
+
+    return steps[recipe_name]
+
+
+def create_argh_command(recipe_name, recipe_name_fnmatch=None):
+    steps = get_pipeline_steps(recipe_name)
+
+    f = create_argh_command_from_steps(recipe_name, steps,
+                                       driver_func, driver_args,
+                                       recipe_name_fnmatch=recipe_name_fnmatch)
+    return f
+
+
+recipe_list = [create_argh_command("flat"),
+               create_argh_command("register-sky", ["SKY", "SKY_AB"]),
+               # create_argh_command("wvlsol-sky", ["SKY", "SKY_AB"]),
+               # create_argh_command("a0v-ab", ["A0V_AB"]),
+               # create_argh_command("a0v-onoff", ["A0V_ONOFF"]),
+               # create_argh_command("stellar-ab", ["STELLAR_AB"]),
+               # create_argh_command("stellar-onoff", ["STELLAR_ONOFF"]),
+               # create_argh_command("a0v", ["A0V_*"]),
+               # create_argh_command("stellar", ["STELLAR_*"])
+]
 
 parser = argh.ArghParser()
 parser.add_commands(recipe_list)
@@ -53,12 +62,9 @@ parser.add_commands(recipe_list)
 if __name__ == '__main__':
     import numpy
     numpy.seterr(all="ignore")
-    import sys
     argv = sys.argv[1:]
     if "--debug" in argv:
         argv.remove("--debug")
-        # print("--debug")
-        from igrins.libs.logger import set_level
-        set_level("debug")
+        logger.set_level("debug")
 
     argh.dispatch(parser, argv=argv)

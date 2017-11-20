@@ -1,15 +1,13 @@
 
 import os
 from os.path import join
-import astropy.io.fits as pyfits
+# import astropy.io.fits as pyfits
 
 import re
+from ..utils.file_utils import ensure_dir
+
+
 groupname_pattern = re.compile(r"(\d+)(\D.*)?")
-
-
-def ensure_dir(d):
-    if not os.path.exists(d):
-        os.makedirs(d)
 
 
 def get_zeropadded_groupname(groupname):
@@ -119,8 +117,8 @@ class IGRINSPath(object):
         # return join(dirpath,
         #             os.path.basename(fn))
 
-    def get_filenames(self, runids):
-        return [self.get_filename(band, i) for i in runids]
+    # def get_filenames(self, runids):
+    #     return [self.get_filename(band, i) for i in runids]
 
     def get_filename(self, runid):
         groupname = get_zeropadded_groupname(runid)

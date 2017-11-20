@@ -5,6 +5,7 @@ import numpy as np
 
 from scipy.signal import savgol_filter
 
+
 def sg_filter(s1, winsize1=15, winsize2=11):
     s1m = ni.median_filter(s1, 11)
     #s1m = s1
@@ -100,7 +101,6 @@ def sv_iter(s1m, maxiter=30, pad=8, winsize1=15, winsize2=11,
     return r
 
 
-
 def get(s1_sl, f12):
     kk = (s1_sl - f12)/f12
     kk[~np.isfinite(kk)] = 0.
@@ -121,13 +121,33 @@ def get(s1_sl, f12):
     return ww
 
 
+def _get_finite_boundary_indices(s1):
+    # select finite number only. This may happen when orders go out of
+    # chip boundary.
+    s1 = np.array(s1)
+    # k1, k2 = np.nonzero(np.isfinite(s1))[0][[0, -1]]
+
+    # k1, k2 = np.nonzero(s1>0.)[0][[0, -1]]
+    with np.errstate(invalid="ignore"):
+        nonzero_indices = np.nonzero(s1 > 0.)[0]  # [[0, -1]]
+
+    # # return meaningless indices if non-zero spectra is too short
+    #  if len(nonzero_indices) < 5:
+    #      return 4, 4
+
+    k1, k2 = nonzero_indices[[0, -1]]
+    k1 = max(k1, 4)
+    k2 = min(k2, 2047-4)
+    return k1, k2
+
+
 def get_smooth_continuum(s, wvl=None):
     """
     wvl : required for masking our some absorption features
     """
 
-    from .trace_flat import get_finite_boundary_indices
-    k1, k2 = get_finite_boundary_indices(s)
+    # from .trace_flat import get_finite_boundary_indices
+    k1, k2 = _get_finite_boundary_indices(s)
     if k1 == k2:
         r = np.empty(len(s), dtype="d")
         r.fill(np.nan)
@@ -161,7 +181,6 @@ def get_smooth_continuum(s, wvl=None):
     if f12 is not None:
         r[sl] = f12
     return r
-
 
 
 if __name__ == "__main__":

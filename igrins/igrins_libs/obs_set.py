@@ -5,7 +5,7 @@ ObsSet: Helper class for a single obsid, and its derived products.
 import astropy.io.fits as pyfits
 
 from .. import DESCS
-from ..libs.load_fits import get_first_science_hdu
+from ..utils.load_fits import get_first_science_hdu
 
 
 class ObsSet(object):

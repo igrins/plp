@@ -2,9 +2,9 @@ import numpy as np
 
 from .. import DESCS
 
-from ..libs.stsci_helper import stsci_median
-from ..libs.resource_helper_igrins import ResourceHelper
-from ..libs.image_combine import destripe_sky
+from ..utils.image_combine import image_median
+from ..igrins_libs.resource_helper_igrins import ResourceHelper
+# from ..libs.image_combine import destripe_sky
 
 
 from .aperture_helper import get_simple_aperture_from_obsset
@@ -12,12 +12,39 @@ from .aperture_helper import get_simple_aperture_from_obsset
 
 def _get_combined_image(obsset):
     data_list = [hdu.data for hdu in obsset.get_hdus()]
-    return stsci_median(data_list)
+    return image_median(data_list)
+
+
+def _destripe_sky(data, destripe_mask, subtract_bg=True):
+    """
+    simple destripping. Suitable for sky.
+    """
+
+    from .destriper import destriper
+    from .estimate_sky import estimate_background, get_interpolated_cubic
+
+    if subtract_bg:
+        xc, yc, v, std = estimate_background(data, destripe_mask,
+                                             di=48, min_pixel=40)
+        nx = ny = 2048
+        ZI3 = get_interpolated_cubic(nx, ny, xc, yc, v)
+        ZI3 = np.nan_to_num(ZI3)
+
+        d = data - ZI3
+    else:
+        d = data
+
+    mask = destripe_mask | ~np.isfinite(d)
+    stripes = destriper.get_stripe_pattern64(d, mask=mask,
+                                             concatenate=True,
+                                             remove_vertical=False)
+
+    return d - stripes
 
 
 def make_combined_image_sky(obsset):
 
-    if obsset.recipe_name.endswith("AB"): # do A-B
+    if obsset.recipe_name.endswith("AB"):  # do A-B
         obsset_a = obsset.get_subset("A")
         obsset_b = obsset.get_subset("B")
 
@@ -31,7 +58,7 @@ def make_combined_image_sky(obsset):
     helper = ResourceHelper(obsset)
     destripe_mask = helper.get("destripe_mask")
 
-    sky_data = destripe_sky(sky_data, destripe_mask, subtract_bg=False)
+    sky_data = _destripe_sky(sky_data, destripe_mask, subtract_bg=False)
 
     hdul = obsset.get_hdul_to_write(([], sky_data))
     obsset.store("combined_sky", data=hdul)

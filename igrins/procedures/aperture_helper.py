@@ -1,4 +1,4 @@
-from igrins.libs.apertures import Apertures
+from .apertures import Apertures
 
 # def get_bottom_up_solution(helper, band, master_obsid):
 #     """

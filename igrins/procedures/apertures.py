@@ -2,7 +2,7 @@ import numpy as np
 import numpy.polynomial as P
 import scipy.ndimage as ni
 
-from .stsci_helper import stsci_median
+from ..utils.image_combine import image_median
 
 
 class ApCoeff(object):
@@ -71,8 +71,8 @@ class Apertures(object):
                 order_map1 = np.zeros(len(xx), dtype="i")
                 for order, bottom, top in zip(self.orders,
                                               bottom_list, top_list):
-                    m_up = yy>bottom[i1]
-                    m_down = yy<top[i1]
+                    m_up = yy > bottom[i1]
+                    m_down = yy < top[i1]
                     order_map1[m_up & m_down] = order
 
                 return order_map1
@@ -81,15 +81,15 @@ class Apertures(object):
                 order_map1 = np.zeros(len(xx), dtype="i")
                 for order, bottom, top in zip(self.orders,
                                               bottom_list, top_list):
-                    m_up = yy>bottom[i1]
-                    m_down = yy<top[i1]
+                    m_up = yy > bottom[i1]
+                    m_down = yy < top[i1]
                     order_map1[m_up & m_down] = order
 
-                order_map1[yy>top_list[-1][i1]] = 999
-                order_map1[yy<bottom_list[0][i1]] = 999
+                order_map1[yy > top_list[-1][i1]] = 999
+                order_map1[yy < bottom_list[0][i1]] = 999
                 return order_map1
 
-        order_map = np.hstack([_g(i1).reshape((-1,1)) for i1 in xx])
+        order_map = np.hstack([_g(i1).reshape((-1, 1)) for i1 in xx])
 
         return order_map
 
@@ -105,15 +105,15 @@ class Apertures(object):
             slitpos_map1.fill(np.nan)
             for order, bottom, top in zip(self.orders,
                                           bottom_list, top_list):
-                m_up = yy>bottom[i1]
-                m_down = yy<top[i1]
+                m_up = yy > bottom[i1]
+                m_down = yy < top[i1]
                 m_order = m_up & m_down
                 slit_pos = (yy[m_order] - bottom[i1])/(top[i1] - bottom[i1])
                 slitpos_map1[m_order] = slit_pos
 
             return slitpos_map1
 
-        order_map = np.hstack([_g(i1).reshape((-1,1)) for i1 in xx])
+        order_map = np.hstack([_g(i1).reshape((-1, 1)) for i1 in xx])
 
         return order_map
 
@@ -122,13 +122,13 @@ class Apertures(object):
         This one is significantly slower than make_order_map.
         """
         yy, xx = np.indices((2048, 2048))
-        #order_maps = []
+        # order_maps = []
         order_map = np.zeros_like(yy)
         for o in self.orders:
-            #izip(count(1), self.apcoeffs):
+            # izip(count(1), self.apcoeffs):
             ap = self.apcoeffs[o]
-            m_up = yy>ap(xx, frac1)
-            m_down = yy<ap(xx, frac2)
+            m_up = yy > ap(xx, frac1)
+            m_down = yy < ap(xx, frac2)
             order_map[m_up & m_down] = o
 
         return order_map
@@ -169,20 +169,18 @@ class Apertures(object):
         for o in self.orders:
             sl = slices[o - 1]
             msk = (order_map[sl] != o)
-            s = stsci_median(data[sl], badmasks=msk)
+            s = image_median(data[sl], badmasks=msk)
 
             s_list.append(s)
 
         return s_list
 
+    # def get_mask_bg_pattern(self, flat_mask):
+    #     im_shape = flat_mask.shape
+    #     order_msk = make_order_map(im_shape, bottom_up_solutions)
+    #     mask_to_estimate_bg_pattern = (flat_mask & order_msk)
 
-    def get_mask_bg_pattern(self, flat_mask):
-        im_shape = flat_mask.shape
-        order_msk = make_order_map(im_shape, bottom_up_solutions)
-        mask_to_estimate_bg_pattern = (flat_mask & order_msk)
-
-        return mask_to_estimate_bg_pattern
-
+    #     return mask_to_estimate_bg_pattern
 
     def get_shifted_images(self, profile_map, variance_map,
                            data, slitoffset_map=None, debug=False):
@@ -211,7 +209,7 @@ class Apertures(object):
 
                 profile_map = profile_map*msk10
                 data = shiftx(data)/msk10
-                variance_map = shiftx(variance_map) / msk10#/msk10 #**2
+                variance_map = shiftx(variance_map) / msk10  # /msk10 #**2
 
                 msk1 = (msk10 > 0) & (variance_map > 0) & (msk10 > 0.2)
 
@@ -241,7 +239,6 @@ class Apertures(object):
 
             map_weighted_variance = np.abs(profile_map1) * variance_map[sl]
 
-
             sum_weighted_spectra1 = np.nansum(map_weighted_spectra1, axis=0)
             sum_weights1 = np.nansum(map_weights1, axis=0)
 
@@ -256,11 +253,10 @@ class Apertures(object):
 
         return s_list, v_list
 
-
     def extract_stellar_from_shifted(self, ordermap_bpixed,
                                      profile_map, variance_map,
                                      data, msk1,
-                                     #slitpos_map,
+                                     # slitpos_map,
                                      weight_thresh=0.05,
                                      remove_negative=False):
 
@@ -282,13 +278,12 @@ class Apertures(object):
 
             profile_map1[~msk] = 0.
 
-            #profile_map1[np.abs(profile_map1) < 0.02] = np.nan
+            # profile_map1[np.abs(profile_map1) < 0.02] = np.nan
 
             profile_map1[~np.isfinite(profile_map1)] = 0.
 
             # normalize profile
-            #profile_map1 /= np.abs(profile_map1).sum(axis=0)
-
+            # profile_map1 /= np.abs(profile_map1).sum(axis=0)
 
             variance_map1 = variance_map[sl]
             map_weighted_spectra1 = (profile_map1*data[sl])/variance_map1
@@ -305,28 +300,28 @@ class Apertures(object):
             map_weights1[~mmm] = 0.
             profile_map1[~mmm] = 0.
 
-            #profile_map1 = profile_map[sl].copy()
-            #profile_map1[~msk] = 0.
+            # profile_map1 = profile_map[sl].copy()
+            # profile_map1[~msk] = 0.
 
             sum_weighted_spectra1 = map_weighted_spectra1.sum(axis=0)
 
             # mask out range where sum_weighted_spectra1 < 0
             if remove_negative:
-               sum_weighted_spectra1[sum_weighted_spectra1<0] = np.nan
+                sum_weighted_spectra1[sum_weighted_spectra1 < 0] = np.nan
 
             sum_weights1 = map_weights1.sum(axis=0)
             sum_profile1 = np.abs(profile_map1).sum(axis=0)
 
             # weight_thresh = 0.01 safe enough?
-            #thresh_msk = sum_profile1 < 0.1
+            # thresh_msk = sum_profile1 < 0.1
 
             if weight_thresh is not None:
                 thresh_msk = ni.binary_dilation(sum_profile1 < weight_thresh,
                                                 iterations=5)
                 sum_weights1[thresh_msk] = np.nan
 
-            #sum_variance1 = variance_map1.sum(axis=0)
-            #sum_weights1[sum_variance1 < 0.1*np.nanmax(sum_variance1)] = np.nan
+            # sum_variance1 = variance_map1.sum(axis=0)
+            # sum_weights1[sum_variance1 < 0.1*np.nanmax(sum_variance1)] = np.nan
 
             with np.errstate(invalid="ignore"):
                 s = sum_weighted_spectra1 / sum_weights1
@@ -345,7 +340,6 @@ class Apertures(object):
         #     hl.writeto("test_profile.fits", clobber=True)
 
         return s_list, v_list
-
 
     def extract_extended_from_shifted(self, ordermap_bpixed,
                                       profile_map, variance_map,
@@ -377,7 +371,6 @@ class Apertures(object):
 
             # normalize profile
             #profile_map1 /= np.abs(profile_map1).sum(axis=0)
-
 
             variance_map1 = variance_map[sl]
             map_weighted_spectra1 = (profile_map1*data[sl])/variance_map1

@@ -1,6 +1,7 @@
 import os
 from .base_storage import StorageBase
-from ..libs.path_info import ensure_dir
+from ..utils.file_utils import ensure_dir
+
 
 class FileStorage(StorageBase):
     def __init__(self, resource_spec, path_info):
