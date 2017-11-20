@@ -1,16 +1,16 @@
 """ Pipeline Driver """
 
+from ..libs.resource_manager import get_igrins_resource_manager
+from ..libs.igrins_config import IGRINSConfig
+from ..libs.obs_set2 import ObsSet
 
 
 def get_obsset(utdate, recipe_name, band,
                obsids, frametypes, config_name,
                groupname=None, recipe_entry=None, saved_context_name=None):
 
-    from ..libs.resource_manager import get_igrins_resource_manager
     # from igrins import get_obsset
     # caldb = get_caldb(config_name, utdate, ensure_dir=True)
-
-    from ..libs.igrins_config import IGRINSConfig
 
     if isinstance(config_name, IGRINSConfig):
         config = config_name
@@ -23,7 +23,6 @@ def get_obsset(utdate, recipe_name, band,
     else:
         resource_manager = get_igrins_resource_manager(config, (utdate, band))
 
-    from ..libs.obs_set2 import ObsSet
     obsset = ObsSet(resource_manager, recipe_name, obsids, frametypes,
                     groupname=groupname, recipe_entry=recipe_entry)
 
@@ -36,7 +35,7 @@ def get_obsset_from_context(obsset_desc, resource_manager):
     obsids = obsset_desc["obsids"]
     frametypes = obsset_desc["frametypes"]
     groupname = obsset_desc["groupname"]
-    from ..libs.obs_set2 import ObsSet
+
     obsset = ObsSet(resource_manager, recipe_name, obsids, frametypes,
                     groupname=groupname)  # ``, recipe_entry=recipe_entry)
 

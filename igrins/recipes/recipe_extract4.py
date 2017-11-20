@@ -22,7 +22,7 @@ from .a0v_flatten import flatten_a0v
 
 #     db = obsset.add_to_db("wvlsol")
 
-from ..driver import Step
+from ..pipeline.steps import Step
 
 
 steps_stellar = [Step("Make Combined Images", make_combined_images),

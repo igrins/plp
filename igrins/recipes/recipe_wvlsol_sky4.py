@@ -31,7 +31,7 @@ def update_wvlsol_db(obsset):
 
     db = obsset.add_to_db("wvlsol")
 
-from ..driver import Step
+from ..pipeline.steps import Step
 
 
 steps = [Step("Make Combined Sky", make_combined_image_sky),

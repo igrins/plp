@@ -38,7 +38,6 @@ def iter_obsset(replace_name_fnmatch,
     for band in bands:
         print("entering band:{}".format(band))
         for s in selected:
-            print(s)
             # obsids = s[0]
             # frametypes = s[1]
 
@@ -64,7 +63,7 @@ driver_args = [arg("-b", "--bands", default="HK"),
 
 
 def driver_func(steps, recipe_name_fnmatch, obsdate,
-                bands="HK", groupname=None,
+                bands="HK", groups=None,
                 config_file=None, debug=False, verbose=None,
                 resume_from_context_file=None, save_context_on_exception=False,
                 **kwargs):
@@ -81,8 +80,11 @@ def driver_func(steps, recipe_name_fnmatch, obsdate,
                     nskip=context_id, kwargs=kwargs)
         return
 
-    for obsset in iter_obsset(recipe_name_fnmatch, obsdate,
-                              config_file, bands, groupname):
+    obsset_list = [obsset for obsset in iter_obsset(recipe_name_fnmatch,
+                                                    obsdate, config_file,
+                                                    bands, groups)]
+
+    for obsset in obsset_list:
         context_id = apply_steps(obsset, steps, nskip=0, kwargs=kwargs)
 
         if context_id is not None:  # if an exception is raised

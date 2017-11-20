@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 
+
 def _convert2wvlsol(p, orders_w_solutions):
 
     # derive wavelengths.
@@ -15,19 +16,14 @@ def _convert2wvlsol(p, orders_w_solutions):
     return wvl_sol
 
 
-def derive_wvlsol(obsset):
-
-    d = obsset.load("SKY_FITTED_PIXELS_JSON")
-    df = pd.DataFrame(**d)
-
-    msk = df["slit_center"] == 0.5
-    dfm = df[msk]
-
+def fit_wvlsol(df, xdeg=4, ydeg=3):
+    """
+    df: pixels, order, wavelength"""
     from ..libs.ecfit import fit_2dspec
 
-    xl = dfm["pixels"].values
-    yl = dfm["order"].values
-    zl = dfm["wavelength"].values
+    xl = df["pixels"].values
+    yl = df["order"].values
+    zl = df["wavelength"].values
     zlo = zl * yl
     # xl : pixel
     # yl : order
@@ -35,26 +31,15 @@ def derive_wvlsol(obsset):
 
     x_domain = [0, 2047]
     y_domain = [min(yl)-2, max(yl)+2]
-    x_degree, y_degree = 4, 3
-    #x_degree, y_degree = 3, 2
+    # x_degree, y_degree = 4, 3
+    # x_degree, y_degree = 3, 2
 
     msk = np.isfinite(xl)
 
-    fit_params = dict(x_degree=x_degree, y_degree=y_degree,
+    fit_params = dict(x_degree=xdeg, y_degree=ydeg,
                       x_domain=x_domain, y_domain=y_domain)
 
     p, m = fit_2dspec(xl[msk], yl[msk], zlo[msk], **fit_params)
-
-    wvlsol_json = obsset.load_resource_for("wvlsol_v0")
-
-    orders = wvlsol_json["orders"]
-
-    wvl_sol = _convert2wvlsol(p, orders)
-
-    d = dict(orders=orders,
-             wvl_sol=wvl_sol)
-
-    obsset.store("SKY_WVLSOL_JSON", d)
 
     from igrins.libs.astropy_poly_helper import serialize_poly_model
     poly_2d = serialize_poly_model(p)
@@ -63,9 +48,32 @@ def derive_wvlsol(obsset):
                        fitted_model=poly_2d,
                        fitted_mask=m)
 
+    return p, fit_results
+
+
+def derive_wvlsol(obsset):
+
+    d = obsset.load("SKY_FITTED_PIXELS_JSON")
+    df = pd.DataFrame(**d)
+
+    msk = df["slit_center"] == 0.5
+    dfm = df[msk]
+
+    p, fit_results = fit_wvlsol(dfm)
+
+    from ..libs.resource_helper_igrins import ResourceHelper
+    helper = ResourceHelper(obsset)
+    orders = helper.get("orders")
+
+    wvl_sol = _convert2wvlsol(p, orders)
+    d = dict(orders=orders,
+             wvl_sol=wvl_sol)
+
+    obsset.store("SKY_WVLSOL_JSON", d)
+
+    fit_results["orders"] = orders
     obsset.store("SKY_WVLSOL_FIT_RESULT_JSON",
                  fit_results)
-
 
 
 if 0:
