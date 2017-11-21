@@ -29,8 +29,8 @@ def iter_obsset(replace_name_fnmatch,
 
     fn = config.get_value('RECIPE_LOG_PATH', obsdate)
 
-    from ..igrins_libs.recipes import Recipes2
-    recipes = Recipes2(fn)
+    from ..igrins_libs.recipes import RecipeLog
+    recipes = RecipeLog(fn)
 
     selected = get_selected(recipes, replace_name_fnmatch,
                             groups)
@@ -45,7 +45,7 @@ def iter_obsset(replace_name_fnmatch,
             obsids = s[1]
             frametypes = s[2]
             aux_infos = s[3]
-            groupname = aux_infos["GROUP1"]
+            groupname = aux_infos["group1"]
 
             obsset = get_obsset(obsdate, recipe_name, band,
                                 obsids, frametypes, config,
