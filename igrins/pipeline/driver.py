@@ -6,16 +6,18 @@ from ..igrins_libs.obs_set import ObsSet
 
 
 def get_obsset(obsdate, recipe_name, band,
-               obsids, frametypes, config_name,
-               groupname=None, recipe_entry=None, saved_context_name=None):
+               obsids, frametypes,
+               groupname=None, recipe_entry=None,
+               config_file=None, saved_context_name=None,
+               basename_postfix=""):
 
     # from igrins import get_obsset
-    # caldb = get_caldb(config_name, obsdate, ensure_dir=True)
+    # caldb = get_caldb(config_file, obsdate, ensure_dir=True)
 
-    if isinstance(config_name, IGRINSConfig):
-        config = config_name
+    if isinstance(config_file, IGRINSConfig):
+        config = config_file
     else:
-        config = IGRINSConfig(config_name)
+        config = IGRINSConfig(config_file)
 
     if saved_context_name is not None:
         import cPickle as pickle
@@ -24,7 +26,8 @@ def get_obsset(obsdate, recipe_name, band,
         resource_manager = get_igrins_resource_manager(config, (obsdate, band))
 
     obsset = ObsSet(resource_manager, recipe_name, obsids, frametypes,
-                    groupname=groupname, recipe_entry=recipe_entry)
+                    groupname=groupname, recipe_entry=recipe_entry,
+                    basename_postfix=basename_postfix)
 
     return obsset
 
@@ -35,8 +38,11 @@ def get_obsset_from_context(obsset_desc, resource_manager):
     obsids = obsset_desc["obsids"]
     frametypes = obsset_desc["frametypes"]
     groupname = obsset_desc["groupname"]
+    basename_postfix = obsset_desc["basename_posfix"]
 
     obsset = ObsSet(resource_manager, recipe_name, obsids, frametypes,
-                    groupname=groupname)  # ``, recipe_entry=recipe_entry)
+                    groupname=groupname,
+                    basename_postfix=basename_postfix)
+    # ``, recipe_entry=recipe_entry)
 
     return obsset

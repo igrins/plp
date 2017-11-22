@@ -11,7 +11,7 @@ from ..utils.load_fits import get_first_science_hdu
 class ObsSet(object):
     def __init__(self, resource_stack, recipe_name, obsids, frametypes,
                  groupname=None, recipe_entry=None,
-                 reset_read_cache=False):
+                 reset_read_cache=False, basename_postfix=""):
         self.rs = resource_stack
         self.recipe_name = recipe_name
         self.obsids = obsids
@@ -21,6 +21,7 @@ class ObsSet(object):
         self.groupname = groupname
         self.recipe_entry = recipe_entry
         self._reset_read_cache = reset_read_cache
+        self.basename_postfix = basename_postfix
 
         # self.basename = self.caldb._get_basename((self.band, groupname))
         # # this is for query
@@ -38,13 +39,16 @@ class ObsSet(object):
 
     # def get_frames(self):
     #     pass
+    def set_basename_postfix(self, basename_postfix):
+        self.basename_postfix = basename_postfix
 
     # context related
     def get_descriptions(self):
         desc = dict(recipe_name=self.recipe_name,
                     obsids=self.obsids,
                     frametypes=self.frametypes,
-                    groupname=self.groupname)  # ,
+                    groupname=self.groupname,
+                    basename_postfix=self.basename_postfix)  # ,
                     # recipe_entry=self.recipe_entry)
 
         return desc
@@ -94,10 +98,13 @@ class ObsSet(object):
         return r
 
     def store(self, item_desc, data, item_type=None,
-              postfix="", cache_only=False):
+              postfix=None, cache_only=False):
 
         if not isinstance(item_desc, tuple):
             item_desc = DESCS[item_desc]
+
+        if postfix is None:
+            postfix = self.basename_postfix
 
         self.rs.store(self.groupname, item_desc, data,
                       item_type=item_type, postfix=postfix,

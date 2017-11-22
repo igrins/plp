@@ -1,11 +1,20 @@
 import os
 import astropy.io.fits as pyfits
 
+
 def get_first_science_hdu(hdu_list):
     if hdu_list[0].data is None:
         return hdu_list[1]
     else:
         return hdu_list[0]
+
+
+def get_science_hdus(hdu_list):
+    if hdu_list[0].data is None:
+        return hdu_list[1:]
+    else:
+        return hdu_list[0:]
+
 
 # candidate_generators = [(lambda x: os.path.extsep.join([x, "gz"]),
 #                          pyfits.open)]

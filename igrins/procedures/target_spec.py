@@ -164,7 +164,7 @@ def get_wvl_header_data(obsset, wavelength_increasing_order=False):
 
 def store_1dspec(obsset, v_list, s_list, sn_list=None):
 
-    basename_postfix = ""
+    basename_postfix = obsset.basename_postfix
 
     wvl_header, wvl_data, convert_data = get_wvl_header_data(obsset)
 
@@ -204,8 +204,10 @@ def store_2dspec(obsset,
                  conserve_flux=True,
                  height_2dspec=0):
 
+    basename_postfix = obsset.basename_postfix
+
     from .spec_extract_w_profile import ShiftedImages
-    hdul = obsset.load("WVLCOR_IMAGE")
+    hdul = obsset.load("WVLCOR_IMAGE", postfix=basename_postfix)
     shifted = ShiftedImages.from_hdul(hdul)
 
     data_shft = shifted.image
@@ -257,7 +259,7 @@ def store_2dspec(obsset,
     # wvl_header.update(hdul[0].header)
     hdul[0].header = wvl_header
 
-    obsset.store("SPEC2D_FITS", hdul)  # FIXME : add basename_postfix
+    obsset.store("SPEC2D_FITS", hdul, postfix=basename_postfix)
 
     # OUTPUT VAR2D, added by Kyle Kaplan Feb 25, 2015 to get variance map
     # outputted as a datacube
@@ -275,11 +277,11 @@ def store_2dspec(obsset,
     # wvl_header.update(hdul[0].header)
     hdul[0].header = wvl_header
 
-    obsset.store("VAR2D_FITS", hdul)  # FIXME : add basename_postfix
+    obsset.store("VAR2D_FITS", hdul, postfix=basename_postfix)
 
 
 def extract_stellar_spec(obsset, extraction_mode="optimal", height_2dspec=0,
-                         conserve_2d_flux=True):
+                         conserve_2d_flux=True, calculate_sn=True):
 
     # refactored from recipe_extract.ProcessABBABand.process
 
@@ -300,8 +302,6 @@ def extract_stellar_spec(obsset, extraction_mode="optimal", height_2dspec=0,
     ordermap = helper.get("ordermap")
     ordermap_bpixed = helper.get("ordermap_bpixed")
     slitpos_map = helper.get("slitposmap")
-
-    wvl_solutions = helper.get("wvl_solutions")
 
     # from .slit_profile import get_profile_func
     # profile = get_profile_func(obsset)
@@ -325,8 +325,10 @@ def extract_stellar_spec(obsset, extraction_mode="optimal", height_2dspec=0,
 
     s_list, v_list, cr_mask, aux_images = _
 
-    if 1:
+    if calculate_sn:
         # calculate S/N per resolution
+        wvl_solutions = helper.get("wvl_solutions")
+
         sn_list = []
         for wvl, s, v in zip(wvl_solutions,
                              s_list, v_list):
@@ -340,6 +342,8 @@ def extract_stellar_spec(obsset, extraction_mode="optimal", height_2dspec=0,
                 sn = (s/v**.5)*(pixel_per_res_element**.5)
 
             sn_list.append(sn)
+    else:
+        sn_list = None
 
     store_1dspec(obsset, v_list, s_list, sn_list=sn_list)
 
@@ -366,13 +370,23 @@ def extract_extended_spec(obsset, lacosmic_thresh=0.):
 
     ap = helper.get("aperture")
 
-    data_minus = obsset.load_fits_sci_hdu("COMBINED_IMAGE1").data
+    from ..utils.load_fits import get_science_hdus
+    postfix = obsset.basename_postfix
+    hdul = get_science_hdus(obsset.load("COMBINED_IMAGE1",
+                                        postfix=postfix))
+    data_minus = hdul[0].data
+
+    if len(hdul) == 3:
+        variance_map = hdul[1].data
+        variance_map0 = hdul[2].data
+    else:
+        variance_map = obsset.load_fits_sci_hdu("combined_variance1",
+                                                postfix=postfix).data
+        variance_map0 = obsset.load_fits_sci_hdu("combined_variance0",
+                                                 postfix=postfix).data
 
     orderflat = helper.get("orderflat")
     data_minus_flattened = data_minus / orderflat
-
-    variance_map = obsset.load_fits_sci_hdu("combined_variance1").data
-    variance_map0 = obsset.load_fits_sci_hdu("combined_variance0").data
 
     slitoffset_map = helper.get("slitoffsetmap")
 
@@ -387,7 +401,8 @@ def extract_extended_spec(obsset, lacosmic_thresh=0.):
 
     gain = float(obsset.rs.query_ref_value("gain"))
 
-    profile_map = obsset.load_fits_sci_hdu("slitprofile_fits").data
+    profile_map = obsset.load_fits_sci_hdu("slitprofile_fits",
+                                           postfix=postfix).data
 
     from .spec_extract_w_profile import extract_spec_uniform
     _ = extract_spec_uniform(ap, profile_map,
@@ -424,7 +439,7 @@ def extract_extended_spec(obsset, lacosmic_thresh=0.):
 
     _hdul = shifted.to_hdul()
     hdul = obsset.get_hdul_to_write(*_hdul)
-    obsset.store("WVLCOR_IMAGE", hdul)
+    obsset.store("WVLCOR_IMAGE", hdul, postfix=obsset.basename_postfix)
 
     # store_2dspec(obsset,
     #              shifted.image,

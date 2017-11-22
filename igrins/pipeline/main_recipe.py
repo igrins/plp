@@ -22,7 +22,8 @@ def get_selected(recipes, recipe_name, groups):
 
 
 def iter_obsset(replace_name_fnmatch,
-                obsdate, config_file, bands, groups):
+                obsdate, config_file, bands, groups,
+                basename_postfix=""):
 
     from ..igrins_libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
@@ -48,8 +49,10 @@ def iter_obsset(replace_name_fnmatch,
             groupname = aux_infos["group1"]
 
             obsset = get_obsset(obsdate, recipe_name, band,
-                                obsids, frametypes, config,
-                                groupname=groupname, recipe_entry=aux_infos)
+                                obsids, frametypes,
+                                groupname=groupname, recipe_entry=aux_infos,
+                                config_file=config,
+                                basename_postfix=basename_postfix)
             yield obsset
 
 
