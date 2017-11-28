@@ -320,23 +320,22 @@ def _check(df, allow_duplicate_groups=False):
                 raise ValueError(msg)
 
 
-class RecipeLog(pd.DataFrame):
-    def __init__(self, fn, allow_duplicate_groups=False):
-        d = load_recipe_as_dict(fn)
+class RecipeLogClass(pd.DataFrame):
 
-        columns = ["starting_obsid", "objname", "obstype",
-                   "recipe", "obsids", "frametypes",
-                   "exptime", "group1", "group2"]
-        super(RecipeLog, self).__init__(d, columns=columns)
-        # self.set_index("starting_obsid", inplace=True)
-        self._substitute_group1()
-        _check(self, allow_duplicate_groups)
+    @property
+    def _constructor(self):
+        return RecipeLogClass
 
     def subset(self, **kwargs):
         """
         You can index the data frame by theie values,
         but obsids and frametypes are not allowed as they are inherently list.
         """
+
+        recipe_fnmatch = kwargs.pop("recipe_fnmatch", None)
+        if recipe_fnmatch is not None:
+            return self._select_recipe_fnmatch(recipe_fnmatch).subset(**kwargs)
+
         bad_k = [k for k in kwargs.iterkeys()
                  if k in ["obsids", "frametypes"]]
 
@@ -366,6 +365,23 @@ class RecipeLog(pd.DataFrame):
         grp[msk] = self["starting_obsid"][msk]
         self["group1"] = grp
 
+    def _select_recipe_fnmatch(self, recipe_fnmatch):
+
+        if isinstance(recipe_fnmatch, str):
+            recipe_fnmatch_list = [recipe_fnmatch]
+        else:
+            recipe_fnmatch_list = recipe_fnmatch
+
+        p_match = get_multi_fnmatch_pattern(recipe_fnmatch_list)
+
+        indices = []
+        for i, row in self.iterrows():
+            for recipe_name in row["recipe"].split("|"):
+                if p_match(recipe_name):
+                    indices.append(i)
+
+        return self.iloc[indices]
+
     def select_fnmatch_by_groups(self, recipe_fnmatch, groups=None):
 
         if isinstance(recipe_fnmatch, str):
@@ -393,3 +409,17 @@ class RecipeLog(pd.DataFrame):
             selected = [s1 for s1 in selected if s1[-1]["group1"] in groups]
 
         return selected
+
+
+class RecipeLog(RecipeLogClass):
+
+    def __init__(self, fn, allow_duplicate_groups=False):
+        d = load_recipe_as_dict(fn)
+
+        columns = ["starting_obsid", "objname", "obstype",
+                   "recipe", "obsids", "frametypes",
+                   "exptime", "group1", "group2"]
+        super(RecipeLog, self).__init__(d, columns=columns)
+        # self.set_index("starting_obsid", inplace=True)
+        self._substitute_group1()
+        _check(self, allow_duplicate_groups)

@@ -18,19 +18,27 @@ def get_pipeline_steps(recipe_name):
     import igrins.igrins_recipes.recipe_register as recipe_register
     import igrins.igrins_recipes.recipe_wvlsol as recipe_wvlsol_sky
     import igrins.igrins_recipes.recipe_extract_sky as recipe_extract_sky
-    import igrins.igrins_recipes.recipe_extract as recipe_extract
+    import igrins.igrins_recipes.recipe_a0v_onoff as recipe_a0v_onoff
+    import igrins.igrins_recipes.recipe_a0v_ab as recipe_a0v_ab
+    import igrins.igrins_recipes.recipe_stellar_onoff as recipe_stellar_onoff
+    import igrins.igrins_recipes.recipe_stellar_ab as recipe_stellar_ab
+    import igrins.igrins_recipes.recipe_extended_onoff as recipe_extended_onoff
+    import igrins.igrins_recipes.recipe_extended_ab as recipe_extended_ab
 
-    m = p_extract.match(recipe_name)
-    if m:
-        recipe_name = m.group(1)
+    # m = p_extract.match(recipe_name)
+    # if m:
+    #     recipe_name = m.group(1)
 
     steps = {"flat": recipe_flat.steps,
              "register-sky": recipe_register.steps,
              "wvlsol-sky": recipe_wvlsol_sky.steps,
-             "extended-sky": recipe_extract_sky.steps,
-             "extended": recipe_extract.steps_extended,
-             "stellar": recipe_extract.steps_stellar,
-             "a0v": recipe_extract.steps_a0v
+             "extract-sky": recipe_extract_sky.steps,
+             "extended-ab": recipe_extended_ab.steps,
+             "extended-onoff": recipe_extended_onoff.steps,
+             "stellar-ab": recipe_stellar_ab.steps,
+             "stellar-onoff": recipe_stellar_onoff.steps,
+             "a0v-ab": recipe_a0v_ab.steps,
+             "a0v-onoff": recipe_a0v_onoff.steps
     }
 
     return steps[recipe_name]
@@ -48,13 +56,16 @@ def create_argh_command(recipe_name, recipe_name_fnmatch=None):
 recipe_list = [create_argh_command("flat"),
                create_argh_command("register-sky", ["SKY", "SKY_AB"]),
                create_argh_command("wvlsol-sky", ["SKY", "SKY_AB"]),
-               create_argh_command("extended-sky", ["SKY", "SKY_AB"]),
+               create_argh_command("extract-sky", ["SKY", "SKY_AB"]),
                create_argh_command("a0v-ab", ["A0V_AB"]),
                create_argh_command("a0v-onoff", ["A0V_ONOFF"]),
                create_argh_command("stellar-ab", ["STELLAR_AB"]),
                create_argh_command("stellar-onoff", ["STELLAR_ONOFF"]),
-               create_argh_command("a0v", ["A0V_*"]),
-               create_argh_command("stellar", ["STELLAR_*"])
+               create_argh_command("extended-ab", ["EXTEND_AB"]),
+               create_argh_command("extended-onoff", ["EXTEND_ONOFF"]),
+               # create_argh_command("stellar-onoff", ["STELLAR_ONOFF"]),
+               # create_argh_command("a0v", ["A0V_*"]),
+               # create_argh_command("extended", ["EXTEND_*"])
 ]
 
 parser = argh.ArghParser()
