@@ -259,7 +259,6 @@ def identify_horizontal_line(d_deriv, mmp, pad=20, bg_std=None):
         ob_id = find_nearest_object(mmp, im_labeled,
                                     slice_map, i, labels_center_column)
         if ob_id:
-            print(i, ob_id)
             im_labeled[im_labeled == i] = ob_id
             slice_map_update_required = True
 
@@ -401,7 +400,7 @@ def trace_aperture_chebyshev(xy_list, domain=None):
         y_m = p(xx, oo+oi)
         f = cheb.Chebyshev.fit(xx, y_m, x_degree, domain=domain)
         if np.all(y_thresh(y_m)):
-            print("all negative at ", oi)
+            # print("all negative at ", oi)
             next_orders = []
 
         return oi, f, next_orders
@@ -440,7 +439,7 @@ def trace_aperture_chebyshev(xy_list, domain=None):
     #     else:
     #         f_list_down.append(f)
 
-    print(o_list_down[::-1] + ooo + o_list_up)
+    # print(o_list_down[::-1] + ooo + o_list_up)
     return f_list, f_list_down[::-1] + f_list + f_list_up
 
 

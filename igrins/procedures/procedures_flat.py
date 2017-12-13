@@ -10,7 +10,7 @@ from astropy.io.fits import Card, HDUList, PrimaryHDU
 from ..utils.image_combine import image_median as stsci_median
 from ..procedures import destripe_dark_flatoff as dh
 
-from .. import DESCS
+from .. import get_obsset_helper, DESCS
 
 from ..utils.json_helper import json_dumps
 
@@ -90,8 +90,7 @@ def obsset_combine_flat_off_step2(obsset):
     obsset_off = obsset.get_subset("OFF")
     flat_off_hdu = obsset_off.load_fits_sci_hdu(DESCS["FLAT_OFF"])
     flat_off = flat_off_hdu.data
-    from ..igrins_libs.resource_helper_igrins import ResourceHelper
-    helper = ResourceHelper(obsset)
+    helper = get_obsset_helper(obsset)
     destripe_mask = helper.get("destripe_mask")
 
     bg_model = dh.model_bg(flat_off, destripe_mask)

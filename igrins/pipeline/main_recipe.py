@@ -2,6 +2,8 @@ from .argh_helper import arg
 from .driver import get_obsset, get_obsset_from_context  # , apply_steps
 from .steps import apply_steps
 
+from ..igrins_libs.logger import info
+
 
 # for testing purposes
 def _parse_groups(groups):
@@ -37,7 +39,7 @@ def iter_obsset(replace_name_fnmatch,
                             groups)
 
     for band in bands:
-        print("entering band:{}".format(band))
+        info("= Entering band:{}".format(band))
         for s in selected:
             # obsids = s[0]
             # frametypes = s[1]

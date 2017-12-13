@@ -1,9 +1,8 @@
 import os
 
-
-
 ### NEW
 
+from .igrins_libs.resource_helper_igrins import ResourceHelper
 
 from .igrins_libs.storage_descriptions import load_descriptions
 
@@ -79,3 +78,7 @@ def get_obsset(obsdate, band, recipe_name_or_entry,
                          groupname, recipe_entry,
                          config_file=config_file)
     return obsset
+
+
+def get_obsset_helper(obsset):
+    return ResourceHelper(obsset)

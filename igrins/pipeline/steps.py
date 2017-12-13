@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from .argh_helper import argh, arg, wrap_multi
+from ..igrins_libs.logger import info
 
 
 class Step():
@@ -27,7 +28,12 @@ def apply_steps(obsset, steps, kwargs=None, nskip=0):
 
     n_steps = len(steps)
 
-    print("[{}]".format(obsset))
+    if obsset.basename_postfix:
+        info("[{}: {} {}]".format(obsset.recipe_name,
+                                  obsset.groupname, obsset.basename_postfix))
+    else:
+        info("[{}: {}]".format(obsset.recipe_name, obsset.groupname))
+
     for context_id, step in enumerate(steps):
         if hasattr(step, "name"):
             context_name = step.name

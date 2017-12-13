@@ -166,16 +166,3 @@ def sub_p64_with_mask(d0, destrip_mask=None):
     ds, p = get_p64_mask(d0, mask)
     return d0 - p
 
-
-def sub_median_row_with_mask(d1, mask):
-    k = np.ma.array(d1, mask=mask).filled(np.nan)
-    c = np.nanmedian(k, axis=1)
-
-    return sub_column(d1, c)
-
-
-def sub_with_bg(d, bg, destripe_mask=None):
-    d0 = d - bg
-    d1 = sub_p64_with_mask(d0, destripe_mask)
-    d2 = sub_median_row_with_mask(d1, destripe_mask)
-    return d2 + bg
