@@ -1,5 +1,5 @@
 from ..pipeline.steps import Step
-from ..procedures.procedures_flat import (combine_flat_off,
+from ..procedures.procedures_flat import (obsset_combine_flat_off,
                                           make_hotpix_mask,
                                           combine_flat_on,
                                           make_deadpix_mask,
@@ -7,10 +7,11 @@ from ..procedures.procedures_flat import (combine_flat_off,
                                           trace_order_boundaries,
                                           stitch_up_traces,
                                           make_bias_mask,
-                                          update_db)
+                                          update_db,
+                                          obsset_combine_flat_off_step2)
 
 
-steps = [Step("Combine Flat-Off", combine_flat_off),
+steps = [Step("Combine Flat-Off", obsset_combine_flat_off),
          Step("Hotpix Mask", make_hotpix_mask,
               sigma_clip1=100, sigma_clip2=5),
          Step("Combine Flat-On", combine_flat_on),
@@ -20,4 +21,5 @@ steps = [Step("Combine Flat-Off", combine_flat_off),
          Step("Trace Order Boundary", trace_order_boundaries),
          Step("Stitch Up Traces", stitch_up_traces),
          Step("Bias Mask", make_bias_mask),
-         Step("Update DB", update_db)]
+         Step("Update DB", update_db),
+         Step("Combine Flat-Off (2nd phase)", obsset_combine_flat_off_step2)]

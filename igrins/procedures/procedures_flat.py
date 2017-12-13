@@ -5,32 +5,113 @@ from collections import namedtuple
 import numpy as np
 import scipy.ndimage as ni
 
-from astropy.io.fits import Card
+from astropy.io.fits import Card, HDUList, PrimaryHDU
 
 from ..utils.image_combine import image_median as stsci_median
+from ..procedures import destripe_dark_flatoff as dh
 
 from .. import DESCS
 
+from ..utils.json_helper import json_dumps
 
-def combine_flat_off(obsset, destripe=True):
+# def combine_flat_off(hdul, destripe=True):
+#     # destripe=True):
+
+#     cards = []
+
+#     data_list = [hdu.data for hdu in hdul]
+
+#     flat_off = stsci_median(data_list)
+
+#     if destripe:
+#         from .destriper import destriper
+#         flat_off = destriper.get_destriped(flat_off)
+
+#         cards.append(Card("HISTORY",
+#                           "IGR: image destriped."))
+
+#     return (cards, flat_off)
+
+
+def combine_flat_off(hdul, destripe=True):
+    # destripe=True):
+
+    cards = []
+
+    data_list = [hdu.data for hdu in hdul]
+
+    if destripe:
+        bg_mask, bg_dict = dh.make_background_mask(data_list)
+        cards.append(("IGRFLAT0", bg_dict))
+        flat_off = dh.make_initial_dark(data_list, bg_mask)
+    else:
+        flat_off = stsci_median(data_list)
+
+    return (cards, flat_off)
+
+
+def obsset_combine_flat_off(obsset, destripe=True):
     # destripe=True):
 
     obsset_off = obsset.get_subset("OFF")
-    cards = []
 
-    data_list = [hdu.data for hdu in obsset_off.get_hdus()]
+    # cards = []
 
-    flat_off = stsci_median(data_list)
+    # data_list = [hdu.data for hdu in obsset_off.get_hdus()]
 
-    if destripe:
-        from .destriper import destriper
-        flat_off = destriper.get_destriped(flat_off)
+    # flat_off = stsci_median(data_list)
 
-        cards.append(Card("HISTORY",
-                          "IGR: image destriped."))
+    # if destripe:
+    #     from .destriper import destriper
+    #     flat_off = destriper.get_destriped(flat_off)
 
-    hdul = obsset_off.get_hdul_to_write((cards, flat_off))
+    #     cards.append(Card("HISTORY",
+    #                       "IGR: image destriped."))
+
+    hdu_list = obsset_off.get_hdus()
+    cards, flat_off = combine_flat_off(hdu_list, destripe=destripe)
+
+    hdu_cards = [Card(k, json_dumps(v)) for (k, v) in cards]
+
+    hdul = obsset_off.get_hdul_to_write((hdu_cards, flat_off))
     obsset_off.store(DESCS["FLAT_OFF"], hdul, cache_only=True)
+
+    obsset_off.store(DESCS["FLATOFF_JSON"], dict(cards), cache_only=True)
+
+
+def get_band(obsset):
+    _, band = obsset.rs.get_resource_spec()
+    return band
+
+
+def obsset_combine_flat_off_step2(obsset):
+    # destripe=True):
+
+    obsset_off = obsset.get_subset("OFF")
+    flat_off_hdu = obsset_off.load_fits_sci_hdu(DESCS["FLAT_OFF"])
+    flat_off = flat_off_hdu.data
+    from ..igrins_libs.resource_helper_igrins import ResourceHelper
+    helper = ResourceHelper(obsset)
+    destripe_mask = helper.get("destripe_mask")
+
+    bg_model = dh.model_bg(flat_off, destripe_mask)
+
+    band = get_band(obsset)
+    if band == "H":
+        destripe_mask = None
+
+    hdul = obsset_off.get_hdus()
+    data_list = [hdu.data for hdu in hdul]
+
+    final_dark = dh.make_dark_with_bg(data_list,
+                                      bg_model,
+                                      destripe_mask)
+
+    # flat_off_hdul = obsset_off.get_hdul_to_write(([], final_dark))
+    flat_off_hdu.data = final_dark
+    flat_off_hdul = HDUList([PrimaryHDU(data=final_dark,
+                                        header=flat_off_hdu.header)])
+    obsset_off.store(DESCS["FLAT_OFF"], flat_off_hdul)
 
 
 def make_hotpix_mask(obsset,
@@ -63,7 +144,7 @@ def make_hotpix_mask(obsset,
 
     # save fits with updated header
     flat_off_hdu.header.update(flat_off_cards)
-    obsset_off.store(DESCS["FLAT_OFF"], flat_off_hdu)
+    obsset_off.store(DESCS["FLAT_OFF"], HDUList([flat_off_hdu]))
 
 
 def combine_flat_on(obsset):
@@ -73,7 +154,10 @@ def combine_flat_on(obsset):
 
     data_list = [hdu.data for hdu in obsset_on.get_hdus()]
 
-    flat_on = stsci_median(data_list)
+    # data_list1 = [dh.sub_p64_from_guard(d) for d in data_list]
+
+    # flat_on = stsci_median(data_list1)
+    flat_on = dh.make_flaton(data_list)
 
     flat_std = np.std(data_list, axis=0)
 

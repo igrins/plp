@@ -97,11 +97,11 @@ def get_interpolated_rbf(nx, ny, xc, yc, v, smooth=1.e-12, nsample=16, nr=1000):
 
     XI, YI = np.meshgrid(np.arange(0, nx), np.arange(0, ny))
 
-    xi_r4 = np.ravel(XI[::nn,::nn])
-    yi_r4 = np.ravel(YI[::nn,::nn])
+    xi_r4 = np.ravel(XI[::nn, ::nn])
+    yi_r4 = np.ravel(YI[::nn, ::nn])
 
     d, r = divmod(len(xi_r4), nr)
-    ii = [nr] * d + [r]
+    # ii = [nr] * d + [r]
 
     zi_list = []
     for i in range(d+1):
@@ -110,7 +110,7 @@ def get_interpolated_rbf(nx, ny, xc, yc, v, smooth=1.e-12, nsample=16, nr=1000):
         zi = rbf(xi, yi)
         zi_list.append(zi)
 
-    ZI4 = np.concatenate(zi_list).reshape(XI[::nn,::nn].shape)
+    ZI4 = np.concatenate(zi_list).reshape(XI[::nn, ::nn].shape)
     ZI = ni.zoom(ZI4, nn)
 
     return ZI

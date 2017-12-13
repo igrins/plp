@@ -2,6 +2,131 @@ import numpy as np
 
 from ..utils.image_combine import image_median
 
+# basic routines
+
+
+def stack_subrows(d, dy, mask=None, alt_sign=False):
+    if len(d.shape) == 1:
+        ny, = d.shape
+    elif len(d.shape) == 2:
+        ny, nx = d.shape
+    else:
+        raise ValueError("unsupported shape: {}", d.shape)
+
+    n_dy = ny//dy
+    dy_slices = [slice(iy*dy, (iy+1)*dy) for iy in range(n_dy)]
+
+    from itertools import cycle
+    if mask is not None:
+        if alt_sign:
+            _sign = cycle([1, -1])
+            dd = [d[sl][::next(_sign)] for sl in dy_slices]
+            _sign = cycle([1, -1])
+            msk = [mask[sl][::next(_sign)] for sl in dy_slices]
+        else:
+            dd = [d[sl] for sl in dy_slices]
+            msk = [mask[sl] for sl in dy_slices]
+
+        ddm = image_median(dd, badmasks=msk)
+
+    else:
+        if alt_sign:
+            _sign = cycle([1, -1])
+            dd = [d[sl][::next(_sign)] for sl in dy_slices]
+        else:
+            dd = [d[sl] for sl in dy_slices]
+
+        ddm = np.median(dd, axis=0)
+
+    return ddm
+
+
+def stack128(d, mask=None):
+    return stack_subrows(d, 128, mask=mask, alt_sign=False)
+
+
+def stack64(d, mask=None):
+    return stack_subrows(d, 64, mask=mask, alt_sign=True)
+
+
+def concat(stacked, iter_sign, n_repeat):
+    return np.concatenate([stacked[::s] for s in iter_sign] * n_repeat)
+
+
+
+
+
+# clf()
+# for d in data_list:
+#     s128 = stack128(d)
+#     xx = np.median(s128, axis=0)
+#     s128m = s128 - xx
+#     s128_0 = np.median(s128m, axis=1)
+#     sm = s128m - s128_0[:, np.newaxis]
+
+#     plot(xx)
+
+# clf()
+# kk = plot(s128m, color="0.8", alpha=0.5)
+# plot(s128_0, color="k")
+# plot(s128_0 + s_std, color="r")
+# plot(s128_0 - s_std, color="b")
+
+
+
+# dy = 128
+#     if len(d.shape) == 1:
+#         ny, = d.shape
+#     elif len(d.shape) == 2:
+#         ny, nx = d.shape
+#     else:
+#         raise ValueError("unsupported shape: {}", d.shape)
+
+#     n_dy = ny//dy
+#     dy_slices = [slice(iy*dy, (iy+1)*dy) for iy in range(n_dy)]
+#     from itertools import cycle
+#     if mask is not None:
+#         dd = [d[sl] for sl in dy_slices]
+#         alt_sign = cycle([1, -1])
+#         msk = [mask[sl] for sl in dy_slices]
+#         ddm = image_median(dd, badmasks=msk)
+#     else:
+#         dd = [d[sl] for sl in dy_slices]
+#         ddm = np.median(dd, axis=0)
+
+#     return ddm
+
+def get_stripe_pattern64(self, d, mask=None,
+                         concatenate=True,
+                         remove_vertical=True):
+    """
+    if concatenate is True, return 2048x2048 array.
+    Otherwise, 128x2048 array.
+    """
+    dy = 64
+    n_dy = 2048//dy
+    dy_slices = [slice(iy*dy, (iy+1)*dy) for iy in range(n_dy)]
+    from itertools import cycle
+    if mask is not None:
+        if remove_vertical:
+            d = self._remove_vertical_smooth_bg(d, mask=mask)
+        alt_sign = cycle([1, -1])
+        dd = [d[sl][::next(alt_sign)] for sl in dy_slices]
+        alt_sign = cycle([1, -1])
+        msk = [mask[sl][::next(alt_sign)] for sl in dy_slices]
+        ddm = image_median(dd, badmasks=msk)
+        # dd1 = np.ma.array(dd, mask=msk)
+        # ddm = np.ma.median(dd1, axis=0)
+    else:
+        alt_sign = cycle([1, -1])
+        dd = [d[sl][::next(alt_sign)] for sl in dy_slices]
+        ddm = np.median(dd, axis=0)
+
+    if concatenate:
+        return np.concatenate([ddm, ddm[::-1]] * (n_dy//2))
+    else:
+        return ddm
+
 
 class Destriper(object):
     def __init__(self):
