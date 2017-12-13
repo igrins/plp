@@ -357,7 +357,7 @@ class RecipeLogClass(pd.DataFrame):
             m_reversed &= m
 
         # print m_reversed
-        return self.iloc[m_reversed]
+        return self.loc[m_reversed]
 
     def _substitute_group1(self):
         msk = self["group1"] == "1"
