@@ -72,8 +72,8 @@ class IgrinsBasenameHelper():
         return str(int(m.group(3))) + m.group(4)
 
 
-def get_file_storage(config, resource_spec):
-    return get_storage(config, resource_spec)
+def get_file_storage(config, resource_spec, check_candidate=False):
+    return get_storage(config, resource_spec, check_candidate=check_candidate)
 
 
 def get_resource_db(config, resource_spec):
@@ -87,11 +87,13 @@ def get_resource_db(config, resource_spec):
 
 
 def get_resource_manager(config, resource_spec,
-                         basename_helper=None, item_converter_class="auto"):
+                         basename_helper=None, item_converter_class="auto",
+                         check_candidate=False):
 
     obsdate, band = resource_spec
 
-    base_storage = get_file_storage(config, resource_spec)
+    base_storage = get_file_storage(config, resource_spec,
+                                    check_candidate=check_candidate)
 
     if item_converter_class is None:
         storage = base_storage
@@ -123,7 +125,7 @@ def get_igrins_resource_manager(config, resource_spec):
     basename_helper = IgrinsBasenameHelper(obsdate, band)
 
     rs = get_resource_manager(config, resource_spec,
-                              basename_helper=basename_helper)
+                              basename_helper=basename_helper,
+                              check_candidate=True)
 
     return rs
-

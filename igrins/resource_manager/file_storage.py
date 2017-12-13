@@ -4,11 +4,12 @@ from ..utils.file_utils import ensure_dir
 
 
 class FileStorage(StorageBase):
-    def __init__(self, resource_spec, path_info):
+    def __init__(self, resource_spec, path_info, check_candidate=False):
 
         self.utdate, self.band = resource_spec
 
         self.path_info = path_info
+        self._check_candidate = check_candidate
 
     def _get_path(self, section, fn):
 
@@ -23,7 +24,10 @@ class FileStorage(StorageBase):
 
         return os.path.exists(file_path)
 
-    def load(self, section, fn, item_type=None, check_candidate=False):
+    def load(self, section, fn, item_type=None, check_candidate=None):
+        if check_candidate is None:
+            check_candidate = self._check_candidate
+
         if check_candidate:
             fn, decompress = self.search_candidate(section, fn)
         else:

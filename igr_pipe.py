@@ -63,9 +63,6 @@ recipe_list = [create_argh_command("flat"),
                create_argh_command("stellar-onoff", ["STELLAR_ONOFF"]),
                create_argh_command("extended-ab", ["EXTEND_AB"]),
                create_argh_command("extended-onoff", ["EXTEND_ONOFF"]),
-               # create_argh_command("stellar-onoff", ["STELLAR_ONOFF"]),
-               # create_argh_command("a0v", ["A0V_*"]),
-               # create_argh_command("extended", ["EXTEND_*"])
 ]
 
 parser = argh.ArghParser()
