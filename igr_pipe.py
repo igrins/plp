@@ -6,6 +6,8 @@ from igrins.pipeline.argh_helper import argh
 
 from igrins.pipeline.main_recipe import driver_func, driver_args
 from igrins.pipeline.steps import create_argh_command_from_steps
+from igrins.igrins_recipes.recipe_prepare_recipe_logs \
+    import prepare_recipe_logs
 
 # from igrins.pipeline.sample_steps import get_pipeline_steps
 
@@ -14,16 +16,16 @@ p_extract = re.compile(r'(\w+)-(ab|onoff)')
 
 
 def get_pipeline_steps(recipe_name):
-    import igrins.igrins_recipes.recipe_flat as recipe_flat
-    import igrins.igrins_recipes.recipe_register as recipe_register
-    import igrins.igrins_recipes.recipe_wvlsol as recipe_wvlsol_sky
-    import igrins.igrins_recipes.recipe_extract_sky as recipe_extract_sky
-    import igrins.igrins_recipes.recipe_a0v_onoff as recipe_a0v_onoff
-    import igrins.igrins_recipes.recipe_a0v_ab as recipe_a0v_ab
-    import igrins.igrins_recipes.recipe_stellar_onoff as recipe_stellar_onoff
-    import igrins.igrins_recipes.recipe_stellar_ab as recipe_stellar_ab
-    import igrins.igrins_recipes.recipe_extended_onoff as recipe_extended_onoff
-    import igrins.igrins_recipes.recipe_extended_ab as recipe_extended_ab
+    from igrins.igrins_recipes import (recipe_flat,
+                                       recipe_register,
+                                       recipe_wvlsol as recipe_wvlsol_sky,
+                                       recipe_extract_sky,
+                                       recipe_a0v_onoff,
+                                       recipe_a0v_ab,
+                                       recipe_stellar_onoff,
+                                       recipe_stellar_ab,
+                                       recipe_extended_onoff,
+                                       recipe_extended_ab)
 
     # m = p_extract.match(recipe_name)
     # if m:
@@ -53,7 +55,8 @@ def create_argh_command(recipe_name, recipe_name_fnmatch=None):
     return f
 
 
-recipe_list = [create_argh_command("flat"),
+recipe_list = [prepare_recipe_logs,
+               create_argh_command("flat"),
                create_argh_command("register-sky", ["SKY", "SKY_AB"]),
                create_argh_command("wvlsol-sky", ["SKY", "SKY_AB"]),
                create_argh_command("extract-sky", ["SKY", "SKY_AB"]),
