@@ -9,6 +9,8 @@ from igrins.pipeline.steps import create_argh_command_from_steps
 from igrins.igrins_recipes.recipe_prepare_recipe_logs \
     import prepare_recipe_logs
 
+from igrins.quicklook.obsset_ql import create_argh_command_quicklook
+
 # from igrins.pipeline.sample_steps import get_pipeline_steps
 
 import re
@@ -66,6 +68,7 @@ recipe_list = [prepare_recipe_logs,
                create_argh_command("stellar-onoff", ["STELLAR_ONOFF"]),
                create_argh_command("extended-ab", ["EXTEND_AB"]),
                create_argh_command("extended-onoff", ["EXTEND_ONOFF"]),
+               create_argh_command_quicklook(),
 ]
 
 parser = argh.ArghParser()

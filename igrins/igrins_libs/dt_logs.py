@@ -104,6 +104,9 @@ def load_from_fn_list(obsdate, fn_list):
 def load_from_dir(obsdate, dir, debug=False):
     # there could be two log files!
     fn_list = glob.glob(os.path.join(dir, "IGRINS_DT_Log_*-1_H.txt"))
+    if len(fn_list) == 0:
+        raise RuntimeError("No DT Log files are found in {}".format(dir))
+
     fn_list.sort()
 
     logger.info("loading DT log files: {}".format(fn_list))

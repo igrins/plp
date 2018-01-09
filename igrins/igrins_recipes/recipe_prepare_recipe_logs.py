@@ -29,7 +29,7 @@ def make_recipe_logs(obsdate, l, populate_group1=False):
     groupby_keys = ["OBJNAME", "OBJTYPE", "GROUP1", "GROUP2", "EXPTIME"]
 
     recipe_logs = []
-    # for k, group in d3.groupby(groupby_keys, sort=False):
+    #~/work/kmtnet for k, group in d3.groupby(groupby_keys, sort=False):
     from ..utils.groupby import groupby
     for k, group in groupby(d3, groupby_keys):
         objname, objtype, group1, group2, exptime = k
