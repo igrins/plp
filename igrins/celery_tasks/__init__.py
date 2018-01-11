@@ -13,7 +13,8 @@ app = Celery('tasks', broker=broker, backend='rpc://')
 @app.task
 def do_ql_flat(triname, obsdate, obsids, frametypes):
     config_file = "recipe.{triname}.config".format(triname=triname)
-    quicklook_func(obsdate, objtypes="FLAT",
+
+    quicklook_func(obsdate, objtypes=["FLAT"] * len(obsids),
                    bands="HK",
                    frametypes=frametypes, obsids=obsids,
                    config_file=config_file)
