@@ -1,3 +1,5 @@
+import pandas as pd
+
 from ..pipeline.steps import Step
 
 # from ..procedures.sky_spec import make_combined_image_sky
@@ -9,8 +11,10 @@ from ..igrins_libs.resource_helper_igrins import ResourceHelper
 from ..procedures.sky_spec import _get_combined_image, _destripe_sky
 from ..procedures.target_spec import get_variance_map
 
-from ..procedures.target_spec import (extract_extended_spec,
-                                      store_2dspec)
+from ..procedures.target_spec import extract_extended_spec
+from ..procedures.ref_lines_db import SkyLinesDB, HitranSkyLinesDB
+
+from ..procedures.process_identify_multiline import identify_lines_from_spec
 
 
 def make_combined_image_sky(obsset):
@@ -50,14 +54,46 @@ def estimate_slit_profile(obsset):
 
 
 def set_basename_postfix(obsset):
+    # This only applies for the output name
     obsset.set_basename_postfix(basename_postfix="_sky")
+
+
+def identify_sky_lines(obsset):
+
+    # just to retrieve order information
+    wvlsol_v0 = obsset.load_resource_for("wvlsol_v0")
+    orders = wvlsol_v0["orders"]
+    wvlsol = wvlsol_v0["wvl_sol"]
+
+    #
+    # from collections import namedtuple
+    # Spec = namedtuple("Spec", ["s_map", "wvl_map"])
+
+    # ref_lines_db = SkyLinesDB(config=obsset.get_config())
+    ref_lines_db = SkyLinesDB(obsset.rs.master_ref_loader)
+
+    if obsset.rs.get_resource_spec()[1] == "K":
+        ref_lines_db_hitrans = HitranSkyLinesDB(obsset.rs.master_ref_loader)
+    else:
+        ref_lines_db_hitrans = None
+
+    hdu = obsset.load_fits_sci_hdu("SPEC_FITS", postfix="_sky")
+
+    fitted_pixels = identify_lines_from_spec(orders, hdu.data, wvlsol,
+                                             ref_lines_db,
+                                             ref_lines_db_hitrans)
+
+    # storing multi-index seems broken. Enforce reindexing.
+    _d = fitted_pixels.reset_index().to_dict(orient="split")
+    obsset.store("SKY_IDENTIFIED_JSON", _d)
 
 
 steps = [Step("Set basename_postfix", set_basename_postfix),
          Step("Make Combined Sky", make_combined_image_sky),
-         Step("Estimate slit profile", estimate_slit_profile),
+         Step("Estimate slit profile (uniform)", estimate_slit_profile),
          Step("Extract spectra (for extendeded)",
               extract_extended_spec),
-         Step("Generate Rectified 2d-spec", store_2dspec),
+         Step("Identify sky lines",
+              identify_sky_lines),
+         # Step("Generate Rectified 2d-spec", store_2dspec),
 ]
-

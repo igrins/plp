@@ -83,6 +83,7 @@ SLITPOSMAP_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_{basename}{postfix}.slitpos_m
 SLITOFFSET_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_{basename}{postfix}.slitoffset_map.fits")
 WAVELENGTHMAP_FITS_DESC = ("PRIMARY_CALIB_PATH", "SKY_{basename}{postfix}.wavelength_map.fits")
 
+SKY_IDENTIFIED_JSON_DESC = ("OUTDATA_PATH", "{basename}{postfix}.sky_identified.json")
 SKY_FITTED_PIXELS_JSON_DESC = ("PRIMARY_CALIB_PATH", "SKY_{basename}{postfix}.fitted_pixels.json")
 
 VOLUMEFIT_COEFFS_JSON_DESC = ("PRIMARY_CALIB_PATH", "SKY_{basename}{postfix}.volumefit_coeffs.json")

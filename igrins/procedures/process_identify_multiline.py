@@ -1,9 +1,39 @@
 import numpy as np
 import pandas as pd
 
+from collections import namedtuple
 # from igrins.libs.recipe_helper import RecipeHelper
 
+
 from ..procedures.ref_lines_db import SkyLinesDB, HitranSkyLinesDB
+
+Spec = namedtuple("Spec", ["s_map", "wvl_map"])
+
+
+def identify_lines_from_spec(orders, spec_data, wvlsol,
+                             ref_lines_db, ref_lines_db_hitrans):
+    small_list = []
+    small_keys = []
+
+    spec = Spec(dict(zip(orders, spec_data)),
+                dict(zip(orders, wvlsol)))
+
+    fitted_pixels_oh = ref_lines_db.identify(spec)
+    small_list.append(fitted_pixels_oh)
+    small_keys.append("OH")
+
+    # if obsset.band == "K":
+    if ref_lines_db_hitrans is not None:
+        fitted_pixels_hitran = ref_lines_db_hitrans.identify(spec)
+        small_list.append(fitted_pixels_hitran)
+        small_keys.append("Hitran")
+
+    fitted_pixels = pd.concat(small_list,
+                              keys=small_keys,
+                              names=["kind"],
+                              axis=0)
+
+    return fitted_pixels
 
 
 def identify_multiline(obsset):
@@ -16,11 +46,8 @@ def identify_multiline(obsset):
     wvlsol = wvlsol_v0["wvl_sol"]
 
     #
-    from collections import namedtuple
-    Spec = namedtuple("Spec", ["s_map", "wvl_map"])
-
-    keys = []
-    fitted_pixels_list = []
+    # from collections import namedtuple
+    # Spec = namedtuple("Spec", ["s_map", "wvl_map"])
 
     # ref_lines_db = SkyLinesDB(config=obsset.get_config())
     ref_lines_db = SkyLinesDB(obsset.rs.master_ref_loader)
@@ -30,31 +57,16 @@ def identify_multiline(obsset):
     else:
         ref_lines_db_hitrans = None
 
+    keys = []
+    fitted_pixels_list = []
+
     for hdu in multi_spec:
-
-        small_list = []
-        small_keys = []
-
         slit_center = hdu.header["FSLIT_CN"]
         keys.append(slit_center)
 
-        spec = Spec(dict(zip(orders, hdu.data)),
-                    dict(zip(orders, wvlsol)))
-
-        fitted_pixels_oh = ref_lines_db.identify(spec)
-        small_list.append(fitted_pixels_oh)
-        small_keys.append("OH")
-
-        # if obsset.band == "K":
-        if ref_lines_db_hitrans is not None:
-            fitted_pixels_hitran = ref_lines_db_hitrans.identify(spec)
-            small_list.append(fitted_pixels_hitran)
-            small_keys.append("Hitran")
-
-        fitted_pixels_ = pd.concat(small_list,
-                                   keys=small_keys,
-                                   names=["kind"],
-                                   axis=0)
+        fitted_pixels_ = identify_lines_from_spec(orders, hdu.data, wvlsol,
+                                                  ref_lines_db,
+                                                  ref_lines_db_hitrans)
 
         fitted_pixels_list.append(fitted_pixels_)
 
