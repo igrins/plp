@@ -21,19 +21,21 @@ class Step():
         self.f(obsset, **self.kwargs)
 
 
-def apply_steps(obsset, steps, kwargs=None, nskip=0):
+def apply_steps(obsset, steps, kwargs=None, nskip=0, on_raise=None):
 
     if kwargs is None:
         kwargs = {}
 
     n_steps = len(steps)
 
+    obsdate_band = str(obsset.rs.get_resource_spec())
     if obsset.basename_postfix:
-        info("[{}: {} {}]".format(obsset.recipe_name,
-                                  obsset.groupname, obsset.basename_postfix))
+        info("[{} {}: {} {}]".format(obsdate_band,
+                                     obsset.recipe_name,
+                                     obsset.groupname, obsset.basename_postfix))
     else:
-        info("[{}: {}]".format(obsset.recipe_name, obsset.groupname))
-
+        info("[{} {}: {}]".format(obsdate_band,
+                                  obsset.recipe_name, obsset.groupname))
     for context_id, step in enumerate(steps):
         if hasattr(step, "name"):
             context_name = step.name
@@ -52,9 +54,9 @@ def apply_steps(obsset, steps, kwargs=None, nskip=0):
             obsset.close_context(context_name)
         except:
             obsset.abort_context(context_name)
-            import traceback
-            traceback.print_exc()
-            return context_id
+            if on_raise is not None:
+                on_raise(obsset, context_id)
+            raise
 
     # if save_context_name is not None:
     #     obsset.rs.save_pickle(open(save_context_name, "wb"))

@@ -10,14 +10,12 @@ def recipe_func(obsdate, task_name, recipe_name,
                 obsids=None, frametypes=None,
                 bands="HK", **kwargs):
 
-    print(obsdate, obsids)
+    # print(obsdate, obsids)
     config_file = kwargs.pop("config_file", None)
-    if config_file is not None:
+    if config_file is None:
         config_file = "recipe.config"
 
     steps = get_pipeline_steps(task_name)
-
-    print(task_name, steps)
 
     for b in bands:
         obsset = get_obsset(obsdate, recipe_name, b,

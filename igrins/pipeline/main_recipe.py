@@ -89,27 +89,28 @@ def driver_func(steps, recipe_name_fnmatch, obsdate,
                                                     obsdate, config_file,
                                                     bands, groups)]
 
-    for obsset in obsset_list:
-        context_id = apply_steps(obsset, steps, nskip=0, kwargs=kwargs)
+    if save_context_on_exception:
+        def on_raise(obsset, context_id):
+            obsset_desc = obsset.get_descriptions()
+            obsset.rs.context_stack.garbage_collect()
+            p = dict(obsdate=obsdate,
+                     resource_context=obsset.rs,
+                     obsset_desc=obsset_desc,
+                     context_id=context_id
+            )
 
-        if context_id is not None:  # if an exception is raised
+            import pickle
+            pickle.dump(p, open("obsset_context.pickle", "wb"))
+    else:
+        def on_raise(obsset, context_id):
             obsset_desc = obsset.get_descriptions()
             print("execution failed during step {context_id} of {obsset_desc}"
                   .format(context_id=context_id + 1, obsset_desc=obsset_desc))
-            if save_context_on_exception:
-                obsset.rs.context_stack.garbage_collect()
-                p = dict(obsdate=obsdate,
-                         resource_context=obsset.rs,
-                         obsset_desc=obsset_desc,
-                         context_id=context_id
-                )
 
-                import pickle
-                pickle.dump(p, open("obsset_context.pickle", "wb"))
-            return
-        else:
-            pass
-        # print("No error")
+    for obsset in obsset_list:
+        apply_steps(obsset, steps, nskip=0, kwargs=kwargs,
+                    on_raise=on_raise)
+
 
 # def execute_recipe(obsdate, recipe_name, **kwargs):
 #     config_name = "recipe.config.igrins128"
