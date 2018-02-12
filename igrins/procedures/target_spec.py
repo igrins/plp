@@ -59,7 +59,8 @@ def get_variance_map(obsset, data_minus, data_plus):
 def make_combined_images(obsset,
                          destripe_pattern=64,
                          use_destripe_mask=True,
-                         sub_horizontal_median=True):
+                         sub_horizontal_median=True,
+                         allow_no_b_frame=False):
 
     ab_mode = obsset.recipe_name.endswith("AB")
 
@@ -70,13 +71,24 @@ def make_combined_images(obsset,
     if ab_mode and (na != nb):
         raise RuntimeError("For AB nodding, number of A and B should match!")
 
-    # a_b != 1 for the cases when len(a) != len(b)
-    a_b = float(na) / float(nb)
+    if na == 0:
+        raise RuntimeError("No A Frame images are found")
 
-    a_data = _get_combined_image(obsset_a)
-    b_data = _get_combined_image(obsset_b)
+    if nb == 0 and not allow_no_b_frame:
+        raise RuntimeError("No B Frame images are found")
 
-    data_minus = a_data - a_b * b_data
+    if nb == 0:
+        a_data = _get_combined_image(obsset_a)
+        data_minus = a_data
+
+    else:  # nb > 0
+        # a_b != 1 for the cases when len(a) != len(b)
+        a_b = float(na) / float(nb)
+
+        a_data = _get_combined_image(obsset_a)
+        b_data = _get_combined_image(obsset_b)
+
+        data_minus = a_data - a_b * b_data
 
     if destripe_pattern is not None:
 
@@ -86,7 +98,10 @@ def make_combined_images(obsset,
                                    use_destripe_mask=use_destripe_mask,
                                    sub_horizontal_median=sub_horizontal_median)
 
-    data_plus = (a_data + (a_b**2)*b_data)
+    if nb == 0:
+        data_plus = a_data
+    else:
+        data_plus = (a_data + (a_b**2)*b_data)
 
     variance_map0, variance_map = get_variance_map(obsset,
                                                    data_minus, data_plus)

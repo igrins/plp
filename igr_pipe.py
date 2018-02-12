@@ -66,13 +66,16 @@ recipe_list = [prepare_recipe_logs,
                create_argh_command("a0v-onoff", ["A0V_ONOFF"]),
                create_argh_command("stellar-ab", ["STELLAR_AB"]),
                create_argh_command("stellar-onoff", ["STELLAR_ONOFF"]),
-               create_argh_command("extended-ab", ["EXTEND_AB"]),
-               create_argh_command("extended-onoff", ["EXTEND_ONOFF"]),
+               create_argh_command("extended-ab", ["EXTENDED_AB"]),
+               create_argh_command("extended-onoff", ["EXTENDED_ONOFF"]),
                create_argh_command_quicklook(),
 ]
 
 parser = argh.ArghParser()
 parser.add_commands(recipe_list)
+
+import igrins
+print(igrins)
 
 # for k, v in subcommands.items():
 #     parser.add_commands(v, namespace=k)

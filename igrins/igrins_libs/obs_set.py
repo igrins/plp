@@ -17,7 +17,7 @@ class ObsSet(object):
         self.obsids = obsids
         self.frametypes = frametypes
         if groupname is None:
-            groupname = str(self.obsids[0])
+            groupname = str(self.obsids[0]) if self.obsids else ""
         self.groupname = groupname
         self.recipe_entry = recipe_entry
         self._reset_read_cache = reset_read_cache

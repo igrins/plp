@@ -46,12 +46,15 @@ steps_a0v = steps_stellar + [Step("Flatten A0V", flatten_a0v),
 ]
 
 
-steps_extended = [Step("Make Combined Images", make_combined_images),
+steps_extended = [Step("Make Combined Images", make_combined_images,
+                       allow_no_b_frame=False),
                   Step("Estimate slit profile", estimate_slit_profile,
                        slit_profile_mode="uniform"),
                   Step("Extract spectra (for extendeded)",
                        extract_extended_spec,
-                       extraction_mode="simple"),
+                       lacosmic_thresh=0.,
+                       # extraction_mode="simple",
+                  ),
                   # Step("Extract spectra (for stellar)",
                   #      extract_stellar_spec),
                   Step("Generate Rectified 2d-spec", store_2dspec),
