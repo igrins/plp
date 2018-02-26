@@ -22,9 +22,16 @@ class ApCoeff(object):
 
 
 class Apertures(object):
+    def set_orders_to_extract(self, orders):
+        if orders is None:
+            orders = self.orders
+
+        self.orders_to_extract = orders
+
     def __init__(self, orders, bottomup_solutions,
-                 basename=""):
+                 basename="", orders_to_extract=None):
         self.orders = orders
+        self.set_orders_to_extract(orders_to_extract)
 
         self.apcoeffs = {}
         for o, (bottom, up) in zip(orders, bottomup_solutions):
@@ -146,7 +153,7 @@ class Apertures(object):
         xx = np.arange(2048)
 
         s_list = []
-        for o in self.orders:
+        for o in self.orders_to_extract:
             yy1 = self.apcoeffs[o](xx, frac=f1)
             yy2 = self.apcoeffs[o](xx, frac=f2)
 
@@ -167,7 +174,7 @@ class Apertures(object):
     def extract_spectra_from_ordermap(self, data, order_map):
         slices = ni.find_objects(order_map)
         s_list = []
-        for o in self.orders:
+        for o in self.orders_to_extract:
             sl = slices[o - 1]
             msk = (order_map[sl] != o)
             s = image_median(data[sl], badmasks=msk)
@@ -228,7 +235,7 @@ class Apertures(object):
         v_list = []
         slices = ni.find_objects(ordermap)
 
-        for o in self.orders:
+        for o in self.orders_to_extract:
             sl = slices[o-1][0], slice(0, 2048)
             msk = (ordermap[sl] == o)
 
@@ -271,7 +278,7 @@ class Apertures(object):
         #     hl = pyfits.HDUList()
         #     hl.append(pyfits.PrimaryHDU())
 
-        for o in self.orders:
+        for o in self.orders_to_extract:
             sl = slices[o-1][0], slice(0, 2048)
             msk = (ordermap_bpixed[sl] == o) & msk1[sl]
 
@@ -358,7 +365,7 @@ class Apertures(object):
             hl = pyfits.HDUList()
             hl.append(pyfits.PrimaryHDU())
 
-        for o in self.orders:
+        for o in self.orders_to_extract:
             sl = slices[o-1][0], slice(0, 2048)
             msk = (ordermap_bpixed[sl] == o) & msk1[sl]
 

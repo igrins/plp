@@ -5,6 +5,29 @@ from ..utils.image_combine import image_median
 from ..igrins_libs.resource_helper_igrins import ResourceHelper
 
 
+def setup_extraction_parameters(obsset, order_range="-1,-1",
+                                height_2dspec=0):
+
+    _order_range_s = order_range
+    try:
+        order_start, order_end = map(int, _order_range_s.split(","))
+    except:
+        msg = "Failed to parse order range: {}".format(_order_range_s)
+        raise ValueError(msg)
+
+    if order_start < 0:
+        order_start = int(obsset.rs.query_ref_value("ORDER_START"))
+
+    if order_end < 0:
+        order_end = int(obsset.rs.query_ref_value("ORDER_END"))
+
+    height_2dspec = int(height_2dspec)
+
+    obsset.set_recipe_parameters(order_start=order_start,
+                                 order_end=order_end,
+                                 height_2dspec=height_2dspec)
+
+
 def _get_combined_image(obsset):
     data_list = [hdu.data for hdu in obsset.get_hdus()]
     return image_median(data_list)
@@ -296,7 +319,7 @@ def store_2dspec(obsset,
     obsset.store("VAR2D_FITS", hdul, postfix=basename_postfix)
 
 
-def extract_stellar_spec(obsset, extraction_mode="optimal", height_2dspec=0,
+def extract_stellar_spec(obsset, extraction_mode="optimal",
                          conserve_2d_flux=True, calculate_sn=True):
 
     # refactored from recipe_extract.ProcessABBABand.process

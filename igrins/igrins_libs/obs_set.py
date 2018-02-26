@@ -26,6 +26,7 @@ class ObsSet(object):
         self.recipe_entry = recipe_entry
         self._reset_read_cache = reset_read_cache
         self.basename_postfix = basename_postfix
+        self._recipe_parameters = {}
 
         self.default_cards = []
 
@@ -48,6 +49,13 @@ class ObsSet(object):
 
     # def get_frames(self):
     #     pass
+
+    def set_recipe_parameters(self, **kwargs):
+        self._recipe_parameters.update(kwargs)
+
+    def get_recipe_parameter(self, parname):
+        return self._recipe_parameters.get(parname)
+
     def set_basename_postfix(self, basename_postfix):
         self.basename_postfix = basename_postfix
 

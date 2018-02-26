@@ -1,3 +1,5 @@
+#! /usr/bin/env python
+
 import sys
 
 import igrins.igrins_libs.logger as logger
