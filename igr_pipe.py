@@ -27,7 +27,8 @@ def get_pipeline_steps(recipe_name):
                                        recipe_stellar_onoff,
                                        recipe_stellar_ab,
                                        recipe_extended_onoff,
-                                       recipe_extended_ab)
+                                       recipe_extended_ab,
+                                       recipe_plot_spec)
 
     # m = p_extract.match(recipe_name)
     # if m:
@@ -42,7 +43,8 @@ def get_pipeline_steps(recipe_name):
              "stellar-ab": recipe_stellar_ab.steps,
              "stellar-onoff": recipe_stellar_onoff.steps,
              "a0v-ab": recipe_a0v_ab.steps,
-             "a0v-onoff": recipe_a0v_onoff.steps
+             "a0v-onoff": recipe_a0v_onoff.steps,
+             "plot-spec": recipe_plot_spec.steps
     }
 
     return steps[recipe_name]
@@ -68,6 +70,9 @@ recipe_list = [prepare_recipe_logs,
                create_argh_command("stellar-onoff", ["STELLAR_ONOFF"]),
                create_argh_command("extended-ab", ["EXTENDED_AB"]),
                create_argh_command("extended-onoff", ["EXTENDED_ONOFF"]),
+               create_argh_command("plot-spec", ["A0V_*",
+                                                 "STELLAR_*",
+                                                 "EXTENDED_*"]),
                create_argh_command_quicklook(),
 ]
 
