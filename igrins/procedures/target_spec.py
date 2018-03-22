@@ -142,6 +142,7 @@ def subtract_interorder_background(obsset, di=24, min_pixel=40):
 def estimate_slit_profile(obsset,
                           x1=800, x2=2048-800,
                           do_ab=True, slit_profile_mode="1d"):
+
     if slit_profile_mode == "1d":
         from .slit_profile import estimate_slit_profile_1d
         estimate_slit_profile_1d(obsset, x1=x1, x2=x2, do_ab=do_ab)
@@ -304,13 +305,17 @@ def extract_stellar_spec(obsset, extraction_mode="optimal", height_2dspec=0,
 
     ap = helper.get("aperture")
 
-    data_minus = obsset.load_fits_sci_hdu("COMBINED_IMAGE1").data
+    postfix = obsset.basename_postfix
+    data_minus = obsset.load_fits_sci_hdu("COMBINED_IMAGE1",
+                                          postfix=postfix).data
 
     orderflat = helper.get("orderflat")
     data_minus_flattened = data_minus / orderflat
 
-    variance_map = obsset.load_fits_sci_hdu("combined_variance1").data
-    variance_map0 = obsset.load_fits_sci_hdu("combined_variance0").data
+    variance_map = obsset.load_fits_sci_hdu("combined_variance1",
+                                            postfix=postfix).data
+    variance_map0 = obsset.load_fits_sci_hdu("combined_variance0",
+                                             postfix=postfix).data
 
     slitoffset_map = helper.get("slitoffsetmap")
 
@@ -323,7 +328,8 @@ def extract_stellar_spec(obsset, extraction_mode="optimal", height_2dspec=0,
 
     gain = float(obsset.rs.query_ref_value("gain"))
 
-    profile_map = obsset.load_fits_sci_hdu("slitprofile_fits").data
+    profile_map = obsset.load_fits_sci_hdu("slitprofile_fits",
+                                           postfix=postfix).data
 
     from .spec_extract_w_profile import extract_spec_using_profile
     _ = extract_spec_using_profile(ap, profile_map,

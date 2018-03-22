@@ -30,8 +30,53 @@ from ..procedures.a0v_flatten import flatten_a0v
 from ..pipeline.steps import Step
 
 
-steps_stellar = [Step("Make Combined Images", make_combined_images),
-                 Step("Estimate slit profile", estimate_slit_profile,
+def set_basename_postfix(obsset, basename_postfix):
+    # This only applies for the output name
+    obsset.set_basename_postfix(basename_postfix)
+
+
+def _get_do_ab_from_recipe_name(obsset):
+    recipe = obsset.recipe_name
+    if recipe.endswith("AB"):
+        do_ab = True
+    elif recipe.endswith("ONOFF"):
+        do_ab = False
+    else:
+        msg = "recipe name is not supported: {}".format(recipe)
+        raise ValueError(msg)
+
+    return do_ab
+
+
+def estimate_slit_profile_stellar(obsset,
+                                  x1=800, x2=2048-800,
+                                  do_ab="recipe",
+                                  slit_profile_mode="1d"):
+
+    do_ab = _get_do_ab_from_recipe_name(obsset)
+    estimate_slit_profile(obsset,
+                          x1=800, x2=2048-800,
+                          do_ab=do_ab, slit_profile_mode=slit_profile_mode)
+
+
+def estimate_slit_profile_extended(obsset,
+                                   x1=800, x2=2048-800,
+                                   do_ab="recipe",
+                                   slit_profile_mode="uniform"):
+
+    do_ab = _get_do_ab_from_recipe_name(obsset)
+    estimate_slit_profile(obsset,
+                          x1=800, x2=2048-800,
+                          do_ab=do_ab,
+                          slit_profile_mode=slit_profile_mode)
+
+
+steps_stellar = [Step("Set baename-postfix", set_basename_postfix,
+                      basename_postfix=""),
+                 Step("Make Combined Images", make_combined_images,
+                      allow_no_b_frame=False),
+                 Step("Estimate slit profile (stellar)",
+                      estimate_slit_profile_stellar,
                       slit_profile_mode="1d"),
                  # Step("Extract spectra (for extendeded)",
                  #      extract_extended_spec),
@@ -46,9 +91,12 @@ steps_a0v = steps_stellar + [Step("Flatten A0V", flatten_a0v),
 ]
 
 
-steps_extended = [Step("Make Combined Images", make_combined_images,
+steps_extended = [Step("Set baename-postfix", set_basename_postfix,
+                       basename_postfix=None),
+                  Step("Make Combined Images", make_combined_images,
                        allow_no_b_frame=False),
-                  Step("Estimate slit profile", estimate_slit_profile,
+                  Step("Estimate slit profile (extended)",
+                       estimate_slit_profile_extended,
                        slit_profile_mode="uniform"),
                   Step("Extract spectra (for extendeded)",
                        extract_extended_spec,

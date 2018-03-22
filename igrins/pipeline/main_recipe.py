@@ -13,17 +13,17 @@ def _parse_groups(groups):
         return [s.strip() for s in groups.split(",")]
 
 
-def get_selected(recipes, recipe_name, groups):
+def get_selected(recipes, recipe_name_fnmatch, groups):
     groups_parsed = _parse_groups(groups)
 
-    selected = recipes.select_fnmatch_by_groups(recipe_name,
+    selected = recipes.select_fnmatch_by_groups(recipe_name_fnmatch,
                                                 groups_parsed)
     # logger.info("selected recipe: {}".format(selected))
 
     return selected
 
 
-def iter_obsset(replace_name_fnmatch,
+def iter_obsset(recipe_name_fnmatch,
                 obsdate, config_file, bands, groups,
                 basename_postfix=""):
 
@@ -35,7 +35,7 @@ def iter_obsset(replace_name_fnmatch,
     from ..igrins_libs.recipes import RecipeLog
     recipes = RecipeLog(fn)
 
-    selected = get_selected(recipes, replace_name_fnmatch,
+    selected = get_selected(recipes, recipe_name_fnmatch,
                             groups)
 
     for band in bands:
@@ -62,6 +62,7 @@ driver_args = [arg("-b", "--bands", default="HK"),
                arg("-g", "--groups", default=None),
                arg("-c", "--config-file", default=None),
                arg("-v", "--verbose", default=0),
+               arg("--override-recipe-name", default=False),
                arg("--resume-from-context-file", default=None),
                arg("--save-context-on-exception", default=False),
                arg("-d", "--debug", default=False)]
@@ -70,6 +71,7 @@ driver_args = [arg("-b", "--bands", default="HK"),
 def driver_func(steps, recipe_name_fnmatch, obsdate,
                 bands="HK", groups=None,
                 config_file=None, debug=False, verbose=None,
+                override_recipe_name=False,
                 resume_from_context_file=None, save_context_on_exception=False,
                 **kwargs):
 
@@ -84,6 +86,12 @@ def driver_func(steps, recipe_name_fnmatch, obsdate,
         apply_steps(obsset, steps,
                     nskip=context_id, kwargs=kwargs)
         return
+
+    if override_recipe_name:
+        if groups is None:
+            raise RuntimeError("override_recipe_name should specify groups.")
+
+        recipe_name_fnmatch = ["*"]
 
     obsset_list = [obsset for obsset in iter_obsset(recipe_name_fnmatch,
                                                     obsdate, config_file,
