@@ -18,6 +18,7 @@ class ObsSet(object):
         self.frametypes = frametypes
         if groupname is None:
             groupname = str(self.obsids[0]) if self.obsids else ""
+        self.master_obsid = obsids[0]
         self.groupname = groupname
         self.recipe_entry = recipe_entry
         self._reset_read_cache = reset_read_cache
@@ -93,6 +94,8 @@ class ObsSet(object):
         if not isinstance(item_desc, tuple):
             item_desc = DESCS[item_desc]
 
+        postfix = "" if postfix is None else postfix
+
         r = self.rs.load(self.groupname, item_desc,
                          item_type=item_type, postfix=postfix)
         return r
@@ -105,6 +108,7 @@ class ObsSet(object):
 
         if postfix is None:
             postfix = self.basename_postfix
+            postfix = "" if postfix is None else postfix
 
         self.rs.store(self.groupname, item_desc, data,
                       item_type=item_type, postfix=postfix,
@@ -115,7 +119,7 @@ class ObsSet(object):
 
     def query_resource_for(self, resource_type, postfix=""):
 
-        resource_basename, item_desc = self.rs.query_resource_for(self.groupname,
+        resource_basename, item_desc = self.rs.query_resource_for(self.master_obsid,
                                                                   resource_type,
                                                                   postfix=postfix)
 
@@ -125,7 +129,8 @@ class ObsSet(object):
                           item_type=None, postfix="",
                           resource_postfix="",
                           check_self=False):
-        r = self.rs.load_resource_for(self.groupname, resource_type, item_type=item_type,
+        r = self.rs.load_resource_for(self.master_obsid,
+                                      resource_type, item_type=item_type,
                                       postfix=postfix, resource_postfix=resource_postfix,
                                       check_self=check_self)
 
@@ -135,7 +140,7 @@ class ObsSet(object):
                                   item_type=None, postfix="",
                                   resource_postfix="",
                                   check_self=False):
-        r = self.rs.load_resource_for(self.groupname, resource_type, item_type=item_type,
+        r = self.rs.load_resource_for(self.master_obsid, resource_type, item_type=item_type,
                                       postfix=postfix, resource_postfix=resource_postfix,
                                       check_self=check_self)
         hdu = get_first_science_hdu(r)
