@@ -6,7 +6,8 @@ from ..igrins_libs import logger
 
 
 _default_recipe_name = dict(flat="FLAT", std="A0V_AB", tar="STELLAR_AB",
-                            dark="DARK")
+                            dark="DARK",
+                            arc_thar="ARC_THAR", arc_une="ARC_UNE")
 
 
 def get_recipe_name(objtype):
@@ -25,6 +26,11 @@ def make_recipe_logs(obsdate, l, populate_group1=False):
     # names are different.
     msk = d3["OBJTYPE"].str.lower() == "flat"
     d3.loc[msk, "OBJNAME"] = "FLAT ON/OFF"
+
+    # For arcs, which has OBJTYPE=ARC, FRAMETYPE=ThAr|Une, we replace OBJTYPE
+    # with OBJTYPE_FRAMETYPE.
+    msk = d3["OBJTYPE"].str.lower() == "arc"
+    d3.loc[msk, "OBJTYPE"] = "ARC_" + d3.loc[msk, "FRAMETYPE"].str.upper()
 
     groupby_keys = ["OBJNAME", "OBJTYPE", "GROUP1", "GROUP2", "EXPTIME"]
 
