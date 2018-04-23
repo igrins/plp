@@ -21,12 +21,15 @@ class Step():
         self.f(obsset, **self.kwargs)
 
 
-def apply_steps(obsset, steps, kwargs=None, nskip=0, on_raise=None):
+def apply_steps(obsset, steps, kwargs=None, step_slice=None, on_raise=None):
 
     if kwargs is None:
         kwargs = {}
 
     n_steps = len(steps)
+    step_range = range(n_steps)
+    if step_slice is not None:
+        step_range = step_range[step_slice]
 
     obsdate_band = str(obsset.rs.get_resource_spec())
     if obsset.basename_postfix:
@@ -42,7 +45,7 @@ def apply_steps(obsset, steps, kwargs=None, nskip=0, on_raise=None):
         else:
             context_name = "Undefined Context {}".format(context_id)
 
-        if context_id < nskip:
+        if context_id not in step_range:
             continue
 
         obsset.new_context(context_name)

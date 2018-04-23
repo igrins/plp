@@ -38,7 +38,7 @@ def get_obsset_from_context(obsset_desc, resource_manager):
     obsids = obsset_desc["obsids"]
     frametypes = obsset_desc["frametypes"]
     groupname = obsset_desc["groupname"]
-    basename_postfix = obsset_desc["basename_posfix"]
+    basename_postfix = obsset_desc["basename_postfix"]
 
     obsset = ObsSet(resource_manager, recipe_name, obsids, frametypes,
                     groupname=groupname,

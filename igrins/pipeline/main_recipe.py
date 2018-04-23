@@ -39,7 +39,7 @@ def iter_obsset(recipe_name_fnmatch,
                             groups)
 
     for band in bands:
-        info("= Entering band:{}".format(band))
+        # info("= Entering band:{}".format(band))
         for s in selected:
             # obsids = s[0]
             # frametypes = s[1]
@@ -58,13 +58,44 @@ def iter_obsset(recipe_name_fnmatch,
             yield obsset
 
 
-driver_args = [arg("-b", "--bands", default="HK"),
+def _save_context(obsdate, obsset, context_id, outname):
+    info("Saving context to '{}'".format(outname))
+    obsset.rs.context_stack.garbage_collect()
+    obsset_desc = obsset.get_descriptions()
+    p = dict(obsdate=obsdate,
+             resource_context=obsset.rs,
+             obsset_desc=obsset_desc,
+             context_id=context_id
+    )
+
+    import pickle
+    pickle.dump(p, open(outname, "wb"))
+
+
+def _load_context(outname):
+    import pickle
+    p = pickle.load(open(outname, "rb"))
+    info("Loading context from '{}'".format(outname))
+    resource_context = p["resource_context"]
+    context_id = p["context_id"]
+    obsset_desc = p["obsset_desc"]
+    # print(obsset_desc)
+    # if step_range is None:
+    #     step_slice = slice(context_id, None)
+
+    obsset = get_obsset_from_context(obsset_desc, resource_context)
+    return obsset
+
+
+driver_args = [arg("-b", "--bands", default="HK", choices=["HK", "H", "K"]),
                arg("-g", "--groups", default=None),
                arg("-c", "--config-file", default=None),
                arg("-v", "--verbose", default=0),
                arg("--override-recipe-name", default=False),
-               arg("--resume-from-context-file", default=None),
-               arg("--save-context-on-exception", default=False),
+               arg("--step-range", default=None),
+               arg("--context-name", default="context_{obsdate}_{recipe_name}_{groupname}{basename_postfix}_{context_id}.pickle"),
+               arg("--save-context-if", default="never",
+                   choices=["never", "exception", "always"]),
                arg("-d", "--debug", default=False)]
 
 
@@ -72,20 +103,29 @@ def driver_func(steps, recipe_name_fnmatch, obsdate,
                 bands="HK", groups=None,
                 config_file=None, debug=False, verbose=None,
                 override_recipe_name=False,
-                resume_from_context_file=None, save_context_on_exception=False,
+                # resume_from_context_file=None,
+                save_context_if="never",
+                context_name="context_{obsdate}_{recipe_name}_{groupname}{basename_postfix}_{context_id}.pickle",
+                # save_context_on_exception=False,
+                step_range=None,
                 **kwargs):
 
-    if resume_from_context_file is not None:
-        import pickle
-        p = pickle.load(open(resume_from_context_file, "rb"))
-        resource_context = p["resource_context"]
-        context_id = p["context_id"]
-        obsset_desc = p["obsset_desc"]
+    # FIXME : should check if 'resume_from_context_file' and 'step_range' are
+    # not set together.
 
-        obsset = get_obsset_from_context(obsset_desc, resource_context)
-        apply_steps(obsset, steps,
-                    nskip=context_id, kwargs=kwargs)
-        return
+    if step_range is not None:
+        _se = [k for k in step_range.split(":")]
+        if len(_se)  == 1:
+            k = int(_se[0])
+            _s, _e = k, k + 1
+        elif len(_se) == 2:
+            _s, _e= [int(k) if k.strip() else None for k in _se]
+        else:
+            raise ValueError("incorrect step_range: {}".format(ste_range))
+
+        step_slice = slice(_s, _e)
+    else:
+        step_slice = slice(None, None)
 
     if override_recipe_name:
         if groups is None:
@@ -97,18 +137,25 @@ def driver_func(steps, recipe_name_fnmatch, obsdate,
                                                     obsdate, config_file,
                                                     bands, groups)]
 
+    if save_context_if == "always":
+        save_context = True
+        save_context_on_exception = True
+    elif save_context_if == "exception":
+        save_context = False
+        save_context_on_exception = True
+    elif save_context_if == "never":
+        save_context = False
+        save_context_on_exception = False
+    else:
+        raise ValueError("unknown save_context_if argument: {}".
+                         format(save_context_if))
+
     if save_context_on_exception:
         def on_raise(obsset, context_id):
-            obsset_desc = obsset.get_descriptions()
-            obsset.rs.context_stack.garbage_collect()
-            p = dict(obsdate=obsdate,
-                     resource_context=obsset.rs,
-                     obsset_desc=obsset_desc,
-                     context_id=context_id
-            )
-
-            import pickle
-            pickle.dump(p, open("obsset_context.pickle", "wb"))
+            outname = context_name.format(obsdate=obsdate,
+                                          context_id=context_id,
+                                          **obsset_desc)
+            _save_context(obsdate, obsset, context_id, outname)
     else:
         def on_raise(obsset, context_id):
             obsset_desc = obsset.get_descriptions()
@@ -116,39 +163,25 @@ def driver_func(steps, recipe_name_fnmatch, obsdate,
                   .format(context_id=context_id + 1, obsset_desc=obsset_desc))
 
     for obsset in obsset_list:
-        apply_steps(obsset, steps, nskip=0, kwargs=kwargs,
+        obsset_desc = obsset.get_descriptions()
+
+        if step_slice.start:
+
+            context_id=step_slice.start
+            outname = context_name.format(obsdate=obsdate,
+                                          context_id=context_id,
+                                          **obsset_desc)
+            obsset = _load_context(outname)
+
+        apply_steps(obsset, steps, step_slice=step_slice,
+                    kwargs=kwargs,
                     on_raise=on_raise)
 
+        if (save_context or
+            (step_slice.stop is not None and step_slice.stop < len(steps))):
+            context_id=step_slice.stop
 
-# def execute_recipe(obsdate, recipe_name, **kwargs):
-#     config_name = "recipe.config.igrins128"
-
-#     # obsdate = "20150120"
-#     obsids = [45, 46]
-
-#     frametypes = "AB"
-
-#     recipe_name = "STELLAR_AB"
-
-#     band = "H"
-
-#     context_name = "test_context_extract.pickle"
-
-#     if True:  # rerun from saved
-#         nskip = 4
-#         save_context_name = None
-#         saved_context_name = context_name
-#     else:
-#         nskip = 0
-#         save_context_name = context_name  # context_name
-#         saved_context_name = None
-
-#     obsset = get_obsset(obsdate, recipe_name, band,
-#                         obsids, frametypes, config_name,
-#                         saved_context_name=saved_context_name)
-
-#     apply_steps(obsset, extract.steps[:],
-#                 nskip=nskip)
-
-#     if save_context_name is not None:
-#         obsset.rs.save_pickle(open(save_context_name, "wb"))
+            outname = context_name.format(obsdate=obsdate,
+                                          context_id=context_id,
+                                          **obsset_desc)
+            _save_context(obsdate, obsset, context_id, outname)

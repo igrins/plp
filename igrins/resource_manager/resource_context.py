@@ -85,7 +85,7 @@ class ResourceContextStack():
                 if k not in context._cache_only_items:
                     kill_list.append(k)
             for k in kill_list:
-                print("kill {}/{}".format(context.name, k))
+                # print("kill {}/{}".format(context.name, k))
                 del context._cache[k]
 
     def new_context(self, context_name, reset_read_cache=False):
