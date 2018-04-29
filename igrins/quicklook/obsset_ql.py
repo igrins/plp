@@ -1,6 +1,54 @@
+import pandas as pd
+import hashlib
+import json
+
+from ..storage_interface.db_file import load_key, save_key
+
 from ..pipeline.driver import get_obsset as _get_obsset
 
 from ..pipeline.argh_helper import argh, arg, wrap_multi
+
+
+def _hash(recipe, groupid, basename_postfix, params):
+    d = dict(recipe=recipe, groupid=groupid,
+             basename_postfix=basename_postfix,
+             params=params)
+
+    h = hashlib.new("sha1")
+    h.update(json.dumps(d, sort_keys=True))
+
+    return h.hexdigest(), d
+
+class IndexDB(object):
+    def __init__(self, storage):
+        self.storage = storage
+        # self.storage = self.storage.new_sectioned_storage("OUTDATA")
+
+    def check_hexdigest(self, recipe, groupid, basename_postfix, params):
+        dbname = "index"
+        sectionname = recipe
+
+        k = "{}:{}".format(groupid, basename_postfix)
+        v = load_key(self.storage,
+                     dbname, sectionname, k)
+        if v is None:
+            return False
+
+        hexdigest_old, value_old = v
+        hexdigest_new, value_new = _hash(recipe, groupid,
+                                         basename_postfix, params)
+
+        return hexdigest_old == hexdigest_new
+
+
+    def save_hexdigest(self, recipe, groupid, basename_postfix, params):
+        dbname = "index"
+        sectionname = recipe
+
+        hexdigest, d = _hash(recipe, groupid, basename_postfix, params)
+        k = "{}:{}".format(groupid, basename_postfix)
+        # k = (groupid, basename_postfix)
+        save_key(self.storage, dbname, sectionname, k, [hexdigest, d])
 
 
 def get_obsset(obsdate, recipe_name, band,
@@ -106,10 +154,21 @@ def quicklook_func(obsdate, obsids=None, objtypes=None, frametypes=None,
             obsset = get_obsset(obsdate, "quicklook", b,
                                 obsids=[oi], frametypes=[ft],
                                 config_file=config_file)
+            storage = obsset.rs.storage.new_sectioned_storage("OUTDATA_PATH")
+            index_db = IndexDB(storage)
+
+            if index_db.check_hexdigest("quicklook", oi, "",
+                                        dict(obstype=ot, frametype=ft)):
+                print("skip..", oi)
+                continue
+
             print(obsset)
             obsset
             if ot == "FLAT":
                 jo_list = do_ql_flat(obsset)
+                # print(len(jo_list), jo_list[0][1]["stat_profile"])
+                df = pd.DataFrame(jo_list[0][1]["stat_profile"])
+                print(df[["y", "t_down_10", "t_up_90"]])
                 save_jo_list(obsset, jo_list)
 
             elif ot in ["TAR", "STD"]:
@@ -117,6 +176,8 @@ def quicklook_func(obsdate, obsids=None, objtypes=None, frametypes=None,
             else:
                 pass
 
+            index_db.save_hexdigest("quicklook", oi, "",
+                                    dict(obstype=ot, frametype=ft))
 
 def create_argh_command_quicklook():
 

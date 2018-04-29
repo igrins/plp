@@ -8,20 +8,25 @@ import astropy.io.fits as pyfits
 import json
 from ..utils.json_helper import json_dumps
 
+from ..resource_manager.base_storage import StorageBase
 
 def null_function(buf):
     return buf
 
 
-class ItemConverterBase(object):
+class ItemConverterBase(StorageBase):
     def __init__(self, storage):
         self.storage = storage
 
-    def load(self, section, fn, item_type=None):
+    def exists(self, section, fn):
+        return self.storage.exists(section, fn)
+
+    def load(self, section, fn, item_type=None, check_candidate=None):
         if item_type is None:
             item_type = self.guess_item_type(fn)
 
-        d = self.storage.load(section, fn, item_type=item_type)
+        d = self.storage.load(section, fn, item_type=item_type,
+                              check_candidate=check_candidate)
 
         if item_type is not None:
             convert_to = self.get_to_item(item_type)
@@ -68,13 +73,15 @@ class ItemConverter(ItemConverterBase):
     def get_to_item(cls, item_type):
         return dict(fits=cls._to_fits,
                     mask=cls._to_mask,
-                    json=cls._to_json)[item_type]
+                    json=cls._to_json,
+                    raw=null_function)[item_type]
 
     @classmethod
     def get_from_item(cls, item_type):
         return dict(fits=cls._from_fits,
                     mask=cls._from_mask,
-                    json=cls._from_json)[item_type]
+                    json=cls._from_json,
+                    raw=null_function)[item_type]
 
     # @classmethod
     # def to_item(cls, item_type, buf):

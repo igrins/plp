@@ -59,23 +59,23 @@ class IGRINSPath(object):
 
     sections_names_no_ensuredir = ["INDATA_PATH"]
 
-    def __init__(self, config, utdate, band, ensure_dir=False):
+    def __init__(self, config, obsdate, band, ensure_dir=False):
 
         self.config = config
-        self.utdate = utdate
+        self.obsdate = obsdate
         self.band = band
 
         self.sections = dict()
 
         for n in self.sections_names:
-            d = self.config.get_value(n, utdate)
+            d = self.config.get_value(n, obsdate)
             self.sections[n] = join(self.config.root_dir, d)
 
         # filename pattern for input files
         self.fn_pattern = join(self.sections["INDATA_PATH"],
-                               "SDC%%s_%s_%%s.fits" % (self.utdate,))
+                               "SDC%%s_%s_%%s.fits" % (self.obsdate,))
 
-        self.basename_pattern = "SDC%%s_%s_%%s" % (self.utdate,)
+        self.basename_pattern = "SDC%%s_%s_%%s" % (self.obsdate,)
 
         if ensure_dir:
             self.ensure_dir()

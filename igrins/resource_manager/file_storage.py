@@ -4,16 +4,22 @@ from ..utils.file_utils import ensure_dir
 
 
 class FileStorage(StorageBase):
-    def __init__(self, resource_spec, path_info, check_candidate=False):
+    def __init__(self, resource_spec, path_info=None, check_candidate=False):
 
-        self.utdate, self.band = resource_spec
+        # self.obsdate, self.band = resource_spec
+        self.resource_spec = resource_spec
 
-        self.path_info = path_info
+        if hasattr(path_info, "sections"):
+            self.path_info = path_info.sections
+            self.get_section = path_info.sections.get
+        else:
+            self.get_section = path_info.get
+
         self._check_candidate = check_candidate
 
     def _get_path(self, section, fn):
 
-        section_dir = self.path_info.get_section_path(section)
+        section_dir = self.get_section(section)
 
         file_path = os.path.join(section_dir, fn)
 
