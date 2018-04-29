@@ -1,29 +1,26 @@
-def get_pipeline_steps(recipe_name):
-    from . import (recipe_flat,
-                   recipe_register,
-                   recipe_wvlsol as recipe_wvlsol_sky,
-                   recipe_extract_sky,
-                   recipe_a0v_onoff,
-                   recipe_a0v_ab,
-                   recipe_stellar_onoff,
-                   recipe_stellar_ab,
-                   recipe_extended_onoff,
-                   recipe_extended_ab)
+def get_path():
+    from .. import igrins_recipes
+    return igrins_recipes.__path__
 
-    # m = p_extract.match(recipe_name)
-    # if m:
-    #     recipe_name = m.group(1)
+translation_map = {"wvlsol-sky": "wvlsol",
+                   "register-sky": "register"}
 
-    steps = {"flat": recipe_flat.steps,
-             "register-sky": recipe_register.steps,
-             "wvlsol-sky": recipe_wvlsol_sky.steps,
-             "extract-sky": recipe_extract_sky.steps,
-             "extended-ab": recipe_extended_ab.steps,
-             "extended-onoff": recipe_extended_onoff.steps,
-             "stellar-ab": recipe_stellar_ab.steps,
-             "stellar-onoff": recipe_stellar_onoff.steps,
-             "a0v-ab": recipe_a0v_ab.steps,
-             "a0v-onoff": recipe_a0v_onoff.steps
-    }
+def get_pipeline_steps(recipe_name,
+                       parent_module_name="igrins.igrins_recipes"):
+    # This may not work for python3
+    import imp
+    cur_path = get_path()
+    recipe_name = translation_map.get(recipe_name, recipe_name)
+    mod_name = "recipe_{}".format(recipe_name.replace("-", "_"))
 
-    return steps[recipe_name]
+    fp, path, desc = imp.find_module(mod_name, cur_path)
+
+    try:
+        mod = imp.load_module(".".join([parent_module_name, mod_name]),
+                              fp, path, desc)
+        return mod.steps
+
+    finally:
+        if fp:
+            fp.close()
+

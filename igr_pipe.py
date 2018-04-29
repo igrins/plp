@@ -17,40 +17,7 @@ import re
 p_extract = re.compile(r'(\w+)-(ab|onoff)')
 
 
-def get_pipeline_steps(recipe_name):
-    from igrins.igrins_recipes import (recipe_flat,
-                                       recipe_register,
-                                       recipe_wvlsol as recipe_wvlsol_sky,
-                                       recipe_extract_sky,
-                                       recipe_extract_arc,
-                                       recipe_a0v_onoff,
-                                       recipe_a0v_ab,
-                                       recipe_stellar_onoff,
-                                       recipe_stellar_ab,
-                                       recipe_extended_onoff,
-                                       recipe_extended_ab,
-                                       recipe_plot_spec)
-
-    # m = p_extract.match(recipe_name)
-    # if m:
-    #     recipe_name = m.group(1)
-
-    steps = {"flat": recipe_flat.steps,
-             "register-sky": recipe_register.steps,
-             "wvlsol-sky": recipe_wvlsol_sky.steps,
-             "extract-sky": recipe_extract_sky.steps,
-             "extract-arc": recipe_extract_arc.steps,
-             "extended-ab": recipe_extended_ab.steps,
-             "extended-onoff": recipe_extended_onoff.steps,
-             "stellar-ab": recipe_stellar_ab.steps,
-             "stellar-onoff": recipe_stellar_onoff.steps,
-             "a0v-ab": recipe_a0v_ab.steps,
-             "a0v-onoff": recipe_a0v_onoff.steps,
-             "plot-spec": recipe_plot_spec.steps
-    }
-
-    return steps[recipe_name]
-
+from igrins.igrins_recipes import get_pipeline_steps
 
 def create_argh_command(recipe_name, recipe_name_fnmatch=None):
     steps = get_pipeline_steps(recipe_name)
