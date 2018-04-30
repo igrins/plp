@@ -57,6 +57,8 @@ class IGRINSPath(object):
                       "QA_PATH",
                       "HTML_PATH"]
 
+    default_paths = dict(QL_PATH="{OUTDATA_PATH}/quicklook")
+
     sections_names_no_ensuredir = ["INDATA_PATH"]
 
     def __init__(self, config, obsdate, band, ensure_dir=False):
@@ -70,6 +72,9 @@ class IGRINSPath(object):
         for n in self.sections_names:
             d = self.config.get_value(n, obsdate)
             self.sections[n] = join(self.config.root_dir, d)
+
+        for n in self.default_paths:
+            self.sections[n] = self.default_paths[n].format(**self.sections)
 
         # filename pattern for input files
         self.fn_pattern = join(self.sections["INDATA_PATH"],

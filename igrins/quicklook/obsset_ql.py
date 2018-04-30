@@ -8,6 +8,8 @@ from ..pipeline.driver import get_obsset as _get_obsset
 
 from ..pipeline.argh_helper import argh, arg, wrap_multi
 
+from ..igrins_libs.logger import info
+
 
 def _hash(recipe, groupid, basename_postfix, params):
     d = dict(recipe=recipe, groupid=groupid,
@@ -72,6 +74,7 @@ driver_args = [arg("-b", "--bands", default="HK"),
                arg("-f", "--frametypes", default=None),
                arg("-c", "--config-file", default=None),
                arg("-v", "--verbose", default=0),
+               arg("-ns", "--no-skip", default=False),
                # arg("--resume-from-context-file", default=None),
                # arg("--save-context-on-exception", default=False),
                arg("-d", "--debug", default=False)]
@@ -111,17 +114,38 @@ def do_ql_flat(obsset):
     from ..quicklook import ql_flat
 
     hdus = obsset.get_hdus()
+    jo_raw_list = []
     jo_list = []
     for hdu, oi, ft in zip(hdus, obsset.obsids, obsset.frametypes):
         jo = ql_flat.do_ql_flat(hdus[0], ft)
         jo_list.append((oi, jo))
+        jo_raw_list.append((oi, dict()))
 
-    return jo_list
+    return jo_list, jo_raw_list
 
 
-def save_jo_list(obsset, jo_list):
-    item_desc = ("OUTDATA_PATH", "{basename}{postfix}.quicklook.json")
+def do_ql_std(obsset, band):
+    from ..quicklook import ql_slit_profile
+
+    hdus = obsset.get_hdus()
+    jo_list = []
+    jo_raw_list = []
+    for hdu, oi, ft in zip(hdus, obsset.obsids, obsset.frametypes):
+        jo, jo_raw = ql_slit_profile.do_ql_slit_profile(hdus[0], band, ft)
+        jo_list.append((oi, jo))
+        jo_raw_list.append((oi, jo_raw))
+
+    return jo_list, jo_raw_list
+
+do_ql_tar = do_ql_std
+
+def save_jo_list(obsset, jo_list, jo_raw_list):
+    item_desc = ("QL_PATH", "{basename}{postfix}.quicklook.json")
     for oi, jo in jo_list:
+        obsset.rs.store(str(oi), item_desc, jo)
+
+    item_desc = ("QL_PATH", "{basename}{postfix}.quicklook_raw.json")
+    for oi, jo in jo_raw_list:
         obsset.rs.store(str(oi), item_desc, jo)
 
 
@@ -130,7 +154,6 @@ def quicklook_func(obsdate, obsids=None, objtypes=None, frametypes=None,
     import os
     from ..igrins_libs.igrins_config import IGRINSConfig
 
-    print(obsdate, obsids)
     config_file = kwargs.pop("config_file", None)
     if config_file is not None:
         config = IGRINSConfig(config_file)
@@ -149,6 +172,8 @@ def quicklook_func(obsdate, obsids=None, objtypes=None, frametypes=None,
                                                       obsids, objtypes,
                                                       frametypes)
 
+    no_skip = kwargs.pop("no_skip", False)
+
     for b in bands:
         for oi, ot, ft in oi_ot_ft_list:
             obsset = get_obsset(obsdate, "quicklook", b,
@@ -157,24 +182,42 @@ def quicklook_func(obsdate, obsids=None, objtypes=None, frametypes=None,
             storage = obsset.rs.storage.new_sectioned_storage("OUTDATA_PATH")
             index_db = IndexDB(storage)
 
-            if index_db.check_hexdigest("quicklook", oi, "",
-                                        dict(obstype=ot, frametype=ft)):
-                print("skip..", oi)
+            if (not no_skip and
+                index_db.check_hexdigest("quicklook", oi, "",
+                                         dict(obstype=ot, frametype=ft))):
+                info("{band}/{obsid:04d} - skipping. already processed"
+                     .format(band=b, obsid=oi, objtype=ot))
                 continue
 
-            print(obsset)
-            obsset
             if ot == "FLAT":
-                jo_list = do_ql_flat(obsset)
+                jo_list, jo_raw_list = do_ql_flat(obsset)
                 # print(len(jo_list), jo_list[0][1]["stat_profile"])
                 df = pd.DataFrame(jo_list[0][1]["stat_profile"])
                 print(df[["y", "t_down_10", "t_up_90"]])
-                save_jo_list(obsset, jo_list)
+                save_jo_list(obsset, jo_list, jo_raw_list)
 
-            elif ot in ["TAR", "STD"]:
-                pass
+            elif ot in ["STD"]:
+                info("{band}/{obsid:04d} - unsupported OBJTYPE:{objtype}"
+                     .format(band=b, obsid=oi, objtype=ot))
+
+                jo_list, jo_raw_list = do_ql_std(obsset, b)
+                # df = pd.DataFrame(jo_list[0][1]["stat_profile"])
+                # print(df[["y", "t_down_10", "t_up_90"]])
+                save_jo_list(obsset, jo_list, jo_raw_list)
+
+            elif ot in ["TAR"]:
+                info("{band}/{obsid:04d} - unsupported OBJTYPE:{objtype}"
+                     .format(band=b, obsid=oi, objtype=ot))
+
+                jo_list, jo_raw_list = do_ql_std(obsset, b)
+                # df = pd.DataFrame(jo_list[0][1]["stat_profile"])
+                # print(df[["y", "t_down_10", "t_up_90"]])
+                save_jo_list(obsset, jo_list, jo_raw_list)
+
             else:
-                pass
+                info("{band}/{obsid:04d} - unsupported OBJTYPE:{objtype}"
+                     .format(band=b, obsid=oi, objtype=ot))
+                continue
 
             index_db.save_hexdigest("quicklook", oi, "",
                                     dict(obstype=ot, frametype=ft))
