@@ -11,8 +11,8 @@ from ..pipeline.argh_helper import argh, arg, wrap_multi
 from ..igrins_libs.logger import info
 
 
-def _hash(recipe, groupid, basename_postfix, params):
-    d = dict(recipe=recipe, groupid=groupid,
+def _hash(recipe, band, groupid, basename_postfix, params):
+    d = dict(recipe=recipe, band=band, groupid=groupid,
              basename_postfix=basename_postfix,
              params=params)
 
@@ -26,29 +26,29 @@ class IndexDB(object):
         self.storage = storage
         # self.storage = self.storage.new_sectioned_storage("OUTDATA")
 
-    def check_hexdigest(self, recipe, groupid, basename_postfix, params):
+    def check_hexdigest(self, recipe, band, groupid, basename_postfix, params):
         dbname = "index"
         sectionname = recipe
 
-        k = "{}:{}".format(groupid, basename_postfix)
+        k = "{}{:04d}:{}".format(band, groupid, basename_postfix)
         v = load_key(self.storage,
                      dbname, sectionname, k)
         if v is None:
             return False
 
         hexdigest_old, value_old = v
-        hexdigest_new, value_new = _hash(recipe, groupid,
+        hexdigest_new, value_new = _hash(recipe, band, groupid,
                                          basename_postfix, params)
 
         return hexdigest_old == hexdigest_new
 
 
-    def save_hexdigest(self, recipe, groupid, basename_postfix, params):
+    def save_hexdigest(self, recipe, band, groupid, basename_postfix, params):
         dbname = "index"
         sectionname = recipe
 
-        hexdigest, d = _hash(recipe, groupid, basename_postfix, params)
-        k = "{}:{}".format(groupid, basename_postfix)
+        hexdigest, d = _hash(recipe, band, groupid, basename_postfix, params)
+        k = "{}{:04d}:{}".format(band, groupid, basename_postfix)
         # k = (groupid, basename_postfix)
         save_key(self.storage, dbname, sectionname, k, [hexdigest, d])
 
@@ -183,7 +183,7 @@ def quicklook_func(obsdate, obsids=None, objtypes=None, frametypes=None,
             index_db = IndexDB(storage)
 
             if (not no_skip and
-                index_db.check_hexdigest("quicklook", oi, "",
+                index_db.check_hexdigest("quicklook", b, oi, "",
                                          dict(obstype=ot, frametype=ft))):
                 info("{band}/{obsid:04d} - skipping. already processed"
                      .format(band=b, obsid=oi, objtype=ot))
@@ -219,7 +219,7 @@ def quicklook_func(obsdate, obsids=None, objtypes=None, frametypes=None,
                      .format(band=b, obsid=oi, objtype=ot))
                 continue
 
-            index_db.save_hexdigest("quicklook", oi, "",
+            index_db.save_hexdigest("quicklook", b, oi, "",
                                     dict(obstype=ot, frametype=ft))
 
 def create_argh_command_quicklook():
