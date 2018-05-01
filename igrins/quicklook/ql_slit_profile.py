@@ -233,6 +233,17 @@ def do_ql_slit_profile(hdu, band, frametype):
     expected_sn = get_expected_sn(jo)
     jo["expected_sn"] = expected_sn
 
+    if True:  # print out information
+        df = pd.DataFrame(jo["per_order_stat"]["25%"])
+
+        counts = df["height"] * df["fwhm"] * df["slit_length_pixel"]
+        df["Counts"] = counts
+        df["SN_AB"] = 2.**0.5 * 3.5 * counts**.5
+        df["SN_ABBA"] = 2. * 3.5 * counts**.5
+        df["FWHM_ARCSEC"] = df["fwhm"] * slit_length_arcsec
+
+        print(df.set_index("order")[["FWHM_ARCSEC", "Counts", "SN_AB", "SN_ABBA"]])
+
     return jo, jo_raw
 
 
@@ -307,8 +318,9 @@ def do_plot_per_order_stat(jo_raw, jo, fig=None):
     ax2 = fig.add_subplot(222)
     ax2.imshow(jo_raw["stacked_image"], aspect="auto")
 
-    ax3 = fig.add_subplot(223)
     df = pd.DataFrame(jo["per_order_stat"]["25%"])
+
+    ax3 = fig.add_subplot(223)
     ax3.plot(df["order"], df["fwhm"] * jo["slit_length_arcsec"],
              "o")
 
@@ -316,7 +328,6 @@ def do_plot_per_order_stat(jo_raw, jo, fig=None):
     l1 = ax3.axhline(v["fwhm"] * jo["slit_length_arcsec"], ls=":")
 
     ax4 = fig.add_subplot(224)
-    df = pd.DataFrame(jo["per_order_stat"]["25%"])
     counts = df["height"] * df["fwhm"] * df["slit_length_pixel"]
     ax4.plot(df["order"], 2. * 3.5 * counts**.5, "o", label="ABBA")
     ax4.plot(df["order"], 2**0.5 * 3.5 * counts**.5, "o", label="AB")
