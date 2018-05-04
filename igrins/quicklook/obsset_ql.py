@@ -10,6 +10,8 @@ from ..pipeline.argh_helper import argh, arg, wrap_multi
 
 from ..igrins_libs.logger import info
 
+from .ql_slit_profile import plot_stacked_profile, plot_per_order_stat
+from .ql_flat import plot_flat
 
 def _hash(recipe, band, groupid, basename_postfix, params):
     d = dict(recipe=recipe, band=band, groupid=groupid,
@@ -30,7 +32,7 @@ class IndexDB(object):
         dbname = "index"
         sectionname = recipe
 
-        k = "{}{:04d}:{}".format(band, groupid, basename_postfix)
+        k = "{}/{:04d}".format(band, groupid)
         v = load_key(self.storage,
                      dbname, sectionname, k)
         if v is None:
@@ -48,10 +50,17 @@ class IndexDB(object):
         sectionname = recipe
 
         hexdigest, d = _hash(recipe, band, groupid, basename_postfix, params)
-        k = "{}{:04d}:{}".format(band, groupid, basename_postfix)
+        k = "{}/{:04d}".format(band, groupid)
         # k = (groupid, basename_postfix)
         save_key(self.storage, dbname, sectionname, k, [hexdigest, d])
 
+    def save_dtlog(self, band, obsid, param):
+        dbname = "index"
+        sectionname = "dtlog"
+
+        k = "{}/{:04d}".format(band, obsid)
+
+        save_key(self.storage, dbname, sectionname, k, param)
 
 def get_obsset(obsdate, recipe_name, band,
                obsids, frametypes,
@@ -91,7 +100,7 @@ def _get_obsid_obstype_frametype_list(config, obsdate,
     fn0 = config.get_value('INDATA_PATH', obsdate)
     df = dt_logs.load_from_dir(obsdate, fn0)
 
-    keys = ["OBSID", "FRAMETYPE", "OBJTYPE"]
+    keys = ["OBSID", "OBJNAME", "FRAMETYPE", "OBJTYPE", "EXPTIME", "ROTPA"]
     m = df[keys].set_index("OBSID").to_dict(orient="index")
 
     if obsids is None:
@@ -107,7 +116,9 @@ def _get_obsid_obstype_frametype_list(config, obsdate,
     if frametypes is None:
         frametypes = [m[o]["FRAMETYPE"] for o in obsids]
 
-    return zip(obsids, objtypes, frametypes)
+    dt_rows = [m[o] for o in obsids]
+
+    return zip(obsids, objtypes, frametypes, dt_rows)
 
 
 def do_ql_flat(obsset):
@@ -149,6 +160,17 @@ def save_jo_list(obsset, jo_list, jo_raw_list):
         obsset.rs.store(str(oi), item_desc, jo)
 
 
+def save_fig_list(obsset, oi, fig_list):
+    from qa_helper import figlist_to_pngs
+
+    pngs = figlist_to_pngs(fig_list)
+    for i, png in enumerate(pngs):
+        item_desc = ("QL_PATH",
+                     "{basename}{postfix}i"
+                     + ".fig{:02d}.png".format(i))
+        obsset.rs.store(str(oi), item_desc, png)
+
+
 def quicklook_func(obsdate, obsids=None, objtypes=None, frametypes=None,
                    bands="HK", **kwargs):
     import os
@@ -175,12 +197,14 @@ def quicklook_func(obsdate, obsids=None, objtypes=None, frametypes=None,
     no_skip = kwargs.pop("no_skip", False)
 
     for b in bands:
-        for oi, ot, ft in oi_ot_ft_list:
+        for oi, ot, ft, dt_row in oi_ot_ft_list:
             obsset = get_obsset(obsdate, "quicklook", b,
                                 obsids=[oi], frametypes=[ft],
                                 config_file=config_file)
             storage = obsset.rs.storage.new_sectioned_storage("OUTDATA_PATH")
             index_db = IndexDB(storage)
+
+            index_db.save_dtlog(b, oi, dt_row)
 
             if (not no_skip and
                 index_db.check_hexdigest("quicklook", b, oi, "",
@@ -196,6 +220,11 @@ def quicklook_func(obsdate, obsids=None, objtypes=None, frametypes=None,
                 print(df[["y", "t_down_10", "t_up_90"]])
                 save_jo_list(obsset, jo_list, jo_raw_list)
 
+                jo = jo_list[0][1]
+                fig1 = plot_flat(jo)
+
+                save_fig_list(obsset, oi, [fig1])
+
             elif ot in ["STD"]:
                 info("{band}/{obsid:04d} - unsupported OBJTYPE:{objtype}"
                      .format(band=b, obsid=oi, objtype=ot))
@@ -205,6 +234,14 @@ def quicklook_func(obsdate, obsids=None, objtypes=None, frametypes=None,
                 # print(df[["y", "t_down_10", "t_up_90"]])
                 save_jo_list(obsset, jo_list, jo_raw_list)
 
+                jo = jo_list[0][1]
+                jo_raw = jo_raw_list[0][1]
+
+                fig1 = plot_stacked_profile(jo)
+                fig2 = plot_per_order_stat(jo_raw, jo)
+
+                save_fig_list(obsset, oi, [fig1, fig2])
+
             elif ot in ["TAR"]:
                 info("{band}/{obsid:04d} - unsupported OBJTYPE:{objtype}"
                      .format(band=b, obsid=oi, objtype=ot))
@@ -213,6 +250,14 @@ def quicklook_func(obsdate, obsids=None, objtypes=None, frametypes=None,
                 # df = pd.DataFrame(jo_list[0][1]["stat_profile"])
                 # print(df[["y", "t_down_10", "t_up_90"]])
                 save_jo_list(obsset, jo_list, jo_raw_list)
+
+                jo = jo_list[0][1]
+                jo_raw = jo_raw_list[0][1]
+
+                fig1 = plot_stacked_profile(jo)
+                fig2 = plot_per_order_stat(jo_raw, jo)
+
+                save_fig_list(obsset, oi, [fig1, fig2])
 
             else:
                 info("{band}/{obsid:04d} - unsupported OBJTYPE:{objtype}"

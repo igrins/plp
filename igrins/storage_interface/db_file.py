@@ -10,7 +10,7 @@ def load_key(storage, dbname, sectionname, k):
     buf = storage.load("{}.json".format(dbname), item_type="raw")
     index_json = json.loads(buf)
     section = index_json.get(sectionname, None)
-    if sectionname is not None:
+    if section is not None:
         return section.get(k, None)
 
     return None

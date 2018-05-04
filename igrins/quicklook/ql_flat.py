@@ -3,7 +3,7 @@ from __future__ import division
 import numpy as np
 
 from igrins.procedures import destripe_helper as dh
-
+from matplotlib.figure import Figure
 
 def get_stat_segment(dd):
 
@@ -63,14 +63,18 @@ def do_ql_flat(hdu, frametype):
     return jo
 
 
-def plot_flat_v2(jo):
-    clf()
-    plot(jo["mean_profile"])
+def plot_flat(jo, fig=None):
+    if fig is None:
+        fig = Figure(figsize=(4, 4))
+
+    ax = fig.add_subplot(111)
+    ax.plot(jo["mean_profile"])
     import pandas as pd
     df = pd.DataFrame(jo["stat_profile"])
-    plot(df["y"], df["t_up_90"], "^")
-    plot(df["y"], df["t_down_10"], "v")
+    ax.plot(df["y"], df["t_up_90"], "^")
+    ax.plot(df["y"], df["t_down_10"], "v")
 
+    return fig
 
 if __name__ == "__main__":
 
@@ -81,10 +85,13 @@ if __name__ == "__main__":
 
     # fn = "/media/igrins128/jjlee/igrins/20170904/SDCK_20170904_0025.fits"
 
-    frametype = "OFF"
-    fn = "/media/igrins128/jjlee/annex/igrins/20170414/SDCK_20170414_0014.fits.gz"
+    frametype = "ON"
+    # fn = "/media/igrins128/jjlee/annex/igrins/20170414/SDCK_20170414_0014.fits.gz"
+    fn = "/data/IGRINS_OBSDATA/20180406/SDCH_20180406_0042.fits"
     f = pyfits.open(fn)
 
     jo = do_ql_flat(f[0], frametype)
 
-    plot_flat_v2(jo)
+    fig = figure(1)
+    fig.clf()
+    plot_flat(jo, fig=fig)

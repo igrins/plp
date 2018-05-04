@@ -238,8 +238,9 @@ def do_ql_slit_profile(hdu, band, frametype):
 
         counts = df["height"] * df["fwhm"] * df["slit_length_pixel"]
         df["Counts"] = counts
-        df["SN_AB"] = 2.**0.5 * 3.5 * counts**.5
-        df["SN_ABBA"] = 2. * 3.5 * counts**.5
+        expected_sn_pixel = estimate_sn(counts, df["slit_length_pixel"])
+        df["SN_AB"] = (2. * 3.5)**0.5 * expected_sn_pixel
+        df["SN_ABBA"] = (4. * 3.5)**0.5 * expected_sn_pixel
         df["FWHM_ARCSEC"] = df["fwhm"] * slit_length_arcsec
 
         print(df.set_index("order")[["FWHM_ARCSEC", "Counts", "SN_AB", "SN_ABBA"]])
@@ -248,15 +249,19 @@ def do_ql_slit_profile(hdu, band, frametype):
 
 
 import matplotlib as mpl
+from matplotlib.figure import Figure
 from itertools import cycle
 
-def do_figure_stacked_profile(stacked, stacked_stat,
-                              slit_length,
-                              expected_sn,
-                              fig=None, color_cycle=None):
+def plot_stacked_profile(jo,
+                         fig=None, color_cycle=None):
+
+    stacked = jo["stacked"]
+    stacked_stat = jo["stacked_stat"]
+    slit_length = jo["slit_length_arcsec"]
+    expected_sn = jo["expected_sn"]
 
     if fig is None:
-        fig = mpl.figure.Figure(figsize=(4, 4))
+        fig = Figure(figsize=(4, 4))
 
     if color_cycle is None:
         color_cycle = mpl.rcParams['axes.prop_cycle'].by_key()['color']
@@ -281,35 +286,43 @@ def do_figure_stacked_profile(stacked, stacked_stat,
     titles = []
     for quad, v in expected_sn.items():
         title1 = "{}: max({:d}) median({:d})".format(quad,
-                                                     int(v["max"]/10.)*10,
-                                                     int(v["median"]/10)*10)
+                                                     int(v["max"]),
+                                                     int(v["median"]))
         titles.append(title1)
 
     ax1.set_title("\n".join(titles))
 
     return fig
 
+def estimate_sn(count, slit_length_pixel):
+    ro_noise = 3
+    noise2 = count + (slit_length_pixel * ro_noise**2)
+
+    sn = count / noise2**.5
+    return sn
 
 def get_expected_sn(jo):
 
-    df = pd.DataFrame(jo["per_order_stat"]["25%"])
+    df = pd.DataFrame(jo["per_order_stat"]["50%"])
     counts = df["height"] * df["fwhm"] * df["slit_length_pixel"]
 
-    expected_sn = 3.5 * counts**.5
+    expected_sn_pixel = estimate_sn(counts, df["slit_length_pixel"])
+
+    expected_sn_res_elem = 3.5**.5 * expected_sn_pixel
 
     factor_ab = 2.**0.5
     factor_abba = 2.
 
-    return dict(AB=dict(max=factor_ab * expected_sn.max(),
-                        median=factor_ab * expected_sn.median()),
-                ABBA=dict(max=factor_abba * expected_sn.max(),
-                          median=factor_abba * expected_sn.median()))
+    return dict(AB=dict(max=factor_ab * expected_sn_res_elem.max(),
+                        median=factor_ab * expected_sn_res_elem.median()),
+                ABBA=dict(max=factor_abba * expected_sn_res_elem.max(),
+                          median=factor_abba * expected_sn_res_elem.median()))
 
 
-def do_plot_per_order_stat(jo_raw, jo, fig=None):
+def plot_per_order_stat(jo_raw, jo, fig=None):
 
     if fig is None:
-        fig = mpl.figure.Figure(figsize=(4, 4))
+        fig = Figure(figsize=(4, 4))
 
     ax1 = fig.add_subplot(221)
     for v in jo_raw["sampled_per_order"]:
@@ -318,21 +331,26 @@ def do_plot_per_order_stat(jo_raw, jo, fig=None):
     ax2 = fig.add_subplot(222)
     ax2.imshow(jo_raw["stacked_image"], aspect="auto")
 
-    df = pd.DataFrame(jo["per_order_stat"]["25%"])
+    df = pd.DataFrame(jo["per_order_stat"]["50%"])
 
     ax3 = fig.add_subplot(223)
     ax3.plot(df["order"], df["fwhm"] * jo["slit_length_arcsec"],
              "o")
 
-    v = jo["stacked_stat"]["25%"]
+    v = jo["stacked_stat"]["50%"]
     l1 = ax3.axhline(v["fwhm"] * jo["slit_length_arcsec"], ls=":")
 
     ax4 = fig.add_subplot(224)
     counts = df["height"] * df["fwhm"] * df["slit_length_pixel"]
-    ax4.plot(df["order"], 2. * 3.5 * counts**.5, "o", label="ABBA")
-    ax4.plot(df["order"], 2**0.5 * 3.5 * counts**.5, "o", label="AB")
+
+    expected_sn_pixel = estimate_sn(counts, df["slit_length_pixel"])
+
+    ax4.plot(df["order"], (2. * 3.5)**0.5 * expected_sn_pixel, "o", label="ABBA")
+    ax4.plot(df["order"], (4. * 3.5)**0.5 * expected_sn_pixel, "o", label="AB")
 
     ax4.legend()
+
+    return fig
 
 
 def do_figure_eq_width(stacked, stacked_stat,
@@ -340,7 +358,7 @@ def do_figure_eq_width(stacked, stacked_stat,
                        fig=None, color_cycle=None):
 
     if fig is None:
-        fig = mpl.Figure(figsize=(4, 4))
+        fig = Figure(figsize=(4, 4))
 
     if color_cycle is None:
         color_cycle = mpl.rcParams['axes.prop_cycle'].by_key()['color']
@@ -387,15 +405,16 @@ def main():
 
     fig = plt.figure(1)
     fig.clf()
-    do_figure_stacked_profile(jo["stacked"], jo["stacked_stat"],
-                              jo["slit_length_arcsec"],
-                              jo["expected_sn"],
-                              fig=fig)
+    plot_stacked_profile(jo, fig=fig)
+    figlist = [fig]
 
     fig = plt.figure(2)
     fig.clf()
-    do_plot_per_order_stat(jo_raw, jo, fig=fig)
+    plot_per_order_stat(jo_raw, jo, fig=fig)
+    figlist.append(fig)
 
+    # png_list = figlist_to_pngs(figlist)
+    # open("test.png", "w").write(png_list[0])
 
 if __name__ == "__main__":
     main()

@@ -49,8 +49,8 @@ def apply_steps(obsset, steps, kwargs=None, step_slice=None, on_raise=None):
             continue
 
         obsset.new_context(context_name)
-        print("  * ({}/{}) {}...".format(context_id + 1,
-                                         n_steps, context_name))
+        info("  * ({}/{}) {}...".format(context_id + 1,
+                                        n_steps, context_name))
         try:
             # step(obsset)
             step.apply(obsset, kwargs)

@@ -1,6 +1,8 @@
 import numpy as np
 import numpy.polynomial as P
 
+import simplejson
+
 def encode_array(obj):
     if hasattr(obj, "to_json"):
         return obj.to_json()
@@ -17,15 +19,17 @@ def encode_array(obj):
 
 import json
 
-def json_dump(obj, f, *kl, **kw):
-    if "default" not in kw:
-        kw["default"] = encode_array
+# def json_dump(obj, f, *kl, **kw):
+#     if "default" not in kw:
+#         kw["default"] = encode_array
 
-    json.dump(obj, f, *kl, **kw)
+    # return simplejson.dumps(o, ignore_nan=True)
 
 
 def json_dumps(obj, *kl, **kw):
     if "default" not in kw:
         kw["default"] = encode_array
 
-    return json.dumps(obj, *kl, **kw)
+    kw["ignore_nan"] = True
+    return simplejson.dumps(obj, *kl, **kw)
+    # return json.dumps(obj, *kl, **kw)

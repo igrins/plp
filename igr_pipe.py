@@ -50,7 +50,6 @@ parser = argh.ArghParser()
 parser.add_commands(recipe_list)
 
 import igrins
-print(igrins)
 
 # for k, v in subcommands.items():
 #     parser.add_commands(v, namespace=k)
