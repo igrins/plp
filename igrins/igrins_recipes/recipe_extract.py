@@ -87,7 +87,12 @@ steps_stellar = [Step("Set baename-postfix", set_basename_postfix,
 ]
 
 
+def update_db(obsset):
+
+    obsset.add_to_db("a0v")
+
 steps_a0v = steps_stellar + [Step("Flatten A0V", flatten_a0v),
+                             Step("Update db", update_db)
 ]
 
 
