@@ -117,6 +117,12 @@ class ObsSet(object):
     def add_to_db(self, db_name):
         self.rs.update_db(db_name, self.groupname)
 
+    def query_resource_basename(self, db_name):
+        return self.rs.query_resource_basename(db_name, self.groupname)
+
+    def query_resource_basename(self, db_name):
+        return self.rs.query_resource_basename(db_name, self.groupname)
+
     def query_resource_for(self, resource_type, postfix=""):
 
         resource_basename, item_desc = self.rs.query_resource_for(self.master_obsid,

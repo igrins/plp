@@ -138,7 +138,11 @@ class ResourceStack(object):
     def update_db(self, db_name, basename):
         self.resource_db.update_db(db_name, basename)
 
+    def query_resource_basename(self, db_name, basename):
+        return self.resource_db.query_resource_basename(db_name, basename)
+
     # master ref
+
     def query_ref_value(self, kind):
         return self.master_ref_loader.query_value(kind)
 
@@ -227,6 +231,9 @@ class ResourceStackWithBasename(ResourceStack):
         basename = self.basename_helper.to_basename(basename)
 
         self.resource_db.update_db(db_name, basename)
+
+    def parse_basename(self, basename):
+        return self.basename_helper.parse_basename(basename)
 
 
 if __name__ == "__main__":
