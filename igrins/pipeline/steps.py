@@ -2,12 +2,41 @@ from collections import OrderedDict
 from .argh_helper import argh, arg, wrap_multi
 from ..igrins_libs.logger import info
 
+class ArghFactoryBase(object):
+    def __init__(self, v):
+        self.v = v
+
+    def __call__(self, k):
+        s = "--" + k.replace("_", "-")
+        a = arg(s, default=self.v)
+        return a
+
+
+class ArghFactoryWithShort(ArghFactoryBase):
+    def __init__(self, v, shortened=None):
+        ArghFactoryBase.__init__(self, v)
+        self.shortened = shortened
+
+    def __call__(self, k):
+        s = "--" + k.replace("_", "-")
+
+        if self.shortened is None:
+            shortened = k[0]
+        else:
+            shortened = self.shortened[0]
+
+        a = arg("-" + shortened, s, default=self.v)
+        return a
+
 
 class Step():
     def __init__(self, name, f, **kwargs):
         self.name = name
         self.f = f
-        self.kwargs = kwargs
+        self.kwargs = dict((k, v.v if isinstance(v, ArghFactoryBase) else v)
+                           for (k, v) in kwargs.items())
+        self.argh_helpers = dict((k, v ) for (k, v) in kwargs.items()
+                                 if isinstance(v, ArghFactoryBase))
 
     def apply(self, obsset, kwargs):
         kwargs0 = self.kwargs.copy()
@@ -76,9 +105,13 @@ def apply_steps(obsset, steps, kwargs=None, step_slice=None, on_raise=None):
 class PipelineKwargs(object):
     def __init__(self, steps):
         self.master_kwargs = OrderedDict()
+        self.master_argh_helpers = OrderedDict()
+
         for step in steps:
             if hasattr(step, "kwargs"):
                 self.master_kwargs.update(step.kwargs)
+            if hasattr(step, "argh_helpers"):
+                self.master_argh_helpers.update(step.argh_helpers)
 
     def check(self, kwargs):
         for k in kwargs:
@@ -95,8 +128,11 @@ class PipelineKwargs(object):
     def generate_argh(self):
         args = []
         for k, v in self.master_kwargs.items():
-            s = "--" + k.replace("_", "-")
-            a = arg(s, default=v)
+            if k in self.master_argh_helpers:
+                a = self.master_argh_helpers[k](k)
+            else:
+                s = "--" + k.replace("_", "-")
+                a = arg(s, default=v)
             args.append(a)
 
         return args
