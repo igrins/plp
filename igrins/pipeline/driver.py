@@ -10,6 +10,7 @@ def get_obsset(obsdate, recipe_name, band,
                groupname=None, recipe_entry=None,
                config_file=None, saved_context_name=None,
                basename_postfix=""):
+    # recipe_entry : dict of original recipe entry
 
     # from igrins import get_obsset
     # caldb = get_caldb(config_file, obsdate, ensure_dir=True)

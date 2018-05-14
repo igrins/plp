@@ -73,6 +73,9 @@ def get_obsset(obsdate, band, recipe_name_or_entry,
         frametypes = r["frametypes"]
         groupname = r["group1"]
 
+        if recipe_entry is None:
+            recipe_entry = r
+
     from .pipeline.driver import get_obsset as _get_obsset
     obsset = _get_obsset(obsdate, recipe_name, band, obsids, frametypes,
                          groupname, recipe_entry,
