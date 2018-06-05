@@ -15,6 +15,22 @@ def _get_combined_image(obsset):
     return image_median(data_list)
 
 
+def get_combined_image(obsset):
+
+    if obsset.recipe_name.endswith("AB"):  # do A-B
+        obsset_a = obsset.get_subset("A")
+        obsset_b = obsset.get_subset("B")
+
+        a = _get_combined_image(obsset_a)
+        b = _get_combined_image(obsset_b)
+
+        sky_data = .5 * (a+b - abs(a-b))
+    else:
+        sky_data = _get_combined_image(obsset)
+
+    return sky_data
+
+
 def _destripe_sky(data, destripe_mask, subtract_bg=True):
     """
     simple destripping. Suitable for sky.
@@ -23,7 +39,10 @@ def _destripe_sky(data, destripe_mask, subtract_bg=True):
     from .destriper import destriper
     from .estimate_sky import estimate_background, get_interpolated_cubic
 
-    if subtract_bg:
+    if hasattr(subtract_bg, "shape"):
+        d = data - subtract_bg
+
+    elif subtract_bg:
         xc, yc, v, std = estimate_background(data, destripe_mask,
                                              di=48, min_pixel=40)
         nx = ny = 2048
@@ -42,27 +61,68 @@ def _destripe_sky(data, destripe_mask, subtract_bg=True):
     return d - stripes
 
 
-def make_combined_image_sky(obsset):
-
-    if obsset.recipe_name.endswith("AB"):  # do A-B
-        obsset_a = obsset.get_subset("A")
-        obsset_b = obsset.get_subset("B")
-
-        a = _get_combined_image(obsset_a)
-        b = _get_combined_image(obsset_b)
-
-        sky_data = a+b - abs(a-b)
-    else:
-        sky_data = _get_combined_image(obsset)
-
+def make_combined_image_sky_old(obsset):
     helper = ResourceHelper(obsset)
     destripe_mask = helper.get("destripe_mask")
+
+    sky_data = get_combined_image(obsset)
 
     sky_data = _destripe_sky(sky_data, destripe_mask, subtract_bg=False)
 
     hdul = obsset.get_hdul_to_write(([], sky_data))
     obsset.store("combined_sky", data=hdul)
 
+
+def get_exptime(obsset):
+    if obsset.recipe_entry is not None and "exptime" in obsset.recipe_entry:
+        exptime = obsset.recipe_entry["exptime"]
+    else:
+        exptime = float(obsset.get_hdus()[0].header["exptime"])
+
+    return exptime
+
+
+def _sky_subtract_bg(obsset, sky_image,
+                     bg_subtraction_mode="flat"):
+
+    sky_exptime = get_exptime(obsset)
+
+    if bg_subtraction_mode == "flat":
+
+        bg_hdu = obsset.load_resource_sci_hdu_for(("flat_off",
+                                                   DESCS["FLAT_OFF_BG"]))
+        bg_exptime = float(bg_hdu.header["exptime"])
+    else:
+        raise ValueError("unknown bg_subtraction_mode: {}".
+                         format(bg_subtraction_mode))
+
+    sky_image2 = sky_image - bg_hdu.data / bg_exptime * sky_exptime
+
+    # subtract pattern noise
+
+    helper = ResourceHelper(obsset)
+    destripe_mask = helper.get("destripe_mask")
+
+    import igrins.procedures.readout_pattern as rp
+
+    pipe = [
+        rp.PatternP64ColWise,
+        rp.PatternAmpP2,
+        rp.PatternRowWiseBias
+    ]
+
+    destriped_sky = rp.apply(sky_image2, pipe, mask=destripe_mask)
+
+    return destriped_sky
+
+
+def _make_combined_image_sky(obsset, bg_subtraction_mode="flat"):
+    sky_image = get_combined_image(obsset)
+
+    final_sky = _sky_subtract_bg(obsset, sky_image,
+                                 bg_subtraction_mode=bg_subtraction_mode)
+
+    return final_sky
 
 def extract_spectra(obsset):
     "extract spectra"
