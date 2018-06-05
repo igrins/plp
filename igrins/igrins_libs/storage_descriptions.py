@@ -8,6 +8,7 @@ RAWIMAGE_DESC = ("INDATA_PATH", "{basename}{postfix}.fits")
 # FLAT_OFF related
 
 FLAT_OFF_DESC = ("OUTDATA_PATH", "{basename}{postfix}.flat_off.fits")
+FLAT_OFF_BG_DESC = ("PRIMARY_CALIB_PATH", "FLAT_{basename}{postfix}.flat_off_bg.fits")
 HOTPIX_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_{basename}{postfix}.hotpix_mask.fits")
 FLATOFF_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT_{basename}{postfix}.flat_off.json")
 

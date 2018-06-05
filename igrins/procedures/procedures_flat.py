@@ -32,8 +32,12 @@ from ..utils.json_helper import json_dumps
 
 #     return (cards, flat_off)
 
+def correct_bg_from_upper256(d):
+    s = ni.median_filter(np.nanmedian(d[-256:-4], axis=0), 128)
+    return d - s
 
-def combine_flat_off(hdul, destripe=True):
+def combine_flat_off(hdul, destripe=True,
+                     correct_bg_upper256=False):
     # destripe=True):
 
     cards = []
@@ -46,6 +50,9 @@ def combine_flat_off(hdul, destripe=True):
         flat_off = dh.make_initial_dark(data_list, bg_mask)
     else:
         flat_off = stsci_median(data_list)
+
+    if correct_bg_upper256:
+        flat_off = correct_bg_from_upper256(flat_off)
 
     return (cards, flat_off)
 
@@ -69,7 +76,13 @@ def obsset_combine_flat_off(obsset, destripe=True):
     #                       "IGR: image destriped."))
 
     hdu_list = obsset_off.get_hdus()
-    cards, flat_off = combine_flat_off(hdu_list, destripe=destripe)
+
+    band = get_band(obsset)
+    correct_bg_upper256 = True if band == "K" else False
+
+    cards, flat_off = combine_flat_off(hdu_list,
+                                       destripe=destripe,
+                                       correct_bg_upper256=correct_bg_upper256)
 
     hdu_cards = [Card(k, json_dumps(v)) for (k, v) in cards]
 
@@ -94,6 +107,12 @@ def obsset_combine_flat_off_step2(obsset):
     destripe_mask = helper.get("destripe_mask")
 
     bg_model = dh.model_bg(flat_off, destripe_mask)
+    header = flat_off_hdu.header.copy()
+    header["NCOMBINE"] = len(obsset.obsids)
+    flat_off_bg_hdul = HDUList([PrimaryHDU(data=bg_model,
+                                           header=header)])
+
+    obsset_off.store(DESCS["FLAT_OFF_BG"], flat_off_bg_hdul)
 
     band = get_band(obsset)
     if band == "H":
