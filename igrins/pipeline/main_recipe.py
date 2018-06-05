@@ -33,7 +33,7 @@ def iter_obsset(recipe_name_fnmatch,
     fn = config.get_value('RECIPE_LOG_PATH', obsdate)
 
     from ..igrins_libs.recipes import RecipeLog
-    recipes = RecipeLog(fn)
+    recipes = RecipeLog(obsdate, fn)
 
     selected = get_selected(recipes, recipe_name_fnmatch,
                             groups)

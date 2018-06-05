@@ -412,14 +412,16 @@ class RecipeLogClass(pd.DataFrame):
 
 
 class RecipeLog(RecipeLogClass):
-
-    def __init__(self, fn, allow_duplicate_groups=False):
+    def __init__(self, obsdate, fn, allow_duplicate_groups=False,
+                 config=None):
         d = load_recipe_as_dict(fn)
 
         columns = ["starting_obsid", "objname", "obstype",
                    "recipe", "obsids", "frametypes",
                    "exptime", "group1", "group2"]
-        super(RecipeLog, self).__init__(d, columns=columns)
-        # self.set_index("starting_obsid", inplace=True)
+        super(RecipeLog, self).__init__(d, columns=columns,
+                                        obsdate=obsdate,
+                                        igrins_config=config)
+
         self._substitute_group1()
         _check(self, allow_duplicate_groups)

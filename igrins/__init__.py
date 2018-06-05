@@ -55,7 +55,7 @@ def load_recipe_log(obsdate, config_file=None):
                       config.get_value('RECIPE_LOG_PATH', obsdate))
 
     from .igrins_libs.recipes import RecipeLog
-    recipe_log = RecipeLog(fn)
+    recipe_log = RecipeLog(obsdate, fn)
 
     return recipe_log
 
