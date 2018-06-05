@@ -2,6 +2,9 @@
 ObsSet: Helper class for a single obsid, and its derived products.
 """
 
+import re
+import fnmatch
+
 import astropy.io.fits as pyfits
 
 from .. import DESCS
@@ -63,6 +66,17 @@ class ObsSet(object):
 
     def abort_context(self, context_name):
         self.rs.abort_context(context_name)
+
+    def ensure_recipe_name(self, recipe_pattern):
+        f_pattern = re.compile(fnmatch.translate(recipe_pattern))
+
+        for recipe_name in self.recipe_name.split("|"):
+            if f_pattern.match(recipe_name):
+                self.recipe_name = recipe_name
+                break
+        else:
+            raise ValueError("no matching recipe {} found: {}".
+                             format(recipe_pattern, self.recipe_name))
 
     def get_obsids(self, frametype=None):
         if frametype is None:
