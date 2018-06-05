@@ -29,6 +29,7 @@ def create_argh_command(recipe_name, recipe_name_fnmatch=None):
 
 
 recipe_list = [prepare_recipe_logs,
+               create_argh_command("dark"),
                create_argh_command("flat"),
                create_argh_command("register-sky", ["SKY", "SKY_AB"]),
                create_argh_command("wvlsol-sky", ["SKY", "SKY_AB"]),

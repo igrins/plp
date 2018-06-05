@@ -5,6 +5,10 @@
 
 RAWIMAGE_DESC = ("INDATA_PATH", "{basename}{postfix}.fits")
 
+# DARK related
+
+PAIR_SUBTRACTED_IMAGES_DESC = ("OUTDATA_PATH", "{basename}{postfix}.pair_subtracted.fits")
+
 # FLAT_OFF related
 
 FLAT_OFF_DESC = ("OUTDATA_PATH", "{basename}{postfix}.flat_off.fits")
