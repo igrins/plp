@@ -7,7 +7,7 @@ from ..igrins_libs import logger
 
 _default_recipe_name = dict(flat="FLAT", std="A0V_AB", tar="STELLAR_AB",
                             dark="DARK",
-                            arc_thar="ARC_THAR", arc_une="ARC_UNE")
+                            arc_thar="ARC", arc_une="ARC")
 
 
 def get_recipe_name(objtype):
