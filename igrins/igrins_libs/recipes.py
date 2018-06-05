@@ -320,11 +320,33 @@ def _check(df, allow_duplicate_groups=False):
                 raise ValueError(msg)
 
 
+class RecipeSeries(pd.Series):
+    # RecipeSeries is not working okay for now
+
+    @property
+    def _constructor(self):
+        return RecipeSeries
+
+    _metadata = ['_igrins_obsdate', '_igrins_config']
+
+    def __init__(self, d, obsdate=None,  igrins_config=None, **kw):
+        super(RecipeSeries, self).__init__(d, **kw)
+        self._igrins_obsdate = obsdate
+        self._igrins_config = igrins_config
+
 class RecipeLogClass(pd.DataFrame):
 
     @property
     def _constructor(self):
         return RecipeLogClass
+
+    _metadata = ['_igrins_obsdate', '_igrins_config']
+
+
+    def __init__(self, d, obsdate=None,  igrins_config=None, **kw):
+        super(RecipeLogClass, self).__init__(d, **kw)
+        self._igrins_obsdate = obsdate
+        self._igrins_config = igrins_config
 
     def subset(self, **kwargs):
         """
