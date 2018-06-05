@@ -109,3 +109,11 @@ def test_subset(recipe_file1):
     assert len(r1) == 2
     assert r1.iloc[0]["group1"] == "1"
     assert r1.iloc[1]["group1"] == "183"
+
+def test_subset(recipe_file1):
+
+    r = RecipeLog(recipe_file1)
+    r1 = r.subset(obstype="DARK")
+    assert len(r1) == 2
+    assert r1.iloc[0]["group1"] == "1"
+    assert r1.iloc[1]["group1"] == "183"
