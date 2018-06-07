@@ -1,3 +1,4 @@
+import json
 import numpy as np
 
 from .. import DESCS
@@ -25,10 +26,23 @@ def get_combined_image(obsset):
         b = _get_combined_image(obsset_b)
 
         sky_data = .5 * (a+b - abs(a-b))
+        combine_mode = "median_sky"
+        combine_par = json.dumps(dict(A=obsset_a.obsids,
+                                      B=obsset_b.obsids))
+
     else:
         sky_data = _get_combined_image(obsset)
+        combine_mode = "median"
+        combine_par = json.dumps(obsset.obsids)
 
-    return sky_data
+    ncombine = len(obsset.obsids)
+    cards = [("NCOMBINE", ncombine, "number of images combined"),
+             ("COMBMODE", combine_mode, "how images are combined"),
+             ("COMB_PAR", combine_par,
+              "parameters for image combine")
+    ]
+
+    return sky_data, cards
 
 
 def _destripe_sky(data, destripe_mask, subtract_bg=True):
@@ -117,12 +131,12 @@ def _sky_subtract_bg(obsset, sky_image,
 
 
 def _make_combined_image_sky(obsset, bg_subtraction_mode="flat"):
-    sky_image = get_combined_image(obsset)
+    sky_image, cards = get_combined_image(obsset)
 
     final_sky = _sky_subtract_bg(obsset, sky_image,
                                  bg_subtraction_mode=bg_subtraction_mode)
 
-    return final_sky
+    return final_sky, cards
 
 def extract_spectra(obsset):
     "extract spectra"

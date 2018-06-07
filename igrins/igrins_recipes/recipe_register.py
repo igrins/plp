@@ -11,7 +11,11 @@ from ..procedures.procedures_register import (identify_orders,
                                               update_db)
 
 def make_combined_image_sky(obsset, bg_subtraction_mode="flat"):
-    final_sky = _make_combined_image_sky(obsset, bg_subtraction_mode)
+    final_sky, cards = _make_combined_image_sky(obsset, bg_subtraction_mode)
+
+    from astropy.io.fits import Card
+    fits_cards = [Card(k, v) for (k, v, c) in cards]
+    obsset.extend_cards(fits_cards)
 
     hdul = obsset.get_hdul_to_write(([], final_sky))
     obsset.store("combined_image", data=hdul)

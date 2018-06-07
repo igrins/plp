@@ -107,11 +107,18 @@ from igrins.procedures.sky_spec import _make_combined_image_sky
 
 
 def make_combined_image_sky(obsset, bg_subtraction_mode="flat"):
-    final_sky = _make_combined_image_sky(obsset, bg_subtraction_mode)
+    final_sky, cards = _make_combined_image_sky(obsset,
+                                                bg_subtraction_mode)
+    ncombine = dict((k, v) for (k, v, c) in cards)["NCOMBINE"]
+    scaled_final_sky = ncombine * final_sky
 
     # assume data_plus is equal to sky_data
     variance_map0, variance_map = get_variance_map(obsset,
-                                                   final_sky, final_sky)
+                                                   scaled_final_sky,
+                                                   scaled_final_sky)
+    from astropy.io.fits import Card
+    fits_cards = [Card(k, v) for (k, v, c) in cards]
+    obsset.extend_cards(fits_cards)
 
     hdul = obsset.get_hdul_to_write(([], final_sky),
                                     ([], variance_map0),

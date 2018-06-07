@@ -27,6 +27,8 @@ class ObsSet(object):
         self._reset_read_cache = reset_read_cache
         self.basename_postfix = basename_postfix
 
+        self.default_cards = []
+
         # self.basename = self.caldb._get_basename((self.band, groupname))
         # # this is for query
         # self.basename_for_query = self.caldb._get_basename((self.band,
@@ -177,6 +179,9 @@ class ObsSet(object):
 
         return hdus
 
+    def extend_cards(self, cards):
+        self.default_cards.extend(cards)
+
     # to store
     def get_template_hdul(self, *hdu_type_list):
         hdul = self.rs.load(self.get_obsids()[0],
@@ -200,7 +205,7 @@ class ObsSet(object):
         hdu_type_list = ["primary"] + (["image"] * (len(card_data_list) - 1))
         hdul = self.get_template_hdul(*hdu_type_list)
         for hdu, (cards, data) in zip(hdul, card_data_list):
-            hdu.header.update(cards)
+            hdu.header.update(self.default_cards + list(cards))
             if data.dtype.name == "bool":
                 data = data.astype("uint8")
             hdu.data = data
