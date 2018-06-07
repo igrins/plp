@@ -145,6 +145,7 @@ def extract_spectra(obsset):
     # master_obsid = obsids[0]
 
     data = obsset.load_fits_sci_hdu(DESCS["combined_sky"]).data
+    data = np.nan_to_num(data)
 
     aperture = get_simple_aperture_from_obsset(obsset)
 

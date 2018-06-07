@@ -18,7 +18,7 @@ def make_combined_image_sky(obsset, bg_subtraction_mode="flat"):
     obsset.extend_cards(fits_cards)
 
     hdul = obsset.get_hdul_to_write(([], final_sky))
-    obsset.store("combined_image", data=hdul)
+    obsset.store("combined_sky", data=hdul)
 
 
 steps = [Step("Make Combined Sky", make_combined_image_sky),
