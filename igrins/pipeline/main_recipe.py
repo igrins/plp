@@ -37,6 +37,9 @@ def iter_obsset(recipe_name_fnmatch,
 
     selected = get_selected(recipes, recipe_name_fnmatch,
                             groups)
+    if len(selected) == 0:
+        raise ValueError("no matching recipes are found: {}"
+                         .format(", ".join(recipe_name_fnmatch)))
 
     for band in bands:
         # info("= Entering band:{}".format(band))

@@ -1,5 +1,6 @@
 import json
 import numpy as np
+import warnings
 
 from .. import DESCS
 
@@ -133,8 +134,11 @@ def _sky_subtract_bg(obsset, sky_image,
 def _make_combined_image_sky(obsset, bg_subtraction_mode="flat"):
     sky_image, cards = get_combined_image(obsset)
 
-    final_sky = _sky_subtract_bg(obsset, sky_image,
-                                 bg_subtraction_mode=bg_subtraction_mode)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', r'All-NaN (slice|axis) encountered')
+
+        final_sky = _sky_subtract_bg(obsset, sky_image,
+                                     bg_subtraction_mode=bg_subtraction_mode)
 
     return final_sky, cards
 
