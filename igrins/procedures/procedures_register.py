@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 # from collections import namedtuple
+import warnings
 
 import numpy as np
 import matplotlib  # Affine class is used
@@ -67,7 +68,8 @@ def identify_orders(obsset):
 
     new_orders = _match_order(src_spectra, ref_spectra)
 
-    print(new_orders)
+    from ..igrins_libs.logger import info
+    info("          orders: {}...{}".format(new_orders[0], new_orders[-1]))
 
     src_spectra["orders"] = new_orders
     obsset.store(DESCS["ONED_SPEC_JSON"],
@@ -200,7 +202,9 @@ def identify_lines(obsset):
             msk = (pixpos >= 0)
 
             ref_pix_list = offsetfunc_map[o](pixpos[msk])
-            pix_list, dist = match_lines1_pix(np.array(s), ref_pix_list)
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', r'Degrees of freedom')
+                pix_list, dist = match_lines1_pix(np.array(s), ref_pix_list)
 
             pix_list[dist > 1] = -1
             pixpos[msk] = pix_list
