@@ -44,6 +44,8 @@ recipe_list = [prepare_recipe_logs,
                create_argh_command("plot-spec", ["A0V_*",
                                                  "STELLAR_*",
                                                  "EXTENDED_*"]),
+               create_argh_command("divide-a0v", ["STELLAR_*",
+                                                  "EXTENDED_*"]),
                create_argh_command_quicklook(),
 ]
 
