@@ -50,8 +50,7 @@ def _volume_poly_fit(points, scalar, orders, names):
     return p, s
 
 
-def volume_fit(obsset):
-
+def _get_df(obsset):
     d = obsset.load("SKY_FITTED_PIXELS_JSON")
     df = pd.DataFrame(**d)
 
@@ -59,6 +58,26 @@ def volume_fit(obsset):
     df = df.set_index(index_names)[["slit_center", "pixels"]]
 
     dd = _append_offset(df)
+    return dd
+
+
+def _filter_points(df, drop=0.10):
+    ss0 = df.groupby("pixels0")["offsets"]
+    ss0_std = ss0.transform(np.std)
+
+    ss = ss0.std()
+    vmin = np.percentile(ss, 100*drop)
+    vmax = np.percentile(ss, 100*(1 - drop))
+
+    msk = (ss0_std > vmin) & (ss0_std < vmax)
+
+    return df[msk]
+
+
+def volume_fit(obsset):
+
+    dd = _get_df(obsset)
+    dd = _filter_points(dd)
 
     names = ["pixel", "order", "slit"]
     orders = [3, 2, 1]

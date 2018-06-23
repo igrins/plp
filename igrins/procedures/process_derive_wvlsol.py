@@ -16,18 +16,12 @@ def _convert2wvlsol(p, orders_w_solutions):
     return wvl_sol
 
 
-def fit_wvlsol(df, xdeg=4, ydeg=3):
+from .ecfit import fit_2dspec
+
+def _fit_2d(xl, yl, zlo, xdeg=4, ydeg=3):
     """
     df: pixels, order, wavelength"""
-    from .ecfit import fit_2dspec
 
-    xl = df["pixels"].values
-    yl = df["order"].values
-    zl = df["wavelength"].values
-    zlo = zl * yl
-    # xl : pixel
-    # yl : order
-    # zlo : wvl * order
 
     x_domain = [0, 2047]
     y_domain = [min(yl)-2, max(yl)+2]
@@ -49,6 +43,44 @@ def fit_wvlsol(df, xdeg=4, ydeg=3):
                        fitted_mask=m)
 
     return p, fit_results
+
+
+def fit_wvlsol(df, xdeg=4, ydeg=3):
+    """
+    df: pixels, order, wavelength"""
+    from .ecfit import fit_2dspec
+
+    xl = df["pixels"].values
+    yl = df["order"].values
+    zl = df["wavelength"].values
+    zlo = zl * yl
+    # xl : pixel
+    # yl : order
+    # zlo : wvl * order
+
+    p, fit_results = _fit_2d(xl, yl, zlo, xdeg=xdeg, ydeg=ydeg)
+    return p, fit_results
+
+    # x_domain = [0, 2047]
+    # y_domain = [min(yl)-2, max(yl)+2]
+    # # x_degree, y_degree = 4, 3
+    # # x_degree, y_degree = 3, 2
+
+    # msk = np.isfinite(xl)
+
+    # fit_params = dict(x_degree=xdeg, y_degree=ydeg,
+    #                   x_domain=x_domain, y_domain=y_domain)
+
+    # p, m = fit_2dspec(xl[msk], yl[msk], zlo[msk], **fit_params)
+
+    # from .astropy_poly_helper import serialize_poly_model
+    # poly_2d = serialize_poly_model(p)
+    # fit_results = dict(xyz=[xl[msk], yl[msk], zlo[msk]],
+    #                    fit_params=fit_params,
+    #                    fitted_model=poly_2d,
+    #                    fitted_mask=m)
+
+    # return p, fit_results
 
 
 def derive_wvlsol(obsset):
