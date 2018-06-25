@@ -151,7 +151,7 @@ def create_pipeline_from_steps(pipeline_name, steps):
     return _f
 
 
-def create_argh_command_from_steps(recipe_name, steps,
+def create_argh_command_from_steps(command_name, steps,
                                    driver_func, driver_args,
                                    recipe_name_fnmatch=None):
 
@@ -159,13 +159,14 @@ def create_argh_command_from_steps(recipe_name, steps,
     args = pipeline_kwargs.generate_argh()
 
     if recipe_name_fnmatch is None:
-        recipe_name_fnmatch = recipe_name.upper().replace("-", "_")
+        recipe_name_fnmatch = command_name.upper().replace("-", "_")
 
     def _func(obsdate, **kwargs):
-        driver_func(steps, recipe_name_fnmatch, obsdate, **kwargs)
+        driver_func(command_name, steps, recipe_name_fnmatch, obsdate,
+                    **kwargs)
 
     func = wrap_multi(_func, args)
     func = wrap_multi(func, driver_args)
-    func = argh.decorators.named(recipe_name)(func)
+    func = argh.decorators.named(command_name)(func)
 
     return func

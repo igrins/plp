@@ -29,6 +29,7 @@ class ResourceStack(object):
         self.qa_generator = qa_generator
 
         self.context_stack = ResourceContextStack(self.storage)
+        self._io_items = []
 
     def get_resource_spec(self):
         return self._resource_spec
@@ -38,6 +39,10 @@ class ResourceStack(object):
         import pickle
         pickle.dump(self, fo)
 
+    def save_io_items(self, fo):
+        # fo = open("out.json", "w")
+        import json
+        json.dump(self._io_items, fo, indent=4)
 
     # CONTEXT
 
@@ -82,6 +87,18 @@ class ResourceStack(object):
 
     def load(self, basename, item_desc, item_type=None, postfix=""):
 
+        if self.context_stack.current is not None:
+            context_name = self.context_stack.current.name
+        else:
+            context_name = ""
+
+        self._io_items.append(
+            (context_name, "load",
+             dict(basename=basename,
+                  item_desc=item_desc,
+                  postfix=postfix,
+                  aux=dict(item_type=item_type))))
+
         section, fn = self.get_section_n_fn(basename, item_desc, postfix)
 
         d = self.context_stack.load(section, fn, item_type=item_type)
@@ -95,6 +112,17 @@ class ResourceStack(object):
         self.context_stack.store(section, fn, data, item_type=item_type,
                                  cache_only=cache_only)
 
+        if self.context_stack.current is not None:
+            context_name = self.context_stack.current.name
+        else:
+            context_name = ""
+
+        self._io_items.append(
+            (context_name, "store",
+             dict(basename=basename,
+                  item_desc=item_desc,
+                  postfix=postfix,
+                  aux=dict(cache_only=cache_only))))
     # RESOURCE
 
     def query_resource_for(self, basename, resource_type, postfix=""):

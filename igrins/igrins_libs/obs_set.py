@@ -34,6 +34,9 @@ class ObsSet(object):
         # self.basename_for_query = self.caldb._get_basename((self.band,
         #                                                     obsids[0]))
 
+    def get_resource_spec(self):
+        return self.rs.get_resource_spec()
+
     # def get_config(self):
     #     return self.caldb.get_config()
 

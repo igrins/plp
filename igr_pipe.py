@@ -19,10 +19,10 @@ p_extract = re.compile(r'(\w+)-(ab|onoff)')
 
 from igrins.igrins_recipes import get_pipeline_steps
 
-def create_argh_command(recipe_name, recipe_name_fnmatch=None):
-    steps = get_pipeline_steps(recipe_name)
+def create_argh_command(command_name, recipe_name_fnmatch=None):
+    steps = get_pipeline_steps(command_name)
 
-    f = create_argh_command_from_steps(recipe_name, steps,
+    f = create_argh_command_from_steps(command_name, steps,
                                        driver_func, driver_args,
                                        recipe_name_fnmatch=recipe_name_fnmatch)
     return f
