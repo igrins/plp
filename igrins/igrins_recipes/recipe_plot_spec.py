@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from ..pipeline.steps import Step, ArghFactoryWithShort
+from ..igrins_libs.logger import logger
 
 # from ..procedures.sky_spec import make_combined_image_sky
 
@@ -89,6 +90,8 @@ def _plot_div_a0v_spec(fig, tgt, obsset, a0v="GROUP2", a0v_obsid=None,
     if a0v_obsid is None:
         a0v_obsid_ = obsset.query_resource_basename("a0v")
         a0v_obsid = obsset.rs.parse_basename(a0v_obsid_)
+
+    logger.warn("using A0V:{}".format(a0v_obsid))
 
     a0v_obsset = type(obsset)(obsset.rs, "A0V_AB", [a0v_obsid], ["A"],
                               basename_postfix=a0v_basename_postfix)

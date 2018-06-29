@@ -16,11 +16,17 @@ def _filter_a0v(a0v, a0v_obsid, group2):
 
     return a0v
 
-
+import re
+p = re.compile(r"0+1")
 
 def get_group2(obsset):
-    group2 = obsset.recipe_entry.get("group2", None) if obsset.recipe_entry is None else None
-    return group2
+    group2 = obsset.recipe_entry.get("group2", None) if obsset.recipe_entry is not None else None
+    if group2 == "1":
+        return None
+    elif p.match(group2):
+        return "1"
+    else:
+        return group2
 
 
 def get_a0v_obsid(obsset, a0v, a0v_obsid):

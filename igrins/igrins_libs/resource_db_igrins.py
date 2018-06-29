@@ -97,11 +97,11 @@ class ResourceDBFile(ResourceDBBase):
                     continue
 
                 try:
-                    obsid = int(l1.strip().split("_")[-1])
+                    obsid_ = int(l1.strip().split("_")[-1])
                 except ValueError:
                     continue
 
-                obsid_list.append(obsid)
+                obsid_list.append(obsid_)
                 basename_list.append(l1.strip())
 
             if obsid_list:
