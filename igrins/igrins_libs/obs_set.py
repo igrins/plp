@@ -2,6 +2,9 @@
 ObsSet: Helper class for a single obsid, and its derived products.
 """
 
+import re
+import fnmatch
+
 import astropy.io.fits as pyfits
 
 from .. import DESCS
@@ -24,10 +27,15 @@ class ObsSet(object):
         self._reset_read_cache = reset_read_cache
         self.basename_postfix = basename_postfix
 
+        self.default_cards = []
+
         # self.basename = self.caldb._get_basename((self.band, groupname))
         # # this is for query
         # self.basename_for_query = self.caldb._get_basename((self.band,
         #                                                     obsids[0]))
+
+    def get_resource_spec(self):
+        return self.rs.get_resource_spec()
 
     # def get_config(self):
     #     return self.caldb.get_config()
@@ -63,6 +71,17 @@ class ObsSet(object):
 
     def abort_context(self, context_name):
         self.rs.abort_context(context_name)
+
+    def ensure_recipe_name(self, recipe_pattern):
+        f_pattern = re.compile(fnmatch.translate(recipe_pattern))
+
+        for recipe_name in self.recipe_name.split("|"):
+            if f_pattern.match(recipe_name):
+                self.recipe_name = recipe_name
+                break
+        else:
+            raise ValueError("no matching recipe {} found: {}".
+                             format(recipe_pattern, self.recipe_name))
 
     def get_obsids(self, frametype=None):
         if frametype is None:
@@ -117,6 +136,12 @@ class ObsSet(object):
     def add_to_db(self, db_name):
         self.rs.update_db(db_name, self.groupname)
 
+    def query_resource_basename(self, db_name):
+        return self.rs.query_resource_basename(db_name, self.groupname)
+
+    def query_resource_basename(self, db_name):
+        return self.rs.query_resource_basename(db_name, self.groupname)
+
     def query_resource_for(self, resource_type, postfix=""):
 
         resource_basename, item_desc = self.rs.query_resource_for(self.master_obsid,
@@ -157,6 +182,9 @@ class ObsSet(object):
 
         return hdus
 
+    def extend_cards(self, cards):
+        self.default_cards.extend(cards)
+
     # to store
     def get_template_hdul(self, *hdu_type_list):
         hdul = self.rs.load(self.get_obsids()[0],
@@ -180,7 +208,7 @@ class ObsSet(object):
         hdu_type_list = ["primary"] + (["image"] * (len(card_data_list) - 1))
         hdul = self.get_template_hdul(*hdu_type_list)
         for hdu, (cards, data) in zip(hdul, card_data_list):
-            hdu.header.update(cards)
+            hdu.header.update(self.default_cards + list(cards))
             if data.dtype.name == "bool":
                 data = data.astype("uint8")
             hdu.data = data

@@ -22,4 +22,4 @@ def recipe_func(obsdate, task_name, recipe_name,
                             obsids=obsids, frametypes=frametypes,
                             config_file=config_file)
 
-        apply_steps(obsset, steps, nskip=0, kwargs=kwargs)
+        apply_steps(obsset, steps, kwargs=kwargs)

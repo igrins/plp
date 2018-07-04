@@ -55,7 +55,7 @@ def load_recipe_log(obsdate, config_file=None):
                       config.get_value('RECIPE_LOG_PATH', obsdate))
 
     from .igrins_libs.recipes import RecipeLog
-    recipe_log = RecipeLog(fn)
+    recipe_log = RecipeLog(obsdate, fn)
 
     return recipe_log
 
@@ -72,6 +72,9 @@ def get_obsset(obsdate, band, recipe_name_or_entry,
         obsids = r["obsids"]
         frametypes = r["frametypes"]
         groupname = r["group1"]
+
+        if recipe_entry is None:
+            recipe_entry = r
 
     from .pipeline.driver import get_obsset as _get_obsset
     obsset = _get_obsset(obsdate, recipe_name, band, obsids, frametypes,

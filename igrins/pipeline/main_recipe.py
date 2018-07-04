@@ -33,10 +33,13 @@ def iter_obsset(recipe_name_fnmatch,
     fn = config.get_value('RECIPE_LOG_PATH', obsdate)
 
     from ..igrins_libs.recipes import RecipeLog
-    recipes = RecipeLog(fn)
+    recipes = RecipeLog(obsdate, fn)
 
     selected = get_selected(recipes, recipe_name_fnmatch,
                             groups)
+    if len(selected) == 0:
+        raise ValueError("no matching recipes are found: {}"
+                         .format(", ".join(recipe_name_fnmatch)))
 
     for band in bands:
         # info("= Entering band:{}".format(band))
@@ -96,10 +99,13 @@ driver_args = [arg("-b", "--bands", default="HK", choices=["HK", "H", "K"]),
                arg("--context-name", default="context_{obsdate}_{recipe_name}_{groupname}{basename_postfix}_{context_id}.pickle"),
                arg("--save-context-if", default="never",
                    choices=["never", "exception", "always"]),
+               arg("--save-io-log", default=False),
+               arg("--io-log-name",
+                   default="SDC{band}_{obsdate}_{groupname}{basename_postfix}.{command_name}.io"),
                arg("-d", "--debug", default=False)]
 
 
-def driver_func(steps, recipe_name_fnmatch, obsdate,
+def driver_func(command_name, steps, recipe_name_fnmatch, obsdate,
                 bands="HK", groups=None,
                 config_file=None, debug=False, verbose=None,
                 override_recipe_name=False,
@@ -108,6 +114,8 @@ def driver_func(steps, recipe_name_fnmatch, obsdate,
                 context_name="context_{obsdate}_{recipe_name}_{groupname}{basename_postfix}_{context_id}.pickle",
                 # save_context_on_exception=False,
                 step_range=None,
+                save_io_log=False,
+                io_log_name="SDC{band}_{obsdate}_{groupname}{basename_postfix}.{command_name}.io",
                 **kwargs):
 
     # FIXME : should check if 'resume_from_context_file' and 'step_range' are
@@ -152,6 +160,7 @@ def driver_func(steps, recipe_name_fnmatch, obsdate,
 
     if save_context_on_exception:
         def on_raise(obsset, context_id):
+            obsset_desc = obsset.get_descriptions()
             outname = context_name.format(obsdate=obsdate,
                                           context_id=context_id,
                                           **obsset_desc)
@@ -185,3 +194,14 @@ def driver_func(steps, recipe_name_fnmatch, obsdate,
                                           context_id=context_id,
                                           **obsset_desc)
             _save_context(obsdate, obsset, context_id, outname)
+
+        if save_io_log:
+            obsdate, band = obsset.get_resource_spec()
+            obsset_desc = obsset.get_descriptions()
+            io_log_name = io_log_name.format(obsdate=obsdate,
+                                             command_name=command_name,
+                                             band=band,
+                                             **obsset_desc
+                                             )
+
+            obsset.rs.save_io_items(open(io_log_name, "w"))

@@ -320,11 +320,33 @@ def _check(df, allow_duplicate_groups=False):
                 raise ValueError(msg)
 
 
+class RecipeSeries(pd.Series):
+    # RecipeSeries is not working okay for now
+
+    @property
+    def _constructor(self):
+        return RecipeSeries
+
+    _metadata = ['_igrins_obsdate', '_igrins_config']
+
+    def __init__(self, d, obsdate=None,  igrins_config=None, **kw):
+        super(RecipeSeries, self).__init__(d, **kw)
+        self._igrins_obsdate = obsdate
+        self._igrins_config = igrins_config
+
 class RecipeLogClass(pd.DataFrame):
 
     @property
     def _constructor(self):
         return RecipeLogClass
+
+    _metadata = ['_igrins_obsdate', '_igrins_config']
+
+
+    def __init__(self, d, obsdate=None,  igrins_config=None, **kw):
+        super(RecipeLogClass, self).__init__(d, **kw)
+        self._igrins_obsdate = obsdate
+        self._igrins_config = igrins_config
 
     def subset(self, **kwargs):
         """
@@ -412,14 +434,16 @@ class RecipeLogClass(pd.DataFrame):
 
 
 class RecipeLog(RecipeLogClass):
-
-    def __init__(self, fn, allow_duplicate_groups=False):
+    def __init__(self, obsdate, fn, allow_duplicate_groups=False,
+                 config=None):
         d = load_recipe_as_dict(fn)
 
         columns = ["starting_obsid", "objname", "obstype",
                    "recipe", "obsids", "frametypes",
                    "exptime", "group1", "group2"]
-        super(RecipeLog, self).__init__(d, columns=columns)
-        # self.set_index("starting_obsid", inplace=True)
+        super(RecipeLog, self).__init__(d, columns=columns,
+                                        obsdate=obsdate,
+                                        igrins_config=config)
+
         self._substitute_group1()
         _check(self, allow_duplicate_groups)

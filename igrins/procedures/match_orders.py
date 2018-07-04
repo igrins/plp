@@ -1,55 +1,111 @@
 import numpy as np
+import scipy
+
+from scipy.signal import correlate
+from scipy.ndimage import median_filter
+
+def get_filtered(s):
+    # The spectra need to be normalized in some way to make it
+    # insensitive to bright lines. For now, we normalize by the total flux.
+
+    # with warnings.catch_warnings():
+    with np.errstate(invalid="ignore"):
+
+        s_ = s - median_filter(s, 55)
+        s_norm = np.nanstd(s_)
+        # s_norm = np.nansum(np.abs(s_))
+
+        # s_norm = np.nanmax(s_)
+
+        s_clip = np.clip(s_, -0.1*s_norm, s_norm)/s_norm
+
+    return s_clip
+
+def get_filtered_s_list(s_list):
+    s_list_clip = [get_filtered(s) for s in s_list]
+
+    return s_list_clip
+
+def _find_matching_spectra(s0, s_list):
+    # we first filter the spectra and do the cross-correlation to find a best
+    # candidate.
+
+    cor_list = [correlate(s0, s, mode="same") for s in s_list]
+
+    import warnings
+    with warnings.catch_warnings():
+        msg = r'All-NaN (slice|axis) encountered'
+        warnings.filterwarnings('ignore', msg)
+
+        cor_max_list = [np.nanmax(cor) for cor in cor_list]
+
+    center_indx_dst = np.nanargmax(cor_max_list)
+
+    return center_indx_dst
+
+def _check_thresh(unique, counts, frac_thresh=0.5):
+    i = np.argmax(counts)
+    maxn = counts[i]
+    v = unique[i]
+
+    if float(maxn) / counts.sum() > frac_thresh:
+        return v
+
+    if maxn > 2:
+        msk = counts > 1
+        # unique_msk = unique[msk]
+        counts_msk = counts[msk]
+
+        if float(maxn) / counts_msk.sum() > 0.5:
+            return v
+
+    return None
 
 
-def match_orders(orders, s_list_src, s_list_dst):
+
+def match_specs(s_list_src, s_list_dst, frac_thresh=0.3):
     """
-    try to math orders of src and dst
+    try to math orders of src and dst.
+
+    frac_thresh: raise error if the fraction of the convered d_order is less than this value.
     """
+
     center_indx0 = int(len(s_list_src)/2)
 
     delta_indx_list = []
-    dstep = 2
+    dstep = 5
+
+    s_list = get_filtered_s_list(s_list_dst)
+
     for di in range(-dstep, dstep+1):
+
         center_indx = center_indx0 + di
-        center_s = s_list_src[center_indx]
+        s = s_list_src[center_indx]
+        s0 = get_filtered(s)
 
-        s_std = np.nanstd(center_s)
-        center_s_clip = np.clip(center_s, -0.1*s_std, s_std)/s_std
+        dst_indx = _find_matching_spectra(s0, s_list)
+        delta_indx = center_indx - dst_indx
 
-        from scipy.signal import correlate
-        from scipy.ndimage import median_filter
-        # ss5 = ni.median_filter(ss, 25)
-
-        # TODO : it is not clear if this is a right algorithm
-
-        # we have to clip the spectra so that the correlation is not
-        # sensitive to bright lines in the target spectra.
-        s_list_dst_filtered = [s - median_filter(s, 55) for s in s_list_dst]
-        std_list = [np.nanstd(s) for s in s_list_dst_filtered]
-        # std_list = [100 for s in s_list_dst_filtered]
-        s_list_dst_clip = [np.clip(s, -0.1*s_std, s_std)/s_std for (s, s_std)
-                           in zip(s_list_dst_filtered, std_list)]
-        cor_list = [correlate(center_s_clip, s, mode="same") for s
-                    in s_list_dst_clip]
-
-        import warnings
-        with warnings.catch_warnings():
-            msg = r'All-NaN (slice|axis) encountered'
-            warnings.filterwarnings('ignore', msg)
-
-            cor_max_list = [np.nanmax(cor) for cor in cor_list]
-
-        center_indx_dst = np.nanargmax(cor_max_list)
-
-        delta_indx = center_indx - center_indx_dst
         delta_indx_list.append(delta_indx)
 
-    # print cor_max_list, delta_indx
-    # print "index diferences : ", delta_indx_list
-    delta_indx = sorted(delta_indx_list)[dstep]
-    center_indx_dst0 = center_indx0 + delta_indx
+    unique, counts = np.unique(delta_indx_list, return_counts=True)
+    delta_indx = _check_thresh(unique, counts, frac_thresh)
 
+    if delta_indx is None:
+        print(delta_indx_list)
+        raise ValueError("Concensus is not made for matching oders"
+                         " : {}"
+                         .format(dict(zip(unique, counts))))
+
+    return delta_indx
+
+def match_orders(orders, s_list_src, s_list_dst, frac_thresh=0.3):
+    do = match_specs(s_list_src, s_list_dst, frac_thresh=frac_thresh)
+    center_indx0 = 0
+    center_indx_dst0 = center_indx0 + do
     orders_dst = (np.arange(len(s_list_dst))
-                  - center_indx_dst0 + orders[center_indx0])
+                  + orders[center_indx0] - center_indx_dst0)
 
-    return delta_indx, orders_dst
+    return do, orders_dst
+
+

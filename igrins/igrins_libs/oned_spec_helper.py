@@ -25,12 +25,14 @@ class OnedSpecHelper(object):
 
     @lazyprop
     def spec(self):
-        spec = list(self._spec_hdu_list[0].data)
+        # spec = list(self._spec_hdu_list[0].data)
+        spec = self._spec_hdu_list[0].data
         return spec
 
     @lazyprop
     def um(self):
-        um = list(self._spec_hdu_list[1].data)
+        # um = list(self._spec_hdu_list[1].data)
+        um = self._spec_hdu_list[1].data
         return um
 
     @lazyprop
@@ -38,7 +40,8 @@ class OnedSpecHelper(object):
         sn_ = self.obsset.load("SN_FITS",
                                postfix=self.basename_postfix)
         # prevent_split=True)
-        sn = list(sn_[0].data)
+        # sn = list(sn_[0].data)
+        sn = sn_[0].data
         return sn
 
     @lazyprop
@@ -55,5 +58,6 @@ class OnedSpecHelper(object):
         telluric_cor_ = self.flattened_hdu_list
         # prevent_split=True)
 
-        flattened = list(telluric_cor_[0].data)
+        # flattened = list(telluric_cor_[0].data)
+        flattened = telluric_cor_[0].data
         return flattened

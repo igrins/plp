@@ -71,6 +71,9 @@ class IgrinsBasenameHelper():
         m = self.p.match(basename)
         return str(int(m.group(3))) + m.group(4)
 
+    def parse_basename(self, basename):
+        return self.from_basename(basename)
+
 
 def get_file_storage(config, resource_spec, check_candidate=False):
     return get_storage(config, resource_spec, check_candidate=check_candidate)

@@ -1,6 +1,6 @@
 from ..pipeline.steps import Step
 
-from ..procedures.sky_spec import (make_combined_image_sky,
+from ..procedures.sky_spec import (_make_combined_image_sky,
                                    extract_spectra)
 
 from ..procedures.procedures_register import (identify_orders,
@@ -9,6 +9,16 @@ from ..procedures.procedures_register import (identify_orders,
                                               transform_wavelength_solutions,
                                               save_orderflat,
                                               update_db)
+
+def make_combined_image_sky(obsset, bg_subtraction_mode="flat"):
+    final_sky, cards = _make_combined_image_sky(obsset, bg_subtraction_mode)
+
+    from astropy.io.fits import Card
+    fits_cards = [Card(k, v) for (k, v, c) in cards]
+    obsset.extend_cards(fits_cards)
+
+    hdul = obsset.get_hdul_to_write(([], final_sky))
+    obsset.store("combined_sky", data=hdul)
 
 
 steps = [Step("Make Combined Sky", make_combined_image_sky),

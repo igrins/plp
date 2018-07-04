@@ -29,6 +29,7 @@ class ResourceStack(object):
         self.qa_generator = qa_generator
 
         self.context_stack = ResourceContextStack(self.storage)
+        self._io_items = []
 
     def get_resource_spec(self):
         return self._resource_spec
@@ -38,6 +39,10 @@ class ResourceStack(object):
         import pickle
         pickle.dump(self, fo)
 
+    def save_io_items(self, fo):
+        # fo = open("out.json", "w")
+        import json
+        json.dump(self._io_items, fo, indent=4)
 
     # CONTEXT
 
@@ -82,6 +87,18 @@ class ResourceStack(object):
 
     def load(self, basename, item_desc, item_type=None, postfix=""):
 
+        if self.context_stack.current is not None:
+            context_name = self.context_stack.current.name
+        else:
+            context_name = ""
+
+        self._io_items.append(
+            (context_name, "load",
+             dict(basename=basename,
+                  item_desc=item_desc,
+                  postfix=postfix,
+                  aux=dict(item_type=item_type))))
+
         section, fn = self.get_section_n_fn(basename, item_desc, postfix)
 
         d = self.context_stack.load(section, fn, item_type=item_type)
@@ -95,6 +112,17 @@ class ResourceStack(object):
         self.context_stack.store(section, fn, data, item_type=item_type,
                                  cache_only=cache_only)
 
+        if self.context_stack.current is not None:
+            context_name = self.context_stack.current.name
+        else:
+            context_name = ""
+
+        self._io_items.append(
+            (context_name, "store",
+             dict(basename=basename,
+                  item_desc=item_desc,
+                  postfix=postfix,
+                  aux=dict(cache_only=cache_only))))
     # RESOURCE
 
     def query_resource_for(self, basename, resource_type, postfix=""):
@@ -138,7 +166,11 @@ class ResourceStack(object):
     def update_db(self, db_name, basename):
         self.resource_db.update_db(db_name, basename)
 
+    def query_resource_basename(self, db_name, basename):
+        return self.resource_db.query_resource_basename(db_name, basename)
+
     # master ref
+
     def query_ref_value(self, kind):
         return self.master_ref_loader.query_value(kind)
 
@@ -227,6 +259,9 @@ class ResourceStackWithBasename(ResourceStack):
         basename = self.basename_helper.to_basename(basename)
 
         self.resource_db.update_db(db_name, basename)
+
+    def parse_basename(self, basename):
+        return self.basename_helper.parse_basename(basename)
 
 
 if __name__ == "__main__":

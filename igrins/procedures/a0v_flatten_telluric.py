@@ -182,7 +182,6 @@ class SpecFlattener(object):
             def weight_func(dist, rad1=rad1, rad2=rad2):
                 return np.exp(-(dist/(2.*rad1))**2) + frac*np.exp(-(dist/(2.*rad2))**2)
 
-
         of = np.array(of)
         of[of<0.01] = np.nan
 
@@ -532,10 +531,11 @@ def get_a0v_flattened(a0v_interp1d, tel_interp1d_f,
     _interim_result = []
 
 
-    print("flattening ...", end="")
-    for w1, s1_orig, of in zip(wvl, s_list, orderflat_response):
+    for w1, s1_orig, of in zip(wvl, s_list,
+                               orderflat_response):
 
-        print("(%5.3f~%5.3f)" % (w1[0], w1[-1]), end="")
+        of = np.array(of).astype("d")
+        # print("(%5.3f~%5.3f)" % (w1[0], w1[-1]), end="")
         s1_a0v = spec_flattener.get_s_a0v(w1, dw_opt)
         tt1 = spec_flattener.get_tel_trans(w1, dw_opt, gw_opt)
 
@@ -551,8 +551,6 @@ def get_a0v_flattened(a0v_interp1d, tel_interp1d_f,
             _interim_result.append((w1, s1_orig, of, s1_a0v, tt1, _))
             msk_i, msk_sv, fitted_continuum = _
             ccc.append((fitted_continuum, msk_sv, s1_a0v, tt1))
-
-    print(" - Done.")
 
     continuum_array = np.array([c for c, m, a, t in ccc])
     mask_array = np.array([m for c, m, a, t in ccc])

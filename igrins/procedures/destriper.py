@@ -5,7 +5,12 @@ from ..utils.image_combine import image_median
 # basic routines
 
 
-def stack_subrows(d, dy, mask=None, alt_sign=False):
+def stack_subrows(d, dy, mask=None, alt_sign=False, op="median"):
+    if mask is None:
+        mask = ~np.isfinite(d)
+    else:
+        mask = ~np.isfinite(d) | mask
+
     if len(d.shape) == 1:
         ny, = d.shape
     elif len(d.shape) == 2:
@@ -27,7 +32,14 @@ def stack_subrows(d, dy, mask=None, alt_sign=False):
             dd = [d[sl] for sl in dy_slices]
             msk = [mask[sl] for sl in dy_slices]
 
-        ddm = image_median(dd, badmasks=msk)
+        if op == "median":
+            ddm = image_median(dd, badmasks=msk)
+        elif op == "sum":
+            ddm = np.ma.array(dd, mask=msk).sum(axis=0)
+        elif op == "average":
+            ddm = np.ma.array(dd, mask=msk).average(axis=0)
+        else:
+            ValueError("unknown ope: {}".format(op))
 
     else:
         if alt_sign:
@@ -36,17 +48,24 @@ def stack_subrows(d, dy, mask=None, alt_sign=False):
         else:
             dd = [d[sl] for sl in dy_slices]
 
-        ddm = np.median(dd, axis=0)
+        if op == "median":
+            ddm = np.median(dd, axis=0)
+        elif op == "sum":
+            ddm = np.sum(dd, axis=0)
+        elif op == "average":
+            ddm = np.average(dd, axis=0)
+        else:
+            ValueError("unknown ope: {}".format(op))
 
     return ddm
 
 
-def stack128(d, mask=None):
-    return stack_subrows(d, 128, mask=mask, alt_sign=False)
+def stack128(d, mask=None, op="median"):
+    return stack_subrows(d, 128, mask=mask, alt_sign=False, op=op)
 
 
-def stack64(d, mask=None):
-    return stack_subrows(d, 64, mask=mask, alt_sign=True)
+def stack64(d, mask=None, op="median"):
+    return stack_subrows(d, 64, mask=mask, alt_sign=True, op=op)
 
 
 def concat(stacked, iter_sign, n_repeat):
