@@ -45,7 +45,7 @@ def _volume_poly_fit(points, scalar, orders, names):
     v = np.array(v)
 
     # errors are not properly handled for now.
-    s = lstsq(v.T, scalar)
+    s = lstsq(v.T, scalar, rcond=None)
 
     return p, s
 

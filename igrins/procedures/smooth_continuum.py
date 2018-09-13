@@ -176,7 +176,6 @@ def get_smooth_continuum(s, wvl=None):
             msk = (ww1 < wvl11) & (wvl11 < ww2)
             s1m[msk] = np.nan
 
-
     if len(s1m) > 351:
         f12 = sv_iter(s1m, winsize1=351, winsize2=91)
     elif len(s1m) > 25:
