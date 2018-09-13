@@ -2,6 +2,8 @@
 # zscale =======================================================================
 #############################################################################
 
+from __future__ import print_function
+
 import numpy as np
 import math
 
@@ -159,4 +161,4 @@ def zscale(image, nsamples=1000, contrast=0.25, bpmask=None, zmask=None):
 
 if __name__ == "__main__":
     im = np.random.randn(10000).reshape((100, 100))
-    print zscale(im)
+    print(zscale(im))

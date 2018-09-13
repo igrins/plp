@@ -87,6 +87,7 @@ def match_specs(s_list_src, s_list_dst, frac_thresh=0.3):
         s0 = get_filtered(s)
 
         dst_indx = _find_matching_spectra(s0, s_list)
+
         delta_indx = center_indx - dst_indx
 
         delta_indx_list.append(delta_indx)
@@ -104,6 +105,7 @@ def match_specs(s_list_src, s_list_dst, frac_thresh=0.3):
 
 def match_orders(orders, s_list_src, s_list_dst, frac_thresh=0.3):
     do = match_specs(s_list_src, s_list_dst, frac_thresh=frac_thresh)
+
     center_indx0 = 0
     center_indx_dst0 = center_indx0 + do
     orders_dst = (np.arange(len(s_list_dst))

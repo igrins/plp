@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 # coding: utf-8
 
@@ -352,7 +353,7 @@ if __name__ == "__main__":
         bs = base64.encodestring(b)
 
 
-        print len(jdata), len(ds), len(bs)
-        print len(jdata), len(d), len(b)
+        print(len(jdata), len(ds), len(bs))
+        print(len(jdata), len(d), len(b))
 
 

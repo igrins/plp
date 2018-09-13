@@ -264,13 +264,19 @@ def get_multi_fnmatch_pattern(fnmatch_list):
 
 def load_recipe_as_dict(fn):
 
-    dtypes = [('OBJNAME', 'S128'), ('OBJTYPE', 'S128'),
-              ('GROUP1', 'S128'), ('GROUP2', 'S128'),
-              ('EXPTIME', 'f'), ('RECIPE', 'S128'),
-              ('OBSIDS', 'S1024'),  ('FRAMETYPES', 'S1024')]
+    # dtypes = [('OBJNAME', 'S128'), ('OBJTYPE', 'S128'),
+    #           ('GROUP1', 'S128'), ('GROUP2', 'S128'),
+    #           ('EXPTIME', 'f'), ('RECIPE', 'S128'),
+    #           ('OBSIDS', 'S1024'),  ('FRAMETYPES', 'S1024')]
+    dtypes = [('OBJNAME', np.unicode), ('OBJTYPE', np.unicode),
+              ('GROUP1', np.unicode), ('GROUP2', np.unicode),
+              ('EXPTIME', 'f'), ('RECIPE', np.unicode),
+              ('OBSIDS', np.unicode),  ('FRAMETYPES', np.unicode)]
 
     df = pd.read_csv(fn, skiprows=0, dtype=dtypes, comment="#",
-                     escapechar="\\", skipinitialspace=True)
+                     escapechar="\\", skipinitialspace=True,
+                     keep_default_na=False,
+                     encoding="utf-8")
     d = df.to_records(index=False)
 
     for k in ["RECIPE", "OBJNAME", "OBJTYPE"]:
@@ -417,7 +423,7 @@ class RecipeLogClass(pd.DataFrame):
         for i, row in self.iterrows():
             for recipe_name in row["recipe"].split("|"):
                 if p_match(recipe_name):
-                    obsids = map(int, row["obsids"])
+                    obsids = [int(o) for o in row["obsids"]]
                     frames = row["frametypes"]
                     _ = (recipe_name, obsids, frames, row)
                     selected.append(_)
@@ -427,7 +433,7 @@ class RecipeLogClass(pd.DataFrame):
         if groups is None:
             pass  # selected = [s1[1] for s1 in selected]
         else:
-            groups = map(str, groups)
+            groups = [str(g) for g in groups]
             selected = [s1 for s1 in selected if s1[-1]["group1"] in groups]
 
         return selected

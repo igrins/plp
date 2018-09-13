@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 #import numpy as np
 
@@ -16,7 +17,7 @@ class RecipeThAr(RecipeBase):
     def run_selected_bands(self, utdate, selected, bands):
         for s in selected:
             obsids = s[0]
-            print obsids
+            print(obsids)
             # frametypes = s[1]
 
             for band in bands:
@@ -126,8 +127,8 @@ def get_orders_matching_ref_spec(helper, band, obsids, thar_products):
 
         new_orders = match_order_thar(thar_products, thar_ref_data)
 
-        print thar_ref_data["orders"]
-        print  new_orders
+        print(thar_ref_data["orders"])
+        print(new_orders)
 
     if 1:
 
@@ -154,8 +155,8 @@ def get_orders_matching_ref_spec2(helper, band, obsids, thar_products):
 
         new_orders = match_order_thar(thar_products, thar_ref_data)
 
-        print thar_ref_data["orders"]
-        print  new_orders
+        print(thar_ref_data["orders"])
+        print(new_orders)
 
     if 1:
 

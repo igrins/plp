@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import numpy as np
 
@@ -20,7 +21,7 @@ class RecipeDistortionSky(RecipeBase):
     def run_selected_bands(self, utdate, selected, bands):
         for s in selected:
             obsids = s[0]
-            print obsids
+            print(obsids)
             # frametypes = s[1]
 
             for band in bands:
@@ -446,7 +447,7 @@ def process_distortion_sky_band(utdate, refdate, band, obsids, config):
         sky_figs = igr_path.get_section_filename_base("QA_PATH",
                                                       "oh_distortion",
                                                       "oh_distortion_dir")
-        print fig_list
+        print(fig_list)
         figlist_to_pngs(sky_figs, fig_list)
 
 

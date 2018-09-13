@@ -40,7 +40,7 @@ class FileStorage(StorageBase):
             decompress = None
 
         file_path = self._get_path(section, fn)
-        r = open(file_path).read()
+        r = open(file_path, "br").read()
 
         if decompress is None:
             return r
@@ -50,4 +50,6 @@ class FileStorage(StorageBase):
     def store(self, section, fn, d, item_type=None):
         file_path = self._get_path(section, fn)
         ensure_dir(os.path.dirname(file_path))
+        if hasattr(d, "encode"):
+            d = d.encode("utf-8")
         open(file_path, "wb").write(d)

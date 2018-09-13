@@ -1,11 +1,14 @@
+from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
 from igrins.libs.zscale import zscale as calc_zscale
 import scipy.ndimage as ni
 
+
 def get_zscale(d):
     z1, z2 = calc_zscale(np.nan_to_num(d), bpmask=~np.isfinite(d))
     return z1, z2
+
 
 def imshow(fig, d, zscale=False, **kwargs):
     d = np.asarray(d)
@@ -25,6 +28,7 @@ def imshow(fig, d, zscale=False, **kwargs):
         im.set_clim(z1, z2)
 
     return im
+
 
 def imshow2(fig, d1, d2, zscale=False, **kwargs):
 
@@ -59,6 +63,7 @@ def imshow2(fig, d1, d2, zscale=False, **kwargs):
 
     return im1, im2
 
+
 def hist_mask(fig, mask):
     labels, nmax = ni.label(mask)
     pix_sum = ni.sum(mask, labels=labels, index=np.arange(1, nmax+1))
@@ -71,10 +76,12 @@ def hist_mask(fig, mask):
     ax2.hist((pix_sum), bins=np.linspace(9.5, pix_sum.max()+0.5, 20))
     ax2.set_title("A > 9")
 
+
 def print_mask_summary(mask):
     labels, nmax = ni.label(mask)
     pix_sum = ni.sum(mask, labels=labels, index=np.arange(1, nmax+1))
 
-    print "number of islands :" , len(pix_sum), "%5.2f%%" % (float(len(pix_sum))/len(mask.flat)*100.)
-    print "total area :", np.max(pix_sum)
-    print "number of large islands (A > 9 pix) :", np.sum(pix_sum > 9)
+    print("number of islands :" , len(pix_sum),
+          "%5.2f%%" % (float(len(pix_sum))/len(mask.flat)*100.))
+    print("total area :", np.max(pix_sum))
+    print("number of large islands (A > 9 pix) :", np.sum(pix_sum > 9))

@@ -1,4 +1,4 @@
-from resource_context import ResourceContextStack
+from .resource_context import ResourceContextStack
 # from item_convert import ItemConverterBase
 
 
