@@ -90,7 +90,10 @@ def get_tel_interp1d_f(obsset, wvl_solutions):
     # telfit_outname_npy = telfit_outname+".npy"
     telfit_outname_npy = obsset.rs.query_ref_data_path("TELFIT_MODEL")
     # telfit_outname_npy = obsset.rs.query_ref_data_path("VEGA_SPEC")
-    print(telfit_outname_npy)
+    from ..igrins_libs.logger import debug
+
+    debug("loading TELFIT_MODEL: {}".format(telfit_outname_npy))
+
     # if 0:
     #     dd = np.genfromtxt(telfit_outname)
     #     np.save(open(telfit_outname_npy, "w"), dd[::10])

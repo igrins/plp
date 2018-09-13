@@ -30,9 +30,12 @@ def _find_matching_spectra(s0, s_list):
     # we first filter the spectra and do the cross-correlation to find a best
     # candidate.
 
-    cor_list = [correlate(s0, s, mode="same") for s in s_list]
-
     import warnings
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore",category=FutureWarning)
+
+        cor_list = [correlate(s0, s, mode="same") for s in s_list]
+
     with warnings.catch_warnings():
         msg = r'All-NaN (slice|axis) encountered'
         warnings.filterwarnings('ignore', msg)

@@ -156,6 +156,7 @@ class Apertures(object):
             import warnings
             with warnings.catch_warnings():
                 warnings.filterwarnings('ignore', r'Mean of empty slice')
+                warnings.filterwarnings('ignore', r'All-NaN slice')
 
                 s = [np.nanmedian(data[down[i]:up[i], i]) for i in range(2048)]
 

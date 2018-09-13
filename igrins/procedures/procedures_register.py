@@ -90,7 +90,12 @@ def _get_offset_transform(thar_spec_src, thar_spec_dst):
     center = 2048/2.
 
     for s_src, s_dst in zip(thar_spec_src, thar_spec_dst):
-        cor = correlate(s_src, s_dst, mode="same")
+        import warnings
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore",category=FutureWarning)
+
+            cor = correlate(s_src, s_dst, mode="same")
+
         cor_list.append(cor)
         offset = center - np.argmax(cor)
         offsets.append(offset)

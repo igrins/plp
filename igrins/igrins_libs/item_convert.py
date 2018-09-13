@@ -116,7 +116,11 @@ class ItemConverter(ItemConverterBase):
     @staticmethod
     def _from_fits(hdulist):
         buf = BytesIO()
-        hdulist.writeto(buf)
+        import warnings
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', r'Card is too long')
+
+            hdulist.writeto(buf)
         return buf.getvalue()
 
     @staticmethod

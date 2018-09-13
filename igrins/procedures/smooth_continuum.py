@@ -3,7 +3,15 @@ import scipy.ndimage as ni
 
 import numpy as np
 
-from scipy.signal import savgol_filter
+from scipy.signal import savgol_filter as _savgol_filter
+
+
+def savgol_filter(s, ws, n, **kwargs):
+    import warnings
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore",category=FutureWarning)
+
+        return _savgol_filter(s, ws, n, **kwargs)
 
 
 def sg_filter(s1, winsize1=15, winsize2=11):

@@ -12,3 +12,8 @@ def set_level(level):
 def info(msg):
     ""
     print(msg)
+
+
+def debug(msg):
+    ""
+    logger.debug(msg)
