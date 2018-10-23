@@ -368,6 +368,10 @@ def extract_stellar_spec(obsset, extraction_mode="optimal", height_2dspec=0,
 
     store_1dspec(obsset, v_list, s_list, sn_list=sn_list)
 
+    hdul = obsset.get_hdul_to_write(([], data_minus),
+                                    ([], aux_images["synth_map"]))
+    obsset.store("DEBUG_IMAGE", hdul)
+
     shifted = aux_images["shifted"]
 
     _hdul = shifted.to_hdul()

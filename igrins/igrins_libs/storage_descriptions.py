@@ -58,6 +58,7 @@ SLITPROFILE_FITS_DESC = ("OUTDATA_PATH",
 COMBINED_IMAGE_A_DESC = ("OUTDATA_PATH", "{basename}{postfix}.combined_image_a.fits")
 COMBINED_IMAGE_B_DESC = ("OUTDATA_PATH", "{basename}{postfix}.combined_image_b.fits")
 WVLCOR_IMAGE_DESC = ("OUTDATA_PATH", "{basename}{postfix}.wvlcor_image.fits")
+DEBUG_IMAGE_DESC = ("OUTDATA_PATH", "{basename}{postfix}.debug_image.fits")
 ONED_SPEC_JSON_DESC = ("PRIMARY_CALIB_PATH", "{basename}{postfix}.oned_spec.json")
 MULTI_SPEC_FITS_DESC = ("PRIMARY_CALIB_PATH", "{basename}{postfix}.multi_spec.fits")
 
