@@ -6,6 +6,7 @@ from __future__ import print_function
 from ..procedures.target_spec import (make_combined_images,
                                       estimate_slit_profile,
                                       extract_stellar_spec,
+                                      extract_stellar_spec_pp,
                                       extract_extended_spec,
                                       store_2dspec)
 
@@ -71,7 +72,7 @@ def estimate_slit_profile_extended(obsset,
                           slit_profile_mode=slit_profile_mode)
 
 
-steps_stellar = [Step("Set baename-postfix", set_basename_postfix,
+steps_stellar = [Step("Set basename-postfix", set_basename_postfix,
                       basename_postfix=""),
                  Step("Make Combined Images", make_combined_images,
                       allow_no_b_frame=False),
@@ -84,6 +85,14 @@ steps_stellar = [Step("Set baename-postfix", set_basename_postfix,
                       extract_stellar_spec,
                       extraction_mode="optimal"),
                  Step("Generate Rectified 2d-spec", store_2dspec),
+]
+
+
+steps_stellar_pp = [Step("Set basename-postfix", set_basename_postfix,
+                         basename_postfix=""),
+                    Step("Extract spectra (PP for stellar)",
+                         extract_stellar_spec_pp,
+                         extraction_mode="optimal"),
 ]
 
 

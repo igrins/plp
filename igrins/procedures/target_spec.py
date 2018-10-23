@@ -387,6 +387,87 @@ def extract_stellar_spec(obsset, extraction_mode="optimal", height_2dspec=0,
     #              height_2dspec=height_2dspec)
 
 
+def extract_stellar_spec_pp(obsset, extraction_mode="optimal", height_2dspec=0,
+                            conserve_2d_flux=True, calculate_sn=True):
+
+    # refactored from recipe_extract.ProcessABBABand.process
+
+    helper = ResourceHelper(obsset)
+
+    ap = helper.get("aperture")
+
+    postfix = obsset.basename_postfix
+    # data_minus = obsset.load_fits_sci_hdu("COMBINED_IMAGE1",
+    #                                       postfix=postfix).data
+
+    # orderflat = helper.get("orderflat")
+    # data_minus_flattened = data_minus / orderflat
+
+    # variance_map = obsset.load_fits_sci_hdu("combined_variance1",
+    #                                         postfix=postfix).data
+    # variance_map0 = obsset.load_fits_sci_hdu("combined_variance0",
+    #                                          postfix=postfix).data
+
+    # slitoffset_map = helper.get("slitoffsetmap")
+
+    ordermap = helper.get("ordermap")
+    ordermap_bpixed = helper.get("ordermap_bpixed")
+    # slitpos_map = helper.get("slitposmap")
+
+    # # from .slit_profile import get_profile_func
+    # # profile = get_profile_func(obsset)
+
+    # gain = float(obsset.rs.query_ref_value("gain"))
+
+    # profile_map = obsset.load_fits_sci_hdu("slitprofile_fits",
+    #                                        postfix=postfix).data
+
+    from .shifted_images import ShiftedImages
+    hdul = obsset.load("WVLCOR_IMAGE", postfix=postfix)
+    shifted = ShiftedImages.from_hdul(hdul)
+
+    from .spec_extract_from_shifted import extract_spec_from_shifted
+    _ = extract_spec_from_shifted(ap,
+                                  ordermap, ordermap_bpixed,
+                                  shifted,
+                                  extraction_mode=extraction_mode,
+                                  debug=False)
+
+    s_list, v_list = _
+
+    if calculate_sn:
+        # calculate S/N per resolution
+        wvl_solutions = helper.get("wvl_solutions")
+
+        sn_list = []
+        for wvl, s, v in zip(wvl_solutions,
+                             s_list, v_list):
+
+            dw = np.gradient(wvl)
+            pixel_per_res_element = (wvl/40000.)/dw
+            # print pixel_per_res_element[1024]
+            # len(pixel_per_res_element) = 2047. But we ignore it.
+
+            with np.errstate(invalid="ignore"):
+                sn = (s/v**.5)*(pixel_per_res_element**.5)
+
+            sn_list.append(sn)
+    else:
+        sn_list = None
+
+    store_1dspec(obsset, v_list, s_list, sn_list=sn_list)
+
+    # hdul = obsset.get_hdul_to_write(([], data_minus),
+    #                                 ([], aux_images["synth_map"]))
+    # obsset.store("DEBUG_IMAGE", hdul)
+
+    # shifted = aux_images["shifted"]
+
+    # _hdul = shifted.to_hdul()
+    # hdul = obsset.get_hdul_to_write(*_hdul)
+    # obsset.store("WVLCOR_IMAGE", hdul)
+
+
 def extract_extended_spec(obsset, lacosmic_thresh=0.):
 
     # refactored from recipe_extract.ProcessABBABand.process

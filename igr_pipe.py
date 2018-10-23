@@ -19,6 +19,10 @@ p_extract = re.compile(r'(\w+)-(ab|onoff)')
 
 from igrins.igrins_recipes import get_pipeline_steps
 
+# Adding recipes
+# add 'igrins_recipes/recipe_[NAME].py and define 'steps' variable in the module.
+
+
 def create_argh_command(command_name, recipe_name_fnmatch=None):
     steps = get_pipeline_steps(command_name)
 
@@ -38,6 +42,7 @@ recipe_list = [prepare_recipe_logs,
                create_argh_command("a0v-ab", ["A0V_AB"]),
                create_argh_command("a0v-onoff", ["A0V_ONOFF"]),
                create_argh_command("stellar-ab", ["STELLAR_AB"]),
+               create_argh_command("stellar-ab-pp", ["STELLAR_AB"]),
                create_argh_command("stellar-onoff", ["STELLAR_ONOFF"]),
                create_argh_command("extended-ab", ["EXTENDED_AB"]),
                create_argh_command("extended-onoff", ["EXTENDED_ONOFF"]),
