@@ -222,7 +222,7 @@ def store_2dspec(obsset,
 
     basename_postfix = obsset.basename_postfix
 
-    from .spec_extract_w_profile import ShiftedImages
+    from .shifted_images import ShiftedImages
     hdul = obsset.load("WVLCOR_IMAGE", postfix=basename_postfix)
     shifted = ShiftedImages.from_hdul(hdul)
 
