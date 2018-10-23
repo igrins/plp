@@ -75,10 +75,16 @@ class ResourceDBFile(ResourceDBBase):
     def query(self, basename, postfix=""):
         import numpy as np
         import os
+
+        # this needs refactoring
+        import re
+        p = re.compile(r"\D+")
+
         if not os.path.exists(self.dbpath):
             raise RuntimeError("db not yet created: %s" % self.dbpath)
 
-        obsid = int(basename.strip().split("_")[-1])
+        obsid_part = basename.strip().split("_")[-1]
+        obsid = int(p.split(obsid_part)[0])
 
         with open(self.dbpath, "r") as myfile:
             obsid_list = []

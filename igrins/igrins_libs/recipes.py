@@ -309,7 +309,9 @@ def load_recipe_as_dict(fn):
 def _check(df, allow_duplicate_groups=False):
     for i, row in df.iterrows():
         if row["obstype"] != "TAR":
-            if row["group1"] != row["obsids"][0]:
+            if row["group1"] == "1":
+                pass
+            elif row["group1"] != row["obsids"][0]:
                 msg = ("GROUP1 should be identical to "
                        "1st OBSIDS unless the OBJTYPE is "
                        "TAR : "
@@ -364,7 +366,7 @@ class RecipeLogClass(pd.DataFrame):
         if recipe_fnmatch is not None:
             return self._select_recipe_fnmatch(recipe_fnmatch).subset(**kwargs)
 
-        bad_k = [k for k in kwargs.iterkeys()
+        bad_k = [k for k in kwargs.keys()
                  if k in ["obsids", "frametypes"]]
 
         if bad_k:
@@ -374,7 +376,7 @@ class RecipeLogClass(pd.DataFrame):
 
         m_reversed = np.ones(len(self.index), dtype=bool)
 
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if isinstance(v, str):
                 m = (self[k] == v)
             elif isinstance(v, Iterable):
