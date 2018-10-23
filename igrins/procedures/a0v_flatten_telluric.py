@@ -167,20 +167,31 @@ class SpecFlattener(object):
 
         return msk
 
+    def get_smoothing_param(self, msk):
+
+        finite_frac = 1 - np.mean(msk) #float(np.sum((msk)))/len(msk)
+        # print(finite_frac)
+        finite_frac = np.clip(finite_frac , 0.1, 0.8)
+        rad1 = 15./ finite_frac
+        #rad1 = 150
+        rad2 = 160.
+        frac = 0.5 * (1. - finite_frac)
+
+        return rad1, rad2, frac
+
+    def get_weight_func(self, rad1, rad2, frac):
+        def _weight_func(dist):
+            return (np.exp(-(dist/(2.*rad1))**2)
+                    + frac*np.exp(-(dist/(2.*rad2))**2))
+
+        return _weight_func
+
     def get_of_interpolated(self, ratio, tt, of, msk,
                             weight_func=None):
 
         if weight_func is None:
-            finite_frac = 1 - np.mean(msk) #float(np.sum((msk)))/len(msk)
-            print(finite_frac)
-            finite_frac = np.clip(finite_frac , 0.1, 0.8)
-            rad1 = 15./ finite_frac
-            #rad1 = 150
-            rad2 = 160.
-            frac = 0.5 * (1. - finite_frac)
-            print("frac, rad1, A = %d, %3f, %3f" % (finite_frac, int(rad1), frac),)
-            def weight_func(dist, rad1=rad1, rad2=rad2):
-                return np.exp(-(dist/(2.*rad1))**2) + frac*np.exp(-(dist/(2.*rad2))**2)
+            rad1, rad2, frac = self.get_smoothing_param(msk)
+            weight_func = self.get_weight_func(rad1, rad2, frac)
 
         of = np.array(of)
         of[of<0.01] = np.nan
@@ -260,7 +271,14 @@ class SpecFlattener(object):
         except ValueError:
             msk_sv = msk_i
 
-        lll = self.get_of_interpolated(ratio_msk, tt, of, msk_sv)
+        rad1, rad2, frac = self.get_smoothing_param(msk_sv)
+        from ..igrins_libs.logger import info, debug
+        debug("smoothing radius: {} {}".format(int(rad1), int(rad2)))
+
+        weight_func = self.get_weight_func(rad1, rad2, frac)
+
+        lll = self.get_of_interpolated(ratio_msk, tt, of, msk_sv,
+                                       weight_func=weight_func)
 
         # if False:
         #     # recover area where continuum is underestimated
