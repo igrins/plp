@@ -12,9 +12,8 @@ from ..igrins_libs.resource_helper_igrins import ResourceHelper
 from ..igrins_libs.oned_spec_helper import OnedSpecHelper
 
 
-def set_basename_postfix(obsset):
-    # This only applies for the output name
-    obsset.set_basename_postfix(basename_postfix="_sky")
+def set_basename_postfix(obsset, basename_postfix):
+    obsset.set_basename_postfix(basename_postfix=basename_postfix)
 
 
 def _plot_source_spec(fig, tgt, objname=""):
@@ -195,7 +194,7 @@ def plot_spec(obsset, interactive=False,
     else:
         raise ValueError("Unknown recipe : %s" % recipe)
 
-    tgt = OnedSpecHelper(obsset)
+    tgt = OnedSpecHelper(obsset, basename_postfix=obsset.basename_postfix)
 
     do_interactive_figure = interactive
 
@@ -227,7 +226,8 @@ def plot_spec(obsset, interactive=False,
         plt.show()
 
 
-steps = [Step("Set basename_postfix", set_basename_postfix),
+steps = [Step("Set basename_postfix", set_basename_postfix,
+              basename_postfix=False),
          Step("Plot spec", plot_spec,
               interactive=ArghFactoryWithShort(False),
               multiply_model_a0v=ArghFactoryWithShort(False)),
