@@ -1,3 +1,4 @@
+import six
 import os
 from .base_storage import StorageBase
 from ..utils.file_utils import ensure_dir
@@ -40,7 +41,7 @@ class FileStorage(StorageBase):
             decompress = None
 
         file_path = self._get_path(section, fn)
-        r = open(file_path, "br").read()
+        r = open(file_path, "rb").read()
 
         if decompress is None:
             return r
@@ -50,6 +51,9 @@ class FileStorage(StorageBase):
     def store(self, section, fn, d, item_type=None):
         file_path = self._get_path(section, fn)
         ensure_dir(os.path.dirname(file_path))
-        if hasattr(d, "encode"):
-            d = d.encode("utf-8")
-        open(file_path, "wb").write(d)
+
+        if isinstance(d, six.binary_type):
+            open(file_path, "wb").write(d)
+        else:
+            open(file_path, "w").write(d)
+
