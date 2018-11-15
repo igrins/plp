@@ -27,9 +27,9 @@ class Apertures(object):
             start_order = self.orders[0]
 
         if end_order is None:
-            end_order = self.orders[1]
+            end_order = self.orders[-1]
 
-        self.orders_to_extract = [start_order, end_order]
+        self.orders_to_extract = range(start_order, end_order+1)
 
     def __init__(self, orders, bottomup_solutions,
                  basename="", orders_to_extract=(None, None)):
