@@ -2,6 +2,7 @@ import os
 import numpy as np
 import json
 
+from six.moves import configparser as ConfigParser
 
 
 def get_master_calib_abspath(fn):
@@ -90,6 +91,18 @@ def get_ref_loader(fn):
     loader = ref_loader_dict[ext]
     return loader
 
+
+def query_ref_value_from_section(config, band, section, kind,
+                                 ref_utdate=None, default=None):
+    # if ref_utdate is None:
+    #     ref_utdate = config.get("MASTER_CAL", "REFDATE")
+    # master_cal_dir = config.get("MASTER_CAL", "MASTER_CAL_DIR")
+    try:
+        v = config.get(section, kind,
+                       BAND=band)
+    except (ConfigParser.NoOptionError, ConfigParser.NoSectionError):
+        v = default
+    return v
 
 def query_ref_value(config, band, kind, ref_utdate=None):
     if ref_utdate is None:

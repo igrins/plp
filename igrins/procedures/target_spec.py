@@ -5,6 +5,16 @@ from ..utils.image_combine import image_median
 from ..igrins_libs.resource_helper_igrins import ResourceHelper
 
 
+def _get_int_from_config(obsset, kind, default):
+        v = obsset.rs.query_ref_value_from_section("EXTRACTION",
+                                                    kind,
+                                                    default=default)
+        if v is not None:
+            v = int(v)
+
+        return v
+
+
 def setup_extraction_parameters(obsset, order_range="-1,-1",
                                 height_2dspec=0):
 
@@ -15,13 +25,11 @@ def setup_extraction_parameters(obsset, order_range="-1,-1",
         msg = "Failed to parse order range: {}".format(_order_range_s)
         raise ValueError(msg)
 
-    if order_start < 0:
-        order_start = int(obsset.rs.query_ref_value("ORDER_START"))
+    order_start = _get_int_from_config(obsset, "ORDER_START", order_start)
+    order_end = _get_int_from_config(obsset, "ORDER_END", order_end)
 
-    if order_end < 0:
-        order_end = int(obsset.rs.query_ref_value("ORDER_END"))
-
-    height_2dspec = int(height_2dspec)
+    height_2dspec = _get_int_from_config(obsset, "HEIGHT_2DSPEC",
+                                         height_2dspec)
 
     obsset.set_recipe_parameters(order_start=order_start,
                                  order_end=order_end,
@@ -240,10 +248,11 @@ def store_1dspec(obsset, v_list, s_list, sn_list=None):
 
 
 def store_2dspec(obsset,
-                 conserve_flux=True,
-                 height_2dspec=0):
+                 conserve_flux=True):
 
     basename_postfix = obsset.basename_postfix
+
+    height_2dspec = obsset.get_recipe_parameter("height_2dspec")
 
     from .shifted_images import ShiftedImages
     hdul = obsset.load("WVLCOR_IMAGE", postfix=basename_postfix)

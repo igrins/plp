@@ -22,16 +22,20 @@ class ApCoeff(object):
 
 
 class Apertures(object):
-    def set_orders_to_extract(self, orders):
-        if orders is None:
-            orders = self.orders
+    def set_orders_to_extract(self, start_order, end_order):
+        if start_order is None:
+            start_order = self.orders[0]
 
-        self.orders_to_extract = orders
+        if end_order is None:
+            end_order = self.orders[1]
+
+        self.orders_to_extract = [start_order, end_order]
 
     def __init__(self, orders, bottomup_solutions,
-                 basename="", orders_to_extract=None):
+                 basename="", orders_to_extract=(None, None)):
         self.orders = orders
-        self.set_orders_to_extract(orders_to_extract)
+        self.set_orders_to_extract(orders_to_extract[0],
+                                   orders_to_extract[1])
 
         self.apcoeffs = {}
         for o, (bottom, up) in zip(orders, bottomup_solutions):

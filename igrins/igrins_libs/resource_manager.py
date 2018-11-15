@@ -10,7 +10,9 @@ from .resource_db_igrins import get_igrins_db_factory
 from .storage_descriptions import load_resource_def
 from .item_convert import ItemConverter
 
-from .master_calib import (query_ref_value, query_ref_data_path,
+from .master_calib import (query_ref_value,
+                           query_ref_value_from_section,
+                           query_ref_data_path,
                            get_ref_loader)
 
 
@@ -23,6 +25,11 @@ class IGRINSRefLoader(object):
     def query_value(self, kind):
         kind += "_{}".format(self.band)
         return query_ref_value(self.config, band=self.band, kind=kind)
+
+    def query_value_from_section(self, section, kind, default=None):
+        kind += "_{}".format(self.band)
+        return query_ref_value_from_section(self.config, self.band,
+                                            section, kind, default=default)
 
     def query(self, kind):
 

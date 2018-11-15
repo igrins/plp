@@ -129,17 +129,17 @@ class ResourceHelper(object):
         orders = self.get("orders")
 
         order_start = obsset.get_recipe_parameter("order_start")
-        if order_start < 0:
-            order_start = orders[0]
+        # if order_start < 0:
+        #     order_start = orders[0]
 
         order_end = obsset.get_recipe_parameter("order_end")
-        if order_end < 0:
-            order_end = orders[-1]
+        # if order_end < 0:
+        #     order_end = orders[-1]
 
         orders_to_extract = range(order_start, order_end + 1)
 
         ap = get_aperture_from_obsset(obsset, orders=orders)
-        ap.set_orders_to_extract(orders_to_extract)
+        ap.set_orders_to_extract(order_start, order_end)
 
         return ap
 

@@ -171,6 +171,14 @@ class ResourceStack(object):
 
     # master ref
 
+    # def query_value_from_section(self, section, kind):
+    #     return self.master_ref_loader.query_value_from_section(section, kind)
+
+    def query_ref_value_from_section(self, section, kind, default=None):
+        return self.master_ref_loader.query_value_from_section(section,
+                                                               kind,
+                                                               default=default)
+
     def query_ref_value(self, kind):
         return self.master_ref_loader.query_value(kind)
 
