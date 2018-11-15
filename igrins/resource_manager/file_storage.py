@@ -10,13 +10,15 @@ class FileStorage(StorageBase):
         # self.obsdate, self.band = resource_spec
         self.resource_spec = resource_spec
 
-        if hasattr(path_info, "sections"):
-            self.path_info = path_info.sections
-            self.get_section = path_info.sections.get
-        else:
-            self.get_section = path_info.get
+        self.path_info = path_info.sections
 
         self._check_candidate = check_candidate
+
+    def get_section(self, section):
+        if hasattr(self.path_info, "sections"):
+            return self.path_info.sections.get(section)
+        else:
+            return self.path_info.get(section)
 
     def _get_path(self, section, fn):
 
