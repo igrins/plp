@@ -136,10 +136,8 @@ class ResourceHelper(object):
         # if order_end < 0:
         #     order_end = orders[-1]
 
-        orders_to_extract = range(order_start, order_end + 1)
-
         ap = get_aperture_from_obsset(obsset, orders=orders)
-        ap.set_orders_to_extract(order_start, order_end)
+        ap.set_order_minmax_to_extract(order_start, order_end)
 
         return ap
 
