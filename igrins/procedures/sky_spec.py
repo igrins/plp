@@ -202,13 +202,17 @@ def _sky_subtract_bg(obsset, sky_image,
 def _make_combined_image_sky(obsset, bg_subtraction_mode="flat"):
     sky_image, cards = get_combined_image(obsset)
 
+    if bg_subtraction_mode is None:
+        return sky_image, cards
+
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', r'All-NaN (slice|axis) encountered')
 
         final_sky = _sky_subtract_bg(obsset, sky_image,
                                      bg_subtraction_mode=bg_subtraction_mode)
 
-    return final_sky, cards
+        return final_sky, cards
+
 
 def extract_spectra(obsset):
     "extract spectra"

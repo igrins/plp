@@ -11,6 +11,8 @@ from ..procedures.procedures_register import (identify_orders,
                                               update_db)
 
 def make_combined_image_sky(obsset, bg_subtraction_mode="flat"):
+    if bg_subtraction_mode == "none":
+        bg_subtraction_mode = None
     final_sky, cards = _make_combined_image_sky(obsset, bg_subtraction_mode)
 
     from astropy.io.fits import Card
@@ -21,7 +23,8 @@ def make_combined_image_sky(obsset, bg_subtraction_mode="flat"):
     obsset.store("combined_sky", data=hdul)
 
 
-steps = [Step("Make Combined Sky", make_combined_image_sky),
+steps = [Step("Make Combined Sky", make_combined_image_sky,
+              bg_subtraction_mode="none"),
          Step("Extract Simple 1d Spectra", extract_spectra),
          Step("Identify Orders", identify_orders),
          Step("Identify Lines", identify_lines),
