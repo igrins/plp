@@ -335,11 +335,45 @@ class PatternRowWiseBias(PatternBase):
 class PatternAmpP2(PatternBase):
     @classmethod
     def get(kls, d, mask=None):
+        """
+        returns a tuple of two 32 element array. First is per-amp bias values.
+        The second is the [1,-1] amplitude for each amp.
+        """
         d = np.ma.array(d, mask=mask).filled(np.nan)
+
+        do = d.reshape(32, 32, 2, -1)
+        av = np.nanmedian(do, axis=[1, 3])
+
+        amp_bias_mean = np.mean(av, axis=1)
+        amp_bias_amp = av[:, 0] - amp_bias_mean
+
+        return amp_bias_mean, amp_bias_amp
+
+    @classmethod
+    def broadcast(kls, d, av_p):
+        av, p = av_p
+        k = p[:, np.newaxis] * np.array([1, -1])
+        v = np.zeros((32, 32, 2, 1)) + k[:, np.newaxis, :, np.newaxis]
+        avv = av.reshape(32, 1, 1, 1) + v
+        return avv.reshape(2048, 1)
+
+
+class PatternAmpP2v1(PatternBase):
+    @classmethod
+    def get(kls, d, mask=None):
+        """
+        returns a tuple of two 32 element array. First is per-amp bias values.
+        The second is the [1,-1] amplitude for each amp.
+        """
+        d = np.ma.array(d, mask=mask).filled(np.nan)
+
+        # TODO: This seems inefficient. See if there is a better way.
+        # we first estimate (32x) bias
         do = d.reshape(32, 32, 2, -1)
         av = np.nanmedian(do, axis=[1, 2, 3])
         dd = do - av.reshape(32, 1, 1, 1)
 
+        # and then [1, -1] bias.
         pp = np.array([1, -1])[np.newaxis, np.newaxis, :, np.newaxis]
         p = np.nanmedian(dd * pp, axis=[1, 2, 3])
         return av, p
