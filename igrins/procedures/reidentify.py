@@ -10,8 +10,8 @@ from .find_peak import find_peaks
 def reidentify(s, x_list, x=None, sigma_init=1.5):
     """
     given spectrum s, try to reidentify lines as x_list as initial point.
-    x_list is shifted by delta_x if not 0.
 
+    x_list: list of list of x values. e.g., [[1, 2], [4, 6]]. Each list elements shares a constant offset value.
     sigma_init : a single value, or an iterator of single value.
     """
 

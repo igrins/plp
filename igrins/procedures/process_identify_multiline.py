@@ -11,14 +11,15 @@ Spec = namedtuple("Spec", ["s_map", "wvl_map"])
 
 
 def identify_lines_from_spec(orders, spec_data, wvlsol,
-                             ref_lines_db, ref_lines_db_hitrans):
+                             ref_lines_db, ref_lines_db_hitrans,
+                             ref_sigma=1.5):
     small_list = []
     small_keys = []
 
     spec = Spec(dict(zip(orders, spec_data)),
                 dict(zip(orders, wvlsol)))
 
-    fitted_pixels_oh = ref_lines_db.identify(spec)
+    fitted_pixels_oh = ref_lines_db.identify(spec, ref_sigma=ref_sigma)
     small_list.append(fitted_pixels_oh)
     small_keys.append("OH")
 

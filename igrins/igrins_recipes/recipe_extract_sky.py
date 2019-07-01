@@ -189,7 +189,8 @@ def derive_wvlsol(obsset):
 
 
 steps = [Step("Set basename_postfix", set_basename_postfix),
-         Step("Make Combined Sky", make_combined_image_sky),
+         Step("Make Combined Sky", make_combined_image_sky,
+              bg_subtraction_mode="flat"),
          Step("Estimate slit profile (uniform)", estimate_slit_profile),
          Step("Extract spectra (for extendeded)",
               extract_extended_spec),

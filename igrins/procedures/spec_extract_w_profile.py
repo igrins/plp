@@ -1,6 +1,7 @@
 import numpy as np
 
 from .shifted_images import ShiftedImages
+from ..igrins_libs.lacosmics import get_cr_mask
 
 
 def get_xshifted_all(ap, profile_map, variance_map,
@@ -93,7 +94,6 @@ def extract_spec_using_profile(ap, profile_map,
         cr_mask = np.abs(sig_map) > cr_rejection_thresh
 
     if lacosmic_thresh > 0:
-        from ..libs.lacosmics import get_cr_mask
 
         # As our data is corrected for orderflat, it
         # actually amplifies order boundary so that they
@@ -208,8 +208,6 @@ def extract_spec_uniform(ap, profile_map,
     # detect CRs
 
     if lacosmic_thresh > 0:
-
-        from ..libs.lacosmics import get_cr_mask
 
         # As our data is corrected for orderflat, it
         # actually amplifies order boundary so that they

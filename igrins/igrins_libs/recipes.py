@@ -88,20 +88,43 @@ import pandas as pd
 #     return recipe_dict
 
 
-def get_multi_fnmatch_pattern(fnmatch_list):
+def get_multi_fnmatch_pattern(fnmatch_list,
+                              recipe_name_exclude=None):
 
     import re
     import fnmatch
-    p_list = []
-    for fnmatch1 in fnmatch_list:
-        p = re.compile(fnmatch.translate(fnmatch1))
-        p_list.append(p)
 
-    def p_match(s, p_list=p_list):
+    p_list = [re.compile(fnmatch.translate(fnmatch1))
+              for fnmatch1 in fnmatch_list]
+
+    if recipe_name_exclude is None:
+        recipe_name_exclude = []
+
+    pe_list = [re.compile(fnmatch.translate(fnmatch1))
+               for fnmatch1 in recipe_name_exclude]
+
+    def p_match(s, p_list=p_list, pe_list=pe_list):
+        for pe in pe_list:
+            if pe.match(s):
+                return False
         for p in p_list:
             if p.match(s):
                 return True
         return False
+
+    return p_match
+
+
+def get_pmatch_from_fnmatch(recipe_fnmatch,
+                            recipe_name_exclude=None):
+
+    if isinstance(recipe_fnmatch, str):
+        recipe_fnmatch_list = [recipe_fnmatch]
+    else:
+        recipe_fnmatch_list = recipe_fnmatch
+
+    p_match = get_multi_fnmatch_pattern(recipe_fnmatch_list,
+                                        recipe_name_exclude)
 
     return p_match
 
@@ -412,14 +435,8 @@ class RecipeLogClass(pd.DataFrame):
 
         return self.iloc[indices]
 
-    def select_fnmatch_by_groups(self, recipe_fnmatch, groups=None):
-
-        if isinstance(recipe_fnmatch, str):
-            recipe_fnmatch_list = [recipe_fnmatch]
-        else:
-            recipe_fnmatch_list = recipe_fnmatch
-
-        p_match = get_multi_fnmatch_pattern(recipe_fnmatch_list)
+    def select_pmatch_by_groups(self, p_match, groups=None):
+        """p_match should be a function that returns True/False"""
 
         selected = []
         for i, row in self.iterrows():
@@ -439,6 +456,14 @@ class RecipeLogClass(pd.DataFrame):
             selected = [s1 for s1 in selected if s1[-1]["group1"] in groups]
 
         return selected
+
+    def select_fnmatch_by_groups(self, recipe_fnmatch, groups=None,
+                                 recipe_name_exclude=None):
+
+        p_match = get_pmatch_from_fnmatch(recipe_fnmatch,
+                                          recipe_name_exclude)
+
+        return self.select_pmatch_by_groups(p_match, groups=groups)
 
 
 class RecipeLog(RecipeLogClass):

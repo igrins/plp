@@ -1,6 +1,10 @@
 from collections import OrderedDict
+
 from .argh_helper import argh, arg, wrap_multi
+
 from ..igrins_libs.logger import info
+from ..igrins_libs.recipes import get_pmatch_from_fnmatch
+
 
 class ArghFactoryBase(object):
     def __init__(self, v):
@@ -153,7 +157,8 @@ def create_pipeline_from_steps(pipeline_name, steps):
 
 def create_argh_command_from_steps(command_name, steps,
                                    driver_func, driver_args,
-                                   recipe_name_fnmatch=None):
+                                   recipe_name_fnmatch=None,
+                                   recipe_name_exclude=None):
 
     pipeline_kwargs = PipelineKwargs(steps)
     args = pipeline_kwargs.generate_argh()
@@ -161,8 +166,11 @@ def create_argh_command_from_steps(command_name, steps,
     if recipe_name_fnmatch is None:
         recipe_name_fnmatch = command_name.upper().replace("-", "_")
 
+    p_match = get_pmatch_from_fnmatch(recipe_name_fnmatch,
+                                      recipe_name_exclude)
+
     def _func(obsdate, **kwargs):
-        driver_func(command_name, steps, recipe_name_fnmatch, obsdate,
+        driver_func(command_name, steps, p_match, obsdate,
                     **kwargs)
 
     func = wrap_multi(_func, args)

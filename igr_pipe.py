@@ -25,12 +25,14 @@ from igrins.igrins_recipes import get_pipeline_steps
 # add 'igrins_recipes/recipe_[NAME].py and define 'steps' variable in the module.
 
 
-def create_argh_command(command_name, recipe_name_fnmatch=None):
+def create_argh_command(command_name, recipe_name_fnmatch=None,
+                        recipe_name_exclude=None):
     steps = get_pipeline_steps(command_name)
 
     f = create_argh_command_from_steps(command_name, steps,
                                        driver_func, driver_args,
-                                       recipe_name_fnmatch=recipe_name_fnmatch)
+                                       recipe_name_fnmatch=recipe_name_fnmatch,
+                                       recipe_name_exclude=recipe_name_exclude)
     return f
 
 
@@ -40,6 +42,8 @@ recipe_list = [prepare_recipe_logs,
                create_argh_command("register-sky", ["SKY", "SKY_AB"]),
                create_argh_command("wvlsol-sky", ["SKY", "SKY_AB"]),
                create_argh_command("extract-sky", ["SKY", "SKY_AB"]),
+               create_argh_command("analyze-sky", ["SKY", "*_ONOFF", "*_AB"],
+                                   recipe_name_exclude=["SKY_AB"]),
                create_argh_command("extract-arc", ["ARC_*"]),
                create_argh_command("a0v-ab", ["A0V_AB"]),
                create_argh_command("a0v-onoff", ["A0V_ONOFF"]),

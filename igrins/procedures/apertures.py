@@ -229,8 +229,7 @@ class Apertures(object):
                 variance_map, profile_map, msk1)
 
     def extract_simple_from_shifted(self, ordermap,
-                                    profile_map, variance_map,
-                                    data):
+                                    profile_map, variance_map, data):
         """
         It assumes that bad pixels in the data and the variance_map are filled.
         """
@@ -247,20 +246,22 @@ class Apertures(object):
                                        mask=~msk).filled(np.nan)
 
             map_weighted_spectra1 = profile_map1 * data[sl]
-            map_weights1 = profile_map1**2
-
-            map_weighted_variance = np.abs(profile_map1) * variance_map[sl]
-
             sum_weighted_spectra1 = np.nansum(map_weighted_spectra1, axis=0)
-            sum_weights1 = np.nansum(map_weights1, axis=0)
 
-            sum_weighted_variance = np.nansum(map_weighted_variance, axis=0)
+            map_weights1 = profile_map1**2
+            sum_weights1 = np.nansum(map_weights1, axis=0)
 
             with np.errstate(invalid="ignore"):
                 s = sum_weighted_spectra1 / sum_weights1
-                v = sum_weighted_variance / sum_weights1
 
             s_list.append(s)
+
+            map_weighted_variance = np.abs(profile_map1) * variance_map[sl]
+            sum_weighted_variance = np.nansum(map_weighted_variance, axis=0)
+
+            with np.errstate(invalid="ignore"):
+                v = sum_weighted_variance / sum_weights1
+
             v_list.append(v)
 
         return s_list, v_list

@@ -1,5 +1,23 @@
 import numpy as np
 
+# fit the spectrum with multiple gaussian lines with their separation fixed.
+
+def _gauss0_w_dcenters(xx, params, dcenters):
+    """ Returns a gaussian function with the given parameters"""
+    center, sigma, height, background = params
+
+    y_models = []
+    with np.errstate(divide="ignore"):
+        for d_center in dcenters:
+            y_models.append(np.exp(-(((xx - (center + d_center))/sigma)**2*0.5)))
+
+    return height*np.array(y_models).sum(axis=0) + background
+
+
+def _gauss_w_dcenters(xx, yy, params, dcenters):
+    return np.sum((yy - _gauss0_w_dcenters(xx, params, dcenters))**2)
+
+
 def fit_gaussian_simple(x, s, lines, xminmax=None, sigma_init=1.5,
                         do_plot=False):
     """
@@ -30,28 +48,31 @@ def fit_gaussian_simple(x, s, lines, xminmax=None, sigma_init=1.5,
     yy = s[sl]
     ymax = max(yy)
     #yy = yy / ymax
-    d_centers0 = lines - lines[0]
+    dcenters0 = lines - lines[0]
 
-    def _gauss0(params, xx=xx):
-        """ Returns a gaussian function with the given parameters"""
-        center, sigma, height, background = params
-
-        y_models = []
-        with np.errstate(divide="ignore"):
-            for d_center in d_centers0:
-                y_models.append(np.exp(-(((xx - (center + d_center))/sigma)**2*0.5)))
-
-        return height*np.array(y_models).sum(axis=0) + background
-        #return (height*np.array(s).sum(axis=0) + background)
-
-    def _gauss(params):
-        return np.sum((yy - _gauss0(params))**2)
-
-        #return (height*np.array(s).sum(axis=0) + background)
+    def _gauss(params, xx=xx, yy=yy, dcenters0=dcenters0):
+        # return np.sum((yy - _gauss0(params))**2)
+        return _gauss_w_dcenters(xx, yy, params, dcenters0)
 
     params0 = np.array([lines[0], sigma_init, ymax, 0])
     params_min = np.array([xmin, 0., 0, -ymax])
     params_max = np.array([xmax, 6*sigma_init, 2*ymax, ymax])
+
+    # def _gauss0(params, xx=xx):
+    #     """ Returns a gaussian function with the given parameters"""
+    #     center, sigma, height, background = params
+
+    #     y_models = []
+    #     with np.errstate(divide="ignore"):
+    #         for d_center in d_centers0:
+    #             y_models.append(np.exp(-(((xx - (center + d_center))/sigma)**2*0.5)))
+
+    #     return height*np.array(y_models).sum(axis=0) + background
+    #     #return (height*np.array(s).sum(axis=0) + background)
+
+
+        #return (height*np.array(s).sum(axis=0) + background)
+
     from scipy.optimize import fmin_tnc
     sol_ = fmin_tnc(_gauss, params0,
                     bounds=list(zip(params_min, params_max)),
@@ -79,35 +100,41 @@ def fit_gaussian_simple(x, s, lines, xminmax=None, sigma_init=1.5,
     #sol_[0][2] = ymax * sol_[0][2]
     return sol_
 
-def fit_gaussian(s, lines, sigma_init=1.5, do_plot=False):
+
+def fit_gaussian(s, lines, sigma_init=1.5):
     """ Return (height, x, width)
     the gaussian parameters of a 1D distribution found by a fit
 
-    spectrum need to be normalized so that maximum is rougly 1.
     """
 
     lines = np.array(lines)
-    xmin = max(int(np.floor(lines[0]))-10, 0)
-    xmax = min(int(np.ceil(lines[-1]))+10, len(s))
+    dx = np.abs(sigma_init * 6.)
+    xmin = max(int(np.floor(lines[0] - dx)), 0)
+    xmax = min(int(np.ceil(lines[-1] + dx)), len(s))
 
     xx = np.arange(xmin, xmax)
     yy = s[xmin:xmax]
     ymax = yy.max()
+    # we normalize spectrum so that maximum is rougly 1.
     yy = yy / ymax
     d_centers0 = lines - lines[0]
 
-    def _gauss0(params):
-        """ Returns a gaussian function with the given parameters"""
-        center, sigma, height, background = params
+    def _gauss(params, xx=xx, yy=yy, dcenters0=d_centers0):
+        # return np.sum((yy - _gauss0(params))**2)
+        return _gauss_w_dcenters(xx, yy, params, dcenters0)
 
-        y_models = []
-        for d_center in d_centers0:
-            y_models.append(np.exp(-(((xx - (center + d_center))/sigma)**2*0.5)))
-        return height*np.array(y_models).sum(axis=0) + background
-        #return (height*np.array(s).sum(axis=0) + background)
+    # def _gauss0(params):
+    #     """ Returns a gaussian function with the given parameters"""
+    #     center, sigma, height, background = params
 
-    def _gauss(params):
-        return np.sum((yy - _gauss0(params))**2)
+    #     y_models = []
+    #     for d_center in d_centers0:
+    #         y_models.append(np.exp(-(((xx - (center + d_center))/sigma)**2*0.5)))
+    #     return height*np.array(y_models).sum(axis=0) + background
+    #     #return (height*np.array(s).sum(axis=0) + background)
+
+    # def _gauss(params):
+    #     return np.sum((yy - _gauss0(params))**2)
 
         #return (height*np.array(s).sum(axis=0) + background)
 
@@ -120,8 +147,10 @@ def fit_gaussian(s, lines, sigma_init=1.5, do_plot=False):
                     approx_grad=True, disp=0,
                     epsilon=0.1)
 
-    sol_[0][2] = ymax * sol_[0][2]
+    sol_[0][2] = ymax * sol_[0][2] # height
+    sol_[0][3] = ymax * sol_[0][3] # background
     return sol_
+
 
 def plot_sol(ax, sol):
         import matplotlib.pyplot as plt

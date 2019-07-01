@@ -11,6 +11,8 @@ from ..igrins_libs.resource_helper_igrins import ResourceHelper
 
 from .aperture_helper import get_simple_aperture_from_obsset
 
+from .destripe_helper import sub_p64_from_guard, sub_bg64_from_guard
+
 
 def _get_combined_image(obsset):
     data_list = [hdu.data for hdu in obsset.get_hdus()]
@@ -26,12 +28,20 @@ def get_combined_image(obsset):
         a = _get_combined_image(obsset_a)
         b = _get_combined_image(obsset_b)
 
+        a = sub_bg64_from_guard(sub_p64_from_guard(a))
+        b = sub_bg64_from_guard(sub_p64_from_guard(b))
+
+        a = a - np.nanmedian(a)
+        b = b - np.nanmedian(b)
+
+        # sky_data = .5 * abs(a-b)
         sky_data = .5 * (a+b - abs(a-b))
         combine_mode = "median_sky"
         combine_par = json.dumps(dict(A=obsset_a.obsids,
                                       B=obsset_b.obsids))
 
     else:
+        # TODO: readout pattern need to be subtracted
         sky_data = _get_combined_image(obsset)
         combine_mode = "median"
         combine_par = json.dumps(obsset.obsids)
@@ -97,6 +107,60 @@ def get_exptime(obsset):
     return exptime
 
 
+def _sky_subtract_bg_list(obsset, sky_image_list,
+                          destripe_mode="guard",
+                          bg_subtraction_mode=None):
+
+    sky_exptime = get_exptime(obsset)
+
+    if bg_subtraction_mode is None:
+        bg_data_norm = 0.
+
+    elif bg_subtraction_mode == "flat":
+
+        bg_hdu = obsset.load_resource_sci_hdu_for(("flat_off",
+                                                   DESCS["FLAT_OFF_BG"]))
+        bg_exptime = float(bg_hdu.header["exptime"])
+        bg_data_norm = bg_hdu.data / bg_exptime
+
+    else:
+        raise ValueError("unknown bg_subtraction_mode: {}".
+                         format(bg_subtraction_mode))
+
+
+    # subtract pattern noise
+
+    helper = ResourceHelper(obsset)
+    destripe_mask = helper.get("destripe_mask")
+
+    import igrins.procedures.readout_pattern as rp
+    from .destripe_helper import sub_p64_from_guard, sub_bg64_from_guard
+
+    pipe = [
+        rp.PatternP64ColWise,
+        rp.PatternAmpP2,
+        rp.PatternRowWiseBias
+    ]
+
+    destriped_sky_list = []
+
+    for sky_image in sky_image_list:
+        sky_image2 = sky_image - bg_data_norm * sky_exptime
+        # destriped_sky = rp.apply(sky_image, pipe, mask=destripe_mask)
+
+        if destripe_mode == "guard":
+            # destriped_sky = rp.sub_guard_column(sky_image2)
+            destriped_sky = sub_bg64_from_guard(sub_p64_from_guard(sky_image2))
+        elif destripe_mode is not None:
+            destriped_sky = rp.apply(sky_image2, pipe, mask=destripe_mask)
+        else:
+            destriped_sky = sky_image2
+
+        destriped_sky_list.append(destriped_sky)
+
+    return destriped_sky_list
+
+
 def _sky_subtract_bg(obsset, sky_image,
                      bg_subtraction_mode="flat"):
 
@@ -106,12 +170,16 @@ def _sky_subtract_bg(obsset, sky_image,
 
         bg_hdu = obsset.load_resource_sci_hdu_for(("flat_off",
                                                    DESCS["FLAT_OFF_BG"]))
+        bg = bg_hdu.data
         bg_exptime = float(bg_hdu.header["exptime"])
+    elif bg_subtraction_mode == "no":
+        bg = np.zeros_like(sky_image)
+        bg_exptime = 1.
     else:
         raise ValueError("unknown bg_subtraction_mode: {}".
                          format(bg_subtraction_mode))
 
-    sky_image2 = sky_image - bg_hdu.data / bg_exptime * sky_exptime
+    sky_image2 = sky_image - bg / bg_exptime * sky_exptime
 
     # subtract pattern noise
 
@@ -154,7 +222,6 @@ def extract_spectra(obsset):
     aperture = get_simple_aperture_from_obsset(obsset)
 
     specs = aperture.extract_spectra_simple(data)
-
     obsset.store(DESCS["oned_spec_json"],
                  data=dict(orders=aperture.orders,
                            specs=specs,

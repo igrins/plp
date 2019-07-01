@@ -3,7 +3,7 @@ from .driver import get_obsset, get_obsset_from_context  # , apply_steps
 from .steps import apply_steps
 
 from ..igrins_libs.logger import info
-
+from ..igrins_libs.recipes import get_pmatch_from_fnmatch
 
 # for testing purposes
 def _parse_groups(groups):
@@ -13,11 +13,23 @@ def _parse_groups(groups):
         return [s.strip() for s in groups.split(",")]
 
 
-def get_selected(recipes, recipe_name_fnmatch, groups):
+def get_selected_pmatch(recipes, recipe_name_pmatch, groups):
     groups_parsed = _parse_groups(groups)
 
-    selected = recipes.select_fnmatch_by_groups(recipe_name_fnmatch,
+    selected = recipes.select_pmatch_by_groups(recipe_name_pmatch,
                                                 groups_parsed)
+
+    return selected
+
+
+def get_selected(recipes, recipe_name_fnmatch, groups,
+                 recipe_name_exclude=None):
+    groups_parsed = _parse_groups(groups)
+
+    kwargs = dict(recipe_name_exclude=recipe_name_exclude)
+    selected = recipes.select_fnmatch_by_groups(recipe_name_fnmatch,
+                                                groups_parsed,
+                                                **kwargs)
     # logger.info("selected recipe: {}".format(selected))
 
     return selected
@@ -25,7 +37,7 @@ def get_selected(recipes, recipe_name_fnmatch, groups):
 
 def iter_obsset(recipe_name_fnmatch,
                 obsdate, config_file, bands, groups,
-                basename_postfix=""):
+                basename_postfix="", recipe_name_exclude=None):
 
     from ..igrins_libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
@@ -35,8 +47,15 @@ def iter_obsset(recipe_name_fnmatch,
     from ..igrins_libs.recipes import RecipeLog
     recipes = RecipeLog(obsdate, fn)
 
-    selected = get_selected(recipes, recipe_name_fnmatch,
-                            groups)
+    if callable(recipe_name_fnmatch):
+        p_match = recipe_name_fnmatch
+    else:
+        p_match = get_pmatch_from_fnmatch(recipe_name_fnmatch,
+                                          recipe_name_exclude)
+
+    selected = get_selected_pmatch(recipes, p_match, groups)
+    # selected = get_selected(recipes, recipe_name_fnmatch, groups)
+
     if len(selected) == 0:
         raise ValueError("no matching recipes are found: {}"
                          .format(", ".join(recipe_name_fnmatch)))
@@ -70,7 +89,6 @@ def _save_context(obsdate, obsset, context_id, outname):
              obsset_desc=obsset_desc,
              context_id=context_id
     )
-
     import pickle
     pickle.dump(p, open(outname, "wb"))
 

@@ -17,7 +17,8 @@ def get_recipe_name(objtype):
     return recipe
 
 
-def make_recipe_logs(obsdate, l, populate_group1=False):
+def make_recipe_logs(obsdate, l, populate_group1=False,
+                     keep_original=False):
 
     d3 = l.fillna("-")
 
@@ -47,14 +48,22 @@ def make_recipe_logs(obsdate, l, populate_group1=False):
         if populate_group1:
             group1 = group["OBSID"].iloc[0]
 
-        recipe_logs.append(dict(OBJNAME=objname, OBJTYPE=objtype,
-                                GROUP1=group1, GROUP2=group2,
-                                EXPTIME=exptime,
-                                RECIPE=recipe_name,
-                                OBSIDS=obsids,
-                                FRAMETYPES=frametypes))
+        v = dict(OBJNAME=objname, OBJTYPE=objtype,
+                 GROUP1=group1, GROUP2=group2,
+                 EXPTIME=exptime,
+                 RECIPE=recipe_name,
+                 OBSIDS=obsids,
+                 FRAMETYPES=frametypes)
+
+        if keep_original:
+            v["_rows"] = group
+
+        recipe_logs.append(v)
 
     headers = groupby_keys + ["RECIPE", "OBSIDS", "FRAMETYPES"]
+    if keep_original:
+        headers.append("_rows")
+
     df_recipe_logs = pd.DataFrame(recipe_logs,
                                   columns=headers)
 

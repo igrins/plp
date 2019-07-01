@@ -146,7 +146,8 @@ def fitted_lines_init(ref_lines):
 
 
 def fitted_lines_reidentify(fitted_lines, ref_lines, s, x,
-                            colname_pixel="pixel", colname_params="params"):
+                            colname_pixel="pixel", colname_params="params",
+                            ref_sigma0=1.5):
 
     ref_lines_groupby = ref_lines.groupby(["group_id"])
 
@@ -157,7 +158,7 @@ def fitted_lines_reidentify(fitted_lines, ref_lines, s, x,
         ref_sigma = [row["sigma_pixel"].values[0] for group_id, row
                      in ref_lines_groupby]
     else:
-        ref_sigma = 1.5
+        ref_sigma = ref_sigma0
 
     from .reidentify import reidentify
     res = reidentify(s, ref_pixels, x=x, sigma_init=ref_sigma)
@@ -236,7 +237,7 @@ class RefLinesDBBase:
         x = np.arange(len(wvl))
 
         ref_lines = ref_lines_db.get_ref_lines(o, wvl, x)
-        ref_lines.line_centroids
+        # ref_lines.line_centroids
 
         fitted_pixels_ = ref_lines.fit(s, x, update_self=True)
 
@@ -246,19 +247,20 @@ class RefLinesDBBase:
 
         return fitted_pixels
 
-    def identify(self, spec):
+    def identify(self, spec, ref_sigma=1.5):
 
         ref_lines_db = self
         order_list = sorted(spec.wvl_map.keys())
         wvl_list = [spec.wvl_map[o_] for o_ in order_list]
         s_list = [spec.s_map[o_] for o_ in order_list]
 
-        x = np.arange(len(wvl_list[10]))
+        x = np.arange(len(wvl_list[0]))
 
         ref_lines_col = ref_lines_db.get_ref_lines_collection(order_list,
                                                               wvl_list, x)
 
-        fitted_pixels_col = ref_lines_col.fit(s_list, x, update_self=True)
+        fitted_pixels_col = ref_lines_col.fit(s_list, x, update_self=True,
+                                              ref_sigma=ref_sigma)
 
         line_centroids_master = pd.concat([_r.line_centroids for _r
                                            in ref_lines_col.ref_lines_list])
@@ -372,11 +374,12 @@ class RefLines:
         self._ref_lines = ref_lines
         self.line_centroids = fitted_lines_init(ref_lines)
 
-    def fit(self, s, x, update_self=True):
+    def fit(self, s, x, update_self=True, ref_sigma=1.5):
 
         fitted_lines = self.line_centroids  # .copy()
         fitted_pixels = fitted_lines_reidentify(fitted_lines,
-                                                self._ref_lines, s, x)
+                                                self._ref_lines, s, x,
+                                                ref_sigma0=ref_sigma)
 
         if update_self:
             ref_lines_update_pixel(self._ref_lines,
@@ -393,10 +396,10 @@ class RefLinesCollection:
     def __init__(self, ref_lines_list):
         self.ref_lines_list = ref_lines_list
 
-    def fit(self, s_list, x, update_self=True):
+    def fit(self, s_list, x, update_self=True, ref_sigma=1.5):
         fitted_pixels_list = []
         for ref_lines, s in zip(self.ref_lines_list, s_list):
-            _ = ref_lines.fit(s, x, update_self)
+            _ = ref_lines.fit(s, x, update_self, ref_sigma=ref_sigma)
             fitted_pixels_list.append(_)
 
         return fitted_pixels_list

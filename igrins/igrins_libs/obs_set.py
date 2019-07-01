@@ -180,10 +180,13 @@ class ObsSet(object):
         return hdu
 
     # load as hdu list
-    def get_hdus(self):
+    def get_hdus(self, obsids=None):
+
+        if obsids is None:
+            obsids = self.get_obsids()
 
         hdus = []
-        for obsid in self.get_obsids():
+        for obsid in obsids:
             hdul = self.rs.load(obsid, DESCS["RAWIMAGE"], item_type="fits")
             hdu = get_first_science_hdu(hdul)
             hdus.append(hdu)
