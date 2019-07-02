@@ -202,6 +202,7 @@ def oi_ot_ft_generator(recipe_name,
     oi_ot_ft_list = _get_obsid_obstype_frametype_list(config, obsdate,
                                                       obsids, objtypes,
                                                       frametypes)
+    oi_ot_ft_list = list(oi_ot_ft_list)
 
     no_skip = kwargs.pop("no_skip", False)
 
