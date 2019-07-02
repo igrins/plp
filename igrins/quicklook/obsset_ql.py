@@ -1,6 +1,9 @@
+import numpy as np
 import pandas as pd
 import hashlib
 import json
+
+from collections import OrderedDict
 
 from ..storage_interface.db_file import load_key, save_key
 
@@ -13,15 +16,17 @@ from ..igrins_libs.logger import info
 from .ql_slit_profile import plot_stacked_profile, plot_per_order_stat
 from .ql_flat import plot_flat
 
+
 def _hash(recipe, band, groupid, basename_postfix, params):
     d = dict(recipe=recipe, band=band, groupid=groupid,
              basename_postfix=basename_postfix,
              params=params)
 
     h = hashlib.new("sha1")
-    h.update(json.dumps(d, sort_keys=True))
+    h.update(json.dumps(d, sort_keys=True).encode("utf8"))
 
     return h.hexdigest(), d
+
 
 class IndexDB(object):
     def __init__(self, storage):
@@ -44,7 +49,6 @@ class IndexDB(object):
 
         return hexdigest_old == hexdigest_new
 
-
     def save_hexdigest(self, recipe, band, groupid, basename_postfix, params):
         dbname = "index"
         sectionname = recipe
@@ -61,6 +65,7 @@ class IndexDB(object):
         k = "{}/{:04d}".format(band, obsid)
 
         save_key(self.storage, dbname, sectionname, k, param)
+
 
 def get_obsset(obsdate, recipe_name, band,
                obsids, frametypes,
@@ -107,8 +112,8 @@ def _get_obsid_obstype_frametype_list(config, obsdate,
         if (objtypes is not None) or (frametypes is not None):
             raise ValueError("objtypes and frametypes should not be None when obsids is None")
 
-        obsids = m.keys()
-        obsids.sort()
+        obsids = sorted(m.keys())
+        # obsids.sort()
 
     if objtypes is None:
         objtypes = [m[o]["OBJTYPE"] for o in obsids]
@@ -148,7 +153,9 @@ def do_ql_std(obsset, band):
 
     return jo_list, jo_raw_list
 
+
 do_ql_tar = do_ql_std
+
 
 def save_jo_list(obsset, jo_list, jo_raw_list):
     item_desc = ("QL_PATH", "{basename}{postfix}.quicklook.json")
@@ -171,8 +178,10 @@ def save_fig_list(obsset, oi, fig_list):
         obsset.rs.store(str(oi), item_desc, png)
 
 
-def quicklook_func(obsdate, obsids=None, objtypes=None, frametypes=None,
-                   bands="HK", **kwargs):
+def oi_ot_ft_generator(recipe_name,
+                       obsdate, obsids=None, objtypes=None, frametypes=None,
+                       bands="HK", **kwargs):
+
     import os
     from ..igrins_libs.igrins_config import IGRINSConfig
 
@@ -188,7 +197,178 @@ def quicklook_func(obsdate, obsids=None, objtypes=None, frametypes=None,
         raise RuntimeError("directory {} does not exist.".format(fn0))
 
     if isinstance(obsids, str):
-        obsids = map(int, obsids.split(","))
+        obsids = [int(_) for _ in obsids.split(",")]
+
+    oi_ot_ft_list = _get_obsid_obstype_frametype_list(config, obsdate,
+                                                      obsids, objtypes,
+                                                      frametypes)
+
+    no_skip = kwargs.pop("no_skip", False)
+
+    for b in bands:
+        for oi, ot, ft, dt_row in oi_ot_ft_list:
+            obsset = get_obsset(obsdate, "quicklook", b,
+                                obsids=[oi], frametypes=[ft],
+                                config_file=config_file)
+            storage = obsset.rs.storage.new_sectioned_storage("OUTDATA_PATH")
+            index_db = IndexDB(storage)
+
+            index_db.save_dtlog(b, oi, dt_row)
+
+            if (not no_skip and
+                index_db.check_hexdigest(recipe_name, b, oi, "",
+                                         dict(obstype=ot, frametype=ft))):
+                info("{band}/{obsid:04d} - skipping. already processed"
+                     .format(band=b, obsid=oi, objtype=ot))
+                continue
+
+            stat = (yield b, oi, ot, ft, dt_row, obsset)
+
+            print("send:", stat)
+            if stat:
+                index_db.save_hexdigest(recipe_name, b, oi, "",
+                                        dict(obstype=ot, frametype=ft))
+
+
+def quicklook_decorator(recipe_name):
+    def _decorated(fun):
+        def _f(obsdate, obsids=None, objtypes=None, frametypes=None,
+               bands="HK", **kwargs):
+            cgen = oi_ot_ft_generator(recipe_name, obsdate,
+                                      obsids, objtypes,
+                                      frametypes, bands, **kwargs)
+            stat = None
+            while True:
+                try:
+                    _ = cgen.send(stat)
+                except StopIteration:
+                    break
+
+                (b, oi, ot, ft, dt_row, obsset) = _
+                print("# entering", _)
+                fun(b, oi, ot, ft, dt_row, obsset)
+
+                stat = True
+        return _f
+    return _decorated
+
+
+@quicklook_decorator("quicklook")
+def quicklook_func(b, oi, ot, ft, dt_row, obsset):
+
+    if ot == "FLAT":
+        jo_list, jo_raw_list = do_ql_flat(obsset)
+        # print(len(jo_list), jo_list[0][1]["stat_profile"])
+        # df = pd.DataFrame(jo_list[0][1]["stat_profile"])
+        save_jo_list(obsset, jo_list, jo_raw_list)
+
+        jo = jo_list[0][1]
+        fig1 = plot_flat(jo)
+
+        save_fig_list(obsset, oi, [fig1])
+
+    elif ot in ["STD"]:
+        info("{band}/{obsid:04d} - unsupported OBJTYPE:{objtype}"
+             .format(band=b, obsid=oi, objtype=ot))
+
+        jo_list, jo_raw_list = do_ql_std(obsset, b)
+        # df = pd.DataFrame(jo_list[0][1]["stat_profile"])
+        # print(df[["y", "t_down_10", "t_up_90"]])
+        save_jo_list(obsset, jo_list, jo_raw_list)
+
+        jo = jo_list[0][1]
+        jo_raw = jo_raw_list[0][1]
+
+        fig1 = plot_stacked_profile(jo)
+        fig2 = plot_per_order_stat(jo_raw, jo)
+
+        save_fig_list(obsset, oi, [fig1, fig2])
+
+    elif ot in ["TAR"]:
+        info("{band}/{obsid:04d} - unsupported OBJTYPE:{objtype}"
+             .format(band=b, obsid=oi, objtype=ot))
+
+        jo_list, jo_raw_list = do_ql_std(obsset, b)
+        # df = pd.DataFrame(jo_list[0][1]["stat_profile"])
+        # print(df[["y", "t_down_10", "t_up_90"]])
+        save_jo_list(obsset, jo_list, jo_raw_list)
+
+        jo = jo_list[0][1]
+        jo_raw = jo_raw_list[0][1]
+
+        fig1 = plot_stacked_profile(jo)
+        fig2 = plot_per_order_stat(jo_raw, jo)
+
+        save_fig_list(obsset, oi, [fig1, fig2])
+
+    else:
+        info("{band}/{obsid:04d} - unsupported OBJTYPE:{objtype}"
+             .format(band=b, obsid=oi, objtype=ot))
+
+
+def get_guard_column_pattern(d):
+    from igrins.procedures.readout_pattern import pipes
+    pipenames_dark1 = ['amp_wise_bias_r2', 'p64_0th_order']
+
+    guards = d[:, [0, 1, 2, 3, -4, -3, -2, -1]]
+
+    pp = OrderedDict()
+    for k in pipenames_dark1:
+        p = pipes[k]
+        _ = p.get(guards)
+        guards = guards - p.broadcast(guards, _)
+        pp[k] = _
+
+    guards = guards - np.median(guards)
+
+    return guards, pp
+
+
+def get_column_percentile(guards, percentiles=None):
+    if percentiles is None:
+        percentiles = [10, 90]
+    # guards = d[:, [0, 1, 2, 3, -4, -3, -2, -1]]
+    r = OrderedDict(zip(percentiles, np.percentile(guards, percentiles)))
+    r["std"] = np.std(guards[(r[10] < guards) & (guards < r[90])])
+    return r
+
+
+@quicklook_decorator("noise_guard")
+def noise_guard_func(b, oi, ot, ft, dt_row, obsset):
+    if True:
+        hdus = obsset.get_hdus()
+        assert len(hdus) == 1
+        d = hdus[0].data
+        guard, pp = get_guard_column_pattern(d)
+        percent = get_column_percentile(guard)
+
+        item_desc = ("QL_PATH", "{basename}{postfix}.noise_guard.json")
+        obsset.rs.store(str(oi), item_desc, dict(percentiles=percent,
+                                                 pattern_noise=pp))
+
+    else:
+        info("{band}/{obsid:04d} - unsupported OBJTYPE:{objtype}"
+             .format(band=b, obsid=oi, objtype=ot))
+
+
+def quicklook_func_deprecated(obsdate, obsids=None, objtypes=None, frametypes=None,
+                              bands="HK", **kwargs):
+    import os
+    from ..igrins_libs.igrins_config import IGRINSConfig
+
+    config_file = kwargs.pop("config_file", None)
+    if config_file is not None:
+        config = IGRINSConfig(config_file)
+    else:
+        config = IGRINSConfig("recipe.config")
+
+    fn0 = config.get_value('INDATA_PATH', obsdate)
+
+    if not os.path.exists(fn0):
+        raise RuntimeError("directory {} does not exist.".format(fn0))
+
+    if isinstance(obsids, str):
+        obsids = [int(_) for _ in obsids.split(",")]
 
     oi_ot_ft_list = _get_obsid_obstype_frametype_list(config, obsdate,
                                                       obsids, objtypes,
@@ -267,9 +447,18 @@ def quicklook_func(obsdate, obsids=None, objtypes=None, frametypes=None,
             index_db.save_hexdigest("quicklook", b, oi, "",
                                     dict(obstype=ot, frametype=ft))
 
+
 def create_argh_command_quicklook():
 
     func = wrap_multi(quicklook_func, driver_args)
     func = argh.decorators.named("quicklook")(func)
+
+    return func
+
+
+def create_argh_command_noise_guard():
+
+    func = wrap_multi(noise_guard_func, driver_args)
+    func = argh.decorators.named("noise-guard")(func)
 
     return func

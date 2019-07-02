@@ -11,7 +11,8 @@ from igrins.pipeline.steps import create_argh_command_from_steps
 from igrins.igrins_recipes.recipe_prepare_recipe_logs \
     import prepare_recipe_logs
 
-from igrins.quicklook.obsset_ql import create_argh_command_quicklook
+from igrins.quicklook.obsset_ql import (create_argh_command_quicklook,
+                                        create_argh_command_noise_guard)
 
 # from igrins.pipeline.sample_steps import get_pipeline_steps
 
@@ -58,6 +59,7 @@ recipe_list = [prepare_recipe_logs,
                create_argh_command("divide-a0v", ["STELLAR_*",
                                                   "EXTENDED_*"]),
                create_argh_command_quicklook(),
+               create_argh_command_noise_guard()
 ]
 
 parser = argh.ArghParser()
