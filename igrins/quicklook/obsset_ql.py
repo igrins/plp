@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import hashlib
@@ -102,7 +103,9 @@ def _get_obsid_obstype_frametype_list(config, obsdate,
     if None not in [obsids, objtypes, frametypes]:
         return zip(obsids, objtypes, frametypes)
 
-    fn0 = config.get_value('INDATA_PATH', obsdate)
+    fn0 = os.path.join(config.root_dir,
+                       config.get_value('INDATA_PATH', obsdate))
+    # fn0 = config.get_value('INDATA_PATH', obsdate)
     df = dt_logs.load_from_dir(obsdate, fn0)
 
     keys = ["OBSID", "OBJNAME", "FRAMETYPE", "OBJTYPE", "EXPTIME", "ROTPA"]
@@ -182,7 +185,6 @@ def oi_ot_ft_generator(recipe_name,
                        obsdate, obsids=None, objtypes=None, frametypes=None,
                        bands="HK", **kwargs):
 
-    import os
     from ..igrins_libs.igrins_config import IGRINSConfig
 
     config_file = kwargs.pop("config_file", None)
@@ -191,7 +193,8 @@ def oi_ot_ft_generator(recipe_name,
     else:
         config = IGRINSConfig("recipe.config")
 
-    fn0 = config.get_value('INDATA_PATH', obsdate)
+    fn0 = os.path.join(config.root_dir,
+                       config.get_value('INDATA_PATH', obsdate))
 
     if not os.path.exists(fn0):
         raise RuntimeError("directory {} does not exist.".format(fn0))
@@ -363,10 +366,10 @@ def quicklook_func_deprecated(obsdate, obsids=None, objtypes=None, frametypes=No
     else:
         config = IGRINSConfig("recipe.config")
 
-    fn0 = config.get_value('INDATA_PATH', obsdate)
+    # fn0 = config.get_value('INDATA_PATH', obsdate)
 
-    if not os.path.exists(fn0):
-        raise RuntimeError("directory {} does not exist.".format(fn0))
+    # if not os.path.exists(fn0):
+    #     raise RuntimeError("directory {} does not exist.".format(fn0))
 
     if isinstance(obsids, str):
         obsids = [int(_) for _ in obsids.split(",")]
