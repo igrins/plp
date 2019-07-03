@@ -215,7 +215,7 @@ def oi_ot_ft_generator(recipe_name,
         for oi, ot, ft, dt_row in oi_ot_ft_list:
             obsset = get_obsset(obsdate, "quicklook", b,
                                 obsids=[oi], frametypes=[ft],
-                                config_file=config_file)
+                                config_file=config)
             storage = obsset.rs.storage.new_sectioned_storage("OUTDATA_PATH")
             index_db = IndexDB(storage)
 

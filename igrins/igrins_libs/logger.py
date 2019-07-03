@@ -9,11 +9,16 @@ def set_level(level):
     logging.basicConfig(level=level)
 
 
+def debug(msg):
+    ""
+    logger.debug(msg)
+
+
 def info(msg):
     ""
     logger.info(msg)
 
 
-def debug(msg):
+def warning(msg):
     ""
-    logger.debug(msg)
+    logger.warning(msg)
