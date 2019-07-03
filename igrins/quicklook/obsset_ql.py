@@ -12,7 +12,7 @@ from ..pipeline.driver import get_obsset as _get_obsset
 
 from ..pipeline.argh_helper import argh, arg, wrap_multi
 
-from ..igrins_libs.logger import info
+from ..igrins_libs.logger import info, set_level
 
 from .ql_slit_profile import plot_stacked_profile, plot_per_order_stat
 from .ql_flat import plot_flat
@@ -88,7 +88,9 @@ driver_args = [arg("-b", "--bands", default="HK"),
                arg("-t", "--objtypes", default=None),
                arg("-f", "--frametypes", default=None),
                arg("-c", "--config-file", default=None),
-               arg("-v", "--verbose", default=0),
+               arg("-v", "--verbose", default="INFO",
+                   choices=["CRITICAL", "ERROR", "WARNING",
+                            "INFO", "DEBUG", "NOTSET"]),
                arg("-ns", "--no-skip", default=False),
                # arg("--resume-from-context-file", default=None),
                # arg("--save-context-on-exception", default=False),
@@ -228,7 +230,7 @@ def oi_ot_ft_generator(recipe_name,
 
             stat = (yield b, oi, ot, ft, dt_row, obsset)
 
-            print("send:", stat)
+            # print("send:", stat)
             if stat:
                 index_db.save_hexdigest(recipe_name, b, oi, "",
                                         dict(obstype=ot, frametype=ft))
@@ -238,6 +240,9 @@ def quicklook_decorator(recipe_name):
     def _decorated(fun):
         def _f(obsdate, obsids=None, objtypes=None, frametypes=None,
                bands="HK", **kwargs):
+            debug = kwargs.pop("verbose")
+            set_level(debug)
+
             cgen = oi_ot_ft_generator(recipe_name, obsdate,
                                       obsids, objtypes,
                                       frametypes, bands, **kwargs)
@@ -249,7 +254,7 @@ def quicklook_decorator(recipe_name):
                     break
 
                 (b, oi, ot, ft, dt_row, obsset) = _
-                print("# entering", _)
+                info("entering {}".format(_))
                 fun(b, oi, ot, ft, dt_row, obsset)
 
                 stat = True
@@ -401,7 +406,6 @@ def quicklook_func_deprecated(obsdate, obsids=None, objtypes=None, frametypes=No
                 jo_list, jo_raw_list = do_ql_flat(obsset)
                 # print(len(jo_list), jo_list[0][1]["stat_profile"])
                 df = pd.DataFrame(jo_list[0][1]["stat_profile"])
-                print(df[["y", "t_down_10", "t_up_90"]])
                 save_jo_list(obsset, jo_list, jo_raw_list)
 
                 jo = jo_list[0][1]
@@ -432,7 +436,6 @@ def quicklook_func_deprecated(obsdate, obsids=None, objtypes=None, frametypes=No
 
                 jo_list, jo_raw_list = do_ql_std(obsset, b)
                 # df = pd.DataFrame(jo_list[0][1]["stat_profile"])
-                # print(df[["y", "t_down_10", "t_up_90"]])
                 save_jo_list(obsset, jo_list, jo_raw_list)
 
                 jo = jo_list[0][1]

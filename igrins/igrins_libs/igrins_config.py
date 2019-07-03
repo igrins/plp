@@ -1,8 +1,8 @@
-import warnings
 import os
 from six.moves import configparser as ConfigParser
 from six.moves import cStringIO as StringIO
 
+from ..igrins_libs.logger import info
 
 default_config_content = """[DEFAULT]
 MASTER_CAL_DIR=master_calib
@@ -37,8 +37,8 @@ class IGRINSConfig(object):
 
         read_file = self.config.read(config_file)
         if not read_file:
-            warnings.warn("no {} is found. Internal default will be used."
-                          .format(config_file))
+            info("no {} is found. Internal default will be used."
+                 .format(config_file))
 
         self.master_cal_dir = os.path.join(self.root_dir,
                                            self.config.get("DEFAULT",
