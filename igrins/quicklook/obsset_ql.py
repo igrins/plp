@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import hashlib
 import json
+import inspect
 
 from collections import OrderedDict
 
@@ -83,10 +84,10 @@ def get_obsset(obsdate, recipe_name, band,
     return obsset
 
 
-driver_args = [arg("-b", "--bands", default="HK"),
-               arg("-o", "--obsids", default=None),
+driver_args = [arg("-o", "--obsids", default=None),
                arg("-t", "--objtypes", default=None),
                arg("-f", "--frametypes", default=None),
+               arg("-b", "--bands", default="HK"),
                arg("-c", "--config-file", default=None),
                arg("-v", "--verbose", default="INFO",
                    choices=["CRITICAL", "ERROR", "WARNING",
@@ -95,6 +96,22 @@ driver_args = [arg("-b", "--bands", default="HK"),
                # arg("--resume-from-context-file", default=None),
                # arg("--save-context-on-exception", default=False),
                arg("-d", "--debug", default=False)]
+
+
+def _get_default_values(driver_args):
+    default_map = OrderedDict()
+    for a in driver_args:
+        if "default" not in a:
+            continue
+
+        for k in a["option_strings"]:
+            if k.startswith("--"):
+                default_map[k[2:].replace("-", "_")] = a["default"]
+
+    return default_map
+
+
+driver_args_map = _get_default_values(driver_args)
 
 
 def _get_obsid_obstype_frametype_list(config, obsdate,
@@ -240,6 +257,14 @@ def quicklook_decorator(recipe_name):
     def _decorated(fun):
         def _f(obsdate, obsids=None, objtypes=None, frametypes=None,
                bands="HK", **kwargs):
+
+            # this is very hacky way of populating the default values.
+            # Better update the function documentation also.
+            positional_args = inspect.getfullargspec(_f).args
+            for k, v in driver_args_map.items():
+                if (k not in positional_args):
+                    kwargs.setdefault(k, v)
+
             debug = kwargs.pop("verbose")
             set_level(debug)
 
