@@ -265,7 +265,7 @@ def quicklook_decorator(recipe_name):
                 if (k not in positional_args):
                     kwargs.setdefault(k, v)
 
-            debug = kwargs.pop("verbose")
+            debug = kwargs.get("verbose")
             set_level(debug)
 
             cgen = oi_ot_ft_generator(recipe_name, obsdate,
