@@ -1,7 +1,9 @@
+from collections import OrderedDict
 
 from ..pipeline.steps import create_argh_command_from_steps
 from ..pipeline.main_recipe import driver_func, driver_args
 from . import get_pipeline_steps
+from .argh_helper import get_default_values
 
 from ..igrins_recipes.recipe_prepare_recipe_logs \
     import prepare_recipe_logs
@@ -52,3 +54,21 @@ def get_recipe_list():
     ]
 
     return recipe_list
+
+
+def get_callable_recipes():
+    recipes = OrderedDict()
+
+    for argh_entrant in get_recipe_list():
+        if hasattr(argh_entrant, "argh_name"):
+            def _f(obsdate, **kwargs):
+                kw2 = get_default_values(argh_entrant.argh_args)
+                unknown_arg_names = set(kwargs.keys()).difference(kw2.keys())
+                if unknown_arg_names:
+                    raise RuntimeError("unknown keyword arguments: {}".
+                                       format(unknown_arg_names))
+
+                argh_entrant(obsdate, **kwargs)
+            recipes[argh_entrant.argh_name] = _f
+
+    return recipes

@@ -18,6 +18,8 @@ from ..igrins_libs.logger import info, set_level
 from .ql_slit_profile import plot_stacked_profile, plot_per_order_stat
 from .ql_flat import plot_flat
 
+from ..igrins_recipes.argh_helper import get_default_values
+
 
 def _hash(recipe, band, groupid, basename_postfix, params):
     d = dict(recipe=recipe, band=band, groupid=groupid,
@@ -98,20 +100,20 @@ driver_args = [arg("-o", "--obsids", default=None),
                arg("-d", "--debug", default=False)]
 
 
-def _get_default_values(driver_args):
-    default_map = OrderedDict()
-    for a in driver_args:
-        if "default" not in a:
-            continue
+# def _get_default_values(driver_args):
+#     default_map = OrderedDict()
+#     for a in driver_args:
+#         if "default" not in a:
+#             continue
 
-        for k in a["option_strings"]:
-            if k.startswith("--"):
-                default_map[k[2:].replace("-", "_")] = a["default"]
+#         for k in a["option_strings"]:
+#             if k.startswith("--"):
+#                 default_map[k[2:].replace("-", "_")] = a["default"]
 
-    return default_map
+#     return default_map
 
 
-driver_args_map = _get_default_values(driver_args)
+driver_args_map = get_default_values(driver_args)
 
 
 def _get_obsid_obstype_frametype_list(config, obsdate,
@@ -280,7 +282,7 @@ def quicklook_decorator(recipe_name):
 
                 (b, oi, ot, ft, dt_row, obsset) = _
                 info("entering {}".format(_))
-                fun(b, oi, ot, ft, dt_row, obsset)
+                fun(b, oi, ot, ft, dt_row, obsset, kwargs)
 
                 stat = True
         return _f
@@ -288,7 +290,7 @@ def quicklook_decorator(recipe_name):
 
 
 @quicklook_decorator("quicklook")
-def quicklook_func(b, oi, ot, ft, dt_row, obsset):
+def quicklook_func(b, oi, ot, ft, dt_row, obsset, kwargs):
 
     if ot == "FLAT":
         jo_list, jo_raw_list = do_ql_flat(obsset)
@@ -340,24 +342,6 @@ def quicklook_func(b, oi, ot, ft, dt_row, obsset):
              .format(band=b, obsid=oi, objtype=ot))
 
 
-def get_guard_column_pattern(d):
-    from igrins.procedures.readout_pattern import pipes
-    pipenames_dark1 = ['amp_wise_bias_r2', 'p64_0th_order']
-
-    guards = d[:, [0, 1, 2, 3, -4, -3, -2, -1]]
-
-    pp = OrderedDict()
-    for k in pipenames_dark1:
-        p = pipes[k]
-        _ = p.get(guards)
-        guards = guards - p.broadcast(guards, _)
-        pp[k] = _
-
-    guards = guards - np.median(guards)
-
-    return guards, pp
-
-
 def get_column_percentile(guards, percentiles=None):
     if percentiles is None:
         percentiles = [10, 90]
@@ -367,18 +351,46 @@ def get_column_percentile(guards, percentiles=None):
     return r
 
 
+def get_guard_column_pattern(d, pattern_noise_recipes=None):
+    from igrins.procedures.readout_pattern import pipes
+    if pattern_noise_recipes is None:
+        pipenames_dark1 = ['amp_wise_bias_r2', 'p64_0th_order']
+    else:
+        pipenames_dark1 = pattern_noise_recipes
+
+    guards = d[:, [0, 1, 2, 3, -4, -3, -2, -1]]
+
+    pp = OrderedDict()
+    for k in pipenames_dark1:
+        p = pipes[k]
+        _ = p.get(guards)
+        guards = guards - p.broadcast(guards, _)
+
+        guards = guards - np.median(guards)
+        s = get_column_percentile(guards)
+        pp[k] = dict(pattern=_, stat=s)
+
+    return guards, pp
+
+
 @quicklook_decorator("noise_guard")
-def noise_guard_func(b, oi, ot, ft, dt_row, obsset):
+def noise_guard_func(b, oi, ot, ft, dt_row, obsset, kwargs):
     if True:
+        pattern_noise_recipes = kwargs.get("pattern_noise_recipes", None)
+        if pattern_noise_recipes is not None:
+            pattern_noise_recipes = [s.strip() for s
+                                     in pattern_noise_recipes.split(",")]
+
         hdus = obsset.get_hdus()
         assert len(hdus) == 1
         d = hdus[0].data
-        guard, pp = get_guard_column_pattern(d)
-        percent = get_column_percentile(guard)
+        guard, pp = get_guard_column_pattern(d, pattern_noise_recipes)
+        # percent = get_column_percentile(guard)
 
         item_desc = ("QL_PATH", "{basename}{postfix}.noise_guard.json")
-        obsset.rs.store(str(oi), item_desc, dict(percentiles=percent,
-                                                 pattern_noise=pp))
+        obsset.rs.store(str(oi), item_desc,
+                        dict(pattern_noise_recipes=pattern_noise_recipes,
+                             pattern_noise=pp))
 
     else:
         info("{band}/{obsid:04d} - unsupported OBJTYPE:{objtype}"
@@ -491,6 +503,9 @@ def create_argh_command_quicklook():
 def create_argh_command_noise_guard():
 
     func = wrap_multi(noise_guard_func, driver_args)
+    extra_args = [arg("--pattern-noise-recipes",
+                      default="amp_wise_bias_r2,p64_0th_order")]
+    func = wrap_multi(noise_guard_func, extra_args)
     func = argh.decorators.named("noise-guard")(func)
 
     return func
