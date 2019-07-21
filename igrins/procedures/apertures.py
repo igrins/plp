@@ -23,10 +23,10 @@ class ApCoeff(object):
 
 class Apertures(object):
     def set_order_minmax_to_extract(self, start_order, end_order):
-        if start_order < 0:
+        if (start_order is None) or (start_order < 0):
             start_order = self.orders[0]
 
-        if end_order < 0:
+        if (end_order is None) or (end_order < 0):
             end_order = self.orders[-1]
 
         self.orders_to_extract = range(start_order, end_order+1)

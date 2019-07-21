@@ -6,6 +6,9 @@ from .igrins_libs.resource_helper_igrins import ResourceHelper
 
 from .igrins_libs.storage_descriptions import load_descriptions
 
+from .igrins_libs.logger import set_level as set_log_level
+
+
 DESCS = load_descriptions()
 
 
@@ -46,6 +49,12 @@ DESCS = load_descriptions()
                                        
 #     obsset = get_obsset(caldb, band, recipe_name, obsids, frametypes)
 #     return obsset
+
+
+def load_config(config_file=None):
+    from .igrins_libs.igrins_config import IGRINSConfig
+    config = IGRINSConfig(config_file=config_file)
+    return config
 
 
 def load_recipe_log(obsdate, config_file=None):

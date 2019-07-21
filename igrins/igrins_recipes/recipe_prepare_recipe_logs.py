@@ -2,7 +2,8 @@ import os
 import pandas as pd
 from ..igrins_libs import dt_logs
 
-from ..igrins_libs import logger
+from ..igrins_libs.logger import logger
+from ..external import argh
 
 
 _default_recipe_name = dict(flat="FLAT", std="A0V_AB", tar="STELLAR_AB",
@@ -85,13 +86,16 @@ def write_to_file(df_recipe_logs, fn_out):
     open(fn_out, "w").write(fout.getvalue())
 
 
+@argh.arg("-n", "--no-tmp-file", default=False)
 def prepare_recipe_logs(obsdate, config_file="recipe.config",
-                        populate_group1=False):
+                        populate_group1=False, no_tmp_file=False,
+                        overwrite=None):
 
     from ..igrins_libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
 
-    fn0 = config.get_value('INDATA_PATH', obsdate)
+    _fn0 = config.get_value('INDATA_PATH', obsdate)
+    fn0 = os.path.join(config.root_dir, _fn0)
 
     if not os.path.exists(fn0):
         raise RuntimeError("directory {} does not exist.".format(fn0))
@@ -104,15 +108,35 @@ def prepare_recipe_logs(obsdate, config_file="recipe.config",
                                       populate_group1=populate_group1)
 
     recipe_log_name = config.get_value('RECIPE_LOG_PATH', obsdate)
-    fn_out = recipe_log_name + ".tmp"
+    if no_tmp_file:
+        _fn_out = recipe_log_name
+    else:
+        _fn_out = recipe_log_name + ".tmp"
 
-    df_recipe_logs.to_html("test2.html")
+    fn_out = os.path.join(config.root_dir, _fn_out)
+
+    if overwrite is None:
+        if no_tmp_file:
+            overwrite = False
+        else:
+            overwrite = True
+
+    if not overwrite and os.path.exists(fn_out):
+        raise RuntimeError("output file exists and "
+                           "overwrite is not set: {}".format(fn_out))
+
     write_to_file(df_recipe_logs, fn_out)
 
-    logger.info("".join(["A draft version of the recipe log is ",
-                         "written to '{}'.\n".format(fn_out),
-                         "Make an adjusment and ",
-                         "rename it to '{}'.\n".format(recipe_log_name)]))
+    # df_recipe_logs.to_html("test2.html")
+
+    if not no_tmp_file:
+        print("".join(["A draft version of the recipe log is ",
+                       "written to '{}'.\n".format(fn_out),
+                       "Make an adjusment and ",
+                       "rename it to '{}'.\n".format(recipe_log_name)]))
+    else:
+        print("".join(["A draft version of the recipe log is ",
+                       "written to '{}'.\n".format(fn_out)]))
 
 
 def test2():

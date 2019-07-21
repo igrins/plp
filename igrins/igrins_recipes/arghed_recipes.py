@@ -56,19 +56,29 @@ def get_recipe_list():
     return recipe_list
 
 
+def make_recipe_func(argh_entrant):
+    def _f(obsdate, **kwargs):
+        kw2 = get_default_values(argh_entrant.argh_args)
+        unknown_arg_names = set(kwargs.keys()).difference(kw2.keys())
+        if unknown_arg_names:
+            raise RuntimeError("unknown keyword arguments: {}".
+                               format(unknown_arg_names))
+
+        argh_entrant(obsdate, **kwargs)
+
+    return _f
+
+
 def get_callable_recipes():
     recipes = OrderedDict()
 
     for argh_entrant in get_recipe_list():
         if hasattr(argh_entrant, "argh_name"):
-            def _f(obsdate, **kwargs):
-                kw2 = get_default_values(argh_entrant.argh_args)
-                unknown_arg_names = set(kwargs.keys()).difference(kw2.keys())
-                if unknown_arg_names:
-                    raise RuntimeError("unknown keyword arguments: {}".
-                                       format(unknown_arg_names))
 
-                argh_entrant(obsdate, **kwargs)
+            _f = make_recipe_func(argh_entrant)
             recipes[argh_entrant.argh_name] = _f
+
+        elif callable(argh_entrant) and hasattr(argh_entrant, "__name__"):
+            recipes[argh_entrant.__name__] = argh_entrant
 
     return recipes

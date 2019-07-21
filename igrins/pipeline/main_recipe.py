@@ -1,9 +1,11 @@
+import os
 from .argh_helper import arg
 from .driver import get_obsset, get_obsset_from_context  # , apply_steps
 from .steps import apply_steps
 
 from ..igrins_libs.logger import info
 from ..igrins_libs.recipes import get_pmatch_from_fnmatch
+
 
 # for testing purposes
 def _parse_groups(groups):
@@ -42,7 +44,8 @@ def iter_obsset(recipe_name_fnmatch,
     from ..igrins_libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
 
-    fn = config.get_value('RECIPE_LOG_PATH', obsdate)
+    fn = os.path.join(config.root_dir,
+                      config.get_value('RECIPE_LOG_PATH', obsdate))
 
     from ..igrins_libs.recipes import RecipeLog
     recipes = RecipeLog(obsdate, fn)
@@ -58,7 +61,7 @@ def iter_obsset(recipe_name_fnmatch,
 
     if len(selected) == 0:
         raise ValueError("no matching recipes are found: {}"
-                         .format(", ".join(recipe_name_fnmatch)))
+                         .format(recipe_name_fnmatch))
 
     for band in bands:
         # info("= Entering band:{}".format(band))
