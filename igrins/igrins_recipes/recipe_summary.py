@@ -42,6 +42,17 @@ def get_first_group(group_exptime_frametypes,
     return group
 
 
+def split_obsids_frametypes(df_recipe_logs, copy=True):
+    if copy:
+        df_recipe_logs = df_recipe_logs.copy()
+
+    ss = df_recipe_logs["OBSIDS"].astype("U").str.split()
+    df_recipe_logs["OBSIDS"] = [list(map(int, s)) for s in ss]
+    df_recipe_logs["FRAMETYPES"] = df_recipe_logs["FRAMETYPES"].str.split()
+
+    return df_recipe_logs
+
+
 class RecipeSummary(object):
     def __init__(self, obsdate, df):
         self.obsdate = obsdate
