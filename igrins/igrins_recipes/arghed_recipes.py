@@ -30,6 +30,8 @@ def get_recipe_list():
     recipe_list = [prepare_recipe_logs,
                    create_argh_command("dark"),
                    create_argh_command("flat"),
+                   create_argh_command("analyze-flat",
+                                       ["FLAT"]),
                    create_argh_command("register-sky", ["SKY", "SKY_AB"]),
                    create_argh_command("wvlsol-sky", ["SKY", "SKY_AB"]),
                    create_argh_command("extract-sky", ["SKY", "SKY_AB"]),

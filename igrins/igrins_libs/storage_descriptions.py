@@ -16,6 +16,8 @@ FLAT_OFF_BG_DESC = ("PRIMARY_CALIB_PATH", "FLAT_{basename}{postfix}.flat_off_bg.
 HOTPIX_MASK_DESC = ("PRIMARY_CALIB_PATH", "FLAT_{basename}{postfix}.hotpix_mask.fits")
 FLATOFF_JSON_DESC = ("PRIMARY_CALIB_PATH", "FLAT_{basename}{postfix}.flat_off.json")
 
+FLAT_MOMENTS_FITS_DESC = ("SECONDARY_CALIB_PATH",
+                          "FLAT_{basename}{postfix}.moments.fits")
 
 # FLAT_ON related
 
