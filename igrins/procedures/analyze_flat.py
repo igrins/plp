@@ -79,14 +79,17 @@ def get_peak_array(imderiv, ol, orange):
     yi, xi = np.indices(imderiv.shape)
     yc_list = []
 
+    bottom_deriv = imderiv
+    top_deriv = -imderiv
+
     for o in orange:
         _ = oo.get(o, None)
         if _ is None:
             yc_list.append(np.zeros(imderiv.shape[-1]))
             continue
 
-        ym0, dy0 = refined_argmax(imderiv, _["bottom_mask"])
-        ym1, dy1 = refined_argmax(imderiv, _["top_mask"])
+        ym0, dy0 = refined_argmax(bottom_deriv, _["bottom_mask"])
+        ym1, dy1 = refined_argmax(top_deriv, _["top_mask"])
 
         yc_list.append([ym0 + dy0, ym1 + dy1])
 
