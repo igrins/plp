@@ -64,7 +64,8 @@ def get_flat_mask_auto(flat_bpix):
 
     bg_mean, bg_fwhm = estimate_bg_mean_std(flat_bpix, pad=4,
                                             smoothing_length=150)
-    flat_mask = (flat_bpix > bg_mean + bg_fwhm*3)
+    with np.errstate(invalid="ignore"):
+        flat_mask = (flat_bpix > bg_mean + bg_fwhm*3)
 
     # remove isolated dots by doing binary erosion
     m_opening = ni.binary_opening(flat_mask, iterations=2)
@@ -291,19 +292,20 @@ def identify_horizontal_line(d_deriv, mmp, pad=20, bg_std=None):
         ys = np.nansum(feature, axis=0)
         yn = np.sum(np.isfinite(feature), axis=0)
 
-        yy = yc/ys
+        with np.errstate(invalid="ignore"):
+            yy = yc/ys
 
-        msk = mask_median_clip(yy) | ~np.isfinite(yy)
+            msk = mask_median_clip(yy) | ~np.isfinite(yy)
 
-        # we also clip wose derivative is smaller than bg_std
-        # This suprress the lowest order of K band
-        if bg_std is not None:
-            msk = msk | (ys/yn < bg_std)
-            # msk = msk | (ys/yn < 0.0006 + 0.0003)
+            # we also clip wose derivative is smaller than bg_std
+            # This suprress the lowest order of K band
+            if bg_std is not None:
+                msk = msk | (ys/yn < bg_std)
+                # msk = msk | (ys/yn < 0.0006 + 0.0003)
 
-        # mask out columns with # of valid pixel is too many
-        # number 10 need to be fixed - JJL
-        msk = msk | (yn > 10)
+            # mask out columns with # of valid pixel is too many
+            # number 10 need to be fixed - JJL
+            msk = msk | (yn > 10)
 
         centroid_list.append((x_indices1,
                               np.ma.array(yy, mask=msk)))
