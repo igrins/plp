@@ -1,4 +1,8 @@
 from collections import OrderedDict
+try:
+    from tqdm.autonotebook import tqdm
+except ImportError:
+    tqdm = None
 
 from .argh_helper import argh, arg, wrap_multi
 
@@ -54,7 +58,11 @@ class Step():
         self.f(obsset, **self.kwargs)
 
 
-def apply_steps(obsset, steps, kwargs=None, step_slice=None, on_raise=None):
+def apply_steps(obsset, steps, kwargs=None, step_slice=None, on_raise=None,
+                progress_mode="ascii"):
+    """
+    progress_mode : terminal, tqdm, notebook, etc
+    """
 
     if kwargs is None:
         kwargs = {}
@@ -65,14 +73,22 @@ def apply_steps(obsset, steps, kwargs=None, step_slice=None, on_raise=None):
         step_range = step_range[step_slice]
 
     obsdate_band = str(obsset.rs.get_resource_spec())
-    if obsset.basename_postfix:
-        info("[{} {}: {} {}]".format(obsdate_band,
-                                     obsset.recipe_name,
-                                     obsset.groupname, obsset.basename_postfix))
+    if progress_mode == "terminal":
+        if obsset.basename_postfix:
+            info("[{} {}: {} {}]".format(obsdate_band,
+                                         obsset.recipe_name,
+                                         obsset.groupname,
+                                         obsset.basename_postfix))
+        else:
+            info("[{} {}: {}]".format(obsdate_band,
+                                      obsset.recipe_name, obsset.groupname))
+
+    if tqdm and progress_mode == "tqdm":
+        _it = tqdm(enumerate(steps), total=len(steps))
     else:
-        info("[{} {}: {}]".format(obsdate_band,
-                                  obsset.recipe_name, obsset.groupname))
-    for context_id, step in enumerate(steps):
+        _it = enumerate(steps)
+
+    for context_id, step in _it:
         if hasattr(step, "name"):
             context_name = step.name
         else:
@@ -82,13 +98,14 @@ def apply_steps(obsset, steps, kwargs=None, step_slice=None, on_raise=None):
             continue
 
         obsset.new_context(context_name)
-        info("  * ({}/{}) {}...".format(context_id + 1,
-                                        n_steps, context_name))
+        if progress_mode == "terminal":
+            info("  * ({}/{}) {}...".format(context_id + 1,
+                                            n_steps, context_name))
         try:
             # step(obsset)
             step.apply(obsset, kwargs)
             obsset.close_context(context_name)
-        except:
+        except Exception:
             obsset.abort_context(context_name)
             if on_raise is not None:
                 on_raise(obsset, context_id)
