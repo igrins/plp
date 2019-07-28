@@ -115,6 +115,8 @@ driver_args = [arg("-b", "--bands", default="HK", choices=["HK", "H", "K"]),
                arg("-g", "--groups", default=None),
                arg("-c", "--config-file", default=None),
                arg("-v", "--verbose", default=0),
+               arg("--progress-mode", default="terminal",
+                   choices=["terminal", "tqdm", "none"]),
                arg("--override-recipe-name", default=False),
                arg("--step-range", default=None),
                arg("--context-name", default="context_{obsdate}_{recipe_name}_{groupname}{basename_postfix}_{context_id}.pickle"),
@@ -135,7 +137,7 @@ def driver_func_obsset(command_name, obsdate, steps, obsset_list,
                        step_range=None,
                        save_io_log=False,
                        io_log_name="SDC{band}_{obsdate}_{groupname}{basename_postfix}.{command_name}.io",
-                       progress_mode=False,
+                       progress_mode="terminal",
                        **kwargs):
     if step_range is not None:
         _se = [k for k in step_range.split(":")]
