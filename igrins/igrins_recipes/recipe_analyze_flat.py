@@ -1,3 +1,5 @@
+import numpy as np
+
 from ..pipeline.steps import Step
 
 from ..igrins_libs.resource_helper_igrins import ResourceHelper
@@ -13,10 +15,13 @@ def analyze_flat(obsset, search_width=7):
 
     imderiv, ol = _analyze_flat.get(obsset, ap, search_width)
 
-    ys = _analyze_flat.get_ys_array(imderiv, ol, orange)
-    ps = _analyze_flat.get_peak_array(imderiv, ol, orange)
+    with np.errstate(invalid="ignore"):
 
-    msk = _analyze_flat.get_response_mask(obsset)
+        msk = _analyze_flat.get_response_mask(obsset)
+        ps = _analyze_flat.get_peak_array(imderiv, ol, orange)
+        fwhm = _analyze_flat.get_fwhm(imderiv, ol, orange, search_width, ps)
+        ys = _analyze_flat.get_ys_array(imderiv, ol, orange)
+
     orders = " ".join([str(o) for o in orange])
 
     hdul = obsset.get_hdul_to_write(([("EXTNAME", "MASK"),
@@ -25,6 +30,10 @@ def analyze_flat(obsset, search_width=7):
                                      ps["bottom"]),
                                     ([("EXTNAME", "PEAK-TOP")],
                                      ps["top"]),
+                                    ([("EXTNAME", "FWHM-BOTTOM")],
+                                     fwhm["bottom"]),
+                                    ([("EXTNAME", "FWHM-TOP")],
+                                     fwhm["top"]),
                                     ([("EXTNAME", "MOM1-BOTTOM")],
                                      ys["1st_moment"]["bottom"]),
                                     ([("EXTNAME", "MOM1-TOP")],
