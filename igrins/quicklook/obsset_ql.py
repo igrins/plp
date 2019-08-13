@@ -20,6 +20,8 @@ from .ql_flat import plot_flat
 
 from ..igrins_recipes.argh_helper import get_default_values
 
+from ..procedures.readout_pattern_guard import get_guard_column_pattern
+
 
 def _hash(recipe, band, groupid, basename_postfix, params):
     d = dict(recipe=recipe, band=band, groupid=groupid,
@@ -342,35 +344,35 @@ def quicklook_func(b, oi, ot, ft, dt_row, obsset, kwargs):
              .format(band=b, obsid=oi, objtype=ot))
 
 
-def get_column_percentile(guards, percentiles=None):
-    if percentiles is None:
-        percentiles = [10, 90]
-    # guards = d[:, [0, 1, 2, 3, -4, -3, -2, -1]]
-    r = OrderedDict(zip(percentiles, np.percentile(guards, percentiles)))
-    r["std"] = np.std(guards[(r[10] < guards) & (guards < r[90])])
-    return r
+# def get_column_percentile(guards, percentiles=None):
+#     if percentiles is None:
+#         percentiles = [10, 90]
+#     # guards = d[:, [0, 1, 2, 3, -4, -3, -2, -1]]
+#     r = OrderedDict(zip(percentiles, np.percentile(guards, percentiles)))
+#     r["std"] = np.std(guards[(r[10] < guards) & (guards < r[90])])
+#     return r
 
 
-def get_guard_column_pattern(d, pattern_noise_recipes=None):
-    from igrins.procedures.readout_pattern import pipes
-    if pattern_noise_recipes is None:
-        pipenames_dark1 = ['amp_wise_bias_r2', 'p64_0th_order']
-    else:
-        pipenames_dark1 = pattern_noise_recipes
+# def get_guard_column_pattern(d, pattern_noise_recipes=None):
+#     from igrins.procedures.readout_pattern import pipes
+#     if pattern_noise_recipes is None:
+#         pipenames_dark1 = ['amp_wise_bias_r2', 'p64_0th_order']
+#     else:
+#         pipenames_dark1 = pattern_noise_recipes
 
-    guards = d[:, [0, 1, 2, 3, -4, -3, -2, -1]]
+#     guards = d[:, [0, 1, 2, 3, -4, -3, -2, -1]]
 
-    pp = OrderedDict()
-    for k in pipenames_dark1:
-        p = pipes[k]
-        _ = p.get(guards)
-        guards = guards - p.broadcast(guards, _)
+#     pp = OrderedDict()
+#     for k in pipenames_dark1:
+#         p = pipes[k]
+#         _ = p.get(guards)
+#         guards = guards - p.broadcast(guards, _)
 
-        guards = guards - np.median(guards)
-        s = get_column_percentile(guards)
-        pp[k] = dict(pattern=_, stat=s)
+#         guards = guards - np.median(guards)
+#         s = get_column_percentile(guards)
+#         pp[k] = dict(pattern=_, stat=s)
 
-    return guards, pp
+#     return guards, pp
 
 
 @quicklook_decorator("noise_guard")
@@ -502,7 +504,7 @@ def create_argh_command_quicklook():
 
 def create_argh_command_noise_guard():
 
-    func = wrap_multi(noise_guard_func, driver_args)
+    # func = wrap_multi(noise_guard_func, driver_args)
     extra_args = [arg("--pattern-noise-recipes",
                       default="amp_wise_bias_r2,p64_0th_order")]
     func = wrap_multi(noise_guard_func, extra_args)
