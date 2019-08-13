@@ -7,7 +7,17 @@ RAWIMAGE_DESC = ("INDATA_PATH", "{basename}{postfix}.fits")
 
 # DARK related
 
-PAIR_SUBTRACTED_IMAGES_DESC = ("OUTDATA_PATH", "{basename}{postfix}.pair_subtracted.fits")
+RO_PATTERN_SUB_CUBE_IMAGES_DESC = ("OUTDATA_PATH", "{basename}{postfix}.ro_pattern_sub_cube.fits")
+
+RO_PATTERN_AMP_WISE_FFT_IMAGES_DESC = ("SECONDARY_CALIB_PATH",
+                                       "{basename}{postfix}.amp_wise_fft.fits")
+RO_PATTERN_C64_WISE_FFT_IMAGES_DESC = ("SECONDARY_CALIB_PATH",
+                                       "{basename}{postfix}.c64_wise_fft.fits")
+RO_PATTERN_SUB_STAT_JSON_DESC = ("SECONDARY_CALIB_PATH",
+                                 "{basename}{postfix}.ro_pattern_sub_stat.json")
+
+
+
 
 # FLAT_OFF related
 
