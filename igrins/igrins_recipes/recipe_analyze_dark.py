@@ -3,7 +3,8 @@ from ..procedures.procedure_dark import (make_guard_n_bg_subtracted_images,
                                          estimate_amp_wise_noise,
                                          print_out_stat_summary,
                                          analyze_amp_wise_fft,
-                                         analyze_c64_wise_fft)
+                                         analyze_c64_wise_fft,
+                                         store_qa)
 
 
 steps = [Step("Make RO pattern-subtracted images",
@@ -15,7 +16,8 @@ steps = [Step("Make RO pattern-subtracted images",
          Step("FFT analysis of RO noise: amp-wise",
               analyze_amp_wise_fft),
          Step("FFT analysis of RO noise: c64-wise",
-              analyze_c64_wise_fft)
-         #make_pair_subtracted_images),
+              analyze_c64_wise_fft),
+         Step("Producing QA plots",
+              store_qa)
 ]
 

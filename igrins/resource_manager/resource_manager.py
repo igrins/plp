@@ -1,3 +1,4 @@
+import os
 from .resource_context import ResourceContextStack
 # from item_convert import ItemConverterBase
 
@@ -123,6 +124,20 @@ class ResourceStack(object):
                   item_desc=item_desc,
                   postfix=postfix,
                   aux=dict(cache_only=cache_only))))
+
+    def store_under(self, basename, item_desc, filename,
+                    data, item_type=None,
+                    postfix="", cache_only=False):
+
+        """
+        mainly to save the qa files under item_desc directory.
+        """
+        section, fn = self.get_section_n_fn(basename, item_desc, postfix)
+        fn = os.path.join(fn, filename)
+        self.context_stack.store(section, fn, data, item_type=item_type,
+                                 cache_only=cache_only)
+
+
     # RESOURCE
 
     def query_resource_for(self, basename, resource_type, postfix=""):

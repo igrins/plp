@@ -134,6 +134,8 @@ QA_FLAT_APERTURE_DIR_DESC = ("QA_PATH", "aperture_{basename}{postfix}")
 QA_ORDERFLAT_DIR_DESC = ("QA_PATH", "orderflat_{basename}{postfix}")
 QA_SKY_FIT2D_DIR_DESC = ("QA_PATH", "sky_fit2d_{basename}{postfix}")
 
+QA_DARK_DIR_DESC = ("QA_PATH", "dark_{basename}{postfix}")
+
 
 #####
 

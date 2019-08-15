@@ -1,73 +1,17 @@
 from __future__ import print_function
 
-from collections import namedtuple
-
+import os
 import numpy as np
-import scipy.ndimage as ni
 import pandas as pd
-
-from astropy.io.fits import Card, HDUList, PrimaryHDU
-
-from ..utils.image_combine import image_median as stsci_median
-from ..procedures import destripe_dark_flatoff as dh
-
-from .. import get_obsset_helper, DESCS
-
-from ..utils.json_helper import json_dumps
-
-from .ascii_plot import (asciiplot_per_amp, pad_with_axes,
-                         pad_yaxis_label, pad_xaxis_label,
-                         pad_title, to_string, markers)
-# from igrins.procedures.readout_pattern import (
-#     PatternAmpP2,
-#     PatternP64Zeroth,
-#     PatternP64First,
-#     PatternP64ColWise,
-#     PatternColWiseBias,
-#     PatternColWiseBiasC64,
-#     PatternRowWiseBias,
-#     PatternAmpWiseBiasC64
-# )
 
 from ..procedures.readout_pattern import pipes, apply as apply_pipe
 from ..procedures.readout_pattern_guard import remove_pattern_from_guard
 
-# from igrins.procedures.readout_pattern import (
-#     sub_amp_p2,
-#     sub_p64_slope,
-#     sub_p64_pattern,
-#     sub_col_median_slow,
-#     sub_col_median,
-#     sub_row_median,
-#     sub_amp_bias_variation,
-#     sub_p64_pattern_each
-# )
+from .ascii_plot import (asciiplot_per_amp, pad_with_axes,
+                         pad_yaxis_label, pad_xaxis_label,
+                         pad_title, to_string, markers)
 
-# from igrins.procedures.readout_pattern import (
-#     get_amp_p2,
-#     get_p64_slope,
-#     get_p64_pattern,
-#     get_col_median_slow,
-#     get_col_median,
-#     get_row_median,
-#     get_amp_bias_variation,
-#     get_p64_pattern_each,
-# )
-
-# from igrins.procedures.readout_pattern import _apply
-
-
-def make_pair_subtracted_images(obsset):
-
-    hdu_list = obsset.get_hdus()
-
-    n = len(hdu_list)
-    cube = []
-    for i in range(n - 1):
-        cube.append(hdu_list[i].data - hdu_list[i+1].data)
-
-    hdul = obsset.get_hdul_to_write(([], np.array(cube)))
-    obsset.store(DESCS["PAIR_SUBTRACTED_IMAGES"], hdul, cache_only=False)
+from .. import DESCS
 
 
 def apply_rp_2nd_phase(d, mask=None):
@@ -204,7 +148,8 @@ def analyze_c64_wise_fft(obsset):
     for k in kl:
         cube = hdul[k].data
 
-        qq_amp = [get_c64_wise_noise_spectrum(c) for c in cube]
+        # qq_amp = [get_c64_wise_noise_spectrum(c) for c in cube]
+        qq_amp = get_c64_wise_noise_spectrum(cube)
         hdul_amp.append(([("EXTNAME", k)], np.array([np.abs(qq_amp),
                                                      np.angle(qq_amp)])))
 
@@ -296,7 +241,7 @@ def print_out_stat_summary(obsset):
     print(S)
 
 
-def test():
+def test_asciiplot():
     from igrins import get_obsset, DESCS
 
     # obsset = get_obsset("20190116", "H", "DARK", obsids=range(1, 11))
@@ -324,30 +269,261 @@ def test():
     print(S)
 
 
-    # mmin = min(min(v1), min(v2))
-    # mmax = max(max(v1), max(v2))
-    # # m, nn = asciiplot_per_amp(v, height=8, mmin=0, mmax=8)
-    # m1, nn = asciiplot_per_amp(v1, height=8, xfactor=1,
-    #                            mmin=mmin, mmax=mmax)
-    # m2, nn = asciiplot_per_amp(v2, height=8, xfactor=1,
-    #                            mmin=mmin, mmax=mmax)
+def _get_hh(qq):
 
-    # ss10 = np.take([" ", markers["o"], "*"], m1)
-    # ss11, sl = pad_with_axes(ss10)
-    # ss12, sl = pad_yaxis_label(ss11, sl, nn[0], nn[-1])
-    # ss13, sl = pad_xaxis_label(ss12, sl, "1", "32")
-    # ss14, sl = pad_title(ss13, sl, "noise per amp: Raw")
+    xbins = np.arange(-0.5, 1025.5, 1.)
+    ybins = np.arange(-0.5, 256, 2.)
 
-    # ss20 = np.take([" ", markers["o"], "*"], m2)
-    # ss21, sl = pad_with_axes(ss20)
-    # ss23, sl = pad_xaxis_label(ss21, sl, "1", "32")
-    # ss24, sl = pad_title(ss23, sl, "Reduced")
-    # # ss2, sl = pad_yaxis_label(ss1, sl, nn[0], nn[-1])
+    hh = np.zeros((len(ybins) - 1, len(xbins) - 1), dtype="d")
+    xx = np.arange(1025)
 
-    # S = "\n".join(["".join(sl) for sl in np.hstack([ss14, ss24])[::-1]])
+    for i, ql in enumerate(qq):
+        for ii, q in enumerate(ql):
+            h_ = np.histogram2d(q, xx, bins=(ybins, xbins))
+            hh += h_[0]
 
-    # fig = plot_ap_per_amp(g["count_gt_threshold"].values, ymargin=200)
-    # fig.ylim(0, 3000)
+    return hh, xbins, ybins
+
+
+def _get_qabs(obsset):
+    hdul = obsset.load(DESCS["RO_PATTERN_AMP_WISE_FFT_IMAGES"])
+
+    # qq = hdul["LEVEL3-REMOVED"].data
+    qabs = dict((k, hdul[k].data[0]) for k in ["DIRTY", "GUARD-REMOVED",
+                                               "LEVEL2-REMOVED",
+                                               "LEVEL3-REMOVED"])
+
+    return qabs
+
+
+def _get_qabs_c64(obsset):
+    hdul = obsset.load(DESCS["RO_PATTERN_C64_WISE_FFT_IMAGES"])
+
+    # qq = hdul["LEVEL3-REMOVED"].data
+    qabs = dict((k, hdul[k].data[0].swapaxes(1, 2))
+                for k in ["DIRTY", "GUARD-REMOVED",
+                          "LEVEL2-REMOVED",
+                          "LEVEL3-REMOVED"])
+
+    return qabs
+
+def _plot_median_fft(fig, qabs):
+    hh, xbins, ybins = _get_hh(qabs["DIRTY"])
+
+    # ncomp = np.
+    ax1 = fig.add_subplot(211)
+
+    im = ax1.imshow(hh, aspect='auto', origin='lower', cmap='gist_gray_r',
+                    extent=[xbins[0], xbins[-1], ybins[0], ybins[-1]])
+    cmax = im.get_clim()[-1]
+    im.set_clim(0, cmax*0.5)
+    g0 = np.median(qabs["DIRTY"], axis=(0, 1))
+    g1 = np.median(qabs["GUARD-REMOVED"], axis=(0, 1))
+    ax1.plot(g0, label="raw")
+    ax1.plot(g1, label="guard-removed")
+    ax1.set_ylim(0, 256)
+    ax1.legend(loc=1)
+
+    ax2 = fig.add_subplot(212, sharex=ax1)
+
+    hh, xbins, ybins = _get_hh(qabs["LEVEL2-REMOVED"])
+    im = ax2.imshow(hh, aspect='auto', origin='lower', cmap='gist_gray_r',
+                    extent=[xbins[0], xbins[-1], ybins[0], ybins[-1]])
+    cmax = im.get_clim()[-1]
+    im.set_clim(0, cmax*0.5)
+    g0 = np.median(qabs["LEVEL2-REMOVED"], axis=(0, 1))
+    g1 = np.median(qabs["LEVEL3-REMOVED"], axis=(0, 1))
+    ax2.plot(g0, label="level2-removed")
+    ax2.plot(g1, label="level3-removed")
+    ax2.set_ylim(0, 64)
+    ax2.legend(loc=1)
+
+
+
+from ..utils.mpl_helper import add_inner_title
+
+def _plot_fft_y(fig, qq, title=None, obsids=None, vmax=256):
+    from matplotlib.gridspec import GridSpec
+    from mpl_toolkits.axes_grid1 import ImageGrid
+    from itertools import repeat
+
+    n = qq.shape[0]
+    gs = GridSpec(2, 1, height_ratios=[5, 1])
+
+    grid = ImageGrid(fig, gs[0], (n, 1), cbar_mode="single",
+                     cbar_location="top",
+                     aspect=False,
+                     cbar_size="20%", cbar_pad=0.1)
+
+    if obsids is None:
+        obsids = repeat(None)
+
+    for ax, q, obsid in zip(grid, qq, obsids):
+        # ax.imshow(ni.gaussian_filter1d(np.abs(q), 1.5, axis=0),
+        im = ax.imshow(np.abs(q),
+                       origin="lower", aspect="auto",
+                       interpolation="none",
+                       vmin=10, vmax=vmax)
+        if obsid is not None:
+            add_inner_title(ax, "obsid={}".format(obsid), loc=1,
+                            style="pe")
+
+    grid.axes_llc.cax.colorbar(im)
+    grid.axes_llc.set_ylabel("Amp num.")
+
+    # line plot
+    hh, xbins, ybins = _get_hh(qq)
+
+    ax = fig.add_subplot(gs[1])
+
+    im = ax.imshow(hh, aspect='auto', origin='lower',
+                   cmap='gist_gray_r',
+                   extent=[xbins[0], xbins[-1], ybins[0], ybins[-1]])
+
+    cmax = im.get_clim()[-1]
+    im.set_clim(0, cmax*0.5)
+    g0 = np.median(qq, axis=(0, 1))
+    ax.plot(g0)
+    ax.set_ylim(0, vmax)
+    ax.set_xlabel("y-wavenumber")
+
+    if title is not None:
+        fig.suptitle(title)
+
+
+def plot_qa_amp_wise_fft(obsset, outname=None):
+    qabs = _get_qabs(obsset)
+
+    from matplotlib.figure import Figure
+    from matplotlib.backends.backend_pdf import PdfPages
+
+    obsids = obsset.get_obsids()
+
+    from six import BytesIO
+    s = BytesIO()
+    with PdfPages(s) as pdf:
+
+        fig = Figure(figsize=(14, 8))
+        _plot_median_fft(fig, qabs)
+        pdf.savefig(fig)
+
+        for k, vmax in [("DIRTY", 128), ("GUARD-REMOVED", 128),
+                        ("LEVEL2-REMOVED", 64), ("LEVEL3-REMOVED", 64)]:
+            qq = qabs[k]
+
+            fig = Figure(figsize=(14, 8))
+            # fig = plt.figure(1, figsize=(14, 8))
+            # fig.clf()
+
+            title = dict(DIRTY="RAW").get(k, k)
+            _plot_fft_y(fig, qq, title=title, obsids=obsids, vmax=vmax)
+
+            pdf.savefig(fig)
+
+    if outname is None:
+        fn = "qa_amp_wise_fft.pdf"
+        obsset.store_under(DESCS["QA_DARK_DIR"], fn,
+                           s.getvalue())
+    else:
+        open(outname, "wb").write(s.getvalue())
+
+
+def plot_qa_c64_wise_fft(obsset, outname=None):
+    qabs = _get_qabs_c64(obsset)
+
+    from matplotlib.figure import Figure
+    from matplotlib.backends.backend_pdf import PdfPages
+
+    obsids = obsset.get_obsids()
+
+    from six import BytesIO
+    s = BytesIO()
+    with PdfPages(s) as pdf:
+
+        fig = Figure(figsize=(14, 8))
+        _plot_median_fft(fig, qabs)
+        pdf.savefig(fig)
+
+        for k, vmax in [("DIRTY", 256), ("GUARD-REMOVED", 256),
+                        ("LEVEL2-REMOVED", 64), ("LEVEL3-REMOVED", 64)]:
+
+            fig = Figure(figsize=(14, 8))
+            # fig = plt.figure(1, figsize=(14, 8))
+            # fig.clf()
+
+            qq = qabs[k]
+            title = dict(DIRTY="RAW").get(k, k)
+            _plot_fft_y(fig, qq, title=title, obsids=obsids, vmax=vmax)
+
+            pdf.savefig(fig)
+
+    if outname is None:
+        fn = "qa_c64_wise_fft.pdf"
+        obsset.store_under(DESCS["QA_DARK_DIR"], fn,
+                           s.getvalue())
+    else:
+        open(outname, "wb").write(s.getvalue())
+
+
+def test_qa_amp_fft():
+    from igrins import get_obsset, DESCS
+
+    # obsset = get_obsset("20190116", "H", "DARK", obsids=range(1, 11))
+    obsset = get_obsset("20190116", "H", "DARK", obsids=range(1, 11))
+
+    plot_qa_amp_wise_fft(obsset)
+    # plot_qa_amp_wise_fft(obsset, outname="test.pdf")
+
+    # xx = np.arange(1025)
+    # for i, ql in enumerate(qabs["DIRTY"]):
+    #     for ii, q in enumerate(ql):
+    #         h_ = np.histogram2d(q, xx, bins=(ybins, xbins))
+    #         hh += h_[0]
+
+
+def test_qa_c64_fft():
+    from igrins import get_obsset, DESCS
+
+    # obsset = get_obsset("20190116", "H", "DARK", obsids=range(1, 11))
+    obsset = get_obsset("20190116", "K", "DARK", obsids=range(1, 11))
+
+    plot_qa_c64_wise_fft(obsset)
+
+
+def store_qa(obsset):
+    plot_qa_amp_wise_fft(obsset)
+    plot_qa_c64_wise_fft(obsset)
+
+
+if False:
+    from matplotlib.figure import Figure
+
+    from matplotlib.backends.backend_pdf import PdfPages
+
+    obsids = range(10)
+
+    with PdfPages('multipage_pdf.pdf') as pdf:
+
+        for k, vmax in [("DIRTY", 128), ("GUARD-REMOVED", 128),
+                        ("LEVEL2-REMOVED", 64), ("LEVEL3-REMOVED", 64)]:
+            qq = qabs[k]
+
+            fig = Figure(figsize=(14, 8))
+            # fig = plt.figure(1, figsize=(14, 8))
+            # fig.clf()
+
+            _plot_fft_y(fig, qq, k, obsids=obsids, vmax=vmax)
+
+            pdf.savefig(fig)
+
+
+if False:
+    amp, ang = hdul["LEVEL3-REMOVED"].data
+    r = amp * np.exp(1j*ang)
+    kk0 = make_model_from_rfft(r, slice(None, None))
+    kk26 = make_model_from_rfft(r, slice(26, 27))
+
+
 
 if __name__ == '__main__':
-    test()
+    test_qa_c64_fft()

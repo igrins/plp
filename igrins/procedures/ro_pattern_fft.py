@@ -52,7 +52,15 @@ def get_amp_wise_rfft(d):
 
 
 def make_model_from_rfft(q, kslice):
-    q0 = np.zeros_like(q)
-    q0[:, kslice] = q[:, kslice]
+    orig_shape = q.shape
+    qr = q.reshape((-1,) + orig_shape[-1:])
+    q0 = np.zeros_like(qr)
+    q0[:, kslice] = qr[:, kslice]
 
-    return np.fft.irfft(q0, axis=1)
+    return np.fft.irfft(q0, axis=-1).reshape(orig_shape[:-1] + (-1,))
+
+# def make_model_from_rfft(q, kslice):
+#     q0 = np.zeros_like(q)
+#     q0[:, kslice] = q[:, kslice]
+
+#     return np.fft.irfft(q0, axis=1)

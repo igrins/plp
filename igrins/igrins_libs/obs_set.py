@@ -141,6 +141,20 @@ class ObsSet(object):
                       item_type=item_type, postfix=postfix,
                       cache_only=cache_only)
 
+    def store_under(self, item_desc, filename, data, item_type=None,
+                    postfix=None, cache_only=False):
+
+        if not isinstance(item_desc, tuple):
+            item_desc = DESCS[item_desc]
+
+        if postfix is None:
+            postfix = self.basename_postfix
+            postfix = "" if postfix is None else postfix
+
+        self.rs.store_under(self.groupname, item_desc, filename, data,
+                            item_type=item_type, postfix=postfix,
+                            cache_only=cache_only)
+
     def add_to_db(self, db_name):
         self.rs.update_db(db_name, self.groupname)
 
