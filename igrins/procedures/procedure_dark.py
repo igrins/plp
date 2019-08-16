@@ -391,78 +391,60 @@ def _plot_fft_y(fig, qq, title=None, obsids=None, vmax=256):
         fig.suptitle(title)
 
 
-def plot_qa_amp_wise_fft(obsset, outname=None):
+def plot_qa_amp_wise_fft(obsset, outtype="pdf"):
+    from matplotlib.figure import Figure
+    from ..quicklook.qa_helper import (save_figlist, check_outtype)
+
+    check_outtype(outtype)
     qabs = _get_qabs(obsset)
-
-    from matplotlib.figure import Figure
-    from matplotlib.backends.backend_pdf import PdfPages
-
     obsids = obsset.get_obsids()
 
-    from six import BytesIO
-    s = BytesIO()
-    with PdfPages(s) as pdf:
+    figlist = []
+    fig = Figure(figsize=(14, 8))
+    _plot_median_fft(fig, qabs)
+    figlist.append(fig)
+
+    for k, vmax in [("DIRTY", 128), ("GUARD-REMOVED", 128),
+                    ("LEVEL2-REMOVED", 64), ("LEVEL3-REMOVED", 64)]:
+        qq = qabs[k]
 
         fig = Figure(figsize=(14, 8))
-        _plot_median_fft(fig, qabs)
-        pdf.savefig(fig)
 
-        for k, vmax in [("DIRTY", 128), ("GUARD-REMOVED", 128),
-                        ("LEVEL2-REMOVED", 64), ("LEVEL3-REMOVED", 64)]:
-            qq = qabs[k]
+        title = dict(DIRTY="RAW").get(k, k)
+        _plot_fft_y(fig, qq, title=title, obsids=obsids, vmax=vmax)
 
-            fig = Figure(figsize=(14, 8))
-            # fig = plt.figure(1, figsize=(14, 8))
-            # fig.clf()
+        figlist.append(fig)
 
-            title = dict(DIRTY="RAW").get(k, k)
-            _plot_fft_y(fig, qq, title=title, obsids=obsids, vmax=vmax)
-
-            pdf.savefig(fig)
-
-    if outname is None:
-        fn = "qa_amp_wise_fft.pdf"
-        obsset.store_under(DESCS["QA_DARK_DIR"], fn,
-                           s.getvalue())
-    else:
-        open(outname, "wb").write(s.getvalue())
+    section, outroot = DESCS["QA_DARK_DIR"], "qa_amp_wise_fft"
+    save_figlist(obsset, figlist, section, outroot, outtype)
 
 
-def plot_qa_c64_wise_fft(obsset, outname=None):
+def plot_qa_c64_wise_fft(obsset, outtype="pdf"):
+    from matplotlib.figure import Figure
+    from ..quicklook.qa_helper import (save_figlist, check_outtype)
+
+    check_outtype(outtype)
     qabs = _get_qabs_c64(obsset)
-
-    from matplotlib.figure import Figure
-    from matplotlib.backends.backend_pdf import PdfPages
-
     obsids = obsset.get_obsids()
 
-    from six import BytesIO
-    s = BytesIO()
-    with PdfPages(s) as pdf:
+    figlist = []
+    fig = Figure(figsize=(14, 8))
+    _plot_median_fft(fig, qabs)
+    figlist.append(fig)
+
+    for k, vmax in [("DIRTY", 256), ("GUARD-REMOVED", 256),
+                    ("LEVEL2-REMOVED", 64), ("LEVEL3-REMOVED", 64)]:
+        qq = qabs[k]
 
         fig = Figure(figsize=(14, 8))
-        _plot_median_fft(fig, qabs)
-        pdf.savefig(fig)
 
-        for k, vmax in [("DIRTY", 256), ("GUARD-REMOVED", 256),
-                        ("LEVEL2-REMOVED", 64), ("LEVEL3-REMOVED", 64)]:
+        title = dict(DIRTY="RAW").get(k, k)
+        _plot_fft_y(fig, qq, title=title, obsids=obsids, vmax=vmax)
 
-            fig = Figure(figsize=(14, 8))
-            # fig = plt.figure(1, figsize=(14, 8))
-            # fig.clf()
+        figlist.append(fig)
 
-            qq = qabs[k]
-            title = dict(DIRTY="RAW").get(k, k)
-            _plot_fft_y(fig, qq, title=title, obsids=obsids, vmax=vmax)
-
-            pdf.savefig(fig)
-
-    if outname is None:
-        fn = "qa_c64_wise_fft.pdf"
-        obsset.store_under(DESCS["QA_DARK_DIR"], fn,
-                           s.getvalue())
-    else:
-        open(outname, "wb").write(s.getvalue())
+    section, outroot = DESCS["QA_DARK_DIR"], "qa_c64_wise_fft"
+    save_figlist(obsset, figlist, section, outroot, outtype)
 
 
 def test_qa_amp_fft():
@@ -471,7 +453,7 @@ def test_qa_amp_fft():
     # obsset = get_obsset("20190116", "H", "DARK", obsids=range(1, 11))
     obsset = get_obsset("20190116", "H", "DARK", obsids=range(1, 11))
 
-    plot_qa_amp_wise_fft(obsset)
+    plot_qa_amp_wise_fft(obsset, outtype="png")
     # plot_qa_amp_wise_fft(obsset, outname="test.pdf")
 
     # xx = np.arange(1025)
@@ -487,7 +469,7 @@ def test_qa_c64_fft():
     # obsset = get_obsset("20190116", "H", "DARK", obsids=range(1, 11))
     obsset = get_obsset("20190116", "K", "DARK", obsids=range(1, 11))
 
-    plot_qa_c64_wise_fft(obsset)
+    plot_qa_amp_wise_fft(obsset, outtype="pdf")
 
 
 def store_qa(obsset):
@@ -526,4 +508,4 @@ if False:
 
 
 if __name__ == '__main__':
-    test_qa_c64_fft()
+    test_qa_amp_fft()
