@@ -1,6 +1,8 @@
 from __future__ import print_function
 
 import os
+import logging
+
 import numpy as np
 import pandas as pd
 
@@ -233,12 +235,25 @@ def print_out_stat_summary(obsset):
     std_lvl2 = l2["stddev_lt_threshold"].values
 
     S = make_ap_badpix_count(cnt)
-    print()
-    print(S)
+
+    log_level = obsset.runner_config["log_level"]
+    try:
+        log_level = int(log_level)
+    except ValueError:
+        log_level = logging.getLevelName(log_level)
+
+    if not isinstance(log_level, int) or log_level == 0:
+        log_level = 20  # info
+
+    if log_level < 30:
+        print()
+        print(S)
 
     S = make_ap_v1_v2(std_dirty, std_lvl2)
-    print()
-    print(S)
+
+    if log_level < 30:
+        print()
+        print(S)
 
 
 def test_asciiplot():

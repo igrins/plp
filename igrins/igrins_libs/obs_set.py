@@ -14,7 +14,8 @@ from ..utils.load_fits import get_first_science_hdu
 class ObsSet(object):
     def __init__(self, resource_stack, recipe_name, obsids, frametypes,
                  groupname=None, recipe_entry=None,
-                 reset_read_cache=False, basename_postfix=""):
+                 reset_read_cache=False, basename_postfix="",
+                 runner_config=None):
         self.rs = resource_stack
         self.recipe_name = recipe_name
         self.obsids = obsids
@@ -29,6 +30,11 @@ class ObsSet(object):
         self._recipe_parameters = {}
 
         self.default_cards = []
+
+        if runner_config is None:
+            runner_config = {}
+
+        self.runner_config = runner_config
 
         # self.basename = self.caldb._get_basename((self.band, groupname))
         # # this is for query

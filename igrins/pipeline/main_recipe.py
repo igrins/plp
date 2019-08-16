@@ -39,7 +39,8 @@ def get_selected(recipes, recipe_name_fnmatch, groups,
 
 def iter_obsset(recipe_name_fnmatch,
                 obsdate, config_file, bands, groups,
-                basename_postfix="", recipe_name_exclude=None):
+                basename_postfix="", recipe_name_exclude=None,
+                runner_config=None):
 
     from ..igrins_libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
@@ -79,7 +80,8 @@ def iter_obsset(recipe_name_fnmatch,
                                 obsids, frametypes,
                                 groupname=groupname, recipe_entry=aux_infos,
                                 config_file=config,
-                                basename_postfix=basename_postfix)
+                                basename_postfix=basename_postfix,
+                                runner_config=runner_config)
             yield obsset
 
 
@@ -114,7 +116,10 @@ def _load_context(outname):
 driver_args = [arg("-b", "--bands", default="HK", choices=["HK", "H", "K"]),
                arg("-g", "--groups", default=None),
                arg("-c", "--config-file", default=None),
-               arg("-v", "--verbose", default=0),
+               # arg("--log-level", default=20),
+               arg("--log-level", default="INFO",
+                   choices=["CRITICAL", "ERROR", "WARNING",
+                            "INFO", "DEBUG", "NOTSET"]),
                arg("--progress-mode", default="terminal",
                    choices=["terminal", "tqdm", "none"]),
                arg("--override-recipe-name", default=False),
@@ -129,7 +134,7 @@ driver_args = [arg("-b", "--bands", default="HK", choices=["HK", "H", "K"]),
 
 
 def driver_func_obsset(command_name, obsdate, steps, obsset_list,
-                       debug=False, verbose=None,
+                       debug=False, log_level="INFO",
                        # resume_from_context_file=None,
                        save_context_if="never",
                        context_name="context_{obsdate}_{recipe_name}_{groupname}{basename_postfix}_{context_id}.pickle",
@@ -230,9 +235,13 @@ def driver_func(command_name, steps, recipe_name_fnmatch, obsdate,
 
         recipe_name_fnmatch = ["*"]
 
+    iter_obsset_kwargs = dict(runner_config=dict(debug=kwargs["debug"],
+                                                 log_level=kwargs["log_level"]))
+
     obsset_list = [obsset for obsset in iter_obsset(recipe_name_fnmatch,
                                                     obsdate, config_file,
-                                                    bands, groups)]
+                                                    bands, groups,
+                                                    **iter_obsset_kwargs)]
 
     driver_func_obsset(command_name, obsdate, steps, obsset_list,
                        **kwargs)

@@ -45,12 +45,14 @@ def recipe_func(task_name,
     if recipe_name is None:
         recipe_name = task_name
 
+    runner_config = {}
+
     steps = get_pipeline_steps(task_name)
 
     obsset = get_obsset(obsdate, recipe_name, band,
                         obsids=obsids, frametypes=frametypes,
                         groupname=None,
-                        config_file=config_file)
+                        config_file=config_file, runner_config=runner_config)
 
     # apply_steps(obsset, steps, kwargs=kwargs)
     if task_name is None:

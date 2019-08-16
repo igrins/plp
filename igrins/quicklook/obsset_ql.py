@@ -93,7 +93,7 @@ driver_args = [arg("-o", "--obsids", default=None),
                arg("-f", "--frametypes", default=None),
                arg("-b", "--bands", default="HK"),
                arg("-c", "--config-file", default=None),
-               arg("-v", "--verbose", default="INFO",
+               arg("--log-level", default="INFO",
                    choices=["CRITICAL", "ERROR", "WARNING",
                             "INFO", "DEBUG", "NOTSET"]),
                arg("-ns", "--no-skip", default=False),
@@ -269,8 +269,8 @@ def quicklook_decorator(recipe_name):
                 if (k not in positional_args):
                     kwargs.setdefault(k, v)
 
-            debug = kwargs.get("verbose")
-            set_level(debug)
+            log_level = kwargs.get("log_level")
+            set_level(log_level)
 
             cgen = oi_ot_ft_generator(recipe_name, obsdate,
                                       obsids, objtypes,
