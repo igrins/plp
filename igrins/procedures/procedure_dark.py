@@ -394,6 +394,7 @@ def _plot_fft_y(fig, qq, title=None, obsids=None, vmax=256):
 def plot_qa_amp_wise_fft(obsset, outtype="pdf"):
     from matplotlib.figure import Figure
     from ..quicklook.qa_helper import (save_figlist, check_outtype)
+    from ..igrins_libs.path_info import get_zeropadded_groupname
 
     check_outtype(outtype)
     qabs = _get_qabs(obsset)
@@ -415,13 +416,17 @@ def plot_qa_amp_wise_fft(obsset, outtype="pdf"):
 
         figlist.append(fig)
 
-    section, outroot = DESCS["QA_DARK_DIR"], "qa_amp_wise_fft"
+    section, _outroot = DESCS["QA_DARK_DIR"], "qa_amp_wise_fft"
+    obsdate, band = obsset.get_resource_spec()
+    groupname = get_zeropadded_groupname(obsset.groupname)
+    outroot = "SDC{}_{}_{}_{}".format(band, obsdate, groupname, _outroot)
     save_figlist(obsset, figlist, section, outroot, outtype)
 
 
 def plot_qa_c64_wise_fft(obsset, outtype="pdf"):
     from matplotlib.figure import Figure
     from ..quicklook.qa_helper import (save_figlist, check_outtype)
+    from ..igrins_libs.path_info import get_zeropadded_groupname
 
     check_outtype(outtype)
     qabs = _get_qabs_c64(obsset)
@@ -443,7 +448,10 @@ def plot_qa_c64_wise_fft(obsset, outtype="pdf"):
 
         figlist.append(fig)
 
-    section, outroot = DESCS["QA_DARK_DIR"], "qa_c64_wise_fft"
+    section, _outroot = DESCS["QA_DARK_DIR"], "qa_c64_wise_fft"
+    obsdate, band = obsset.get_resource_spec()
+    groupname = get_zeropadded_groupname(obsset.groupname)
+    outroot = "SDC{}_{}_{}_{}".format(band, obsdate, groupname, _outroot)
     save_figlist(obsset, figlist, section, outroot, outtype)
 
 
