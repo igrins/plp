@@ -18,6 +18,6 @@ steps = [Step("Make RO pattern-subtracted images",
          Step("FFT analysis of RO noise: c64-wise",
               analyze_c64_wise_fft),
          Step("Producing QA plots",
-              store_qa)
+              store_qa, qa_outtype="png")
 ]
 

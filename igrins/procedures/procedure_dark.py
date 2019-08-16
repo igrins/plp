@@ -472,9 +472,9 @@ def test_qa_c64_fft():
     plot_qa_amp_wise_fft(obsset, outtype="pdf")
 
 
-def store_qa(obsset):
-    plot_qa_amp_wise_fft(obsset)
-    plot_qa_c64_wise_fft(obsset)
+def store_qa(obsset, qa_outtype):
+    plot_qa_amp_wise_fft(obsset, qa_outtype)
+    plot_qa_c64_wise_fft(obsset, qa_outtype)
 
 
 if False:
