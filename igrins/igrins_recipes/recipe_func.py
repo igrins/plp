@@ -35,6 +35,7 @@ def recipe_func(task_name,
                 groupname=None,
                 recipe_name=None,
                 config_file=None,
+                log_level="INFO", debug=False,
                 **kwargs):
 
     # print(obsdate, obsids)
@@ -45,7 +46,7 @@ def recipe_func(task_name,
     if recipe_name is None:
         recipe_name = task_name
 
-    runner_config = {}
+    runner_config = dict(log_level=log_level, debug=debug)
 
     steps = get_pipeline_steps(task_name)
 
