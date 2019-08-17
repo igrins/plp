@@ -29,6 +29,7 @@ def _recipe_func(obsdate, task_name, recipe_name,
     apply_steps(obsset, steps, kwargs=kwargs)
 
 
+# This should resemble 'pipeline.main_recipe.driver_func'
 def recipe_func(task_name,
                 obsdate, band,
                 obsids=None, frametypes=None,
@@ -46,7 +47,10 @@ def recipe_func(task_name,
     if recipe_name is None:
         recipe_name = task_name
 
-    runner_config = dict(log_level=log_level, debug=debug)
+    # runner_config = dict(log_level=kwargs["log_level"],
+    #                      debug=kwargs["debug"])
+    runner_config = dict(log_level=log_level,
+                         debug=debug)
 
     steps = get_pipeline_steps(task_name)
 
@@ -63,18 +67,19 @@ def recipe_func(task_name,
 
 
 if True:
-    import inspect
+    # import inspect
 
-    def merge_signature(f1, f2):
-        s1 = inspect.signature(f1)
-        s2 = inspect.signature(f2)
+    # def merge_signature(f1, f2):
+    #     s1 = inspect.signature(f1)
+    #     s2 = inspect.signature(f2)
 
-        filtered_ss = (list(s1.parameters.values())[:-1]
-                       + [_s for _s in s2.parameters.values()
-                          if ((_s.default is not inspect._empty) or
-                              (_s.kind is inspect.Parameter.VAR_KEYWORD))])
+    #     filtered_ss = (list(s1.parameters.values())[:-1]
+    #                    + [_s for _s in s2.parameters.values()
+    #                       if ((_s.default is not inspect._empty) or
+    #                           (_s.kind is inspect.Parameter.VAR_KEYWORD))])
 
-        return inspect.Signature(filtered_ss)
+    #     return inspect.Signature(filtered_ss)
 
+    from .argh_helper import merge_signature
     recipe_func.__signature__ = merge_signature(recipe_func,
                                                 driver_func_obsset)
