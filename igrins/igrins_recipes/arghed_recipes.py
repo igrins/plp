@@ -2,11 +2,14 @@ from collections import OrderedDict
 
 from ..pipeline.steps import create_argh_command_from_steps
 from ..pipeline.main_recipe import driver_func, driver_args
+from ..pipeline.main_recipe import driver_func_obsset
 from . import get_pipeline_steps
 from .argh_helper import get_default_values
+from .argh_helper import merge_signature, _merge_signature
 
 from ..igrins_recipes.recipe_prepare_recipe_logs \
     import prepare_recipe_logs
+
 
 from ..quicklook.obsset_ql import (create_argh_command_quicklook,
                                    create_argh_command_noise_guard)
@@ -59,6 +62,8 @@ def get_recipe_list():
 
 
 def make_recipe_func(argh_entrant):
+    from inspect import signature
+
     def _f(obsdate, **kwargs):
         kw2 = get_default_values(argh_entrant.argh_args)
         unknown_arg_names = set(kwargs.keys()).difference(kw2.keys())
@@ -67,6 +72,10 @@ def make_recipe_func(argh_entrant):
                                format(unknown_arg_names))
 
         argh_entrant(obsdate, **kwargs)
+
+    _sig = _merge_signature(signature(driver_func),
+                            signature(driver_func_obsset))
+    _f.__signature__ = _merge_signature(signature(_f), _sig)
 
     return _f
 
@@ -84,3 +93,10 @@ def get_callable_recipes():
             recipes[argh_entrant.__name__] = argh_entrant
 
     return recipes
+
+
+if False:
+    from igrins.igrins_recipes.arghed_recipes import get_callable_recipes
+    recipes = get_callable_recipes()
+    kk = recipes.keys()
+    print(kk)

@@ -113,28 +113,40 @@ def _load_context(outname):
     return obsset
 
 
-driver_args = [arg("-b", "--bands", default="HK", choices=["HK", "H", "K"]),
-               arg("-g", "--groups", default=None),
-               arg("-c", "--config-file", default=None),
-               # arg("--log-level", default=20),
-               arg("--log-level", default="INFO",
-                   choices=["CRITICAL", "ERROR", "WARNING",
-                            "INFO", "DEBUG", "NOTSET"]),
-               arg("--progress-mode", default="terminal",
-                   choices=["terminal", "tqdm", "none"]),
-               arg("--override-recipe-name", default=False),
-               arg("--step-range", default=None),
-               arg("--context-name", default="context_{obsdate}_{recipe_name}_{groupname}{basename_postfix}_{context_id}.pickle"),
-               arg("--save-context-if", default="never",
-                   choices=["never", "exception", "always"]),
-               arg("--save-io-log", default=False),
-               arg("--io-log-name",
-                   default="SDC{band}_{obsdate}_{groupname}{basename_postfix}.{command_name}.io"),
-               arg("-d", "--debug", default=False)]
+# driver_args = [arg("-b", "--bands", default="HK", choices=["HK", "H", "K"]),
+#                arg("-g", "--groups", default=None),
+#                arg("-c", "--config-file", default=None),
+#                # arg("--log-level", default=20),
+#                arg("--log-level", default="INFO",
+#                    choices=["CRITICAL", "ERROR", "WARNING",
+#                             "INFO", "DEBUG", "NOTSET"]),
+#                arg("--progress-mode", default="terminal",
+#                    choices=["terminal", "tqdm", "none"]),
+#                arg("--override-recipe-name", default=False),
+#                arg("--step-range", default=None),
+#                arg("--context-name", default="context_{obsdate}_{recipe_name}_{groupname}{basename_postfix}_{context_id}.pickle"),
+#                arg("--save-context-if", default="never",
+#                    choices=["never", "exception", "always"]),
+#                arg("--save-io-log", default=False),
+#                arg("--io-log-name",
+#                    default="SDC{band}_{obsdate}_{groupname}{basename_postfix}.{command_name}.io"),
+#                arg("-d", "--debug", default=False)]
+
+
+driver_obsset_args = [arg("--save-context-if", default="never",
+                          choices=["never", "exception", "always"]),
+                      arg("--context-name", default="context_{obsdate}_{recipe_name}_{groupname}{basename_postfix}_{context_id}.pickle"),
+                      arg("--step-range", default=None),
+                      arg("--save-io-log", default=False),
+                      arg("--io-log-name",
+                          default="SDC{band}_{obsdate}_{groupname}{basename_postfix}.{command_name}.io"),
+                      arg("--progress-mode", default="terminal",
+                          choices=["terminal", "tqdm", "none"]),
+]
 
 
 def driver_func_obsset(command_name, obsdate, steps, obsset_list,
-                       debug=False, log_level="INFO",
+                       # debug=False, log_level="INFO",
                        # resume_from_context_file=None,
                        save_context_if="never",
                        context_name="context_{obsdate}_{recipe_name}_{groupname}{basename_postfix}_{context_id}.pickle",
@@ -221,10 +233,25 @@ def driver_func_obsset(command_name, obsdate, steps, obsset_list,
             obsset.rs.save_io_items(open(io_log_name, "w"))
 
 
+driver_args = [arg("-b", "--bands", default="HK", choices=["HK", "H", "K"]),
+               arg("-g", "--groups", default=None),
+               arg("-c", "--config-file", default=None),
+               # arg("--log-level", default=20),
+               arg("--override-recipe-name", default=False),
+               arg("--log-level", default="INFO",
+                   choices=["CRITICAL", "ERROR", "WARNING",
+                            "INFO", "DEBUG", "NOTSET"]),
+               arg("-d", "--debug", default=False),
+] + driver_obsset_args
+
+
 def driver_func(command_name, steps, recipe_name_fnmatch, obsdate,
                 bands="HK", groups=None, config_file=None,
                 override_recipe_name=False,
+                debug=False, log_level="INFO",
                 **kwargs):
+    # kwargs : should be arguments from driver_func_obsset
+    # keywords from driver_func_obsset will be merged via merge_signature below.
 
     # FIXME : should check if 'resume_from_context_file' and 'step_range' are
     # not set together.
@@ -235,8 +262,8 @@ def driver_func(command_name, steps, recipe_name_fnmatch, obsdate,
 
         recipe_name_fnmatch = ["*"]
 
-    iter_obsset_kwargs = dict(runner_config=dict(debug=kwargs["debug"],
-                                                 log_level=kwargs["log_level"]))
+    iter_obsset_kwargs = dict(runner_config=dict(debug=debug,
+                                                 log_level=log_level))
 
     obsset_list = [obsset for obsset in iter_obsset(recipe_name_fnmatch,
                                                     obsdate, config_file,
