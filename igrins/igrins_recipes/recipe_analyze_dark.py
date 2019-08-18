@@ -8,7 +8,7 @@ from ..procedures.procedure_dark import (make_guard_n_bg_subtracted_images,
 
 
 steps = [Step("Make RO pattern-subtracted images",
-              make_guard_n_bg_subtracted_images),
+              make_guard_n_bg_subtracted_images, use_bias_mask=False),
          Step("Esimate amp-wise noise",
               estimate_amp_wise_noise),
          Step("Printing out the stat summary",

@@ -41,7 +41,7 @@ def apply_rp_3rd_phase(d):
     return apply_pipe(d, p)
 
 
-def make_guard_n_bg_subtracted_images(obsset):
+def make_guard_n_bg_subtracted_images(obsset, use_bias_mask=False):
 
     hdu_list = obsset.get_hdus()
 
@@ -56,7 +56,10 @@ def make_guard_n_bg_subtracted_images(obsset):
 
     cube1 = cube - bg
 
-    bias_mask = obsset.load_resource_for("bias_mask")
+    if use_bias_mask:
+        bias_mask = obsset.load_resource_for("bias_mask")
+    else:
+        bias_mask = np.zeros(cube0[0].shape, dtype=bool)
 
     # cube20 = np.array([apply_rp_2nd_phase(d1) for d1 in cube1])
     cube2 = np.array([apply_rp_2nd_phase(d1, mask=bias_mask) for d1 in cube1])
@@ -528,6 +531,12 @@ if False:
     kk0 = make_model_from_rfft(r, slice(None, None))
     kk26 = make_model_from_rfft(r, slice(26, 27))
 
+
+if False:
+    from igrins import get_obsset, DESCS
+
+    # obsset = get_obsset("20190116", "H", "DARK", obsids=range(1, 11))
+    obsset = get_obsset("20160129", "H", "DARK", obsids=range(1, 16))
 
 
 if __name__ == '__main__':

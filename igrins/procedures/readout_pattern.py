@@ -248,7 +248,7 @@ class PatternP64First(PatternBase):
         v, u = v_u
         p = dh.concat(v[:, np.newaxis] + u, [1, -1], 16)
 
-        assert np.all(p)
+        assert np.all(np.isfinite(p))
 
         return p
 
