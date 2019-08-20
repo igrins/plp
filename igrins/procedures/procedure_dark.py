@@ -41,7 +41,7 @@ def apply_rp_3rd_phase(d):
     return apply_pipe(d, p)
 
 
-def make_guard_n_bg_subtracted_images(obsset, use_bias_mask=False):
+def make_guard_n_bg_subtracted_images(obsset, no_bias_mask=False):
 
     hdu_list = obsset.get_hdus()
 
@@ -56,10 +56,10 @@ def make_guard_n_bg_subtracted_images(obsset, use_bias_mask=False):
 
     cube1 = cube - bg
 
-    if use_bias_mask:
-        bias_mask = obsset.load_resource_for("bias_mask")
-    else:
+    if no_bias_mask:
         bias_mask = np.zeros(cube0[0].shape, dtype=bool)
+    else:
+        bias_mask = obsset.load_resource_for("bias_mask")
 
     # cube20 = np.array([apply_rp_2nd_phase(d1) for d1 in cube1])
     cube2 = np.array([apply_rp_2nd_phase(d1, mask=bias_mask) for d1 in cube1])
