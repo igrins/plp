@@ -1,4 +1,7 @@
+from __future__ import print_function
+
 import os
+import numpy as np
 import pandas as pd
 from ..igrins_libs import dt_logs
 
@@ -137,6 +140,89 @@ def prepare_recipe_logs(obsdate, config_file="recipe.config",
     else:
         print("".join(["A draft version of the recipe log is ",
                        "written to '{}'.\n".format(fn_out)]))
+
+
+def _fmt_exptime(row, max_n, max_len):
+    # The tabulate module seems to strip the string. So it does not work okay
+    etime = float(row["exptime"])
+    if etime < 2.:
+        etime = "{:.1f}".format(etime)
+    else:
+        etime = str(int(etime))
+
+    fmt = "{{:>{}}} x {{:>{}}}".format(max_n, max_len)
+
+    return fmt.format(etime, len(row["obsids"]))
+
+
+def fmt_exptime(row):
+    etime = float(row["exptime"])
+    if etime < 2.:
+        etime = "{:.1f}".format(etime)
+    else:
+        etime = str(int(etime))
+
+    return "{} x {}".format(etime, len(row["obsids"]))
+
+
+def fmt_frames(frames):
+    frames = [dict(on="O", off="S").get(f.lower(), f) for f in frames]
+
+    return "".join(frames)
+
+
+def fmt_obsids(obsids):
+    oo = []
+    old_o = np.nan
+
+    for o in obsids:
+        o = int(o)
+        if o - old_o == 1:
+            oo[-1].append(o)
+        else:
+            oo.append([o])
+        old_o = o
+
+    for o1 in oo:
+        o1[1:-1] = []
+
+    return ",".join(["-".join(map(str, o1)) for o1 in oo])
+
+
+def tabulated_recipe_logs(obsdate, config):
+
+    fn = os.path.join(config.root_dir,
+                      config.get_value('RECIPE_LOG_PATH', obsdate))
+
+    from ..igrins_libs.recipes import RecipeLog
+    recipes = RecipeLog(obsdate, fn)
+
+    recipes["obsid-fmt"] = recipes["obsids"].apply(fmt_obsids)
+    recipes["frame-fmt"] = recipes["frametypes"].apply(fmt_frames)
+
+    # # length of the exptime string
+    # max_n = int(np.log10(max(recipes["exptime"]))) + 1
+    # max_len = int(np.log10(max(recipes["obsids"].apply(len)))) + 1
+
+    recipes["exptime-fmt"] = recipes.apply(fmt_exptime, axis=1)
+
+    from ..external.tabulate import tabulate
+    r = tabulate(recipes[["group1", "objname", "recipe",
+                          "exptime-fmt", "obsid-fmt", "frame-fmt"]],
+                 headers=["Group", "Obj. Name", "Recip",
+                          "ExpTime", "ObsIDs", "Frames"],
+                 tablefmt='psql', showindex=False)
+
+    return r
+
+
+def show_recipe_logs(obsdate, config_file="recipe.config"):
+
+    from ..igrins_libs.igrins_config import IGRINSConfig
+    config = IGRINSConfig(config_file)
+
+    r = tabulated_recipe_logs(obsdate, config)
+    print(r)
 
 
 def test2():

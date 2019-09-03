@@ -227,7 +227,7 @@ def plot_spec(obsset, interactive=False,
 
 
 steps = [Step("Set basename_postfix", set_basename_postfix,
-              basename_postfix=False),
+              basename_postfix=''),
          Step("Plot spec", plot_spec,
               interactive=ArghFactoryWithShort(False),
               multiply_model_a0v=ArghFactoryWithShort(False)),

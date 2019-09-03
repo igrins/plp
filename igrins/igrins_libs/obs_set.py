@@ -106,10 +106,11 @@ class ObsSet(object):
 
             return obsids
 
-    def get_subset(self, frametype):
-        obsids = [o for o, f in zip(self.obsids, self.frametypes)
-                  if f == frametype]
-        frametypes = [frametype] * len(obsids)
+    def get_subset(self, *frametypes):
+        ofs = [(o, f) for o, f in zip(self.obsids, self.frametypes)
+               if f in frametypes]
+        obsids = [o for o, f in ofs]
+        frametypes = [f for o, f in ofs]
 
         return ObsSet(self.rs, self.recipe_name, obsids, frametypes)
 

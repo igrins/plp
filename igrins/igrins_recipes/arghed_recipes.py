@@ -8,7 +8,7 @@ from .argh_helper import get_default_values
 from .argh_helper import merge_signature, _merge_signature
 
 from ..igrins_recipes.recipe_prepare_recipe_logs \
-    import prepare_recipe_logs
+    import (prepare_recipe_logs, show_recipe_logs)
 
 
 from ..quicklook.obsset_ql import (create_argh_command_quicklook,
@@ -31,7 +31,11 @@ def create_argh_command(command_name, recipe_name_fnmatch=None,
 
 def get_recipe_list():
     recipe_list = [prepare_recipe_logs,
+                   show_recipe_logs,
                    create_argh_command("flat"),
+                   create_argh_command("combine", ["A0V_*",
+                                                   "STELLAR_*",
+                                                   "EXTENDED_*"]),
                    create_argh_command("register-sky", ["SKY", "SKY_AB"]),
                    create_argh_command("wvlsol-sky", ["SKY", "SKY_AB"]),
                    create_argh_command("extract-sky", ["SKY", "SKY_AB"]),
