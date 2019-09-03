@@ -1,6 +1,12 @@
 import numpy as np
 
 def get_variance_map0(a_minus_b, bias_mask2, pix_mask):
+    # I think this was put in place due to the bright bars that are seen
+    # right after the detector reset.
+
+    # Basically, it takes a median-values along the columns, and
+    # guess the x-direction variance.
+
     #variance0 = a_minus_b
     #a_minus_b = a-b
     msk = bias_mask2 | pix_mask | ~np.isfinite(a_minus_b)
@@ -22,6 +28,7 @@ def get_variance_map0(a_minus_b, bias_mask2, pix_mask):
     variance_[msk] = np.nan
 
     with np.errstate(invalid="ignore"):
+        # To remove extreme values
         st = np.nanstd(variance_)
         st = np.nanstd(variance_[np.abs(variance_) < 3*st])
 

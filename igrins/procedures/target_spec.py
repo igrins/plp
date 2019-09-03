@@ -6,13 +6,13 @@ from ..igrins_libs.resource_helper_igrins import ResourceHelper
 
 
 def _get_int_from_config(obsset, kind, default):
-        v = obsset.rs.query_ref_value_from_section("EXTRACTION",
-                                                    kind,
-                                                    default=default)
-        if v is not None:
-            v = int(v)
+    v = obsset.rs.query_ref_value_from_section("EXTRACTION",
+                                               kind,
+                                               default=default)
+    if v is not None:
+        v = int(v)
 
-        return v
+    return v
 
 
 def setup_extraction_parameters(obsset, order_range="-1,-1",
@@ -21,7 +21,7 @@ def setup_extraction_parameters(obsset, order_range="-1,-1",
     _order_range_s = order_range
     try:
         order_start, order_end = map(int, _order_range_s.split(","))
-    except:
+    except Exception:
         msg = "Failed to parse order range: {}".format(_order_range_s)
         raise ValueError(msg)
 
@@ -37,8 +37,13 @@ def setup_extraction_parameters(obsset, order_range="-1,-1",
 
 
 def _get_combined_image(obsset):
+    # Should not use median, Use sum.
     data_list = [hdu.data for hdu in obsset.get_hdus()]
-    return image_median(data_list)
+
+    return np.sum(data_list, axis=0)
+# def _get_combined_image(obsset):
+#     data_list = [hdu.data for hdu in obsset.get_hdus()]
+#     return image_median(data_list)
 
 
 def get_destriped(obsset,
@@ -87,64 +92,111 @@ def get_variance_map(obsset, data_minus, data_plus):
     return variance_map0, variance_map
 
 
+def get_variance_map_deprecated(obsset, data_minus, data_plus):
+    helper = ResourceHelper(obsset)
+    _destripe_mask = helper.get("destripe_mask")
+
+    bias_mask2 = ni.binary_dilation(_destripe_mask)
+
+    from .variance_map import (get_variance_map,
+                               get_variance_map0)
+
+    _pix_mask = helper.get("badpix_mask")
+    variance_map0 = get_variance_map0(data_minus,
+                                      bias_mask2, _pix_mask)
+
+    _gain = obsset.rs.query_ref_value("GAIN")
+    variance_map = get_variance_map(data_plus, variance_map0,
+                                    gain=float(_gain))
+
+    # variance_map0 : variance without poisson noise of source + sky
+    # This is used to estimate model variance where poisson noise is
+    # added from the simulated spectra.
+    # variance : variance with poisson noise.
+    return variance_map0, variance_map
+
+
+# def make_combined_images(obsset,
+#                          destripe_pattern=64,
+#                          use_destripe_mask=True,
+#                          sub_horizontal_median=True,
+#                          allow_no_b_frame=False):
+
+#     ab_mode = obsset.recipe_name.endswith("AB")
+
+#     obsset_a = obsset.get_subset("A", "ON")
+#     obsset_b = obsset.get_subset("B", "OFF")
+
+#     na, nb = len(obsset_a.obsids), len(obsset_b.obsids)
+#     if ab_mode and (na != nb):
+#         raise RuntimeError("For AB nodding, number of A and B should match!")
+
+#     if na == 0:
+#         raise RuntimeError("No A Frame images are found")
+
+#     if nb == 0 and not allow_no_b_frame:
+#         raise RuntimeError("No B Frame images are found")
+
+#     if nb == 0:
+#         a_data = _get_combined_image(obsset_a)
+#         data_minus = a_data
+
+#     else:  # nb > 0
+#         # a_b != 1 for the cases when len(a) != len(b)
+#         a_b = float(na) / float(nb)
+
+#         a_data = _get_combined_image(obsset_a)
+#         b_data = _get_combined_image(obsset_b)
+
+#         data_minus = a_data - a_b * b_data
+
+#     if destripe_pattern is not None:
+
+#         data_minus = get_destriped(obsset,
+#                                    data_minus,
+#                                    destripe_pattern=destripe_pattern,
+#                                    use_destripe_mask=use_destripe_mask,
+#                                    sub_horizontal_median=sub_horizontal_median)
+
+#     if nb == 0:
+#         data_plus = a_data
+#     else:
+#         data_plus = (a_data + (a_b**2)*b_data)
+
+#     variance_map0, variance_map = get_variance_map(obsset,
+#                                                    data_minus, data_plus)
+
+#     # hdul = obsset.get_hdul_to_write(([], data_minus))
+#     # obsset.store("combined_image1", data=hdul, cache_only=True)
+
+#     hdul = obsset.get_hdul_to_write(([], variance_map0))
+#     obsset.store("combined_variance0", data=hdul, cache_only=True)
+
+#     hdul = obsset.get_hdul_to_write(([], variance_map))
+#     obsset.store("combined_variance1", data=hdul, cache_only=True)
+
+
+from ..igrins_recipes.recipe_combine import (make_combined_images
+                                             as _make_combined_images)
+
+
 def make_combined_images(obsset,
-                         destripe_pattern=64,
-                         use_destripe_mask=True,
-                         sub_horizontal_median=True,
-                         allow_no_b_frame=False):
+                         allow_no_b_frame=False,
+                         force_image_combine=False):
 
-    ab_mode = obsset.recipe_name.endswith("AB")
+    try:
+        obsset.load("combined_image1")
+        combined_image_exists = True
+    except Exception:
+        combined_image_exists = False
+        pass
 
-    obsset_a = obsset.get_subset("A")
-    obsset_b = obsset.get_subset("B")
+    if combined_image_exists and not force_image_combine:
+        print("skipped")
+        return
 
-    na, nb = len(obsset_a.obsids), len(obsset_b.obsids)
-    if ab_mode and (na != nb):
-        raise RuntimeError("For AB nodding, number of A and B should match!")
-
-    if na == 0:
-        raise RuntimeError("No A Frame images are found")
-
-    if nb == 0 and not allow_no_b_frame:
-        raise RuntimeError("No B Frame images are found")
-
-    if nb == 0:
-        a_data = _get_combined_image(obsset_a)
-        data_minus = a_data
-
-    else:  # nb > 0
-        # a_b != 1 for the cases when len(a) != len(b)
-        a_b = float(na) / float(nb)
-
-        a_data = _get_combined_image(obsset_a)
-        b_data = _get_combined_image(obsset_b)
-
-        data_minus = a_data - a_b * b_data
-
-    if destripe_pattern is not None:
-
-        data_minus = get_destriped(obsset,
-                                   data_minus,
-                                   destripe_pattern=destripe_pattern,
-                                   use_destripe_mask=use_destripe_mask,
-                                   sub_horizontal_median=sub_horizontal_median)
-
-    if nb == 0:
-        data_plus = a_data
-    else:
-        data_plus = (a_data + (a_b**2)*b_data)
-
-    variance_map0, variance_map = get_variance_map(obsset,
-                                                   data_minus, data_plus)
-
-    hdul = obsset.get_hdul_to_write(([], data_minus))
-    obsset.store("combined_image1", data=hdul, cache_only=True)
-
-    hdul = obsset.get_hdul_to_write(([], variance_map0))
-    obsset.store("combined_variance0", data=hdul, cache_only=True)
-
-    hdul = obsset.get_hdul_to_write(([], variance_map))
-    obsset.store("combined_variance1", data=hdul, cache_only=True)
+    _make_combined_images(obsset, allow_no_b_frame=allow_no_b_frame,
+                          cache_only=True)
 
 
 def subtract_interorder_background(obsset, di=24, min_pixel=40):
