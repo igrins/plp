@@ -14,6 +14,7 @@ from ..procedures.ro_pattern_fft import (get_amp_wise_rfft,
                                          make_model_from_rfft)
 # from ..procedures.ro_pattern_fft import (get_amp_wise_rfft,
 #                                          make_model_from_rfft)
+from .gui_combine import setup_gui, factory_pattern_remove_n_smoothed
 
 
 def _get_combined_image(obsset):
@@ -179,9 +180,54 @@ def get_variances(data_minus, data_plus, gain):
     return variance_per_amp, variance
 
 
+def run_interactive(obsset,
+                    data_minus_raw, data_plus, bias_mask,
+                    remove_level, remove_amp_wise_var):
+    import matplotlib.pyplot as plt
+    # from astropy_smooth import get_smoothed
+    # from functools import lru_cache
+
+    get_im = factory_pattern_remove_n_smoothed(remove_pattern,
+                                               data_minus_raw,
+                                               bias_mask)
+
+    fig, ax = plt.subplots(figsize=(8, 8), num=1, clear=True)
+
+    vmin, vmax = -30, 30
+    # setup figure guis
+
+    obsdate, band = obsset.get_resource_spec()
+    obsid = obsset.master_obsid
+
+    status = dict(to_save=False)
+
+    def save(*kl, status=status):
+        status["to_save"] = True
+        plt.close(fig)
+        # print("save")
+        # pass
+
+    ax.set_title("{}-{:04d} [{}]".format(obsdate, obsid, band))
+
+    # add callbacks
+    d2 = get_im(1, False, False)
+    im = ax.imshow(d2, origin="lower", interpolation="none")
+    im.set_clim(vmin, vmax)
+
+    box, get_params = setup_gui(im, vmin, vmax,
+                                get_im, save)
+
+    plt.show()
+    params = get_params()
+    params.update(status)
+
+    return params
+
+
 def make_combined_images(obsset, allow_no_b_frame=False,
                          remove_level=2,
                          remove_amp_wise_var=False,
+                         interactive=False,
                          cache_only=False):
 
     if remove_level == "auto":
@@ -193,8 +239,20 @@ def make_combined_images(obsset, allow_no_b_frame=False,
     _ = get_combined_images(obsset,
                             allow_no_b_frame=allow_no_b_frame)
     data_minus_raw, data_plus = _
-
     bias_mask = obsset.load_resource_for("bias_mask")
+
+    if interactive:
+        params = run_interactive(obsset,
+                                 data_minus_raw, data_plus, bias_mask,
+                                 remove_level, remove_amp_wise_var)
+
+        print("returned", params)
+        if not params["to_save"]:
+            print("canceled")
+            return
+
+        remove_level = params["remove_level"]
+        remove_amp_wise_var = params["amp_wise"]
 
     d2 = remove_pattern(data_minus_raw, mask=bias_mask,
                         remove_level=remove_level,
@@ -219,102 +277,6 @@ def make_combined_images(obsset, allow_no_b_frame=False,
 
 
 steps = [Step("Make Combined Image", make_combined_images,
+              interactive=False,
               remove_level="auto", remove_amp_wise_var="auto")]
 
-
-# if False:
-#     hdul = obsset.get_hdul_to_write(([], data_minus),
-#                                     ([], data_minus_raw))
-
-#     obsset.store("combined_image1", data=hdul, cache_only=False)
-
-#     # if nb == 0:
-#     #     data_plus = a_data
-#     # else:
-#     #     data_plus = (a_data + (a_b**2)*b_data)
-
-#     # variance_map0, variance_map = get_variance_map(obsset,
-#     #                                                data_minus, data_plus)
-
-#     # hdul = obsset.get_hdul_to_write(([], variance_map0))
-#     # obsset.store("combined_variance0", data=hdul, cache_only=True)
-
-#     # hdul = obsset.get_hdul_to_write(([], variance_map))
-#     # obsset.store("combined_variance1", data=hdul, cache_only=True)
-# def main():
-# if False:
-#     import igrins
-
-#     obsset = igrins.get_obsset("20190318", "K", "STELLAR_ONOFF",
-#                                obsids=range(9, 12),
-#                                # obsids=range(9, 15),
-#                                # obsids=range(12, 15),
-#                                # frametypes="A B A A B A".split())
-#                                frametypes="A B A A B A".split())
-
-#     data_minus, data_minus_raw = get_combined_images(obsset,
-#                                                      destripe_pattern=None)
-
-#     bias_mask = obsset.load_resource_for("bias_mask")
-
-#     d2 = remove_pattern(data_minus, mask=bias_mask)
-
-
-# if False:
-
-
-#     lx = np.linspace(0, 3, 100)
-#     ly = np.polyval(p, lx)
-
-#     fig, (ax1, ax2) = plt.subplots(1, 2, num=1, clear=True)
-#     ax1.plot(x, k)
-#     ax1.plot(x[msk], k[msk], "o")
-#     ax1.loglog()
-
-#     ax1.plot(10.**lx, 10.**(ly), "-")
-#     ax1.plot(10.**lx, 10.**(ly + 3*ss))
-
-#     # x = np.arange(ca.shape[-1])
-#     y = 10.**(np.polyval(p, np.log10(x)) + 3*ss)
-#     di = 5
-#     dly = np.log10(k/y)[di:15]
-#     ii = np.argsort(dly)
-#     yi = [di + i1 for i1 in ii[::-1][:2] if dly[i1] > 3 * ss]
-
-#     ca = np.abs(c[:, :30])
-
-# if False:
-#     k = np.median(np.abs(c), axis=0)[1:]
-#     x = np.arange(1, 1 + len(k))
-#     msk = (x < 5) | (15 < x)
-
-#     p = np.polyfit(np.log10(x[msk]), np.log10(k[msk]), 2)
-
-#     ss = np.std(np.log10(k[-256:]))
-
-#     lx = np.linspace(0, 3, 100)
-#     ly = np.polyval(p, lx)
-
-#     fig, (ax1, ax2) = plt.subplots(1, 2, num=1, clear=True)
-#     ax1.plot(x, k)
-#     ax1.plot(x[msk], k[msk], "o")
-#     ax1.loglog()
-
-#     ax1.plot(10.**lx, 10.**(ly), "-")
-#     ax1.plot(10.**lx, 10.**(ly + 3*ss))
-
-#     # x = np.arange(ca.shape[-1])
-#     y = 10.**(np.polyval(p, np.log10(x)) + 3*ss)
-#     di = 5
-#     dly = np.log10(k/y)[di:15]
-#     ii = np.argsort(dly)
-#     yi = [di + i1 for i1 in ii[::-1][:2] if dly[i1] > 3 * ss]
-
-#     ca = np.abs(c[:, :30])
-
-#     ax1.imshow(ca, origin="lower", vmax=500)
-#     ax2.imshow(ca > y, origin="lower")
-
-
-# if __name__ == '__main__':
-#     main()
