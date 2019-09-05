@@ -165,10 +165,53 @@ def fmt_exptime(row):
     return "{} x {}".format(etime, len(row["obsids"]))
 
 
+import re
+
+def get_replaced_pattern(s):
+    """
+    replace patterns like 'ABAABA' or 'ABBAABBA' to '(ABA)x2' or '(ABBA)x2'
+    """
+    p = re.compile(r'(((.)(.)(\4)?\3){2,})')
+    ps = re.compile(r'\s+')
+
+    s1 = s
+    m = p.search(s1)
+
+    while m:
+        st, c, _, _, _ = m.groups()
+        n = len(st) // len(c)
+        r = " ({})x{} ".format(c, n)
+        s1, _ = p.subn(r, s1, 1)
+        m = p.search(s1)
+
+    s1 = ps.sub(" ", s1)
+    # s1 = p.sub(" ", s1)
+    return s1.strip()
+
+
+def get_replaced_repeated(s):
+    """
+    replace patterns like 'OOOO' (or longer) to '0x4'
+    """
+    p = re.compile(r'((.)\2{3,})')
+    ps = re.compile(r'\s+')
+
+    s1 = s
+    m = p.search(s1)
+    while m:
+        st, c = m.groups()
+        r = " {}x{} ".format(c, len(st))
+        s1 = p.sub(r, s1, 1)
+        m = p.search(s1)
+
+    s1 = ps.sub(" ", s1)
+    return s1.strip()
+
+
 def fmt_frames(frames):
     frames = [dict(on="O", off="S").get(f.lower(), f) for f in frames]
 
-    return "".join(frames)
+    return get_replaced_pattern(get_replaced_repeated("".join(frames)))
 
 
 def fmt_obsids(obsids):
@@ -209,7 +252,7 @@ def tabulated_recipe_logs(obsdate, config):
     from ..external.tabulate import tabulate
     r = tabulate(recipes[["group1", "objname", "recipe",
                           "exptime-fmt", "obsid-fmt", "frame-fmt"]],
-                 headers=["Group", "Obj. Name", "Recip",
+                 headers=["GID", "Obj. Name", "Recip",
                           "ExpTime", "ObsIDs", "Frames"],
                  tablefmt='psql', showindex=False)
 
