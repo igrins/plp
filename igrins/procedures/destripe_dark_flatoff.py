@@ -44,6 +44,13 @@ def make_background_mask(data_list):
     return m, k
 
 
+def make_background_mask_from_combined(combined):
+
+    m, k = _make_background_mask(combined)
+
+    return m, k
+
+
 def make_initial_dark(data_list, bg_mask):
 
     # subtract p64 with the background mask, and create initial background

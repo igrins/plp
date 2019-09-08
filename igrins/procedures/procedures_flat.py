@@ -7,10 +7,10 @@ import scipy.ndimage as ni
 
 from astropy.io.fits import Card, HDUList, PrimaryHDU
 
+from .. import get_obsset_helper, DESCS
+
 from ..utils.image_combine import image_median as stsci_median
 from ..procedures import destripe_dark_flatoff as dh
-
-from .. import get_obsset_helper, DESCS
 
 from ..utils.json_helper import json_dumps
 
@@ -32,12 +32,58 @@ from ..utils.json_helper import json_dumps
 
 #     return (cards, flat_off)
 
+from ..utils.image_combine import image_median
+
+from ..procedures.readout_pattern_guard import remove_pattern_from_guard
+
+# from igrins.procedures import destripe_dark_flatoff as dh
+
+from ..procedures.readout_pattern_helper import make_initial_flat_cube
+
+# from igrins.procedures.procedure_dark import (apply_rp_2nd_phase,
+#                                               apply_rp_1st_phase)
+
+
+def get_params(band):
+    if band == "K":
+        mode = 0
+        bg_y_slice = slice(-256, None)
+    else:
+        mode = 1
+        bg_y_slice = slice(None, 512)
+
+    # print(band, mode, bg_y_slice)
+    return mode, bg_y_slice
+
+
+def make_flat_off_cube_201909(hdul, rp_remove_mod, bg_y_slice):
+
+    data_list = np.array([remove_pattern_from_guard(hdu.data)
+                          for hdu in hdul])
+
+    cards, cube = make_initial_flat_cube(data_list,
+                                         rp_remove_mod, bg_y_slice)
+
+    return cards, cube
+
+
+def combine_flat_off_cube_201909(hdul, rp_remove_mod, bg_y_slice):
+
+    cards, cube = make_flat_off_cube_201909(hdul,
+                                            rp_remove_mod, bg_y_slice)
+
+    flat_off = image_median(cube)
+
+    return cards, flat_off
+
+
 def correct_bg_from_upper256(d):
     s = ni.median_filter(np.nanmedian(d[-256:-4], axis=0), 128)
     return d - s
 
-def combine_flat_off(hdul, destripe=True,
-                     correct_bg_upper256=False):
+
+def combine_flat_off_old(hdul, destripe=True,
+                         correct_bg_upper256=False):
     # destripe=True):
 
     cards = []
@@ -75,14 +121,18 @@ def obsset_combine_flat_off(obsset, destripe=True):
     #     cards.append(Card("HISTORY",
     #                       "IGR: image destriped."))
 
-    hdu_list = obsset_off.get_hdus()
+    hdul = obsset_off.get_hdus()
 
     band = get_band(obsset)
-    correct_bg_upper256 = True if band == "K" else False
+    rp_remove_mod, bg_y_slice = get_params(band)
 
-    cards, flat_off = combine_flat_off(hdu_list,
-                                       destripe=destripe,
-                                       correct_bg_upper256=correct_bg_upper256)
+    # correct_bg_upper256 = True if band == "K" else False
+
+    # cards, flat_off = combine_flat_off(hdu_list,
+    #                                    destripe=destripe,
+    #                                    correct_bg_upper256=correct_bg_upper256)
+    cards, flat_off = combine_flat_off_cube_201909(hdul,
+                                                   rp_remove_mod, bg_y_slice)
 
     hdu_cards = [Card(k, json_dumps(v)) for (k, v) in cards]
 
@@ -146,12 +196,10 @@ def make_hotpix_mask(obsset,
     flat_off_hdu = obsset_off.load_fits_sci_hdu(DESCS["FLAT_OFF"])
     flat_off = flat_off_hdu.data
 
-    hotpix_mask = bp.badpixel_mask(flat_off,
-                                   sigma_clip1=sigma_clip1,
-                                   sigma_clip2=sigma_clip2,
-                                   medfilter_size=medfilter_size)
-
-    bg_std = flat_off[~hotpix_mask].std()
+    bg_std, hotpix_mask = bp.badpixel_mask(flat_off,
+                                           sigma_clip1=sigma_clip1,
+                                           sigma_clip2=sigma_clip2,
+                                           medfilter_size=medfilter_size)
 
     flat_off_cards = [Card("BG_STD", bg_std, "IGR: stddev of combined flat")]
 
@@ -165,6 +213,18 @@ def make_hotpix_mask(obsset,
     obsset_off.store(DESCS["FLAT_OFF"], HDUList([flat_off_hdu]))
 
 
+def make_initial_flat_on(data_list):
+    """
+    data_list : list of raw images
+    """
+    # subtract p64 with the background mask, and create initial background
+
+    cube = np.array([remove_pattern_from_guard(d1)
+                     for d1 in data_list])
+
+    return cube
+
+
 def combine_flat_on(obsset):
     # destripe=True):
 
@@ -175,7 +235,9 @@ def combine_flat_on(obsset):
     # data_list1 = [dh.sub_p64_from_guard(d) for d in data_list]
 
     # flat_on = stsci_median(data_list1)
-    flat_on = dh.make_flaton(data_list)
+    # flat_on = dh.make_flaton(data_list)
+    cube = make_initial_flat_on(data_list)
+    flat_on = image_median(cube)
 
     flat_std = np.std(data_list, axis=0)
 
@@ -494,21 +556,21 @@ def store_qa(obsset_on, obsset_off):
 ###
 
 
-from ..pipeline.steps import Step
+# from ..pipeline.steps import Step
 
 
-steps = [Step("Combine Flat-Off", combine_flat_off),
-         Step("Hotpix Mask", make_hotpix_mask,
-              sigma_clip1=100, sigma_clip2=5),
-         Step("Combine Flat-On", combine_flat_on),
-         Step("Deadpix Mask", make_deadpix_mask,
-              deadpix_thresh=0.6, smooth_size=9),
-         Step("Identify Order Boundary", identify_order_boundaries),
-         Step("Trace Order Boundary", trace_order_boundaries),
-         Step("Stitch Up Traces", stitch_up_traces),
-         Step("Bias Mask", make_bias_mask),
-         Step("Update DB", update_db),
-]
+# steps = [Step("Combine Flat-Off", combine_flat_off),
+#          Step("Hotpix Mask", make_hotpix_mask,
+#               sigma_clip1=100, sigma_clip2=5),
+#          Step("Combine Flat-On", combine_flat_on),
+#          Step("Deadpix Mask", make_deadpix_mask,
+#               deadpix_thresh=0.6, smooth_size=9),
+#          Step("Identify Order Boundary", identify_order_boundaries),
+#          Step("Trace Order Boundary", trace_order_boundaries),
+#          Step("Stitch Up Traces", stitch_up_traces),
+#          Step("Bias Mask", make_bias_mask),
+#          Step("Update DB", update_db),
+# ]
 
 
 if __name__ == "__main__":

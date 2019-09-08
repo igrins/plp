@@ -15,30 +15,8 @@ from .ascii_plot import (asciiplot_per_amp, pad_with_axes,
 
 from .. import DESCS
 
-
-def apply_rp_2nd_phase(d, mask=None):
-    if mask is None:
-        mask = np.zeros(d.shape, dtype=bool)
-    else:
-        mask = mask.copy()
-
-    mask[:4] = True
-    mask[-4:] = True
-
-    p = [pipes[k] for k in ['p64_1st_order',
-                            'col_wise_bias_c64',
-                            'amp_wise_bias_r2',
-                            'col_wise_bias']]
-
-    return apply_pipe(d, p, mask=mask)
-
-
-def apply_rp_3rd_phase(d):
-    p = [pipes[k] for k in ['p64_per_column',
-                            'row_wise_bias',
-                            'amp_wise_bias_c64']]
-
-    return apply_pipe(d, p)
+from ..procedures.readout_pattern_helper import (apply_rp_2nd_phase,
+                                                 apply_rp_3rd_phase)
 
 
 def make_guard_n_bg_subtracted_images(obsset, no_bias_mask=False):
