@@ -1,5 +1,4 @@
 import numpy as np
-import scipy.ndimage as ni
 
 from ..utils.image_combine import image_median
 from ..procedures import destripe_helper as dh
@@ -7,48 +6,7 @@ from ..procedures import destripe_helper as dh
 from ..procedures.estimate_sky import (estimate_background,
                                        get_interpolated_cubic)
 
-from ..igrins_libs.logger import logger
-
-
-def _make_background_mask(dark1):
-    # esimate threshold for the initial background destermination
-    dark1G = ni.median_filter(dark1, [15, 1])
-    dark1G_med, dark1G_std = np.median(dark1G), np.std(dark1G)
-
-    f_candidate = [1., 1.5, 2., 4.]
-    for f in f_candidate:
-        th = dark1G_med + f * dark1G_std
-        m = (dark1G > th)
-
-        k = np.sum(m, axis=0, dtype="f") / m.shape[0]
-        if k.max() < 0.6:
-            break
-    else:
-        logger.warning("No suitable background threshold is found")
-        m = np.zeros_like(m, dtype=bool)
-        f, th = np.inf, np.inf
-
-    k = dict(bg_med=dark1G_med, bg_std=dark1G_std,
-             threshold_factor=k, threshold=th)
-    return m, k
-
-
-def make_background_mask(data_list):
-
-    # subtract p64 usin the guard columns
-    data_list1 = [dh.sub_p64_from_guard(d) for d in data_list]
-    dark1 = image_median(data_list1)
-
-    m, k = _make_background_mask(dark1)
-
-    return m, k
-
-
-def make_background_mask_from_combined(combined):
-
-    m, k = _make_background_mask(combined)
-
-    return m, k
+from ..procedures.readout_pattern_helper import apply_rp_2nd_phase
 
 
 def make_initial_dark(data_list, bg_mask):
@@ -89,17 +47,27 @@ def _sub_median_row_with_mask(d1, mask):
     return dh.sub_column(d1, c)
 
 
-def _sub_with_bg(d, bg, destripe_mask=None):
+def _sub_with_bg_old(d, bg, destripe_mask=None):
     d0 = d - bg
     d1 = dh.sub_p64_with_mask(d0, destripe_mask)
     d2 = _sub_median_row_with_mask(d1, destripe_mask)
     return d2 + bg
 
 
+def _sub_with_bg_201909(d, bg, destripe_mask=None):
+
+    with np.warnings.catch_warnings():
+        np.warnings.filterwarnings('ignore', r'All-NaN (slice|axis)')
+
+        r = apply_rp_2nd_phase(d - bg, destripe_mask) + bg
+
+    return r
+
+
 def make_dark_with_bg(data_list, bg_model,
                       destripe_mask=None):
 
-    data_list5 = [_sub_with_bg(d, bg_model, destripe_mask)
+    data_list5 = [_sub_with_bg_201909(d, bg_model, destripe_mask)
                   for d in data_list]
 
     flat5 = image_median(data_list5)

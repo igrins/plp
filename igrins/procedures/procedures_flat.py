@@ -104,7 +104,16 @@ def combine_flat_off_old(hdul, destripe=True,
 
 
 def obsset_combine_flat_off(obsset, destripe=True):
-    # destripe=True):
+    """
+    For flat-off, they are first guard-removed.
+    ['amp_wise_bias_r2', 'p64_0th_order'].
+    Then, for H, we apply 1st-phase of RO pattern removal
+    with initial bg-mask. Then vertical background pattern is removed using an
+    estimate from a range of rows (band dependent).
+
+    """
+
+    # TODO: is there any way we can (model and) remove thermal background.
 
     obsset_off = obsset.get_subset("OFF")
 
@@ -148,6 +157,11 @@ def get_band(obsset):
 
 
 def obsset_combine_flat_off_step2(obsset):
+    """
+    We model the post-slit bg from the previous flat-off.
+    Then subtract the bg from individual flat-off frames, and
+    apply 2nd phase ro-pattern removal using the destripe mask.
+    """
     # destripe=True):
 
     obsset_off = obsset.get_subset("OFF")
@@ -226,6 +240,11 @@ def make_initial_flat_on(data_list):
 
 
 def combine_flat_on(obsset):
+    """
+    For flat-on, we subtract ro pattern from guards.
+    ['amp_wise_bias_r2', 'p64_0th_order']
+    And then median-combined.
+    """
     # destripe=True):
 
     obsset_on = obsset.get_subset("ON")
