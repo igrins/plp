@@ -142,7 +142,7 @@ class RecipeSummary(object):
             if len(df_sky):
                 sky_recipe = "SKY_AB"
             else:
-                return "", 0
+                return "", "0"
 
         i = len(df_sky) // 2
         sky_group = df_sky.iloc[i]["GROUP1"]
