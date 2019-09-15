@@ -86,6 +86,13 @@ class ResourceStack(object):
 
         return section, fn
 
+    def locate(self, basename, item_desc, item_type=None, postfix=""):
+
+        section, fn = self.get_section_n_fn(basename, item_desc, postfix)
+
+        d = self.context_stack.locate(section, fn, item_type=item_type)
+        return d
+
     def load(self, basename, item_desc, item_type=None, postfix=""):
 
         if self.context_stack.current is not None:

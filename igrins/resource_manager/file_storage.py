@@ -33,7 +33,7 @@ class FileStorage(StorageBase):
 
         return os.path.exists(file_path)
 
-    def load(self, section, fn, item_type=None, check_candidate=None):
+    def _locate(self, section, fn, item_type=None, check_candidate=None):
         if check_candidate is None:
             check_candidate = self._check_candidate
 
@@ -43,6 +43,17 @@ class FileStorage(StorageBase):
             decompress = None
 
         file_path = self._get_path(section, fn)
+        return file_path, decompress
+
+    def locate(self, section, fn, item_type=None, check_candidate=None):
+        file_path, decompress = self._locate(section, fn,
+                                             item_type, check_candidate)
+        return file_path
+
+    def load(self, section, fn, item_type=None, check_candidate=None):
+        file_path, decompress = self._locate(section, fn,
+                                             item_type, check_candidate)
+
         r = open(file_path, "rb").read()
 
         if decompress is None:

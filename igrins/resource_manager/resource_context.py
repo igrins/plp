@@ -144,6 +144,25 @@ class ResourceContextStack():
             self.storage.store(section, fn, buf,
                                item_type=item_type)
 
+    def locate(self, section, fn, item_type=None):
+        """
+        locate bypass cache and try to locate file.
+        """
+        # check the write cache in the context_stack
+        # for context in self.context_list[::-1]:
+        #     try:
+        #         return context.load(section, fn, item_type=item_type)
+        #     except KeyError:
+        #         pass
+
+        # # then check the read cache.
+        # if self.current is not None:
+        #     return self.read_cache.load(section, fn, item_type)
+        # else:
+        #     return self.storage.load(section, fn, item_type)
+
+        return self.storage.exists(section, fn)
+
     def load(self, section, fn, item_type=None):
         # check the write cache in the context_stack
         for context in self.context_list[::-1]:

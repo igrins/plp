@@ -123,6 +123,17 @@ class ObsSet(object):
         hdul = self.load(item_desc, item_type="fits", postfix=postfix)
         return get_first_science_hdu(hdul)
 
+    def locate(self, item_desc, item_type=None, postfix=""):
+
+        if not isinstance(item_desc, tuple):
+            item_desc = DESCS[item_desc]
+
+        postfix = "" if postfix is None else postfix
+
+        r = self.rs.locate(self.groupname, item_desc,
+                           item_type=item_type, postfix=postfix)
+        return r
+
     def load(self, item_desc, item_type=None, postfix=""):
 
         if not isinstance(item_desc, tuple):
