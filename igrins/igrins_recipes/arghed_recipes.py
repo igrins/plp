@@ -36,6 +36,8 @@ def get_recipe_list():
                    create_argh_command("combine", ["A0V_*",
                                                    "STELLAR_*",
                                                    "EXTENDED_*"]),
+                   create_argh_command("combine-sky", ["SKY", "SKY_AB"],
+                                       bg_subtraction_mode="none"),
                    create_argh_command("register-sky", ["SKY", "SKY_AB"]),
                    create_argh_command("wvlsol-sky", ["SKY", "SKY_AB"]),
                    create_argh_command("extract-sky", ["SKY", "SKY_AB"]),

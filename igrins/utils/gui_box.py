@@ -9,7 +9,8 @@ from matplotlib.offsetbox import (AnchoredOffsetbox,
                                   DrawingArea, TextArea,
                                   HPacker, VPacker)
 
-from matplotlib.widgets import (Button, RadioButtons, CheckButtons,
+from matplotlib.widgets import (Button, RadioButtons as _RadioButtons,
+                                CheckButtons,
                                 TextBox)
 
 from matplotlib.backends.backend_agg import FigureCanvasAgg
@@ -22,6 +23,25 @@ from matplotlib.tight_layout import get_renderer
 #     renderer = canvas.get_renderer()
 
 #     return renderer
+
+
+class RadioButtons(_RadioButtons):
+    def __init__(self, ax, labels, active=0, values=None):
+        """
+        active : active index
+        """
+        self._values = values
+        self._labels = labels
+
+        _RadioButtons.__init__(self, ax, labels, active=active)
+
+    def get_selected_value(self):
+        label1 = self.value_selected
+        if self._values is not None:
+            i = self._labels.index(label1)
+            return self._values[i]
+        else:
+            return label1
 
 
 class DrawingAreaBase(DrawingArea):
@@ -215,11 +235,12 @@ class GuiBox():
 
         return text_box
 
-    def append_radio_buttons(self, labels, active):
+    def append_radio_buttons(self, labels, active, values=None):
         box = self._append_box(self._line_height * len(labels))
         ax = self._add_axes_box(box)
 
-        radioButtons = RadioButtons(ax, labels, active=active)
+        radioButtons = RadioButtons(ax, labels, active=active,
+                                    values=values)
         self._widgets.append(radioButtons)
 
         return radioButtons

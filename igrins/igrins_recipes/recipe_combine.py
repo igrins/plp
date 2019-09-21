@@ -22,33 +22,6 @@ def _get_combined_image(obsset):
     data_list = [hdu.data for hdu in obsset.get_hdus()]
 
     return np.sum(data_list, axis=0)
-    # return image_median(data_list)
-
-
-# def get_destriped(obsset,
-#                   data_minus,
-#                   destripe_pattern=64,
-#                   use_destripe_mask=None,
-#                   sub_horizontal_median=True,
-#                   remove_vertical=False):
-
-#     from ..procedures.destriper import destriper
-
-#     if use_destripe_mask:
-#         helper = ResourceHelper(obsset)
-#         _destripe_mask = helper.get("destripe_mask")
-
-#         destrip_mask = ~np.isfinite(data_minus) | _destripe_mask
-#     else:
-#         destrip_mask = None
-
-#     data_minus_d = destriper.get_destriped(data_minus,
-#                                            destrip_mask,
-#                                            pattern=destripe_pattern,
-#                                            hori=sub_horizontal_median,
-#                                            remove_vertical=remove_vertical)
-
-#     return data_minus_d
 
 
 def remove_pattern(data_minus, mask=None, remove_level=1,
