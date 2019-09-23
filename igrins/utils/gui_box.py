@@ -15,6 +15,7 @@ from matplotlib.widgets import (Button, RadioButtons as _RadioButtons,
 
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.text import Text
+import matplotlib.patheffects as path_effects
 
 from matplotlib.tight_layout import get_renderer
 
@@ -203,6 +204,10 @@ class GuiBox():
         labelbox.set_figure(self._fig)
         p = Text(width, height/2., label, va="center", ha="right")
         labelbox.add_artist(p)
+
+        pe = [path_effects.Stroke(linewidth=3, foreground='0.9'),
+              path_effects.Normal()]
+        p.set_path_effects(pe)
 
         box = DrawingAreaBase(self._width - width - 5, height, 0, 0)
         ax = self._add_axes_box(box)
