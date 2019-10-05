@@ -199,9 +199,13 @@ class GuiBox():
 
     def append_labeled_textbox(self, label, width, height,
                                initial_text="TEXT"):
-
+        """
+        with & height for the label.
+        """
         labelbox = DrawingArea(width, height, 0, 0)
         labelbox.set_figure(self._fig)
+        # For now, we use va=center. ba=baseline does not work okay as is
+        # and need to be improved.
         p = Text(width, height/2., label, va="center", ha="right")
         labelbox.add_artist(p)
 
@@ -223,6 +227,7 @@ class GuiBox():
     def _append_labeld_box_d(self, label, height, initial_text="TEXT"):
 
         t = TextArea(label)
+
         t.set_figure(self._fig)
         renderer = get_renderer(self._fig)
         w_ = t.get_window_extent(renderer).width

@@ -19,6 +19,14 @@ def _get_combined_image(obsset):
     return image_median(data_list)
 
 
+def get_median_combined_image_n_exptime(obsset):
+    im = _get_combined_image(obsset)
+
+    exptime = get_exptime(obsset)
+
+    return im, exptime
+
+
 def get_combined_image(obsset):
 
     if obsset.recipe_name.endswith("AB"):  # do A-B

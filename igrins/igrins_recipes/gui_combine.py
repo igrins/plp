@@ -134,6 +134,169 @@ def setup_gui_combine_sky(im, vmin, vmax,
 
     func_get_processed_n_smoothed = factory_processed_n_smoothed(func_process)
 
+    busy_text = ax.annotate("busy...", (0, 1), va="top", ha="left",
+                            xycoords="figure fraction")
+    busy_text.set_visible(False)
+
+    box = AnchoredGuiBox(fig, ax, 80, align="center", pad=0, sep=5)
+    ax.add_artist(box)
+
+    from ..utils.gui_box_helper import WidgetSet, Input, Radio, Check, Button
+    ws = WidgetSet(box.gui, ax=ax, im=im)
+
+    def get_params(user_params=None):
+        if user_params is None:
+            user_params = ws.get_params()
+
+        p = dict(remove_level=user_params["level"],
+                 bg_subtraction_mode=user_params["bg_mode"])
+
+        return p
+
+    def hzfunc(w, kl, user_params):
+
+        im = kl["im"]
+
+        smooth = user_params["smooth"][0]
+
+        p = get_params(user_params)
+        d2 = func_get_processed_n_smoothed(**p, smooth=smooth)
+
+        im.set_data(d2)
+
+        # we do not redraw as this will be done with post hook
+        # fig.canvas.draw()
+
+    def change_clim(w, kl, user_params):
+
+        im = kl["im"]
+
+        vmin = float(user_params["vmin"])
+        vmax = float(user_params["vmax"])
+
+        im.set_clim(vmin, vmax)
+        # fig.canvas.draw()
+
+    widgets = [
+        Input("vmax", value="30", label="vmax",
+              on_trigger=change_clim),
+        Input("vmin", value="-10", label="vmin",
+              on_trigger=change_clim),
+        Radio("level", ["level 1", "level 2"], [1, 2],
+              value=params["remove_level"],
+              on_trigger=hzfunc),
+        Radio("bg_mode", ["none", "sky"], ["none", "sky"],
+              value=params["bg_subtraction_mode"],
+              on_trigger=hzfunc),
+        Check("smooth", ["smooth"], [False],
+              on_trigger=hzfunc),
+        Button("Save & Quit", on_trigger=func_save)
+    ]
+
+    def set_busy(*kl, **kwargs):
+        busy_text.set_visible(True)
+        fig.canvas.draw()
+        fig.canvas.flush_events()
+
+    def unset_busy(*kl, **kwargs):
+        busy_text.set_visible(False)
+        fig.canvas.draw()
+        fig.canvas.flush_events()
+
+    ws.pre_trigger_hooks.append(set_busy)
+    ws.post_trigger_hooks.append(unset_busy)
+
+    ws.install_widgets(widgets)
+
+    return box, get_params
+
+#, get_params
+
+
+if False:
+
+    box = AnchoredGuiBox(fig, ax, 80, align="center", pad=0, sep=5)
+    ax.add_artist(box)
+
+    vmax_input = box.gui.append_labeled_textbox("vmax", 30, 20,
+                                                initial_text=str(vmax))
+
+    vmin_input = box.gui.append_labeled_textbox("vmin", 30, 20,
+                                                initial_text=str(vmin))
+
+    check_buttons1 = box.gui.append_check_buttons(["Smooth"],
+                                                  [False])
+
+    radio_labels1 = ('level 1', 'level 2')
+    # radio_return_values1 = [1, 2]
+    # a = radio_return_values1.index(params["remove_level"])
+    v, vv = params["remove_level"], [1, 2]
+    radio_buttons1 = box.gui.append_radio_buttons(radio_labels1,
+                                                  active=vv.index(v),
+                                                  values=vv)
+
+    radio_labels2 = ('none', 'sky')
+    a = radio_labels2.index(params["bg_subtraction_mode"])
+    radio_buttons2 = box.gui.append_radio_buttons(radio_labels2, active=a)
+
+    # box.gui.append_label(label)
+
+    save_button = box.gui.append_button("Save & Quit")
+    save_button.on_clicked(func_save)
+
+    def get_params():
+        # label1 = radio_buttons1.value_selected
+        # i = radio_labels1.index(label1)
+        # remove_level = radio_return_values1[i]
+        remove_level = radio_buttons1.get_selected_value()
+
+        bg_subtraction_mode = radio_buttons2.get_selected_value()
+
+        r = dict(remove_level=remove_level,
+                 bg_subtraction_mode=bg_subtraction_mode)
+        return r
+
+    def hzfunc(*kl, im=im, ax=ax):
+        p = get_params()
+        smooth = check_buttons1.get_status()[0]
+
+        d2 = func_get_processed_n_smoothed(**p, smooth=smooth)
+        # d2 = func_get_pattern_remove_n_smoothed(p["remove_level"],
+        #                                         p["amp_wise"], smooth)
+
+        im.set_data(d2)
+
+        fig.canvas.draw()
+
+    def change_clim(*kl, im=im):
+        vmin = float(vmin_input.text)
+        vmax = float(vmax_input.text)
+
+        im.set_clim(vmin, vmax)
+        fig.canvas.draw()
+
+    vmax_input.on_submit(change_clim)
+    vmin_input.on_submit(change_clim)
+    # hzfunc()
+
+    radio_buttons1.on_clicked(hzfunc)
+    radio_buttons2.on_clicked(hzfunc)
+    check_buttons1.on_clicked(hzfunc)
+    # check_buttons2.on_clicked(hzfunc)
+
+    # return box, get_params
+
+
+def setup_gui_combine_sky_deprecated(im, vmin, vmax,
+                                     params,
+                                     func_process,
+                                     func_save):
+
+    ax = im.axes
+    fig = ax.figure
+
+    func_get_processed_n_smoothed = factory_processed_n_smoothed(func_process)
+
     box = AnchoredGuiBox(fig, ax, 80, align="center", pad=0, sep=5)
     ax.add_artist(box)
 

@@ -4,10 +4,13 @@ from ..utils.gui_box import AnchoredGuiBox
 
 
 class WidgetSet():
-    def __init__(self, box, **kwargs):
-        self.gui = box.gui
+    def __init__(self, gui_object, **kwargs):
+        self.gui = gui_object
         self.kwargs = kwargs
         self.params = []
+
+        self.pre_trigger_hooks = []
+        self.post_trigger_hooks = []
 
     def append_param(self, widget_id, get_param1):
         self.params.append((widget_id, get_param1))
@@ -16,6 +19,14 @@ class WidgetSet():
         r = dict((widget_id, get_param1())
                  for widget_id, get_param1 in self.params)
         return r
+
+    def install_widgets(self, widget_list):
+        for w in widget_list:
+            w.install(self,
+                      pre_trigger_hooks=self.pre_trigger_hooks,
+                      post_trigger_hooks=self.post_trigger_hooks)
+
+    # ws = WidgetSet(box, ax=ax)
 
     # def _append_widget(self, widgetwidget_set, widget):
     #     widget_set.append_param(self.widget_id,
@@ -29,6 +40,7 @@ class Widget():
         self.value = value
         self.label = label
         self.on_trigger = on_trigger
+
         "on_trigger(self, widget_params, user_params)"
 
     def get_param1(self, widget):
@@ -41,14 +53,29 @@ class Widget():
 
         raise RuntimeError("Need to be implmented by the derived class")
 
-    def install(self, widget_set):
+    def install(self, widget_set,
+                pre_trigger_hooks=None, post_trigger_hooks=None):
+
+        if pre_trigger_hooks is None:
+            pre_trigger_hooks = []
+
+        if post_trigger_hooks is None:
+            post_trigger_hooks = []
 
         def _on_trigger(*kl, **kw):
             widget_set_kwargs = widget_set.kwargs
             user_params = widget_set.get_params()
 
+            if pre_trigger_hooks:
+                for _f in pre_trigger_hooks:
+                    _f(self, widget_set_kwargs, user_params)
+
             if self.on_trigger is not None:
                 self.on_trigger(self, widget_set_kwargs, user_params)
+
+            if post_trigger_hooks:
+                for _f in post_trigger_hooks:
+                    _f(self, widget_set_kwargs, user_params)
 
         w = self.create_widget(widget_set, _on_trigger)
 
@@ -76,8 +103,6 @@ class Input(Widget):
         return inp
 
 
-#      Check("smooth", ["Smooth"], values=[False],
-#            cb=hzfunc), # ["smooth", "check", ["Smooth"], [False]],
 class Check(Widget):
     def __init__(self, widget_id, check_labels, check_values=None,
                  on_trigger=None):
@@ -130,6 +155,26 @@ class Radio(Widget):
         return w
 
 
+class Button(Widget):
+    def __init__(self, widget_id, label=None,
+                 on_trigger=None):
+
+        Widget.__init__(self, widget_id, label=label,
+                        on_trigger=on_trigger)
+
+    def get_param1(self, widget):
+        return None
+
+    def create_widget(self, widget_set, on_trigger):
+        gui = widget_set.gui
+
+        label = self.widget_id if self.label is None else self.label
+        w = gui.append_button(label)
+        w.on_clicked(on_trigger)
+
+        return w
+
+
 if False:
     radio_labels1 = ('level 1', 'level 2')
     # radio_return_values1 = [1, 2]
@@ -160,10 +205,13 @@ def setup_gui(ax):
     im = ax.imshow([[1, 2], [3, 4]], interpolation="none")
 
     fig = ax.figure
+
+    busy_text = ax.annotate("busy...", (0, 1), va="top", ha="left",
+                            xycoords="figure fraction")
+    busy_text.set_visible(False)
+
     box = AnchoredGuiBox(fig, ax, 80, align="center", pad=0, sep=5)
     ax.add_artist(box)
-
-    ws = WidgetSet(box, ax=ax)
 
     def on_change(w, kl, user_params):
         # vmax = float(user_params["vmax"])
@@ -172,24 +220,36 @@ def setup_gui(ax):
 
         fig.canvas.draw()
 
-    inp1 = Input("vmax", value="30", label="vmax",
-                 on_trigger=on_change)
-    inp2 = Input("vmin", value="-10", label="vmin",
-                 on_trigger=on_change)
+    widgets = [
+        Input("vmax", value="30", label="vmax",
+              on_trigger=on_change),
+        Input("vmin", value="-10", label="vmin",
+              on_trigger=on_change),
+        Radio("level", ["level 1", "level 2"], [1, 2],
+              value=2,
+              on_trigger=on_change),
+        Check("smooth", ["smooth"], [False],
+              on_trigger=on_change),
+        Button("Save & Quit")
+    ]
 
-    inp1.install(ws)
-    inp2.install(ws)
+    ws = WidgetSet(box.gui, ax=ax)
 
-    radio1 = Radio("level", ["level 1", "level 2"], [1, 2],
-                   value=2,
-                   on_trigger=on_change)
+    def set_busy(*kl, **kwargs):
+        busy_text.set_visible(True)
+        fig.canvas.draw()
 
-    radio1.install(ws)
+    def unset_busy(*kl, **kwargs):
+        busy_text.set_visible(False)
+        fig.canvas.draw()
 
-    check1 = Check("smooth", ["smooth"], [False],
-                   on_trigger=on_change)
+    ws.pre_trigger_hooks.append(set_busy)
+    ws.post_trigger_hooks.append(unset_busy)
 
-    check1.install(ws)
+    ws.install_widgets(widgets)
+
+    # for w in widgets:
+    #     w.install(ws)
 
 
 def main():

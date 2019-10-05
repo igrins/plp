@@ -197,10 +197,8 @@ from .gui_combine import (setup_gui_combine_sky,
 
 #     return params
 
-def run_interactive(obsset, params, _process):
+def run_interactive(obsset, params, _process, exptime=None):
     import matplotlib.pyplot as plt
-    # from astropy_smooth import get_smoothed
-    # from functools import lru_cache
 
     fig, ax = plt.subplots(figsize=(8, 8), num=1, clear=True)
 
@@ -215,17 +213,22 @@ def run_interactive(obsset, params, _process):
     def save(*kl, status=status):
         status["to_save"] = True
         plt.close(fig)
-        # print("save")
-        # pass
 
     ax.set_title("{}-{:04d} [{}]".format(obsdate, obsid, band))
 
     # add callbacks
     sky = _process(**params)
-    print(params)
 
     im = ax.imshow(sky, origin="lower", interpolation="none")
-    vmin, vmax = -10, 40
+
+    if exptime is None:
+        vmin, vmax = -10, 30
+    else:
+        vmin, vmax = -1, 3  # for 30s exptime
+        cor = max(int(exptime / 30.), 1)
+
+        vmin, vmax = vmin * cor, vmax * cor
+
     im.set_clim(vmin, vmax)
 
     box, get_params = setup_gui_combine_sky(im, vmin, vmax,
@@ -241,22 +244,25 @@ def run_interactive(obsset, params, _process):
 
 def make_combined_images(obsset,
                          bg_subtraction_mode="sky",
-                         remove_level=1,
+                         remove_level="auto",
                          # remove_amp_wise_var=False,
                          interactive=False,
                          cache_only=False):
 
+    from functools import lru_cache
+
     from ..procedures.readout_pattern_helper import (sub_bg_from_slice,
                                                      apply_rp_1st_phase)
     from ..procedures.procedures_flat import get_params
-    from ..procedures.sky_spec import _get_combined_image
+    from ..procedures.sky_spec import get_median_combined_image_n_exptime
     from .. import get_obsset_helper
     from ..procedures import destripe_dark_flatoff as dh
 
     obsdate, band = obsset.get_resource_spec()
     mode, bg_y_slice = get_params(band)
 
-    raw_sky = _get_combined_image(obsset)
+    # median-combined image
+    raw_sky, exptime = get_median_combined_image_n_exptime(obsset)
 
     sky0 = remove_pattern_from_guard(raw_sky)
     sky1 = sub_bg_from_slice(sky0, bg_y_slice)
@@ -266,7 +272,6 @@ def make_combined_images(obsset,
 
     # This seem to work, but we may better refine the mask for the column-wise
     # background subtraction.
-    print(mode)
     if mode == 1:
         _d = apply_rp_1st_phase(sky1, destripe_mask)
     else:
@@ -274,13 +279,15 @@ def make_combined_images(obsset,
 
     sky2 = sub_bg_from_slice(_d, bg_y_slice)
 
+    @lru_cache(maxsize=2)
+    def _get_sky():
+        return dh.model_bg(sky2, destripe_mask)
+
     def _process_sky(bg_subtraction_mode=bg_subtraction_mode,
                      remove_level=remove_level):
-        # bg_subtraction_mode = params["bg_subtraction_mode"]
-        # remove_level = params["remove_level"]
 
         if bg_subtraction_mode == "sky":
-            bg_model = dh.model_bg(sky2, destripe_mask)
+            bg_model = _get_sky()
 
             sky3 = apply_rp_1st_phase(sky2 - bg_model, destripe_mask)
         elif bg_subtraction_mode == "none":
@@ -298,18 +305,22 @@ def make_combined_images(obsset,
 
         return sky4
 
+    if remove_level == "auto":
+        if bg_subtraction_mode == "sky":
+            remove_level = 2
+        else:
+            remove_level = 1
+
     params = dict()
     params["bg_subtraction_mode"] = bg_subtraction_mode
     params["remove_level"] = remove_level
 
     if interactive:
-        params = run_interactive(obsset, params, _process_sky)
-        # params = run_interactive(obsset,
-        #                          data_minus_raw, data_plus, bias_mask,
-        #                          remove_level, remove_amp_wise_var)
+        params = run_interactive(obsset, params, _process_sky,
+                                 exptime=exptime)
 
-        print("returned", params)
-        if not params["to_save"]:
+        to_save = params.pop("to_save", False)
+        if not to_save:
             print("canceled")
             return
 
@@ -323,56 +334,11 @@ def make_combined_images(obsset,
     hdul = obsset.get_hdul_to_write(([], sky4))
     obsset.store("combined_sky", data=hdul)
 
-    # if remove_level == "auto":
-    #     remove_level = 2
-
-    # if remove_amp_wise_var == "auto":
-    #     remove_amp_wise_var = False
-
-    # _ = get_combined_images(obsset,
-    #                         allow_no_b_frame=allow_no_b_frame)
-    # data_minus_raw, data_plus = _
-    # bias_mask = obsset.load_resource_for("bias_mask")
-
-    # if interactive:
-    #     params = run_interactive(obsset,
-    #                              data_minus_raw, data_plus, bias_mask,
-    #                              remove_level, remove_amp_wise_var)
-
-    #     print("returned", params)
-    #     if not params["to_save"]:
-    #         print("canceled")
-    #         return
-
-    #     remove_level = params["remove_level"]
-    #     remove_amp_wise_var = params["amp_wise"]
-
-    # d2 = remove_pattern(data_minus_raw, mask=bias_mask,
-    #                     remove_level=remove_level,
-    #                     remove_amp_wise_var=remove_amp_wise_var)
-
-    # dp = remove_pattern(data_plus, remove_level=1,
-    #                     remove_amp_wise_var=False)
-
-    # gain = float(obsset.rs.query_ref_value("GAIN"))
-
-    # variance_map0, variance_map = get_variances(d2, dp, gain)
-
-    # hdul = obsset.get_hdul_to_write(([], d2))
-
-    # obsset.store("combined_image1", data=hdul, cache_only=cache_only)
-
-    # hdul = obsset.get_hdul_to_write(([], variance_map0))
-    # obsset.store("combined_variance0", data=hdul, cache_only=cache_only)
-
-    # hdul = obsset.get_hdul_to_write(([], variance_map))
-    # obsset.store("combined_variance1", data=hdul, cache_only=cache_only)
-
 
 steps = [Step("Make Combined Image", make_combined_images,
-              bg_subtraction_mode="none",
               interactive=False,
-              remove_level="auto", remove_amp_wise_var="auto")]
+              bg_subtraction_mode="none",
+              remove_level="auto")]
 
 
 def main():
@@ -386,7 +352,7 @@ def main():
                         frametypes=["-"],
                         config_file=config_file)
 
-    make_combined_images(obsset, bg_subtraction_mode="sky",
+    make_combined_images(obsset, bg_subtraction_mode="none",
                          interactive=True)
 
 
