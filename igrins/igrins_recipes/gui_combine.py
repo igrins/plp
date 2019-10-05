@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from ..utils.astropy_smooth import get_smoothed
+from ..utils.astropy_smooth import get_smoothed, get_smoothed_w_mask
 from ..utils.gui_box import AnchoredGuiBox
 
 
@@ -103,21 +103,23 @@ def factory_pattern_remove_n_smoothed(remove_pattern,
     return get_pattern_remove_n_smoothed
 
 
-def factory_processed_n_smoothed(_process):
+def factory_processed_n_smoothed(_process, mask=None, stddev=0.3):
 
     @lru_cache(maxsize=16)
     def get_processed(**kw):
         d2 = _process(**kw)
-
         return d2
 
     @lru_cache(maxsize=32)
     def get_processed_n_smoothed(smooth=False, **kw):
         d2 = get_processed(**kw)
+        # d2 = _process(**kw)
         # d2 = get_pattern_removed(remove_level=remove_level,
         #                          remove_amp_wise_var=amp_wise)
         if smooth:
-            d2 = get_smoothed(d2)
+            d2 = get_smoothed_w_mask(d2, x_stddev=stddev, mask=mask)
+            # d2 = get_smoothed(d2)
+            # d2 = get_smoothed(d2)
 
         return d2
 
@@ -132,7 +134,8 @@ def setup_gui_combine_sky(im, vmin, vmax,
     ax = im.axes
     fig = ax.figure
 
-    func_get_processed_n_smoothed = factory_processed_n_smoothed(func_process)
+    func_get_processed_n_smoothed = factory_processed_n_smoothed(func_process,
+                                                                 stddev=1.)
 
     busy_text = ax.annotate("busy...", (0, 1), va="top", ha="left",
                             xycoords="figure fraction")

@@ -269,6 +269,8 @@ def make_combined_images(obsset,
 
     helper = get_obsset_helper(obsset)
     destripe_mask = helper.get("destripe_mask")
+    # badpix_mask = helper.get("badpix_mask")
+    badpix_mask = obsset.load_resource_for("hotpix_mask")
 
     # This seem to work, but we may better refine the mask for the column-wise
     # background subtraction.
@@ -278,6 +280,7 @@ def make_combined_images(obsset,
         _d = sky1
 
     sky2 = sub_bg_from_slice(_d, bg_y_slice)
+    sky2 = np.ma.array(sky2, mask=badpix_mask).filled(np.nan)
 
     @lru_cache(maxsize=2)
     def _get_sky():
