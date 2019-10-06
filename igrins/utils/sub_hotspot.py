@@ -1,18 +1,26 @@
 import numpy as np
 from scipy.ndimage import median_filter
+from scipy.interpolate import LSQUnivariateSpline
 
 
 def get_spl(d1, s1):
+    """
+    d1 : (sorted) array of distance from the hotspot center
+    s1 : pixel values
+
+    We divide the region into two. k=1 is used in the inner region, and k=2 isused for the outer region.
+    """
     tx1 = [-0.5, 0.001, 1, 1.4, 2, 2.24, 2.83, 3, 3.6, 4.1, 5.]
     tx2 = [3.2, 3.6, 4, 4.3, 5] + list(range(6, 32)) + list(range(32, 64, 2)) + list(range(64, 128, 4))
 
-    from scipy.interpolate import LSQUnivariateSpline
+    # we pad 0s to make the interpolation stable.
     spl1 = LSQUnivariateSpline(np.concatenate([[-2, -1], d1]),
                                np.concatenate([[0, 0.], s1]),
                                tx1, k=1)
 
     ii = np.searchsorted(d1, 3.1)
 
+    # median filtering to remove badpixels.
     spl2 = LSQUnivariateSpline(d1[ii:],
                                median_filter(s1[ii:], 3),
                                tx2, k=2)
@@ -29,7 +37,9 @@ def get_spl(d1, s1):
 
 
 def interpolate_hotspot(d, distance_map):
-
+    """
+    current alorithm interpolate within d < 129 from the center whose value is hard coded.
+    """
     dd = distance_map
 
     # dd = ((xx - cx)**2 + (yy - cy)**2)**.5
@@ -58,7 +68,10 @@ def get_distance_map(d, cx, cy):
 
 
 def subtract_hotspot(d, cx, cy, box_size):
-    assert box_size < 128
+    """
+    box_size : a box_size to be removed from the given image. Should be less than 129
+    """
+    assert box_size < 129
 
     dd = get_distance_map(d, cx, cy)
 

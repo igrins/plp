@@ -280,14 +280,18 @@ def make_combined_images(obsset,
         _d = sky1
 
     sky2 = sub_bg_from_slice(_d, bg_y_slice)
-    sky2 = np.ma.array(sky2, mask=badpix_mask).filled(np.nan)
+
+    if band == "H":
+        from ..utils.sub_hotspot import subtract_hotspot
+        cx, cy = 163, 586
+        sky2 = subtract_hotspot(sky2, cx, cy, box_size=96)
 
     @lru_cache(maxsize=2)
     def _get_sky():
         return dh.model_bg(sky2, destripe_mask)
 
     def _process_sky(bg_subtraction_mode=bg_subtraction_mode,
-                     remove_level=remove_level):
+                     remove_level=remove_level, fill_badpix_mask=True):
 
         if bg_subtraction_mode == "sky":
             bg_model = _get_sky()
@@ -305,6 +309,9 @@ def make_combined_images(obsset,
             sky4 = apply_rp_2nd_phase(sky3, destripe_mask)
         else:
             sky4 = sky3
+
+        if fill_badpix_mask:
+            sky4 = np.ma.array(sky4, mask=badpix_mask).filled(np.nan)
 
         return sky4
 
@@ -327,7 +334,7 @@ def make_combined_images(obsset,
             print("canceled")
             return
 
-    sky4 = _process_sky(**params)
+    sky4 = _process_sky(fill_badpix_mask=False, **params)
 
     from astropy.io.fits import Card
     cards = []
