@@ -26,6 +26,20 @@ from matplotlib.tight_layout import get_renderer
 #     return renderer
 
 
+# Monkey Patching
+from matplotlib.widgets import AxesWidget
+
+def ignore(self, event):
+    """Return True if event should be ignored.
+
+    This method (or a version of it) should be called at the beginning
+    of any event callback.
+    """
+    return (not self.active) or (not self.ax.get_visible())
+
+AxesWidget.ignore = ignore
+
+
 class RadioButtons(_RadioButtons):
     def __init__(self, ax, labels, active=0, values=None):
         """
@@ -109,7 +123,9 @@ class OffsetBoxLocator():
 
 
 def make_axes_box(fig, box):
-    ax = Axes(fig, [0, 0, 1, 1])
+    bbox = [0, 0, 1, 1]
+
+    ax = Axes(fig, bbox)
     fig.add_axes(ax)
     locator = OffsetBoxLocator(box)
     ax.set_axes_locator(locator)
@@ -164,11 +180,19 @@ class GuiBox():
         self.pack = VPacker(children=self._gui_elements,
                             **kwargs)
 
+        self.axlist = []
+
+    def set_axlist_visibility(self, v):
+        for ax in self.axlist:
+            ax.set_visible(v)
+
     def _add_axes_box(self, box):
         locator = OffsetBoxLocator(box)
         ax = Axes(self._fig, [0, 0, 1, 1])
         self._fig.add_axes(ax)
         ax.set_axes_locator(locator)
+
+        self.axlist.append(ax)
 
         return ax
 
@@ -286,6 +310,7 @@ class GuiBox():
 class AnchoredGuiBox(AnchoredOffsetbox):
     def __init__(self, fig, ax, *kl, **kw):
         self.gui = GuiBox(fig, ax, *kl, **kw)
+        self.gui_visible = True
 
         btn_grid, btns = self.add_loc_button_grid(fig)
         self._loc_buttons = btns
@@ -305,9 +330,36 @@ class AnchoredGuiBox(AnchoredOffsetbox):
     def add_loc_button_grid(self, fig):
         _loc_button_grid = DrawingAreaGrid(2, 2, 20, 20)
 
+        _bb = _loc_button_grid.get_box_list()
+        bb = [_b for i, _b in enumerate(_bb)
+              if i in [0, 1, 2, 3]]
+
         btns = []
+
+        if True:
+            # button to toggle main part of widgets
+
+            xb = DrawingAreaBase(16, 16, 0, 0)
+
+            packed = HPacker(children=[xb, _loc_button_grid.packed],
+                             align="bottom", pad=0, sep=5)
+
+            _loc_button_grid.packed = packed
+
+            _ax = make_axes_box(fig, xb)
+
+            btn = Button(_ax, "x")
+
+            def callback(event):
+                self.gui_visible = not self.gui_visible
+                self.gui.set_axlist_visibility(self.gui_visible)
+                self._trigger_redraw()
+
+            btn.on_clicked(callback)
+            btns.append(btn)
+
         for loc, box in zip([2, 1, 3, 4],
-                            _loc_button_grid.get_box_list()):
+                            bb):
             _ax = make_axes_box(fig, box)
 
             bnext = Button(_ax, loc)
