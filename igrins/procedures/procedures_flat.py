@@ -434,6 +434,8 @@ def trace_order_boundaries(obsset):
                                                 pad=10,
                                                 bg_std=bg_fwhm_normed)
 
+    # make sure that centroid lists are in order by checking its center
+    # position.
     cent_bottom_list = _check_boundary_orders(cent_bottom_list, nx=nx)
 
     cent_up_list = identify_horizontal_line(-flat_deriv,

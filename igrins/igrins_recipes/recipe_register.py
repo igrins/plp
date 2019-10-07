@@ -10,6 +10,17 @@ from ..procedures.procedures_register import (identify_orders,
                                               save_orderflat,
                                               update_db)
 
+
+def _test():
+    from igrins import get_obsset
+    band = "K"
+    config_file = "../../recipe.config"
+    obsset = get_obsset("20190318", band, "SKY",
+                        obsids=range(10, 11),
+                        frametypes=["-"],
+                        config_file=config_file)
+
+
 def make_combined_image_sky(obsset, bg_subtraction_mode="flat"):
     if bg_subtraction_mode == "none":
         bg_subtraction_mode = None

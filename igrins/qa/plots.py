@@ -1,7 +1,7 @@
 from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
-from igrins.libs.zscale import zscale as calc_zscale
+from igrins.utils.zscale import zscale as calc_zscale
 import scipy.ndimage as ni
 
 

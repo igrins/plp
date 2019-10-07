@@ -19,6 +19,12 @@ def _get_combined_image(obsset):
     return image_median(data_list)
 
 
+def get_median_combined_image(obsset):
+    im = _get_combined_image(obsset)
+
+    return im
+
+
 def get_median_combined_image_n_exptime(obsset):
     im = _get_combined_image(obsset)
 

@@ -11,6 +11,7 @@ class WidgetSet():
 
         self.pre_trigger_hooks = []
         self.post_trigger_hooks = []
+        self.status = dict()
 
     def append_param(self, widget_id, get_param1):
         self.params.append((widget_id, get_param1))
@@ -250,6 +251,53 @@ def setup_gui(ax):
 
     # for w in widgets:
     #     w.install(ws)
+
+
+def setup_basic_gui(ax, params, widgets, save_button_label="Quit"):
+
+    from ..utils.gui_box import AnchoredGuiBox
+    from ..utils.gui_box_helper import WidgetSet, Input, Radio, Check, Button
+
+    fig = ax.figure
+
+    busy_text = ax.annotate("busy...", (0, 1), va="top", ha="left",
+                            xycoords="figure fraction")
+    busy_text.set_visible(False)
+
+    box = AnchoredGuiBox(fig, ax, 80, align="center", pad=0, sep=5)
+    ax.add_artist(box)
+
+    ws = WidgetSet(box.gui, ax=ax)
+
+    widgets_pre = []
+
+    def func_save(*kl):
+        ws.status["to_save"] = True
+        import matplotlib.pyplot as plt
+        plt.close(fig)
+
+    widgets_post = [
+        Button(save_button_label, on_trigger=func_save)
+    ]
+
+    widgets = widgets_pre + widgets + widgets_post
+
+    def set_busy(*kl, **kwargs):
+        busy_text.set_visible(True)
+        fig.canvas.draw()
+        fig.canvas.flush_events()
+
+    def unset_busy(*kl, **kwargs):
+        busy_text.set_visible(False)
+        fig.canvas.draw()
+        fig.canvas.flush_events()
+
+    ws.pre_trigger_hooks.append(set_busy)
+    ws.post_trigger_hooks.append(unset_busy)
+
+    ws.install_widgets(widgets)
+
+    return box, ws
 
 
 def main():

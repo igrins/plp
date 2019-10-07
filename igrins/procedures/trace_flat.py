@@ -175,7 +175,8 @@ def find_nearest_object(mmp, im_labeled, slice_map, i, labels_center_column):
                     return ob_id
 
 
-def identify_horizontal_line(d_deriv, mmp, pad=20, bg_std=None):
+def identify_horizontal_line(d_deriv, mmp, pad=20, bg_std=None,
+                             thre_dx=30):
     """
     d_deriv : derivative (along-y) image
     mmp : mask
@@ -186,6 +187,13 @@ def identify_horizontal_line(d_deriv, mmp, pad=20, bg_std=None):
 
     Masks will be derived from mmp, and peak values of d_deriv will be
     fitted with polynomical of given order.
+
+    We first limit the area between
+       1024 - thre_dx > x > 1024 + thre_dx
+
+    and identify objects from the mask whose x-slice is larger than thre_dx.
+    This will identify at most one object per order. For objects not included
+    in this list, we find nearest object and associate it to them.
     """
     # if 0:
 
@@ -225,7 +233,7 @@ def identify_horizontal_line(d_deriv, mmp, pad=20, bg_std=None):
     # from itertools import groupby
     # labels_center_column = [i for i, _ in groupby(im_labeled[:,nx/2]) if i>0]
 
-    thre_dx = 30
+    # thre_dx = 30
     center_cut = im_labeled[:, nx//2-thre_dx:nx//2+thre_dx]
     labels_ = list(set(np.unique(center_cut)) - set([0]))
 
