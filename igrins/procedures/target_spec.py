@@ -273,6 +273,7 @@ def store_1dspec(obsset, v_list, s_list, sn_list=None):
     hdul = obsset.get_hdul_to_write(([], v_data))
     wvl_header.update(hdul[0].header)
     hdul[0].header = wvl_header
+    hdul[0].verify(option="silentfix")
 
     obsset.store("VARIANCE_FITS", hdul,
                  postfix=basename_postfix)
@@ -294,6 +295,7 @@ def store_1dspec(obsset, v_list, s_list, sn_list=None):
                                     ([], convert_data(wvl_data)))
     wvl_header.update(hdul[0].header)
     hdul[0].header = wvl_header
+    hdul[0].verify(option="silentfix")
 
     obsset.store("SPEC_FITS", hdul,
                  postfix=basename_postfix)

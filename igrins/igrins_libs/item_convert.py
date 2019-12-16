@@ -14,6 +14,44 @@ def null_function(buf):
     return buf
 
 
+def fits_add_primary_hdu(hdul, mode="use_first_image_hdu"):
+
+    if mode not in ["empty_if_multi",
+                    "use_first_image_hdu"]:
+        raise ValueError("unrecognized mode value")
+
+    phdu = None
+    if ((mode == "empty_if_multi" and (len(hdul) == 1)) or
+        (mode == "use_first_image_hdu" and
+         isinstance(hdul[0], (pyfits.ImageHDU,
+                              pyfits.PrimaryHDU)))):
+        phdu = pyfits.PrimaryHDU(header=hdul[0].header,
+                                 data=hdul[0].data)
+        hdul = [phdu] + hdul[1:]
+    else:
+        phdu = pyfits.PrimaryHDU()
+        if isinstance(hdul[0], pyfits.PrimaryHDU):
+            hdul[0] = pyfits.ImageHDU(hdeader=hdul[0].header,
+                                      data=hdul[0].data)
+            # hdul[0].verify(option="fix")
+            # print("to image")
+        hdul = [phdu] + hdul
+        # print("added empty HDU")
+
+    # print(len(hdul))
+    # if len(hdul) > 1:
+    #     hdul[1].verify(option="fix")
+
+    return pyfits.HDUList(hdul)
+
+
+def fits_remove_empty_primary_hdu(hdul):
+    if hdul[0].data is None:
+        return hdul[1:]
+    else:
+        return hdul
+
+
 class ItemConverterBase(StorageBase):
     def __init__(self, storage):
         self.storage = storage
@@ -69,6 +107,11 @@ class ItemConverterBase(StorageBase):
 
 
 class ItemConverter(ItemConverterBase):
+    def __init__(self, storage, fits_mode="use_first_image_hdu"):
+        fits_mode = "empty_if_multi"
+        ItemConverterBase.__init__(self, storage)
+        self.fits_mode = fits_mode
+
     @classmethod
     def get_to_item(cls, item_type):
         return dict(fits=cls._to_fits,
@@ -76,11 +119,10 @@ class ItemConverter(ItemConverterBase):
                     json=cls._to_json,
                     raw=null_function)[item_type]
 
-    @classmethod
-    def get_from_item(cls, item_type):
-        return dict(fits=cls._from_fits,
-                    mask=cls._from_mask,
-                    json=cls._from_json,
+    def get_from_item(self, item_type):
+        return dict(fits=self._from_fits,
+                    mask=self._from_mask,
+                    json=self._from_json,
                     raw=null_function)[item_type]
 
     # @classmethod
@@ -110,17 +152,20 @@ class ItemConverter(ItemConverterBase):
 
     @staticmethod
     def _to_fits(buf):
-        hdulist = pyfits.HDUList.fromstring(buf)
-        return hdulist
+        hdul = pyfits.HDUList.fromstring(buf)
+        hdul = fits_remove_empty_primary_hdu(hdul)
+        return hdul
 
-    @staticmethod
-    def _from_fits(hdulist):
+    def _from_fits(self, hdul):
+
+        hdul = fits_add_primary_hdu(hdul, self.fits_mode)
+        print(hdul.info())
         buf = BytesIO()
         import warnings
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore', r'Card is too long')
 
-            hdulist.writeto(buf)
+            hdul.writeto(buf)  #  , output_verify="fix")
         return buf.getvalue()
 
     @staticmethod
@@ -139,7 +184,8 @@ class ItemConverter(ItemConverterBase):
         hdu = get_first_science_hdu(hdulist)
         return hdu.data.astype(bool)
 
-    @classmethod
-    def _from_mask(cls, m):
+    def _from_mask(self, m):
         d = m.astype("uint8")
-        return cls._from_fits(pyfits.PrimaryHDU(data=d))
+        # hdul = pyfits.HDUList([pyfits.PrimaryHDU(data=d)])
+        hdul = [pyfits.ImageHDU(data=d)]
+        return self._from_fits(hdul)

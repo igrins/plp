@@ -248,7 +248,8 @@ class ObsSet(object):
         return pyfits.HDUList(hdul)
 
     def get_hdul_to_write(self, *card_data_list):
-        hdu_type_list = ["primary"] + (["image"] * (len(card_data_list) - 1))
+        # hdu_type_list = ["primary"] + (["image"] * (len(card_data_list) - 1))
+        hdu_type_list = ["image"] * len(card_data_list)
         hdul = self.get_template_hdul(*hdu_type_list)
         for hdu, (cards, data) in zip(hdul, card_data_list):
             hdu.header.update(self.default_cards + list(cards))

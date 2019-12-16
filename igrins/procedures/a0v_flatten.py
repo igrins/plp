@@ -55,6 +55,7 @@ def store_a0v_results(obsset, a0v_flattened_data):
     hdul = obsset.get_hdul_to_write(*image_list)
     wvl_header.update(hdul[0].header)
     hdul[0].header = wvl_header
+    hdul[0].verify(option="silentfix")
 
     obsset.store("spec_fits_flattened", hdul)
 

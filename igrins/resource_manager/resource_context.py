@@ -116,8 +116,13 @@ class ResourceContextStack():
             for k, (item_type, buf) in self.current.iter_cache():
                 if k not in self.current._cache_only_items:
                     section, fn = k
-                    self.storage.store(section, fn, buf,
-                                       item_type=item_type)
+                    try:
+                        self.storage.store(section, fn, buf,
+                                           item_type=item_type)
+                    except Exception:
+                        print("Error in {}, {}".format(section, fn))
+                        raise
+
         except Exception as e:
             self.current.close(e)
             raise
