@@ -82,7 +82,9 @@ def _make_spec_a0v_hdu_list(obsset, wvl, spec, a0v_spec, vega,
         ([("EXTNAME", "MASK")], thresh_masks.astype("i"))
     ]
 
-    hdul = obsset.get_hdul_to_write(*_hdul)
+    # _hdul[0].verify(option="fix")
+
+    hdul = obsset.get_hdul_to_write(*_hdul, convention="gemini")
 
     return hdul
 

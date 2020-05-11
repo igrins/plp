@@ -179,9 +179,6 @@ class ObsSet(object):
     def query_resource_basename(self, db_name):
         return self.rs.query_resource_basename(db_name, self.groupname)
 
-    def query_resource_basename(self, db_name):
-        return self.rs.query_resource_basename(db_name, self.groupname)
-
     def query_resource_for(self, resource_type, postfix=""):
 
         resource_basename, item_desc = self.rs.query_resource_for(self.master_obsid,
@@ -229,17 +226,22 @@ class ObsSet(object):
         self.default_cards.extend(cards)
 
     # to store
-    def get_template_hdul(self, *hdu_type_list):
+    def get_template_hdul(self, *hdu_type_list, convention=None):
         hdul = self.rs.load(self.get_obsids()[0],
                             DESCS["RAWIMAGE"], item_type="fits")
         master_header = get_first_science_hdu(hdul).header
+
+        if convention == "gemini":
+            secondary_header = pyfits.Header()
+        else:
+            secondary_header = master_header
 
         hdul = []
         for hdu_type in hdu_type_list:
             if hdu_type == "primary":
                 hdu_class = pyfits.PrimaryHDU(header=master_header)
             elif hdu_type == "image":
-                hdu_class = pyfits.ImageHDU(header=master_header)
+                hdu_class = pyfits.ImageHDU(header=secondary_header)
             else:
                 msg = "hdu_type of {hdu_type} is not supported"
                 raise ValueError(msg.format(hdu_type=hdu_type))
@@ -247,13 +249,18 @@ class ObsSet(object):
 
         return pyfits.HDUList(hdul)
 
-    def get_hdul_to_write(self, *card_data_list):
+    def get_hdul_to_write(self, *card_data_list, convention=None):
         # hdu_type_list = ["primary"] + (["image"] * (len(card_data_list) - 1))
-        hdu_type_list = ["image"] * len(card_data_list)
-        hdul = self.get_template_hdul(*hdu_type_list)
+        if convention == "gemini":
+            hdu_type_list = ["primary"] + ["image"] * len(card_data_list)
+            card_data_list = (([], None),) + card_data_list
+        else:
+            hdu_type_list = ["image"] * len(card_data_list)
+
+        hdul = self.get_template_hdul(*hdu_type_list, convention=convention)
         for hdu, (cards, data) in zip(hdul, card_data_list):
             hdu.header.update(self.default_cards + list(cards))
-            if data.dtype.name == "bool":
+            if data is not None and data.dtype.name == "bool":
                 data = data.astype("uint8")
             hdu.data = data
 

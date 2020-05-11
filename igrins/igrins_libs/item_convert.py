@@ -108,7 +108,7 @@ class ItemConverterBase(StorageBase):
 
 class ItemConverter(ItemConverterBase):
     def __init__(self, storage, fits_mode="use_first_image_hdu"):
-        fits_mode = "empty_if_multi"
+        # fits_mode = "empty_if_multi"
         ItemConverterBase.__init__(self, storage)
         self.fits_mode = fits_mode
 
@@ -159,7 +159,6 @@ class ItemConverter(ItemConverterBase):
     def _from_fits(self, hdul):
 
         hdul = fits_add_primary_hdu(hdul, self.fits_mode)
-        print(hdul.info())
         buf = BytesIO()
         import warnings
         with warnings.catch_warnings():

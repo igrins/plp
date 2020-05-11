@@ -59,7 +59,10 @@ def load_config(config_file=None):
 
 def load_recipe_log(obsdate, config_file=None):
     from .igrins_libs.igrins_config import IGRINSConfig
-    config = IGRINSConfig(config_file=config_file)
+    if isinstance(config_file, IGRINSConfig):
+        config = config_file
+    else:
+        config = IGRINSConfig(config_file=config_file)
     fn = os.path.join(os.path.dirname(config.config_file),
                       config.get_value('RECIPE_LOG_PATH', obsdate))
 
