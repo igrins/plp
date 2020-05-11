@@ -194,7 +194,7 @@ def save_jo_list(obsset, jo_list, jo_raw_list):
 
 
 def save_fig_list(obsset, oi, fig_list):
-    from qa_helper import figlist_to_pngs
+    from .qa_helper import figlist_to_pngs
 
     pngs = figlist_to_pngs(fig_list)
     for i, png in enumerate(pngs):

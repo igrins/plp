@@ -23,7 +23,9 @@ from plotly.offline.offline import (get_image_download_script,
                                     get_plotlyjs)
 
 def check_offline():
-    return plotly.offline.offline.__PLOTLY_OFFLINE_INITIALIZED
+    return True
+
+    # return plotly.offline.offline.__PLOTLY_OFFLINE_INITIALIZED
 
 __IMAGE_FORMATS = plotly.offline.offline.__IMAGE_FORMATS
 

@@ -126,6 +126,21 @@ def factory_processed_n_smoothed(_process, mask=None, stddev=0.3):
     return get_processed_n_smoothed
 
 
+def kk():
+    [Input("vmax", label="vmax", value=vmax,
+           cb=change_clim),  # ["vmax", "input", "vmax", vmax],
+     Input("vmin", label="vmin", value=vmax,
+           cb=change_clim),  # ["vmin", "input", "vmin", vmin],
+     Check("smooth", ["Smooth"], values=[False],
+           cb=hzfunc), # ["smooth", "check", ["Smooth"], [False]],
+     Radio("remove_level", ["Level 1", "Level 2"],
+           values=[1, 2], active=0,
+           cb=hzfunc),  # ["remove_level", "radio", ["Level 1", "Level2"], [1, 2], 0],
+     Radio("bg_sub_mode", ["none", "sky"],
+           cb=hzfunc)
+    ]
+
+
 def setup_gui_combine_sky(im, vmin, vmax,
                           params,
                           func_process,

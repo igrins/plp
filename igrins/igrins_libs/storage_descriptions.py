@@ -108,6 +108,9 @@ VOLUMEFIT_COEFFS_JSON_DESC = ("PRIMARY_CALIB_PATH", "SKY_{basename}{postfix}.vol
 
 SKY_WVLSOL_FIT_RESULT_JSON_DESC = ("PRIMARY_CALIB_PATH", "SKY_{basename}{postfix}.wvlsol_fit_result.json")
 
+SKY_SPEC_DATAFRAME_DESC = ("OUTDATA_PATH",
+                           "SKY_{basename}{postfix}.spec_dataframe.fits")
+
 # extract
 SPEC_FITS_WAVELENGTH_DESC = ("OUTDATA_PATH", "{basename}{postfix}.wave.fits")
 SPEC_FITS_FLATTENED_DESC = ("OUTDATA_PATH", "{basename}{postfix}.spec_flattened.fits")

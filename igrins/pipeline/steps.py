@@ -59,7 +59,7 @@ class Step():
 
 
 def apply_steps(obsset, steps, kwargs=None, step_slice=None, on_raise=None,
-                progress_mode="ascii"):
+                progress_mode="terminal"):
     """
     progress_mode : terminal, tqdm, notebook, etc
     """

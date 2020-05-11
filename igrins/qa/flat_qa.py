@@ -3,8 +3,6 @@ import itertools
 # from mpl_toolkits.axes_grid1.anchored_artists import AnchoredText
 from matplotlib.offsetbox import AnchoredText
 
-from .. import DESCS
-
 
 def _imshow_flat_deriv(ax, flat_deriv):
     im = ax.imshow(flat_deriv, origin="lower", interpolation="none",
@@ -222,34 +220,73 @@ def set_visible_all(l, b):
         l1.set_visible(b)
 
 
+def plot_qa_flat(obsset, ax1, ax2):
+    obsdate, band = obsset.get_resource_spec()
+    obsid = obsset.master_obsid
+
+    obsset_on = obsset.get_subset("ON")
+    flat_deriv = obsset_on.load("flat_deriv")[0].data
+    trace_dict = obsset_on.load("flatcentroids_json")
+
+    im_deriv = _imshow_flat_deriv(ax1, flat_deriv)
+    l1, l2 = _draw_traces(ax1, trace_dict)
+    line_detected = list(l1) + list(l2)
+
+    im_flat = _imshow_flat(ax2, obsset_on)
+    line_modeled = _draw_modeled(ax2, obsset_on)
+
+    for ax in [ax1, ax2]:
+        ax.set_xlim(0, 2048)
+        ax.set_ylim(0, 2048)
+
+    ax1.set_title("{}-{} [{}]".format(obsdate, obsid, band))
+
+    return im_deriv, line_detected, im_flat, line_modeled
+
+
+def produce_qa(obsset, outtype="pdf"):
+    # , params, _process, exptime=None):
+    # import matplotlib.pyplot as plt
+
+    from matplotlib.figure import Figure
+    from ..quicklook.qa_helper import (save_figlist, check_outtype)
+    from ..igrins_libs.path_info import get_zeropadded_groupname
+
+    check_outtype(outtype)
+
+    figlist = []
+    fig = Figure(figsize=(12, 6))
+    # import matplotlib.pyplot as plt
+    # fig = plt.figure(figsize=(12, 6))
+
+    ax1 = fig.add_subplot(121)
+    ax2 = fig.add_subplot(122)
+    # ax3 = fig.add_subplot(133)
+
+    im_deriv, line_detected, im_flat, line_modeled = \
+        plot_qa_flat(obsset, ax1, ax2)
+
+    figlist.append(fig)
+
+    from igrins import DESCS
+
+    section, _outroot = DESCS["QA_FLAT_APERTURE_DIR"], "qa_flat_aperture"
+    obsdate, band = obsset.get_resource_spec()
+    groupname = get_zeropadded_groupname(obsset.groupname)
+    outroot = "SDC{}_{}_{}_{}".format(band, obsdate, groupname, _outroot)
+    save_figlist(obsset, figlist, section, outroot, outtype)
+
+    return
+
+
 def run_interactive(obsset, params):
     # , params, _process, exptime=None):
     import matplotlib.pyplot as plt
 
     fig, ax = plt.subplots(figsize=(8, 8), num=1, clear=True)
 
-    obsdate, band = obsset.get_resource_spec()
-    obsid = obsset.master_obsid
-
-    # status = dict(to_save=False)
-
-    # def save(*kl, status=status):
-    #     status["to_save"] = True
-    #     plt.close(fig)
-
-    obsset_on = obsset.get_subset("ON")
-    flat_deriv = obsset_on.load("flat_deriv")[0].data
-    trace_dict = obsset_on.load("flatcentroids_json")
-
-    im_deriv = _imshow_flat_deriv(ax, flat_deriv)
-    l1, l2 = _draw_traces(ax, trace_dict)
-    line_detected = list(l1) + list(l2)
-
-    im_flat = _imshow_flat(ax, obsset_on)
-    line_modeled = _draw_modeled(ax, obsset_on)
-
-    ax.set_xlim(0, 2048)
-    ax.set_ylim(0, 2048)
+    im_deriv, line_detected, im_flat, line_modeled = \
+        plot_qa_flat(obsset, ax, ax)
 
     def set_visibility(w, kl, user_params):
 
@@ -288,16 +325,26 @@ def run_interactive(obsset, params):
     box, ws = setup_basic_gui(ax, params, widgets)
     set_visibility(None, None, params)
 
-    ax.set_title("{}-{:04d} [{}]".format(obsdate, obsid, band))
-
     plt.show()
 
     return ws.status
 
 
-def main():
+def main_procude():
     from igrins import get_obsset
-    band = "H"
+    band = "K"
+    config_file = "recipe.config"
+    obsset = get_obsset("20190318", band, "FLAT",
+                        obsids=range(1011, 1031),
+                        frametypes=["OFF"]*10 + ["ON"]*10,
+                        config_file=config_file)
+
+    produce_qa(obsset)
+
+
+def main_interactive():
+    from igrins import get_obsset
+    band = "K"
     config_file = "recipe.config"
     obsset = get_obsset("20190318", band, "FLAT",
                         obsids=range(1011, 1031),
@@ -305,6 +352,8 @@ def main():
                         config_file=config_file)
 
     # from igrins import DESCS
+
+    # produce_qa(obsset)
 
     params = dict(image_kind="flat", line_kind="modeled")
 
@@ -322,4 +371,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main_procude()

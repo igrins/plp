@@ -11,6 +11,11 @@ from ..procedures.procedures_flat import (obsset_combine_flat_off,
                                           obsset_combine_flat_off_step2)
 
 
+def obsset_produce_qa_plots(obsset):
+    from ..qa.flat_qa import produce_qa
+    produce_qa(obsset)
+
+
 steps = [Step("Combine Flat-Off", obsset_combine_flat_off),
          Step("Hotpix Mask", make_hotpix_mask,
               sigma_clip1=100, sigma_clip2=5),
@@ -22,4 +27,5 @@ steps = [Step("Combine Flat-Off", obsset_combine_flat_off),
          Step("Stitch Up Traces", stitch_up_traces),
          Step("Bias Mask", make_bias_mask),
          Step("Update DB", update_db),
-         Step("Combine Flat-Off (2nd phase)", obsset_combine_flat_off_step2)]
+         Step("Combine Flat-Off (2nd phase)", obsset_combine_flat_off_step2),
+         Step("Produce QA plots", obsset_produce_qa_plots)]
