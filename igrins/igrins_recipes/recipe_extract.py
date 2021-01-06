@@ -53,24 +53,32 @@ def _get_do_ab_from_recipe_name(obsset):
 def estimate_slit_profile_stellar(obsset,
                                   x1=800, x2=2048-800,
                                   do_ab="recipe",
-                                  slit_profile_mode="1d"):
+                                  slit_profile_mode="1d",
+                                  frac_slit=None):
 
     do_ab = _get_do_ab_from_recipe_name(obsset)
+
+    if frac_slit is not None:
+        frac_slit = list(map(float, frac_slit.split(",")))
+
     estimate_slit_profile(obsset,
                           x1=800, x2=2048-800,
-                          do_ab=do_ab, slit_profile_mode=slit_profile_mode)
+                          do_ab=do_ab, slit_profile_mode=slit_profile_mode,
+                          frac_slit=frac_slit)
 
 
 def estimate_slit_profile_extended(obsset,
                                    x1=800, x2=2048-800,
                                    do_ab="recipe",
-                                   slit_profile_mode="uniform"):
+                                   slit_profile_mode="uniform",
+                                   frac_slit=None):
 
     do_ab = _get_do_ab_from_recipe_name(obsset)
     estimate_slit_profile(obsset,
                           x1=800, x2=2048-800,
                           do_ab=do_ab,
-                          slit_profile_mode=slit_profile_mode)
+                          slit_profile_mode=slit_profile_mode,
+                          frac_slit=frac_slit)
 
 
 _steps_default = [
@@ -87,7 +95,8 @@ _steps_stellar = [
     Step("Make Combined Images", make_combined_images),
     Step("Estimate slit profile (stellar)",
          estimate_slit_profile_stellar,
-         slit_profile_mode="1d"),
+         slit_profile_mode="1d",
+         frac_slit=None),
     # Step("Extract spectra (for extendeded)",
     #      extract_extended_spec),
     Step("Extract spectra (for stellar)",

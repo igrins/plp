@@ -26,7 +26,8 @@ def flatten_a0v(obsset, fill_nan=None):  # refactor of get_a0v_flattened
     orderflat_json = obsset.load_resource_for("order_flat_json")
     orderflat_response = orderflat_json["fitted_responses"]
 
-    s_list = obsset.load_fits_sci_hdu("SPEC_FITS").data
+    s_list = obsset.load_fits_sci_hdu("SPEC_FITS",
+                                      postfix=obsset.basename_postfix).data
 
     from .a0v_flatten_telluric import get_a0v_flattened
     data_list = get_a0v_flattened(a0v_interp1d, tel_interp1d_f,

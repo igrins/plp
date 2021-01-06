@@ -224,14 +224,17 @@ def subtract_interorder_background(obsset, di=24, min_pixel=40):
 
 def estimate_slit_profile(obsset,
                           x1=800, x2=2048-800,
-                          do_ab=True, slit_profile_mode="1d"):
+                          do_ab=True, slit_profile_mode="1d",
+                          frac_slit=None):
 
     if slit_profile_mode == "1d":
         from .slit_profile import estimate_slit_profile_1d
-        estimate_slit_profile_1d(obsset, x1=x1, x2=x2, do_ab=do_ab)
+        estimate_slit_profile_1d(obsset, x1=x1, x2=x2, do_ab=do_ab,
+                                 frac_slit=frac_slit)
     elif slit_profile_mode == "uniform":
         from .slit_profile import estimate_slit_profile_uniform
-        estimate_slit_profile_uniform(obsset, do_ab=do_ab)
+        estimate_slit_profile_uniform(obsset, do_ab=do_ab,
+                                      frac_slit=frac_slit)
     else:
         msg = ("Unknwon mode ({}) in slit_profile estimation"
                .format(slit_profile_mode))
@@ -475,7 +478,14 @@ def extract_stellar_spec(obsset, extraction_mode="optimal",
 
 def extract_stellar_spec_pp(obsset, extraction_mode="optimal", height_2dspec=0,
                             conserve_2d_flux=True, calculate_sn=True):
+    """
+    This function reads in "WVLCOR_IMAGE" and use extract_spec_from_shifted
+    for spec-extraction.
 
+    c.f., extract_stellar_spec work on the combined images and
+    do wvl-cor by itself.
+
+    """
     # refactored from recipe_extract.ProcessABBABand.process
 
     helper = ResourceHelper(obsset)

@@ -3,6 +3,8 @@ import astropy.io.fits as pyfits
 from scipy.interpolate import interp1d
 from numpy.polynomial import Polynomial
 
+# refactored version is avaiable at utisl/rectipy.py
+# May need to use that version.
 
 class ShiftX(object):
     AXIS = 1

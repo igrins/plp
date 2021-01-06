@@ -106,7 +106,7 @@ def make_slitprofile_map(ap, profile,
 
 def estimate_slit_profile_1d(obsset,
                              x1=800, x2=2048-800,
-                             do_ab=True):
+                             do_ab=True, frac_slit=None):
     """
     return a profile function
 
@@ -151,12 +151,13 @@ def estimate_slit_profile_1d(obsset,
                              profile_x=profile_x,
                              profile_y=profile_y)
 
-    obsset.store("SLIT_PROFILE_JSON", slit_profile_dict, postfix="")
+    obsset.store("SLIT_PROFILE_JSON", slit_profile_dict,
+                 postfix=obsset.basename_postfix)
 
     profile = _get_profile_func_from_dict(slit_profile_dict)
     profile_map = make_slitprofile_map(ap, profile,
                                        ordermap, slitpos_map,
-                                       frac_slit=None)
+                                       frac_slit=frac_slit)
 
     hdul = obsset.get_hdul_to_write(([], profile_map))
     obsset.store("slitprofile_fits", hdul, cache_only=True)
@@ -200,7 +201,7 @@ def get_profile_func_extended(obsset, do_ab):
 
 
 def estimate_slit_profile_uniform(obsset,
-                                  do_ab=True):
+                                  do_ab=True, frac_slit=None):
 
     from ..igrins_libs.resource_helper_igrins import ResourceHelper
     helper = ResourceHelper(obsset)
@@ -213,7 +214,7 @@ def estimate_slit_profile_uniform(obsset,
     profile = get_profile_func_extended(obsset, do_ab=do_ab)
     profile_map = make_slitprofile_map(ap, profile,
                                        ordermap, slitpos_map,
-                                       frac_slit=None)
+                                       frac_slit=frac_slit)
 
     hdul = obsset.get_hdul_to_write(([], profile_map))
     obsset.store("slitprofile_fits", hdul, cache_only=True)
