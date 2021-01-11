@@ -247,6 +247,7 @@ class ResourceStackWithBasename(ResourceStack):
         self.basename_helper = basename_helper
 
     def get_section_n_fn(self, basename, item_desc, postfix=""):
+        # basename need to be int of obsid of str of obsid
         basename = self.basename_helper.to_basename(basename)
 
         return ResourceStack.get_section_n_fn(self, basename, item_desc,

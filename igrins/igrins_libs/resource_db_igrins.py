@@ -72,19 +72,11 @@ class ResourceDBFile(ResourceDBBase):
             else:
                 myfile.write("%s %s\n" % (self.db_kind, basename))
 
-    def query(self, basename, postfix=""):
-        import numpy as np
+    def get_obsid_list(self, postfix=""):
         import os
-
-        # this needs refactoring
-        import re
-        p = re.compile(r"\D+")
 
         if not os.path.exists(self.dbpath):
             raise RuntimeError("db not yet created: %s" % self.dbpath)
-
-        obsid_part = basename.strip().split("_")[-1]
-        obsid = int(p.split(obsid_part)[0])
 
         with open(self.dbpath, "r") as myfile:
             obsid_list = []
@@ -110,10 +102,58 @@ class ResourceDBFile(ResourceDBBase):
                 obsid_list.append(obsid_)
                 basename_list.append(l1.strip())
 
-            if obsid_list:
-                # return last one with minimum distance
-                obsid_dist = np.abs(np.array(obsid_list) - obsid)
-                i = np.where(obsid_dist == np.min(obsid_dist))[0][-1]
-                return basename_list[i]
-            else:
-                raise RuntimeError("db (%s) is empty." % (self.dbpath))
+        return obsid_list, basename_list
+
+    def query(self, basename, postfix=""):
+        # import numpy as np
+        # import os
+
+        # this needs refactoring
+
+        # if not os.path.exists(self.dbpath):
+        #     raise RuntimeError("db not yet created: %s" % self.dbpath)
+
+        # obsid_part = basename.strip().split("_")[-1]
+        # obsid = int(p.split(obsid_part)[0])
+
+        # with open(self.dbpath, "r") as myfile:
+        #     obsid_list = []
+        #     basename_list = []
+        #     for l0 in myfile.readlines():
+        #         b_l1 = l0.strip().split()
+        #         if len(b_l1) == 3:
+        #             b, l1, pf = b_l1
+        #         elif len(b_l1) == 2:
+        #             b, l1 = b_l1
+        #             pf = ""
+        #         else:
+        #             raise RuntimeError("")
+
+        #         if (b, pf) != (self.db_kind, postfix):
+        #             continue
+
+        #         try:
+        #             obsid_ = int(l1.strip().split("_")[-1])
+        #         except ValueError:
+        #             continue
+
+        #         obsid_list.append(obsid_)
+        #         basename_list.append(l1.strip())
+
+        import numpy as np
+
+        import re
+        p = re.compile(r"\D+")
+
+        obsid_list, basename_list = self.get_obsid_list(postfix)
+
+        obsid_part = basename.strip().split("_")[-1]
+        obsid = int(p.split(obsid_part)[0])
+
+        if obsid_list:
+            # return last one with minimum distance
+            obsid_dist = np.abs(np.array(obsid_list) - obsid)
+            i = np.where(obsid_dist == np.min(obsid_dist))[0][-1]
+            return basename_list[i]
+        else:
+            raise RuntimeError("db (%s) is empty." % (self.dbpath))

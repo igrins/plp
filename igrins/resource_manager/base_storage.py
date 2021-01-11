@@ -18,6 +18,17 @@ class StorageBase(object):
     def new_sectioned_storage(self, section):
         return SectionedStorage(self, section)
 
+    def get_section_defs(self):
+        raise RuntimeError("Need to be implmented by derived classes")
+
+    def get_section(self, section):
+        return self.get_section_location(section)
+
+    def get_section_location(self, section):
+        d = self.get_section_defs()
+
+        return d[section]
+
 
 class SectionedStorage(object):
     def __init__(self, storage, section):

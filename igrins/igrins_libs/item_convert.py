@@ -59,6 +59,18 @@ class ItemConverterBase(StorageBase):
     def exists(self, section, fn):
         return self.storage.exists(section, fn)
 
+    def get_section_defs(self):
+        return self.storage.get_section_defs()
+
+    def locate(self, section, fn, item_type=None, check_candidate=None):
+        if item_type is None:
+            item_type = self.guess_item_type(fn)
+
+        p = self.storage.locate(section, fn, item_type=item_type,
+                                check_candidate=check_candidate)
+
+        return p
+
     def load(self, section, fn, item_type=None, check_candidate=None):
         if item_type is None:
             item_type = self.guess_item_type(fn)

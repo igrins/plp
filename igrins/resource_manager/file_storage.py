@@ -14,11 +14,11 @@ class FileStorage(StorageBase):
 
         self._check_candidate = check_candidate
 
-    def get_section(self, section):
+    def get_section_defs(self):
         if hasattr(self.path_info, "sections"):
-            return self.path_info.sections.get(section)
+            return self.path_info.sections
         else:
-            return self.path_info.get(section)
+            return self.path_info
 
     def _get_path(self, section, fn):
 
