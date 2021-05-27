@@ -108,7 +108,14 @@ def fetch_ref_data(config, band, kind, ref_utdate=None):
     fn1, ext = os.path.splitext(fn)
 
     loader = ref_loader_dict[ext]
-    return fn, loader(fn)
+
+    try:
+        r = loader(fn)
+    except ValueError:
+        print("Error loading ref data file: ", fn)
+        raise
+
+    return fn, r
 
 
 if 0:
