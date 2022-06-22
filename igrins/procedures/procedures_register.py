@@ -18,6 +18,11 @@ from .aperture_helper import get_simple_aperture_from_obsset
 # from .sky_spec import make_combined_image_sky, extract_spectra
 # these are used by recipes
 
+from .trace_flat import (get_smoothed_order_spec,
+                         get_order_boundary_indices)
+
+from .smooth_continuum import get_smooth_continuum
+
 
 def _get_ref_spec_name(recipe_name):
 
@@ -436,10 +441,84 @@ def transform_wavelength_solutions(obsset):
                  data=dict(orders=orders, wvl_sol=wvl_sol))
 
     return wvl_sol
-# from ..libs.transform_wvlsol import transform_wavelength_solutions
 
 
-def _make_order_flat(flat_normed, flat_mask, orders, order_map):
+def _make_order_flat(flat_normed, flat_mask, orders,
+                     order_map, mode="median", extract_mask=None):
+
+    f_reduce = dict(median=np.nanmedian, mean=np.nanmean)[mode]
+
+    import scipy.ndimage as ni
+    slices = ni.find_objects(order_map)
+
+    # ordermap for extraction with optional mask applied
+    if extract_mask is not None:
+        order_map2 = np.ma.array(order_map, mask=~extract_mask).filled(0)
+    else:
+        order_map2 = order_map
+
+    mean_order_specs = []
+    mask_list = []
+    for o in orders:
+        sl = (slices[o-1][0], slice(0, 2048))
+
+        mmm = order_map2[sl] == o
+
+        d_sl = flat_normed[sl].copy()
+        d_sl[~mmm] = np.nan
+
+        f_sl = flat_mask[sl].copy()
+        f_sl[~mmm] = np.nan
+        ff = np.nanmean(f_sl, axis=0)
+        mask_list.append(ff)
+
+        import warnings
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', r'All-NaN slice encountered')
+
+            ss = f_reduce(d_sl, axis=0)
+
+        mean_order_specs.append(ss)
+
+    s_list = [get_smoothed_order_spec(s) for s in mean_order_specs]
+    i1i2_list = [get_order_boundary_indices(s, s0)
+                 for s, s0 in zip(mean_order_specs, s_list)]
+    s2_list = [get_smooth_continuum(s) for s, (i1, i2)
+               in zip(s_list, i1i2_list)]
+
+    # make flat
+    # x = np.arange(len(s_list[-1]))
+    flat_im = np.ones(flat_normed.shape, "d")
+    # flat_im.fill(np.nan)
+
+    fitted_responses = []
+
+    for o, px in zip(orders, s2_list):
+        sl = (slices[o-1][0], slice(0, 2048))
+        d_sl = flat_normed[sl].copy()
+        msk = (order_map[sl] == o)
+        # d_sl[~msk] = np.nan
+
+        d_div = d_sl / px
+        px2d = px * np.ones_like(d_div)  # better way to broadcast px?
+        with np.errstate(invalid="ignore"):
+            d_div[px2d < 0.05*px.max()] = 1.
+
+        flat_im[sl][msk] = (d_sl / px)[msk]
+        fitted_responses.append(px)
+
+    with np.errstate(invalid="ignore"):
+        flat_im[flat_im < 0.5] = np.nan
+
+    order_flat_dict = dict(orders=orders,
+                           fitted_responses=fitted_responses,
+                           i1i2_list=i1i2_list,
+                           mean_order_specs=mean_order_specs)
+
+    return flat_im, order_flat_dict
+
+
+def _make_order_flat_deprecated(flat_normed, flat_mask, orders, order_map):
 
     # from storage_descriptions import (FLAT_NORMED_DESC,
     #                                   FLAT_MASK_DESC)
@@ -474,9 +553,6 @@ def _make_order_flat(flat_normed, flat_mask, orders, order_map):
                   for i in range(2048)]
 
         mean_order_specs.append(ss)
-
-    from .trace_flat import (get_smoothed_order_spec,
-                             get_order_boundary_indices)
 
     s_list = [get_smoothed_order_spec(s) for s in mean_order_specs]
     i1i2_list = [get_order_boundary_indices(s, s0)
@@ -540,6 +616,7 @@ def save_orderflat(obsset):
     ap = get_simple_aperture_from_obsset(obsset, orders=orders)
 
     order_map = ap.make_order_map()
+    extract_mask = ap.make_order_map(0.2, 0.8) > 0
 
     hdul = obsset.load_resource_for("flat_normed")
     flat_normed = get_first_science_hdu(hdul).data
@@ -549,7 +626,8 @@ def save_orderflat(obsset):
     # from ..libs.process_flat import make_order_flat
     order_flat_im, order_flat_json = _make_order_flat(flat_normed,
                                                       flat_mask,
-                                                      orders, order_map)
+                                                      orders, order_map,
+                                                      extract_mask=extract_mask)
 
     hdul = obsset.get_hdul_to_write(([], order_flat_im))
     obsset.store(DESCS["order_flat_im"], hdul)

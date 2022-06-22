@@ -100,8 +100,8 @@ def get_combined_images(obsset,
 
     na, nb = len(obsset_a.obsids), len(obsset_b.obsids)
 
-    if ab_mode and (na != nb):
-        raise RuntimeError("For AB nodding, number of A and B should match!")
+    # if ab_mode and (na != nb):
+    #     raise RuntimeError("For AB nodding, number of A and B should match!")
 
     if na == 0:
         raise RuntimeError("No A Frame images are found")
@@ -250,6 +250,7 @@ def make_combined_images(obsset, allow_no_b_frame=False,
 
 
 steps = [Step("Make Combined Image", make_combined_images,
+              allow_no_b_frame=False,
               interactive=False,
               remove_level="auto", remove_amp_wise_var="auto")]
 

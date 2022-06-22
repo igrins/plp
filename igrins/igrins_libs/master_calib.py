@@ -146,25 +146,3 @@ def load_ref_data(config, band, kind, ref_utdate=None):
 
 
 
-
-if 0:
-    ref_ohline_indices_map = json.load(open(fn))
-    ref_ohline_indices = ref_ohline_indices_map[band]
-
-    ref_ohline_indices = dict((int(k), v) for k, v \
-                              in ref_ohline_indices.items())
-
-    from .oh_lines import OHLines
-    fn = get_master_calib_abspath("ohlines.dat")
-    ohlines = OHLines(fn)
-
-    # from fit_gaussian import fit_gaussian_simple
-
-
-    r = dict(ref_date=ref_utdate,
-             band=band,
-             ohlines_db = ohlines,
-             ohline_indices=ref_ohline_indices,
-             )
-
-    return r

@@ -22,7 +22,7 @@ class ObsSet(object):
         self.frametypes = frametypes
         if groupname is None:
             groupname = str(self.obsids[0]) if self.obsids else ""
-        self.master_obsid = obsids[0]
+        self.master_obsid = None if len(obsids) == 0 else obsids[0]
         self.groupname = groupname
         self.recipe_entry = recipe_entry
         self._reset_read_cache = reset_read_cache

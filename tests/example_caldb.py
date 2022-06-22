@@ -10,7 +10,7 @@ def main():
     _ = caldb.get_all_products_for_db("flat_on")
     print(_)
 
-    v = caldb.load("flat_on", "FLATON_JSON")
+    v = caldb.load("flat_on", "FLATCENTROID_JSON")
 
 if __name__ == '__main__':
     main()

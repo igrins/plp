@@ -55,8 +55,10 @@ def get_combined_image(obsset):
                                       B=obsset_b.obsids))
 
     else:
-        # TODO: readout pattern need to be subtracted
-        sky_data = _get_combined_image(obsset)
+        # TODO: readout pattern is only subtracted from the guard
+        sky_data_ = _get_combined_image(obsset)
+        sky_data = sub_bg64_from_guard(sub_p64_from_guard(sky_data_))
+
         combine_mode = "median"
         combine_par = json.dumps(obsset.obsids)
 

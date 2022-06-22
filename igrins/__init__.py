@@ -125,7 +125,13 @@ class CalDB(object):
 
         return d
 
-    def load(self, db_name, desc, n=0):
+    def get_resource_def(self):
+        return self.rm.resource_db.resource_def
+
+    def query_resource_desc(self, resource_name):
+        return self.get_resource_def()[resource_name]
+
+    def load(self, db_name, desc, n=0, item_type=None, postfix=""):
         if isinstance(desc, str):
             desc = DESCS[desc]
 
@@ -133,7 +139,12 @@ class CalDB(object):
         obsid_list, basename_list = db.get_obsid_list()
         obsid = obsid_list[0]
 
-        return self.rm.load(obsid, desc)
+        return self.rm.load(obsid, desc, item_type=item_type, postfix=postfix)
+
+    def load_fits_sci_hdu(self, db_name, desc, n=0, postfix=""):
+        from .utils.load_fits import get_first_science_hdu
+        hdul = self.load(db_name, desc, item_type="fits", postfix=postfix)
+        return get_first_science_hdu(hdul)
 
 
 # basename = 'SDCK_20170215_0061'

@@ -284,12 +284,12 @@ def setup_basic_gui(ax, params, widgets, save_button_label="Quit"):
 
     def set_busy(*kl, **kwargs):
         busy_text.set_visible(True)
-        fig.canvas.draw()
+        fig.canvas.draw_idle()
         fig.canvas.flush_events()
 
     def unset_busy(*kl, **kwargs):
         busy_text.set_visible(False)
-        fig.canvas.draw()
+        fig.canvas.draw_idle()
         fig.canvas.flush_events()
 
     ws.pre_trigger_hooks.append(set_busy)
