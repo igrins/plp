@@ -16,7 +16,7 @@ from .destripe_helper import sub_p64_from_guard, sub_bg64_from_guard
 
 def _get_combined_image(obsset):
     data_list = [hdu.data for hdu in obsset.get_hdus()]
-    return image_median(data_list)
+    return image_median(np.array(data_list))
 
 
 def get_median_combined_image(obsset):
