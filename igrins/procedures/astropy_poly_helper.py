@@ -38,9 +38,14 @@ def deserialize_poly_model(module_name, klass_name, serialized):
 
     assert issubclass(T, P.PolynomialBase)
 
-    if T.n_inputs == 1:
-        prefixes = [""]  # FIXME: this might be ["X_"]. Need to be checked.
-    elif T.n_inputs == 2:
+    if hasattr(T, "n_inputs"): # newer astropy
+        n_inputs = T.n_inputs
+    else:  # for astropy < 4?
+        n_inputs = len(T.inputs)
+
+    if n_inputs == 1:
+        prefixes = [""]  # FIXME: this might be ["x_"]. Need to be checked.
+    elif n_inputs == 2:
         prefixes = ["x_", "y_"]
     else:
         raise ValueError(f"Unsupported Polynomial with n_inputs : {T.n_inputs}")
