@@ -38,11 +38,12 @@ def deserialize_poly_model(module_name, klass_name, serialized):
 
     assert issubclass(T, P.PolynomialBase)
 
-    inputs = T.inputs
-    if len(inputs) == 1:
-        prefixes = [""]
-    elif len(inputs) == 2:
-        prefixes = ["{}_".format(_) for _ in inputs]
+    if T.n_inputs == 1:
+        prefixes = [""]  # FIXME: this might be ["X_"]. Need to be checked.
+    elif T.n_inputs == 2:
+        prefixes = ["x_", "y_"]
+    else:
+        raise ValueError(f"Unsupported Polynomial with n_inputs : {T.n_inputs}")
 
     serialized = serialized.copy()
     degrees = [serialized.pop(prefix+"degree") for prefix in prefixes]
