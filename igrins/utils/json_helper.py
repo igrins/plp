@@ -9,7 +9,7 @@ def encode_array(obj):
     elif isinstance(obj, np.ndarray):
         return obj.tolist()
     elif hasattr(obj, "dtype"):
-        return np.asscalar(obj)
+        return obj.item()
     # # check if numpy polynomial. Need to be improved
     # elif hasattr(obj, "convert"):
     #     p = obj.convert(kind=P.Polynomial)
