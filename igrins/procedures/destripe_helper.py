@@ -1,7 +1,7 @@
 import numpy as np
 # import matplotlib.pyplot as plt
 
-from igrins.procedures.destriper import stack64, concat
+from .destriper import stack64, concat
 
 
 def _get_ny_slice(ny, dy):

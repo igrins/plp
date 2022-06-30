@@ -4,7 +4,7 @@ import numpy as np
 import scipy.ndimage as ni
 from scipy.interpolate import LSQUnivariateSpline
 
-from igrins.procedures import destripe_helper as dh
+from . import destripe_helper as dh
 
 
 def _get_slices(ny, dy):
