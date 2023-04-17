@@ -4,6 +4,7 @@ import pandas as pd
 
 from astropy.table import Table
 from astropy.io.fits.convenience import table_to_hdu
+from astropy.io.fits.card import Undefined
 
 
 def get_raw_value_string(c):
@@ -14,8 +15,10 @@ def get_raw_value_string(c):
 
 
 def get_cards_to_store(h):
+
     cc = [(c.keyword, c.value) for c in h.cards
-          if c.keyword not in ["SIMPLE", "COMMENT", "FITSFILE"]]
+          if c.keyword not in ["SIMPLE", "COMMENT", "FITSFILE"]
+          and c.value is Undefined]
     # cc = [(c.keyword, get_raw_value_string(c), ) for c in h.cards
     #       if c.keyword not in ["SIMPLE", "COMMENT", "FITSFILE"]]
 
@@ -33,7 +36,7 @@ def get_cards_to_store(h):
 def get_header_tables_as_df(hdu_list, aux_columns=None):
     ccc = [get_cards_to_store(hdu.header) for hdu in hdu_list]
 
-    ccc1 = [pd.Series(od) for od in ccc]
+    ccc1 = [pd.Series(od) for od in ccc if len(od)]
     df = pd.DataFrame(ccc1)
 
     if aux_columns is not None:

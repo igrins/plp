@@ -68,7 +68,7 @@ from .make_header_table import get_header_tables_as_hdu
 
 def _make_sky_ab_pair(obsset):
 
-    of_list = zip(obsset.obsids, obsset.frametypes)
+    of_list = list(zip(obsset.obsids, obsset.frametypes))
     obsid_to_load = set()
     obsid_pairs = []
 
@@ -108,9 +108,12 @@ def _make_sky_ab_pair(obsset):
     return sky_list, tbl_hdu, mode_dict
 
 
-def _make_sky_off_only(obsset_orig):
+def _make_sky_off_only(obsset_orig, frmtype="B"):
 
-    obsset = obsset_orig.get_subset("B")
+    if frmtype:
+        obsset = obsset_orig.get_subset(frmtype)
+    else:
+        obsset = obsset_orig
 
     hdu_list = obsset.get_hdus()
     data_list_ = [hdu.data for hdu in hdu_list]
@@ -118,7 +121,7 @@ def _make_sky_off_only(obsset_orig):
     data_list = [sub_bg64_from_guard(sub_p64_from_guard(d))
                  for d in data_list_]
 
-    obsid_list = map(int, obsset.get_obsids())
+    obsid_list = list(map(int, obsset.get_obsids()))
     aux_columns = dict(OBSID=obsid_list,
                        # OBSDATE=[obsdate] * len(obsid_list),
                        FRAMETYPE=obsset.frametypes)
@@ -140,7 +143,7 @@ def _make_sky_list(obsset, mode=None):
     assert mode in ["ab-pair", "off-only"]
 
     if mode == "off-only":
-        data_list, tbl_hdu, mode_dict = _make_sky_off_only(obsset)
+        data_list, tbl_hdu, mode_dict = _make_sky_off_only(obsset, frmtype="")
     else:
         data_list, tbl_hdu, mode_dict = _make_sky_ab_pair(obsset)
 
@@ -196,7 +199,6 @@ def make_initial_sky_cube(obsset):
     # final_sky = np.array(data_list)
     hdul = obsset.get_hdul_to_write(([("SKY_MODE", json.dumps(mode_dict))],
                                      final_sky))
-    print(len(skys))
     hdul.append(tbl_hdu)
     obsset.store("combined_image1", data=hdul)
 

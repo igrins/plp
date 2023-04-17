@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 
 from ..utils.image_combine import image_median
@@ -39,8 +40,8 @@ def model_bg(dark3, destripe_mask):
 def _sub_median_row_with_mask(d1, mask):
     k = np.ma.array(d1, mask=mask).filled(np.nan)
 
-    with np.warnings.catch_warnings():
-        np.warnings.filterwarnings('ignore', r'All-NaN (slice|axis)')
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', r'All-NaN (slice|axis)')
 
         c = np.nanmedian(k, axis=1)
 
@@ -56,8 +57,8 @@ def _sub_with_bg_old(d, bg, destripe_mask=None):
 
 def _sub_with_bg_201909(d, bg, destripe_mask=None):
 
-    with np.warnings.catch_warnings():
-        np.warnings.filterwarnings('ignore', r'All-NaN (slice|axis)')
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', r'All-NaN (slice|axis)')
 
         r = apply_rp_2nd_phase(d - bg, destripe_mask) + bg
 

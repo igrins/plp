@@ -273,7 +273,7 @@ class SpecFlattener(object):
 
         rad1, rad2, frac = self.get_smoothing_param(msk_sv)
         from ..igrins_libs.logger import info, debug
-        debug("smoothing radius: {} {}".format(int(rad1), int(rad2)))
+        # info("smoothing radius: {} {}".format(int(rad1), int(rad2)))
 
         weight_func = self.get_weight_func(rad1, rad2, frac)
 

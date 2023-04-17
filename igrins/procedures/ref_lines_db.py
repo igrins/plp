@@ -149,7 +149,7 @@ def fitted_lines_reidentify(fitted_lines, ref_lines, s, x,
                             colname_pixel="pixel", colname_params="params",
                             ref_sigma0=1.5):
 
-    ref_lines_groupby = ref_lines.groupby(["group_id"])
+    ref_lines_groupby = ref_lines.groupby("group_id")
 
     ref_pixels = [row["pixel"].values for group_id, row
                   in ref_lines_groupby]
