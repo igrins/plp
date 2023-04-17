@@ -46,7 +46,9 @@ def fit_gaussian_simple(x, s, lines, xminmax=None, sigma_init=1.5,
 
     xx = x[sl]
     yy = s[sl]
+    ymin = min(yy)
     ymax = max(yy)
+    yheight = ymax - ymin
     #yy = yy / ymax
     dcenters0 = lines - lines[0]
 
