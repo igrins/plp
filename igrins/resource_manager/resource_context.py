@@ -166,7 +166,7 @@ class ResourceContextStack():
         # else:
         #     return self.storage.load(section, fn, item_type)
 
-        return self.storage.exists(section, fn)
+        return self.storage.locate(section, fn)
 
     def load(self, section, fn, item_type=None):
         # check the write cache in the context_stack

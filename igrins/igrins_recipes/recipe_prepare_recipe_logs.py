@@ -105,7 +105,7 @@ def prepare_recipe_logs(obsdate, config_file="recipe.config",
 
     l = dt_logs.load_from_dir(obsdate, fn0)
 
-    dt_logs.update_file_links(obsdate, l, bands="HK")
+    dt_logs.update_file_links(config, obsdate, l, bands="HK")
 
     df_recipe_logs = make_recipe_logs(obsdate, l,
                                       populate_group1=populate_group1)

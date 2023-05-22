@@ -4,7 +4,7 @@ import pandas as pd
 import glob
 
 from ..igrins_libs import logger
-
+from .. import DESCS
 
 def convert_group_values(groups):
 
@@ -160,6 +160,7 @@ def get_obsid_map(obsdate, l, bands="HK"):
             logger.logger.error("Error on : {}".format(l1))
             raise
 
+    # maxobsid = (maxobsid // 1000 + 1) * 1000
     obsid_map = {}
     for i, (obsdate1, obsid, fn) in enumerate(obsid_link_list, start=1):
         obsid2 = maxobsid + i
@@ -168,30 +169,36 @@ def get_obsid_map(obsdate, l, bands="HK"):
     return obsid_map
 
 
-def update_file_links(obsdate, l, bands="HK"):
+def update_file_links(config, obsdate, l, bands="HK"):
     # prepare the convertsion map between obsids with different obsdate
     # to the current obsdate.
+
+    # The current resource_manager only handles a single obsdate. Thus files
+    # have different obsdate need to be renamed.
+    # get_obsid_map returns a dictionary of filename mapping.
     obsid_map = get_obsid_map(obsdate, l, bands=bands)
 
+    from .resource_manager_helper import ResourceManagerWorkaround
+    rmw = ResourceManagerWorkaround(config, obsdate)
+
     if obsid_map:
-        print("trying to make soft links for files of different obsdates")
-        from igrins.libs.load_fits import find_fits
+        print("\ntrying to make soft links for files of different obsdates")
+        # from igrins.utils.load_fits import find_fits
         old_new_list = []
 
         for band in bands:
-            for k, v in obsid_map.items():
+            for k, new_obsid in obsid_map.items():
                 obsdate1, obsid = k
-                tmpl = "SDC%s_%s_%04d" % (band, obsdate1, obsid)
-                # old_fn = os.path.join(fn0, tmpl+".fits")
-                old_fn = tmpl + ".fits"
-                old_fn = find_fits(old_fn)
+                old_fn = rmw.locate(obsdate1, band, obsid)
+                old_fn_basename = os.path.basename(old_fn)
 
-                newtmpl = "SDC%s_%s_%04d" % (band, obsdate, v)
-                _newfn = os.path.basename(old_fn).replace(tmpl, newtmpl)
-                new_fn = os.path.join(os.path.dirname(old_fn),
-                                      _newfn)
+                new_fn = rmw.get_path(obsdate, band, new_obsid)
+                new_fn_basename = os.path.basename(new_fn)
 
-                old_new_list.append((old_fn, new_fn))
+                # e.g., ".gz", "bz2"
+                additional_ext = old_fn_basename[len(new_fn_basename):]
+
+                old_new_list.append((old_fn, new_fn + additional_ext))
 
         for old_fn, new_fn in old_new_list:
             if os.path.exists(new_fn):
@@ -201,6 +208,7 @@ def update_file_links(obsdate, l, bands="HK"):
                     raise RuntimeError("file already exists: %s" % new_fn)
 
         for old_fn, new_fn in old_new_list:
+            print(os.path.basename(old_fn), "-->", os.path.basename(new_fn))
             os.symlink(os.path.basename(old_fn), new_fn)
 
 
