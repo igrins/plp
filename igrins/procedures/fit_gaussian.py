@@ -56,9 +56,9 @@ def fit_gaussian_simple(x, s, lines, xminmax=None, sigma_init=1.5,
         # return np.sum((yy - _gauss0(params))**2)
         return _gauss_w_dcenters(xx, yy, params, dcenters0)
 
-    params0 = np.array([lines[0], sigma_init, ymax, 0])
-    params_min = np.array([xmin, 0., 0, -ymax])
-    params_max = np.array([xmax, 6*sigma_init, 2*ymax, ymax])
+    params0 = np.array([lines[0], sigma_init, yheight, ymin])
+    params_min = np.array([xmin, 0., 0, ymin])
+    params_max = np.array([xmax, 6*sigma_init, 2*yheight, ymax])
 
     # def _gauss0(params, xx=xx):
     #     """ Returns a gaussian function with the given parameters"""
@@ -76,10 +76,15 @@ def fit_gaussian_simple(x, s, lines, xminmax=None, sigma_init=1.5,
         #return (height*np.array(s).sum(axis=0) + background)
 
     from scipy.optimize import fmin_tnc
-    sol_ = fmin_tnc(_gauss, params0,
-                    bounds=list(zip(params_min, params_max)),
-                    approx_grad=True, disp=0,
-                    )
+    try:
+        sol_ = fmin_tnc(_gauss, params0,
+                        bounds=list(zip(params_min, params_max)),
+                        approx_grad=True, disp=0,
+                        )
+    except ValueError:
+        print(yy)
+        print(params0, params_min, params_max)
+        raise
 
     if do_plot:
         import matplotlib.pyplot as plt
