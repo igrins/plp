@@ -21,6 +21,12 @@ def _get_combined_image(obsset):
     # Should not use median, Use sum.
     data_list = [hdu.data for hdu in obsset.get_hdus()]
 
+    #This is where the flexure correction is done
+    correct_flexure = obsset.get_recipe_parameter("correct-flexure")
+    if correct_flexure == True:
+        print('LOOKS LIKE THE CORRECT FLEXURE PARAMETER CORRECTLY GOT PASSED WHERE IT NEEDS TO GO')
+
+
     return np.sum(data_list, axis=0)
 
 
