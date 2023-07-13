@@ -85,7 +85,8 @@ _steps_default = [
     Step("Setup extraction parameters",
          setup_extraction_parameters,
          height_2dspec=0,
-         order_range="-1,-1"),
+         order_range="-1,-1",
+         correct_flexure=False),
     Step("Set basename-postfix", set_basename_postfix,
          basename_postfix=""),
 ]
