@@ -130,6 +130,10 @@ SPEC_A0V_FITS_DESC = ("OUTDATA_PATH", "{basename}{postfix}.spec_a0v.fits")
 #Save variance map as straitened out 2D datacube like spec2d.fits
 VAR2D_FITS_DESC = ("OUTDATA_PATH", "{basename}{postfix}.var2d.fits")
 
+# Save processed sky frames for flexure correction
+FLEXCORR_FITS_DESC = ("PRIMARY_CALIB_PATH", "{basename}{postfix}.sky_flexcorr.fits")
+
+
 
 # QA
 

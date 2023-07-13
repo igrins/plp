@@ -33,6 +33,7 @@ def get_recipe_list():
     recipe_list = [prepare_recipe_logs,
                    show_recipe_logs,
                    create_argh_command("flat"),
+                   create_argh_command("flexure-setup" , ["SKY"]),
                    create_argh_command("combine", ["A0V_*",
                                                    "STELLAR_*",
                                                    "EXTENDED_*"]),
