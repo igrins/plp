@@ -57,7 +57,11 @@ class ObsSet(object):
     #     pass
 
     def set_recipe_parameters(self, **kwargs):
+
         self._recipe_parameters.update(kwargs)
+
+        print('Setting a parameter!!!!!!')
+        breakpoint()
 
     def get_recipe_parameter(self, parname):
         return self._recipe_parameters.get(parname)
@@ -111,8 +115,10 @@ class ObsSet(object):
                if f in frametypes]
         obsids = [o for o, f in ofs]
         frametypes = [f for o, f in ofs]
-
-        return ObsSet(self.rs, self.recipe_name, obsids, frametypes)
+        subset = ObsSet(self.rs, self.recipe_name, obsids, frametypes)
+        subset._recipe_parameters = self._recipe_parameters #Propogate recipe parameters to subsets
+        #return ObsSet(self.rs, self.recipe_name, obsids, frametypes)
+        return subset
 
     # ref_data related
     def load_ref_data(self, kind, get_path=False):
