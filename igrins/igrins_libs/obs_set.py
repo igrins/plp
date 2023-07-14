@@ -57,11 +57,7 @@ class ObsSet(object):
     #     pass
 
     def set_recipe_parameters(self, **kwargs):
-
         self._recipe_parameters.update(kwargs)
-
-        print('Setting a parameter!!!!!!')
-        breakpoint()
 
     def get_recipe_parameter(self, parname):
         return self._recipe_parameters.get(parname)
