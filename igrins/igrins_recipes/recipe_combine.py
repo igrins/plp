@@ -16,18 +16,24 @@ from ..procedures.ro_pattern_fft import (get_amp_wise_rfft,
 #                                          make_model_from_rfft)
 from .gui_combine import setup_gui, factory_pattern_remove_n_smoothed
 
-from ..procedures.procedures_flexure_correction import estimate_flexure
+from ..procedures.sky_spec import get_exptime
+from ..procedures.procedures_flexure_correction import estimate_flexure, check_slit_illumination_in_H_band
 
 
 def _get_combined_image(obsset):
     # Should not use median, Use sum.
     data_list = [hdu.data for hdu in obsset.get_hdus()]
-
+    date, band = obsset.get_resource_spec()
+    
     correct_flexure = obsset.get_recipe_parameter("correct_flexure")
     if correct_flexure == True:
-        from ..procedures.sky_spec import get_exptime
+        
         exptime = get_exptime(obsset)
         data_list = estimate_flexure(obsset, data_list, exptime) #Estimate flexure and apply correction
+
+        if band == 'H' and len(data_list) > 1: #Testing detection
+            check_slit_illumination_in_H_band(obsset, data_list)
+
 
     return np.sum(data_list, axis=0)
 

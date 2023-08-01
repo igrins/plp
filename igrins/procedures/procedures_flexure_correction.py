@@ -15,6 +15,7 @@ from ..igrins_libs.resource_helper_igrins import ResourceHelper
 #from ..procedures.sky_spec import _get_combined_image, _destripe_sky
 from astropy.io import fits
 import glob
+import copy
 
 from scipy.ndimage import median_filter, gaussian_filter
 
@@ -50,10 +51,11 @@ def roll_along_axis(array_to_correct, correction, axis=0): #Apply flexure correc
 
 
 def cross_correlate(reference, data, zoom_amount=1000, maximum_pixel_search=5):
-	fx1 = zoom(np.nansum(reference, 0), zoom_amount, order=1) #Zoom and collapse into 1D
-	fy1 = zoom(np.nansum(reference, 1), zoom_amount, order=1)
-	fx2 = zoom(np.nansum(data, 0), zoom_amount, order=1) #Zoom and collapse into 1D
-	fy2 = zoom(np.nansum(data, 1), zoom_amount, order=1)
+	interp_order = 1
+	fx1 = zoom(np.nansum(reference, 0), zoom_amount, order=interp_order) #Zoom and collapse into 1D
+	fy1 = zoom(np.nansum(reference, 1), zoom_amount, order=interp_order)
+	fx2 = zoom(np.nansum(data, 0), zoom_amount, order=interp_order) #Zoom and collapse into 1D
+	fy2 = zoom(np.nansum(data, 1), zoom_amount, order=interp_order)
 	# fx2 = bn.nansum(zoom(data, [1, self.zoom_amount], order=1), 0) #Zoom and collapse into 1D
 	# fy2 = bn.nansum(zoom(data, [self.zoom_amount, 1], order=1), 1)
 	fx1[np.isnan(fx1)] = 0 #Zero out remaining nan pixels
@@ -73,6 +75,35 @@ def cross_correlate(reference, data, zoom_amount=1000, maximum_pixel_search=5):
 	find_shift_from_maximum_y = np.unravel_index(np.argmax(fft_sub_result_y), fft_sub_result_y.shape[0])
 	fft_dx_result = (find_shift_from_maximum_x[0] -  (fft_sub_result_x.shape[0]/2))/zoom_amount #Calcualte the offset from the pixels with the strongest correlation
 	fft_dy_result = (find_shift_from_maximum_y[0] -  (fft_sub_result_y.shape[0]/2))/zoom_amount
+
+	# #Test cross-correlating
+	# for i in range(2):
+	# 	for j in range(2):
+	# 		sub_data = data[1024*i:1024*(i+1), 1024*j:1024*(j+1)]
+	# 		suf_reference = reference[1024*i:1024*(i+1), 1024*j:1024*(j+1)]
+	# 		fx1 = zoom(np.nansum(suf_reference, 0), zoom_amount, order=1) #Zoom and collapse into 1D
+	# 		fy1 = zoom(np.nansum(suf_reference, 1), zoom_amount, order=1)
+	# 		fx2 = zoom(np.nansum(sub_data, 0), zoom_amount, order=1) #Zoom and collapse into 1D
+	# 		fy2 = zoom(np.nansum(sub_data, 1), zoom_amount, order=1)
+	# 		fx1[np.isnan(fx1)] = 0 #Zero out remaining nan pixels
+	# 		fy1[np.isnan(fy1)] = 0
+	# 		fx2[np.isnan(fx2)] = 0 #Zero out remaining nan pixels
+	# 		fy2[np.isnan(fy2)] = 0
+	# 		fft_result_x = fftconvolve(fx1, fx2[::-1]) #Perform FFIT cross correlation only in x and y
+	# 		fft_result_y = fftconvolve(fy1, fy2[::-1])
+	# 		delta_sub_pixels = 0.5*maximum_pixel_search*zoom_amount #Cut FFT cross-correlation result to be within a maximum number of pixels from zero offset, this cuts out possible extraneous minima screwing up the maximum in the FFT result characterizing the true offset
+	# 		x1 = int((fft_result_x.shape[0]/2) - delta_sub_pixels)
+	# 		x2 = int((fft_result_x.shape[0]/2) + delta_sub_pixels)
+	# 		y1 = int((fft_result_y.shape[0]/2) - delta_sub_pixels)
+	# 		y2 = int((fft_result_y.shape[0]/2) + delta_sub_pixels)  
+	# 		fft_sub_result_x = fft_result_x[x1:x2]
+	# 		fft_sub_result_y = fft_result_y[y1:y2]
+	# 		find_shift_from_maximum_x = np.unravel_index(np.argmax(fft_sub_result_x), fft_sub_result_x.shape[0]) #Find pixels with strongest correlation
+	# 		find_shift_from_maximum_y = np.unravel_index(np.argmax(fft_sub_result_y), fft_sub_result_y.shape[0])
+	# 		fft_dx_result_chunk = (find_shift_from_maximum_x[0] -  (fft_sub_result_x.shape[0]/2))/zoom_amount #Calcualte the offset from the pixels with the strongest correlation
+	# 		fft_dy_result_chunk = (find_shift_from_maximum_y[0] -  (fft_sub_result_y.shape[0]/2))/zoom_amount
+	# 		print('i,j = ', i, j)
+	# 		print('dx,dy = ',fft_dx_result_chunk, fft_dy_result_chunk)
 
 
 	# #Test halves in cross correlation
@@ -137,6 +168,53 @@ def set_reference_frame(obsset):
 		obsset.store('FLEXCORR_FITS', data=hdus_out)
 
 
+#Check 
+def check_slit_illumination_in_H_band(obsset, datalist):
+	date, band = get_date_and_band(obsset) #Grab date and band we are working in
+	xr = [400,1900]
+	zoom_amount = 1000.0
+	interp_order=1
+	maximum_pixel_search = 10
+
+	filename = glob.glob('calib/primary/'+date+'/SKY_SDCH_'+date+'*order_map.fits')[0] #Load order map
+	order_map = fits.getdata(filename)
+	filtered_data1 = datalist[0] - np.nanmedian(datalist[0], 0) - np.nanmedian(datalist[0], 1)[:,np.newaxis] #Cross correlate each dataframe with the first data frame in the list
+	filtered_data1 -= median_filter(filtered_data1, [35,1])
+	for j in range(1, len(datalist)):
+		filtered_data2 =  datalist[j] - np.nanmedian(datalist[j], 0) - np.nanmedian(datalist[j], 1)[:,np.newaxis]
+		filtered_data2 -= median_filter(filtered_data2, [35,1])
+		dx_results = []
+		for i in range(119, 122):
+		    cut_data1 = copy.deepcopy(filtered_data1) #Collapse data in an order into 1D
+		    cut_data2 = copy.deepcopy(filtered_data2)
+		    cut_data1[~(order_map == i)] = np.nan
+		    cut_data2[~(order_map == i)] = np.nan
+		    collapsed_data1 = np.nansum(cut_data1[:,xr[0]:xr[1]], 0)
+		    collapsed_data2 = np.nansum(cut_data2[:,xr[0]:xr[1]], 0)
+		    collapsed_data1 /= np.nansum(collapsed_data1) #Normalize both frames
+		    collapsed_data2 /= np.nansum(collapsed_data2)
+		    fx1 = zoom(collapsed_data1, zoom_amount, order=interp_order) #Zoom and collapse into 1D
+		    fx2 = zoom(collapsed_data2, zoom_amount, order=interp_order) #Zoom and collapse into 1D
+		    fx1[np.isnan(fx1) | (fx1 < -np.std(fx1))] = 0 #Zero out remaining nan pixels
+		    fx2[np.isnan(fx2) | (fx2 < -np.std(fx2))] = 0 #Zero out remaining nan pixels
+		    fft_result_x = fftconvolve(fx1, fx2[::-1]) #Perform FFIT cross correlation only in x and y
+		    delta_sub_pixels = 0.5*maximum_pixel_search*zoom_amount #Cut FFT cross-correlation result to be within a maximum number of pixels from zero offset, this cuts out possible extraneous minima screwing up the maximum in the FFT result characterizing the true offset
+		    x1 = int((fft_result_x.shape[0]/2) - delta_sub_pixels)
+		    x2 = int((fft_result_x.shape[0]/2) + delta_sub_pixels)
+		    fft_sub_result_x = fft_result_x[x1:x2]
+		    find_shift_from_maximum_x = np.unravel_index(np.argmax(fft_sub_result_x), fft_sub_result_x.shape[0]) #Find pixels with strongest correlation
+		    fft_dx_result = (find_shift_from_maximum_x[0] -  (fft_sub_result_x.shape[0]/2))/zoom_amount #Calc
+		    dx_results.append(fft_dx_result)
+		dx = np.nanmedian(dx_results)
+
+		if abs(dx) > 0.1 or obsset.obsids[0]==80:
+			print('UH OH!   FOUND POSSIBLE SHIFT DUE TO SLIT ILLUMINATION')
+			print('H-band Frames: ', obsset.obsids[0], obsset.obsids[j])
+			print('dx: ', dx_results)
+			print('median 3 orders dx: ', dx)
+			breakpoint()
+
+
 def estimate_flexure(obsset, data, exptime):
 	#exptime = get_exptime(obsset)
 	date, band = get_date_and_band(obsset) #Grab date and band we are working in
@@ -152,12 +230,12 @@ def estimate_flexure(obsset, data, exptime):
 			cleaned_dataframe = isolate_sky_lines(dataframe) / exptime #Apply median filters to isolate sky lines from other signal and normalize by exposure time
 			cleaned_dataframe[~mask] = np.nan #Apply mask to isolate sky lines on detector
 			dx, dy = cross_correlate(refframe, cleaned_dataframe) #Estimate delta-x and delta-y difference in pixels between the reference and data frames
-			
-			shifted_dataframe = roll_along_axis(dataframe, dx, axis=1) #Apply flexure correction
-			shifted_dataframe = roll_along_axis(shifted_dataframe, dy, axis=0)
+
+			shifted_dataframe = roll_along_axis(dataframe, dy, axis=0)			
+			shifted_dataframe = roll_along_axis(shifted_dataframe, dx, axis=1) #Apply flexure correction
 
 			flexure_corrected_data.append(shifted_dataframe)
-			#print('dx =', dx, 'dy =', dy)
+			print('dx =', dx, 'dy =', dy)
 
 	else: #For short exposures, estimate flexure for all the frames stacked
 		mask = (fits.getdata('master_calib/'+band+'-band_limited_sky_mask.fits') == 1.0)  #(note we use a more conservative mask for short exposures)
