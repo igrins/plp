@@ -17,7 +17,7 @@ from ..procedures.ro_pattern_fft import (get_amp_wise_rfft,
 from .gui_combine import setup_gui, factory_pattern_remove_n_smoothed
 
 from ..procedures.sky_spec import get_exptime
-from ..procedures.procedures_flexure_correction import estimate_flexure, check_slit_illumination_in_H_band
+from ..procedures.procedures_flexure_correction import estimate_flexure, check_telluric_shift
 
 
 def _get_combined_image(obsset):
@@ -31,8 +31,8 @@ def _get_combined_image(obsset):
         exptime = get_exptime(obsset)
         data_list = estimate_flexure(obsset, data_list, exptime) #Estimate flexure and apply correction
 
-        if band == 'H' and len(data_list) > 1: #Testing detection
-            check_slit_illumination_in_H_band(obsset, data_list)
+        if len(data_list) > 1: #Testing detection
+            check_telluric_shift(obsset, data_list)
 
 
     return np.sum(data_list, axis=0)

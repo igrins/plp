@@ -1,23 +1,19 @@
 from __future__ import print_function
 
-#from collections import namedtuple
-
 import numpy as np
-#import scipy.ndimage as ni
 from scipy.ndimage import median_filter, zoom, gaussian_filter1d
 from scipy.signal import fftconvolve
-#from ..procedures.readout_pattern_guard import remove_pattern_from_guard
-#from ..igrins_recipes.recipe_combine import remove_pattern
-#from ..igrins_libs.storage_descriptions import FLEXCORR_FITS_DESC
 from .estimate_sky import estimate_background, get_interpolated_cubic
 from ..procedures.destriper import destriper, stack128, stack64, get_stripe_pattern64
 from ..igrins_libs.resource_helper_igrins import ResourceHelper
-#from ..procedures.sky_spec import _get_combined_image, _destripe_sky
 from astropy.io import fits
 import glob
 import copy
 
+from numpy.polynomial import Polynomial
+
 from scipy.ndimage import median_filter, gaussian_filter
+
 
 #Use a series of median filters to isolate the sky lines while ignoring everything else
 def isolate_sky_lines(data):
@@ -50,7 +46,7 @@ def roll_along_axis(array_to_correct, correction, axis=0): #Apply flexure correc
     return corrected_array
 
 
-def cross_correlate(reference, data, zoom_amount=1000, maximum_pixel_search=5):
+def cross_correlate(reference, data, zoom_amount=1000, maximum_pixel_search=15):
 	interp_order = 1
 	fx1 = zoom(np.nansum(reference, 0), zoom_amount, order=interp_order) #Zoom and collapse into 1D
 	fy1 = zoom(np.nansum(reference, 1), zoom_amount, order=interp_order)
@@ -71,77 +67,20 @@ def cross_correlate(reference, data, zoom_amount=1000, maximum_pixel_search=5):
 	y2 = int((fft_result_y.shape[0]/2) + delta_sub_pixels)  
 	fft_sub_result_x = fft_result_x[x1:x2]
 	fft_sub_result_y = fft_result_y[y1:y2]
+
+	#Mask out large trends
+	n = len(fft_sub_result_x)
+	fit_x_array = np.arange(n)
+	fft_sub_result_mask = (fit_x_array < n*0.4) | (fit_x_array > n*0.6)
+	pfit = Polynomial.fit(fit_x_array[fft_sub_result_mask], fft_sub_result_x[fft_sub_result_mask], 4)
+	fft_sub_result_x = fft_sub_result_x - pfit(fit_x_array)
+	pfit = Polynomial.fit(fit_x_array[fft_sub_result_mask], fft_sub_result_y[fft_sub_result_mask], 4)
+	fft_sub_result_y = fft_sub_result_y - pfit(fit_x_array)
+
 	find_shift_from_maximum_x = np.unravel_index(np.argmax(fft_sub_result_x), fft_sub_result_x.shape[0]) #Find pixels with strongest correlation
 	find_shift_from_maximum_y = np.unravel_index(np.argmax(fft_sub_result_y), fft_sub_result_y.shape[0])
 	fft_dx_result = (find_shift_from_maximum_x[0] -  (fft_sub_result_x.shape[0]/2))/zoom_amount #Calcualte the offset from the pixels with the strongest correlation
 	fft_dy_result = (find_shift_from_maximum_y[0] -  (fft_sub_result_y.shape[0]/2))/zoom_amount
-
-	# #Test cross-correlating
-	# for i in range(2):
-	# 	for j in range(2):
-	# 		sub_data = data[1024*i:1024*(i+1), 1024*j:1024*(j+1)]
-	# 		suf_reference = reference[1024*i:1024*(i+1), 1024*j:1024*(j+1)]
-	# 		fx1 = zoom(np.nansum(suf_reference, 0), zoom_amount, order=1) #Zoom and collapse into 1D
-	# 		fy1 = zoom(np.nansum(suf_reference, 1), zoom_amount, order=1)
-	# 		fx2 = zoom(np.nansum(sub_data, 0), zoom_amount, order=1) #Zoom and collapse into 1D
-	# 		fy2 = zoom(np.nansum(sub_data, 1), zoom_amount, order=1)
-	# 		fx1[np.isnan(fx1)] = 0 #Zero out remaining nan pixels
-	# 		fy1[np.isnan(fy1)] = 0
-	# 		fx2[np.isnan(fx2)] = 0 #Zero out remaining nan pixels
-	# 		fy2[np.isnan(fy2)] = 0
-	# 		fft_result_x = fftconvolve(fx1, fx2[::-1]) #Perform FFIT cross correlation only in x and y
-	# 		fft_result_y = fftconvolve(fy1, fy2[::-1])
-	# 		delta_sub_pixels = 0.5*maximum_pixel_search*zoom_amount #Cut FFT cross-correlation result to be within a maximum number of pixels from zero offset, this cuts out possible extraneous minima screwing up the maximum in the FFT result characterizing the true offset
-	# 		x1 = int((fft_result_x.shape[0]/2) - delta_sub_pixels)
-	# 		x2 = int((fft_result_x.shape[0]/2) + delta_sub_pixels)
-	# 		y1 = int((fft_result_y.shape[0]/2) - delta_sub_pixels)
-	# 		y2 = int((fft_result_y.shape[0]/2) + delta_sub_pixels)  
-	# 		fft_sub_result_x = fft_result_x[x1:x2]
-	# 		fft_sub_result_y = fft_result_y[y1:y2]
-	# 		find_shift_from_maximum_x = np.unravel_index(np.argmax(fft_sub_result_x), fft_sub_result_x.shape[0]) #Find pixels with strongest correlation
-	# 		find_shift_from_maximum_y = np.unravel_index(np.argmax(fft_sub_result_y), fft_sub_result_y.shape[0])
-	# 		fft_dx_result_chunk = (find_shift_from_maximum_x[0] -  (fft_sub_result_x.shape[0]/2))/zoom_amount #Calcualte the offset from the pixels with the strongest correlation
-	# 		fft_dy_result_chunk = (find_shift_from_maximum_y[0] -  (fft_sub_result_y.shape[0]/2))/zoom_amount
-	# 		print('i,j = ', i, j)
-	# 		print('dx,dy = ',fft_dx_result_chunk, fft_dy_result_chunk)
-
-
-	# #Test halves in cross correlation
-	# half_length = int(len(fx1)/2)
-	# fft_result_x = fftconvolve(fx1[0:half_length], fx2[0:half_length][::-1]) #Perform FFIT cross correlation only in x and y
-	# fft_result_y = fftconvolve(fy1[0:half_length], fy2[0:half_length][::-1])
-	# delta_sub_pixels = 0.5*maximum_pixel_search*zoom_amount #Cut FFT cross-correlation result to be within a maximum number of pixels from zero offset, this cuts out possible extraneous minima screwing up the maximum in the FFT result characterizing the true offset
-	# x1 = int((fft_result_x.shape[0]/2) - delta_sub_pixels)
-	# x2 = int((fft_result_x.shape[0]/2) + delta_sub_pixels)
-	# y1 = int((fft_result_y.shape[0]/2) - delta_sub_pixels)
-	# y2 = int((fft_result_y.shape[0]/2) + delta_sub_pixels)  
-	# fft_sub_result_x = fft_result_x[x1:x2]
-	# fft_sub_result_y = fft_result_y[y1:y2]
-	# find_shift_from_maximum_x = np.unravel_index(np.argmax(fft_sub_result_x), fft_sub_result_x.shape[0]) #Find pixels with strongest correlation
-	# find_shift_from_maximum_y = np.unravel_index(np.argmax(fft_sub_result_y), fft_sub_result_y.shape[0])
-	# fft_dx_result_x_half_1 = (find_shift_from_maximum_x[0] -  (fft_sub_result_x.shape[0]/2))/zoom_amount #Calcualte the offset from the pixels with the strongest correlation
-	# fft_dy_result_y_half_1 = (find_shift_from_maximum_y[0] -  (fft_sub_result_y.shape[0]/2))/zoom_amount
-
-	# fft_result_x = fftconvolve(fx1[half_length:2*half_length], fx2[half_length:2*half_length][::-1]) #Perform FFIT cross correlation only in x and y
-	# fft_result_y = fftconvolve(fy1[half_length:2*half_length], fy2[half_length:2*half_length][::-1])
-	# delta_sub_pixels = 0.5*maximum_pixel_search*zoom_amount #Cut FFT cross-correlation result to be within a maximum number of pixels from zero offset, this cuts out possible extraneous minima screwing up the maximum in the FFT result characterizing the true offset
-	# x1 = int((fft_result_x.shape[0]/2) - delta_sub_pixels)
-	# x2 = int((fft_result_x.shape[0]/2) + delta_sub_pixels)
-	# y1 = int((fft_result_y.shape[0]/2) - delta_sub_pixels)
-	# y2 = int((fft_result_y.shape[0]/2) + delta_sub_pixels)  
-	# fft_sub_result_x = fft_result_x[x1:x2]
-	# fft_sub_result_y = fft_result_y[y1:y2]
-	# find_shift_from_maximum_x = np.unravel_index(np.argmax(fft_sub_result_x), fft_sub_result_x.shape[0]) #Find pixels with strongest correlation
-	# find_shift_from_maximum_y = np.unravel_index(np.argmax(fft_sub_result_y), fft_sub_result_y.shape[0])
-	# fft_dx_result_x_half_2 = (find_shift_from_maximum_x[0] -  (fft_sub_result_x.shape[0]/2))/zoom_amount #Calcualte the offset from the pixels with the strongest correlation
-	# fft_dy_result_y_half_2 = (find_shift_from_maximum_y[0] -  (fft_sub_result_y.shape[0]/2))/zoom_amount
-
-	# print('Testing FFT results from halves')
-	# print('dx half 1 =', fft_dx_result_x_half_1)
-	# print('dx half 2 =', fft_dx_result_x_half_2)
-	# print('dy half 1 =', fft_dy_result_y_half_1)
-	# print('dy half 2 =', fft_dy_result_y_half_2)
-	# breakpoint()
 
 	return fft_dx_result, fft_dy_result #Returns the difference in x pixels and y pixels between the reference and data frames
 
@@ -169,14 +108,17 @@ def set_reference_frame(obsset):
 
 
 #Check 
-def check_slit_illumination_in_H_band(obsset, datalist):
+def check_telluric_shift(obsset, datalist):
 	date, band = get_date_and_band(obsset) #Grab date and band we are working in
 	xr = [400,1900]
 	zoom_amount = 1000.0
 	interp_order=1
 	maximum_pixel_search = 10
-
-	filename = glob.glob('calib/primary/'+date+'/SKY_SDCH_'+date+'*order_map.fits')[0] #Load order map
+	if band == 'H':
+		orders = [119, 120, 121]
+	elif band == 'K':
+		orders = [72, 73, 74]
+	filename = glob.glob('calib/primary/'+date+'/SKY_SDC'+band+'_'+date+'*order_map.fits')[0] #Load order map
 	order_map = fits.getdata(filename)
 	filtered_data1 = datalist[0] - np.nanmedian(datalist[0], 0) - np.nanmedian(datalist[0], 1)[:,np.newaxis] #Cross correlate each dataframe with the first data frame in the list
 	filtered_data1 -= median_filter(filtered_data1, [35,1])
@@ -184,7 +126,8 @@ def check_slit_illumination_in_H_band(obsset, datalist):
 		filtered_data2 =  datalist[j] - np.nanmedian(datalist[j], 0) - np.nanmedian(datalist[j], 1)[:,np.newaxis]
 		filtered_data2 -= median_filter(filtered_data2, [35,1])
 		dx_results = []
-		for i in range(119, 122):
+
+		for i in orders:
 		    cut_data1 = copy.deepcopy(filtered_data1) #Collapse data in an order into 1D
 		    cut_data2 = copy.deepcopy(filtered_data2)
 		    cut_data1[~(order_map == i)] = np.nan
@@ -207,12 +150,10 @@ def check_slit_illumination_in_H_band(obsset, datalist):
 		    dx_results.append(fft_dx_result)
 		dx = np.nanmedian(dx_results)
 
-		if abs(dx) > 0.1 or obsset.obsids[0]==80:
-			print('UH OH!   FOUND POSSIBLE SHIFT DUE TO SLIT ILLUMINATION')
-			print('H-band Frames: ', obsset.obsids[0], obsset.obsids[j])
-			print('dx: ', dx_results)
-			print('median 3 orders dx: ', dx)
-			breakpoint()
+		#if abs(dx) > 0.0: #threshold for telluric shift
+		if True:
+			with open('outdata/'+date+"/telluric_shift_"+band+".csv", "a") as f: #Output flexure corrections to the textfile flexure.txt 
+				f.write(str(obsset.obsids[0])+', '+str(obsset.obsids[j])+', '+str(dx)+'\n')
 
 
 def estimate_flexure(obsset, data, exptime):
@@ -223,10 +164,12 @@ def estimate_flexure(obsset, data, exptime):
 	filename = glob.glob('calib/primary/'+date+'/SDC'+band+'_'+date+'_*.sky_flexcorr.fits')[0] #Load reference frame created with recipe_flexure_setup
 	refframe = fits.getdata(filename)
 
-	if exptime >= 30.0: #Load mask to isolate sky lines , for long exposures estimate flexure for each frame seperately
+	if exptime >= 20.0: #Load mask to isolate sky lines , for long exposures estimate flexure for each frame seperately
 		mask = (fits.getdata('master_calib/'+band+'-band_sky_mask.fits') == 1.0)
 		refframe[~mask] = np.nan
-		for dataframe in data:
+		#for dataframe in data:
+		for i in range(len(data)):
+			dataframe = data[i]
 			cleaned_dataframe = isolate_sky_lines(dataframe) / exptime #Apply median filters to isolate sky lines from other signal and normalize by exposure time
 			cleaned_dataframe[~mask] = np.nan #Apply mask to isolate sky lines on detector
 			dx, dy = cross_correlate(refframe, cleaned_dataframe) #Estimate delta-x and delta-y difference in pixels between the reference and data frames
@@ -235,7 +178,12 @@ def estimate_flexure(obsset, data, exptime):
 			shifted_dataframe = roll_along_axis(shifted_dataframe, dx, axis=1) #Apply flexure correction
 
 			flexure_corrected_data.append(shifted_dataframe)
-			print('dx =', dx, 'dy =', dy)
+			#print('dx =', dx, 'dy =', dy)
+			#breakpoint()
+			with open('outdata/'+date+"/flexure_"+band+".csv", "a") as f: #Output flexure corrections to the textfile flexure.txt 
+				f.write(band+', '+str(obsset.obsids[i])+', '+str(dx)+', '+str(dy)+'\n')
+
+
 
 	else: #For short exposures, estimate flexure for all the frames stacked
 		mask = (fits.getdata('master_calib/'+band+'-band_limited_sky_mask.fits') == 1.0)  #(note we use a more conservative mask for short exposures)
@@ -244,11 +192,17 @@ def estimate_flexure(obsset, data, exptime):
 		cleaned_stacked_dataframe = isolate_sky_lines(stacked_dataframe) / (exptime * len(data)) #Apply median filters to isolate sky lines from other signal and normalize by exposure time
 		cleaned_stacked_dataframe[~mask] = np.nan #Apply mask to isolate sky lines on detector	
 		dx, dy = cross_correlate(refframe, cleaned_stacked_dataframe) #Estimate delta-x and delta-y difference in pixels between the reference and data frames
-		print('dx =', dx, 'dy =', dy)
+		#print('dx =', dx, 'dy =', dy)
 		for dataframe in data:
 			shifted_dataframe = roll_along_axis(dataframe, dx, axis=1) #Apply flexure correction
 			shifted_dataframe = roll_along_axis(shifted_dataframe, dy, axis=0)
 			flexure_corrected_data.append(shifted_dataframe)
+		with open('outdata/'+date+"/flexure_"+band+".csv", "a") as f: #Output flexure corrections to the textfile flexure.txt 
+			obsids = ''
+			for obsid in obsset.obsids:
+				obsids = str(obsid)+ ' '
+			obsids = obsids[:-1] #Remove trailing space
+			f.write(band+', '+obsids+', '+str(dx)+', '+str(dy)+'\n')
 
 	return flexure_corrected_data
 
