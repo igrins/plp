@@ -17,9 +17,11 @@ from scipy.ndimage import median_filter, gaussian_filter
 
 #Use a series of median filters to isolate the sky lines while ignoring everything else
 def isolate_sky_lines(data):
-	data = median_filter(data - median_filter(data, [1, 35]), [11, 1]) #median filters
-	data = data - np.nanmedian(data, 0)
-	data = data- np.nanmedian(data, 1)[:,np.newaxis]
+	data = data - np.nanmedian(data, 0) #Remove pattern
+	data = data- np.nanmedian(data, 1)[:,np.newaxis]	
+	data = median_filter(data - median_filter(data, [1, 35]), [11, 1]) #median filters to try to isolate sky lines
+	data = data - median_filter(data, [9,19])
+
 	std = np.std(data) #Zero out negative residuals from science signal
 	data[data < -std] = 0.
 	return data
@@ -46,43 +48,64 @@ def roll_along_axis(array_to_correct, correction, axis=0): #Apply flexure correc
     return corrected_array
 
 
-def cross_correlate(reference, data, zoom_amount=1000, maximum_pixel_search=15):
+def cross_correlate(reference, data, zoom_amount=1000, maximum_pixel_search=10):
 	interp_order = 1
 	fx1 = zoom(np.nansum(reference, 0), zoom_amount, order=interp_order) #Zoom and collapse into 1D
-	fy1 = zoom(np.nansum(reference, 1), zoom_amount, order=interp_order)
+	#fy1 = zoom(np.nansum(reference, 1), zoom_amount, order=interp_order)
 	fx2 = zoom(np.nansum(data, 0), zoom_amount, order=interp_order) #Zoom and collapse into 1D
-	fy2 = zoom(np.nansum(data, 1), zoom_amount, order=interp_order)
+	#fy2 = zoom(np.nansum(data, 1), zoom_amount, order=interp_order)
 	# fx2 = bn.nansum(zoom(data, [1, self.zoom_amount], order=1), 0) #Zoom and collapse into 1D
 	# fy2 = bn.nansum(zoom(data, [self.zoom_amount, 1], order=1), 1)
 	fx1[np.isnan(fx1)] = 0 #Zero out remaining nan pixels
-	fy1[np.isnan(fy1)] = 0
+	#fy1[np.isnan(fy1)] = 0
 	fx2[np.isnan(fx2)] = 0 #Zero out remaining nan pixels
-	fy2[np.isnan(fy2)] = 0
+	#fy2[np.isnan(fy2)] = 0
 	fft_result_x = fftconvolve(fx1, fx2[::-1]) #Perform FFIT cross correlation only in x and y
-	fft_result_y = fftconvolve(fy1, fy2[::-1])
+	#fft_result_y = fftconvolve(fy1, fy2[::-1])
 	delta_sub_pixels = 0.5*maximum_pixel_search*zoom_amount #Cut FFT cross-correlation result to be within a maximum number of pixels from zero offset, this cuts out possible extraneous minima screwing up the maximum in the FFT result characterizing the true offset
 	x1 = int((fft_result_x.shape[0]/2) - delta_sub_pixels)
 	x2 = int((fft_result_x.shape[0]/2) + delta_sub_pixels)
-	y1 = int((fft_result_y.shape[0]/2) - delta_sub_pixels)
-	y2 = int((fft_result_y.shape[0]/2) + delta_sub_pixels)  
+	#y1 = int((fft_result_y.shape[0]/2) - delta_sub_pixels)
+	#y2 = int((fft_result_y.shape[0]/2) + delta_sub_pixels)  
 	fft_sub_result_x = fft_result_x[x1:x2]
-	fft_sub_result_y = fft_result_y[y1:y2]
+	#fft_sub_result_y = fft_result_y[y1:y2]
 
 	#Mask out large trends
 	n = len(fft_sub_result_x)
 	fit_x_array = np.arange(n)
-	fft_sub_result_mask = (fit_x_array < n*0.4) | (fit_x_array > n*0.6)
-	pfit = Polynomial.fit(fit_x_array[fft_sub_result_mask], fft_sub_result_x[fft_sub_result_mask], 4)
+	# pfit = Polynomial.fit(fit_x_array, fft_sub_result_x, 20) #Fit a 20 order polynomial and use the first derivitive test to find the peak of the CCF while ignoring large scale trends
+	# roots = pfit.deriv().roots()
+	# possible_peaks = (roots[np.isreal(roots)].real -  (n/2))/zoom_amount
+	# if sum(roots[np.isreal(roots)] < 1.5) > 1:
+	# 	breakpoint()
+	# fft_dx_result = possible_peaks[np.abs(possible_peaks) == np.min(np.abs(possible_peaks))][0] #Find peak closest to zero flexure
+	#fft_sub_result_x = fft_sub_result_x - pfit(fit_x_array)
+	# pfit = Polynomial.fit(fit_x_array,  fft_sub_result_y, 20)
+	# roots = pfit.deriv().roots()
+	# possible_peaks = (roots[np.isreal(roots)].real -  (n/2))/zoom_amount
+
+	# fft_dy_result = possible_peaks[np.abs(possible_peaks) == np.min(np.abs(possible_peaks))][0] #Find peak closest to zero flexure
+
+	#fft_sub_result_y = fft_sub_result_y - pfit(fit_x_array)
+
+	fft_sub_result_mask = (fit_x_array < n*0.25) | (fit_x_array > n*0.75)
+	pfit = Polynomial.fit(fit_x_array[fft_sub_result_mask], fft_sub_result_x[fft_sub_result_mask], 2)
 	fft_sub_result_x = fft_sub_result_x - pfit(fit_x_array)
-	pfit = Polynomial.fit(fit_x_array[fft_sub_result_mask], fft_sub_result_y[fft_sub_result_mask], 4)
-	fft_sub_result_y = fft_sub_result_y - pfit(fit_x_array)
+	# pfit = Polynomial.fit(fit_x_array[fft_sub_result_mask], fft_sub_result_y[fft_sub_result_mask], 1)
+	# fft_sub_result_y = fft_sub_result_y - pfit(fit_x_array)
 
 	find_shift_from_maximum_x = np.unravel_index(np.argmax(fft_sub_result_x), fft_sub_result_x.shape[0]) #Find pixels with strongest correlation
-	find_shift_from_maximum_y = np.unravel_index(np.argmax(fft_sub_result_y), fft_sub_result_y.shape[0])
+	#find_shift_from_maximum_y = np.unravel_index(np.argmax(fft_sub_result_y), fft_sub_result_y.shape[0])
 	fft_dx_result = (find_shift_from_maximum_x[0] -  (fft_sub_result_x.shape[0]/2))/zoom_amount #Calcualte the offset from the pixels with the strongest correlation
-	fft_dy_result = (find_shift_from_maximum_y[0] -  (fft_sub_result_y.shape[0]/2))/zoom_amount
+	#fft_dy_result = (find_shift_from_maximum_y[0] -  (fft_sub_result_y.shape[0]/2))/zoom_amount
+	# fft_dx_result = (x_peak -  (n/2))/zoom_amount #Calcualte the offset from the pixels with the strongest correlation
+	# fft_dy_result = (y_peak -  (n/2))/zoom_amount	
 
-	return fft_dx_result, fft_dy_result #Returns the difference in x pixels and y pixels between the reference and data frames
+	if np.abs(fft_dx_result) > 1.5: # or np.abs(fft_dy_result) > 1.5:
+		breakpoint()
+
+
+	return fft_dx_result#, fft_dy_result #Returns the difference in x pixels and y pixels between the reference and data frames
 
 
 #Create reference frames to flexure correct everything to
@@ -164,48 +187,78 @@ def estimate_flexure(obsset, data, exptime):
 	filename = glob.glob('calib/primary/'+date+'/SDC'+band+'_'+date+'_*.sky_flexcorr.fits')[0] #Load reference frame created with recipe_flexure_setup
 	refframe = fits.getdata(filename)
 
-	if exptime >= 20.0: #Load mask to isolate sky lines , for long exposures estimate flexure for each frame seperately
-		mask = (fits.getdata('master_calib/'+band+'-band_sky_mask.fits') == 1.0)
-		refframe[~mask] = np.nan
-		#for dataframe in data:
-		for i in range(len(data)):
-			dataframe = data[i]
-			cleaned_dataframe = isolate_sky_lines(dataframe) / exptime #Apply median filters to isolate sky lines from other signal and normalize by exposure time
-			cleaned_dataframe[~mask] = np.nan #Apply mask to isolate sky lines on detector
-			dx, dy = cross_correlate(refframe, cleaned_dataframe) #Estimate delta-x and delta-y difference in pixels between the reference and data frames
+	# if exptime >= 20.0: #Load mask to isolate sky lines , for long exposures estimate flexure for each frame seperately
+	mask = (fits.getdata('master_calib/'+band+'-band_sky_mask.fits') == 1.0)
+	refframe[~mask] = np.nan
+	#for dataframe in data:
+	for i in range(len(data)):
+		dataframe = data[i]
+		cleaned_dataframe = isolate_sky_lines(dataframe) / exptime #Apply median filters to isolate sky lines from other signal and normalize by exposure time
+		#if obsset.obsids[i] == 99:
+		#	breakpoint()
+		cleaned_dataframe[~mask] = np.nan #Apply mask to isolate sky lines on detector
+		#dx, dy = cross_correlate(refframe, cleaned_dataframe) #Estimate delta-x and delta-y difference in pixels between the reference and data frames
+		dx = cross_correlate(refframe, cleaned_dataframe) #Estimate delta-x and delta-y difference in pixels between the reference and data frames
 
-			shifted_dataframe = roll_along_axis(dataframe, dy, axis=0)			
-			shifted_dataframe = roll_along_axis(shifted_dataframe, dx, axis=1) #Apply flexure correction
+		#shifted_dataframe = roll_along_axis(dataframe, dy, axis=0)			
+		#shifted_dataframe = roll_along_axis(shifted_dataframe, dx, axis=1) #Apply flexure correction
+		shifted_dataframe = roll_along_axis(dataframe, dx, axis=1)	
 
-			flexure_corrected_data.append(shifted_dataframe)
-			#print('dx =', dx, 'dy =', dy)
-			#breakpoint()
-			with open('outdata/'+date+"/flexure_"+band+".csv", "a") as f: #Output flexure corrections to the textfile flexure.txt 
-				f.write(band+', '+str(obsset.obsids[i])+', '+str(dx)+', '+str(dy)+'\n')
-
-
-
-	else: #For short exposures, estimate flexure for all the frames stacked
-		mask = (fits.getdata('master_calib/'+band+'-band_limited_sky_mask.fits') == 1.0)  #(note we use a more conservative mask for short exposures)
-		refframe[~mask] = np.nan
-		stacked_dataframe =  np.sum(data, axis=0) #Stack data since exposure time is low to increase signal-to-noise on the sky lines before estimating flexure
-		cleaned_stacked_dataframe = isolate_sky_lines(stacked_dataframe) / (exptime * len(data)) #Apply median filters to isolate sky lines from other signal and normalize by exposure time
-		cleaned_stacked_dataframe[~mask] = np.nan #Apply mask to isolate sky lines on detector	
-		dx, dy = cross_correlate(refframe, cleaned_stacked_dataframe) #Estimate delta-x and delta-y difference in pixels between the reference and data frames
+		flexure_corrected_data.append(shifted_dataframe)
 		#print('dx =', dx, 'dy =', dy)
-		for dataframe in data:
-			shifted_dataframe = roll_along_axis(dataframe, dx, axis=1) #Apply flexure correction
-			shifted_dataframe = roll_along_axis(shifted_dataframe, dy, axis=0)
-			flexure_corrected_data.append(shifted_dataframe)
+		#breakpoint()
 		with open('outdata/'+date+"/flexure_"+band+".csv", "a") as f: #Output flexure corrections to the textfile flexure.txt 
-			obsids = ''
-			for obsid in obsset.obsids:
-				obsids = str(obsid)+ ' '
-			obsids = obsids[:-1] #Remove trailing space
-			f.write(band+', '+obsids+', '+str(dx)+', '+str(dy)+'\n')
+			f.write(band+', '+str(obsset.obsids[i])+', '+str(dx)+'\n')
+
+
+
+	# else: #For short exposures, estimate flexure for all the frames stacked
+	# 	mask = (fits.getdata('master_calib/'+band+'-band_limited_sky_mask.fits') == 1.0)  #(note we use a more conservative mask for short exposures)
+	# 	refframe[~mask] = np.nan
+	# 	stacked_dataframe =  np.sum(data, axis=0) #Stack data since exposure time is low to increase signal-to-noise on the sky lines before estimating flexure
+	# 	cleaned_stacked_dataframe = isolate_sky_lines(stacked_dataframe) / (exptime * len(data)) #Apply median filters to isolate sky lines from other signal and normalize by exposure time
+	# 	if obsset.obsids[0] == 99:
+	# 		breakpoint()		
+	# 	cleaned_stacked_dataframe[~mask] = np.nan #Apply mask to isolate sky lines on detector	
+	# 	dx, dy = cross_correlate(refframe, cleaned_stacked_dataframe) #Estimate delta-x and delta-y difference in pixels between the reference and data frames
+	# 	#print('dx =', dx, 'dy =', dy)
+	# 	for dataframe in data:
+	# 		shifted_dataframe = roll_along_axis(dataframe, dx, axis=1) #Apply flexure correction
+	# 		shifted_dataframe = roll_along_axis(shifted_dataframe, dy, axis=0)
+	# 		flexure_corrected_data.append(shifted_dataframe)
+	# 	with open('outdata/'+date+"/flexure_"+band+".csv", "a") as f: #Output flexure corrections to the textfile flexure.txt 
+	# 		obsids = ''
+	# 		for obsid in obsset.obsids:
+	# 			obsids = str(obsid)+ ' '
+	# 		obsids = obsids[:-1] #Remove trailing space
+	# 		f.write(band+', '+obsids+', '+str(dx)+', '+str(dy)+'\n')
 
 	return flexure_corrected_data
 
+def estimate_flexure_short_exposures(obsset, data_a, data_b, exptime):
+	date, band = get_date_and_band(obsset) #Grab date and band we are working in
+	filename = glob.glob('calib/primary/'+date+'/SDC'+band+'_'+date+'_*.sky_flexcorr.fits')[0] #Load reference frame created with recipe_flexure_setup
+	refframe = fits.getdata(filename)
+	mask = (fits.getdata('master_calib/'+band+'-band_limited_sky_mask.fits') == 1.0)  #(note we use a more conservative mask for short exposures)
+	refframe[~mask] = np.nan
+	combined_data = data_a + data_b - np.abs(data_a - data_b)
+	cleaned_combined_data = isolate_sky_lines(combined_data) / (exptime * len(obsset.get_obsids())) #Apply median filters to isolate sky lines from other signal and normalize by exposure time
+	cleaned_combined_data[~mask] = np.nan #Apply mask to isolate sky lines on detector	
+	#dx, dy = cross_correlate(refframe, cleaned_combined_data) #Estimate delta-x and delta-y difference in pixels between the reference and data frames
+	dx = cross_correlate(refframe, cleaned_combined_data) #Estimate delta-x and delta-y difference in pixels between the reference and data frames
+	shifted_data_a = roll_along_axis(data_a, dx, axis=1) #Apply flexure correction
+	#shifted_data_a = roll_along_axis(shifted_data_a, dy, axis=0)
+	shifted_data_b = roll_along_axis(data_b, dx, axis=1) #Apply flexure correction
+	#shifted_data_b = roll_along_axis(shifted_data_b, dy, axis=0)
+
+	# print('OBSID:', obsset.obsids[0])
+	# breakpoint()
+
+	with open('outdata/'+date+"/flexure_"+band+".csv", "a") as f: #Output flexure corrections to the textfile flexure.txt 
+		#f.write(band+', '+str(obsset.obsids[0])+', '+str(dx)+', '+str(dy)+'\n')
+		f.write(band+', '+str(obsset.obsids[0])+', '+str(dx)+'\n')
+
+	return shifted_data_a, shifted_data_b
 
 if __name__ == "__main__":
     pass

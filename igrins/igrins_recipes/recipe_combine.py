@@ -17,7 +17,7 @@ from ..procedures.ro_pattern_fft import (get_amp_wise_rfft,
 from .gui_combine import setup_gui, factory_pattern_remove_n_smoothed
 
 from ..procedures.sky_spec import get_exptime
-from ..procedures.procedures_flexure_correction import estimate_flexure, check_telluric_shift
+from ..procedures.procedures_flexure_correction import estimate_flexure, estimate_flexure_short_exposures, check_telluric_shift
 
 
 def _get_combined_image(obsset):
@@ -29,7 +29,8 @@ def _get_combined_image(obsset):
     if correct_flexure == True:
         
         exptime = get_exptime(obsset)
-        data_list = estimate_flexure(obsset, data_list, exptime) #Estimate flexure and apply correction
+        if exptime >= 20.0:
+            data_list = estimate_flexure(obsset, data_list, exptime) #Estimate flexure and apply correction
 
         if len(data_list) > 1: #Testing detection
             check_telluric_shift(obsset, data_list)
@@ -131,8 +132,16 @@ def get_combined_images(obsset,
         # a_b != 1 for the cases when len(a) != len(b)
         a_b = float(na) / float(nb)
 
+
+
         a_data = _get_combined_image(obsset_a)
         b_data = _get_combined_image(obsset_b)
+
+        exptime = get_exptime(obsset_a)
+        correct_flexure = obsset.get_recipe_parameter("correct_flexure")
+        if correct_flexure == True and exptime < 20.0: #Flexure correct short exposures
+           a_data, b_data = estimate_flexure_short_exposures(obsset, a_data, b_data, exptime)
+
 
         data_minus = a_data - a_b * b_data
 
