@@ -56,10 +56,17 @@ def get_params(band):
     return mode, bg_y_slice
 
 
-def make_flat_off_cube_201909(hdul, rp_remove_mod, bg_y_slice):
+def make_flat_off_cube_201909(hdul, rp_remove_mod, bg_y_slice,
+                              flat_off_pattern_removal="guard"):
 
-    data_list = np.array([remove_pattern_from_guard(hdu.data)
-                          for hdu in hdul])
+    if flat_off_pattern_removal == "none":
+        data_list = np.array([hdu.data
+                              for hdu in hdul])
+    elif flat_off_pattern_removal == "guard":
+        data_list = np.array([remove_pattern_from_guard(hdu.data)
+                              for hdu in hdul])
+    else:
+        raise ValueError(f"unupported flat_off_pattern_removel option: {flat_off_pattern_removal}")
 
     cards, cube = make_initial_flat_cube(data_list,
                                          rp_remove_mod, bg_y_slice)
@@ -67,10 +74,12 @@ def make_flat_off_cube_201909(hdul, rp_remove_mod, bg_y_slice):
     return cards, cube
 
 
-def combine_flat_off_cube_201909(hdul, rp_remove_mod, bg_y_slice):
+def combine_flat_off_cube_201909(hdul, rp_remove_mod, bg_y_slice,
+                                 flat_off_pattern_removal="guard"):
 
     cards, cube = make_flat_off_cube_201909(hdul,
-                                            rp_remove_mod, bg_y_slice)
+                                            rp_remove_mod, bg_y_slice,
+                                            flat_off_pattern_removal=flat_off_pattern_removal)
 
     flat_off = image_median(cube)
 
@@ -103,7 +112,7 @@ def combine_flat_off_old(hdul, destripe=True,
     return (cards, flat_off)
 
 
-def obsset_combine_flat_off(obsset, destripe=True):
+def obsset_combine_flat_off(obsset, flat_off_pattern_removal="guard"):
     """
     For flat-off, they are first guard-removed.
     ['amp_wise_bias_r2', 'p64_0th_order'].
@@ -141,7 +150,8 @@ def obsset_combine_flat_off(obsset, destripe=True):
     #                                    destripe=destripe,
     #                                    correct_bg_upper256=correct_bg_upper256)
     cards, flat_off = combine_flat_off_cube_201909(hdul,
-                                                   rp_remove_mod, bg_y_slice)
+                                                   rp_remove_mod, bg_y_slice,
+                                                   flat_off_pattern_removal=flat_off_pattern_removal)
 
     hdu_cards = [Card(k, json_dumps(v)) for (k, v) in cards]
 
@@ -227,19 +237,25 @@ def make_hotpix_mask(obsset,
     obsset_off.store(DESCS["FLAT_OFF"], HDUList([flat_off_hdu]))
 
 
-def make_initial_flat_on(data_list):
+def make_initial_flat_on(data_list, flat_on_pattern_removal="guard"):
     """
     data_list : list of raw images
     """
     # subtract p64 with the background mask, and create initial background
 
-    cube = np.array([remove_pattern_from_guard(d1)
-                     for d1 in data_list])
+    if flat_on_pattern_removal == "guard":
+        cube = np.array([remove_pattern_from_guard(d1)
+                         for d1 in data_list])
+    elif flat_on_pattern_removal == "none":
+        cube = np.array([d1
+                         for d1 in data_list])
+    else:
+        raise ValueError(f"unupported flat_on_pattern_removel option: {flat_on_pattern_removal}")
 
     return cube
 
 
-def combine_flat_on(obsset):
+def combine_flat_on(obsset, flat_on_pattern_removal="guard"):
     """
     For flat-on, we subtract ro pattern from guards.
     ['amp_wise_bias_r2', 'p64_0th_order']
@@ -255,7 +271,8 @@ def combine_flat_on(obsset):
 
     # flat_on = stsci_median(data_list1)
     # flat_on = dh.make_flaton(data_list)
-    cube = make_initial_flat_on(data_list)
+    cube = make_initial_flat_on(data_list,
+                                flat_on_pattern_removal=flat_on_pattern_removal)
     flat_on = image_median(cube)
 
     flat_std = np.std(data_list, axis=0)
@@ -382,6 +399,7 @@ def identify_order_boundaries(obsset):
 
     flaton_info = obsset_on.load(DESCS["FLATON_JSON"])
     bg_fwhm_normed = flaton_info["bg_fwhm_norm"]
+    # bg_fwhm_normed = flaton_info["bg_fwhm_norm"] / 2.
 
     flat_deriv_ = get_y_derivativemap(flat_normed, flat_bpixed,
                                       bg_fwhm_normed,

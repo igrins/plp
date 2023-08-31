@@ -16,10 +16,12 @@ def obsset_produce_qa_plots(obsset):
     produce_qa(obsset)
 
 
-steps = [Step("Combine Flat-Off", obsset_combine_flat_off),
+steps = [Step("Combine Flat-Off", obsset_combine_flat_off,
+              flat_off_pattern_removal="guard"), # guard' | 'none'
          Step("Hotpix Mask", make_hotpix_mask,
               sigma_clip1=100, sigma_clip2=5),
-         Step("Combine Flat-On", combine_flat_on),
+         Step("Combine Flat-On", combine_flat_on,
+              flat_on_pattern_removal="guard"), #  # guard' | 'none'
          Step("Deadpix Mask", make_deadpix_mask,
               deadpix_thresh=0.6, smooth_size=9),
          Step("Identify Order Boundary", identify_order_boundaries),
