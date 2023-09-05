@@ -182,7 +182,8 @@ from ..igrins_recipes.recipe_combine import (make_combined_images
 
 def make_combined_images(obsset,
                          allow_no_b_frame=False,
-                         force_image_combine=False):
+                         force_image_combine=False,
+                         pattern_remove_level="auto"):
 
     try:
         obsset.load("combined_image1")
@@ -196,7 +197,8 @@ def make_combined_images(obsset,
         return
 
     _make_combined_images(obsset, allow_no_b_frame=allow_no_b_frame,
-                          cache_only=True)
+                          cache_only=True,
+                          remove_level=pattern_remove_level)
 
 
 def subtract_interorder_background(obsset, di=24, min_pixel=40):
@@ -224,7 +226,8 @@ def subtract_interorder_background(obsset, di=24, min_pixel=40):
 
 def estimate_slit_profile(obsset,
                           x1=800, x2=2048-800,
-                          do_ab=True, slit_profile_mode="1d",
+                          do_ab=True,
+                          slit_profile_mode="1d",
                           frac_slit=None):
 
     if slit_profile_mode == "1d":
@@ -386,7 +389,8 @@ def store_2dspec(obsset,
 
 
 def extract_stellar_spec(obsset, extraction_mode="optimal",
-                         conserve_2d_flux=True, calculate_sn=True):
+                         conserve_2d_flux=True,
+                         pixel_per_res_element=None):
 
     # refactored from recipe_extract.ProcessABBABand.process
 
@@ -435,25 +439,26 @@ def extract_stellar_spec(obsset, extraction_mode="optimal",
 
     s_list, v_list, cr_mask, aux_images = _
 
-    if calculate_sn:
-        # calculate S/N per resolution
-        wvl_solutions = helper.get("wvl_solutions")
+    # calculate S/N per resolution
+    wvl_solutions = helper.get("wvl_solutions")
 
-        sn_list = []
-        for wvl, s, v in zip(wvl_solutions,
-                             s_list, v_list):
+    sn_list = []
+    for wvl, s, v in zip(wvl_solutions,
+                         s_list, v_list):
 
+        if pixel_per_res_element is None:
             dw = np.gradient(wvl)
-            pixel_per_res_element = (wvl/40000.)/dw
-            # print pixel_per_res_element[1024]
-            # len(pixel_per_res_element) = 2047. But we ignore it.
+            _pixel_per_res_element = (wvl/40000.)/dw
+        else:
+            _pixel_per_res_element = float(pixel_per_res_element)
 
-            with np.errstate(invalid="ignore"):
-                sn = (s/v**.5)*(pixel_per_res_element**.5)
+        # print pixel_per_res_element[1024]
+        # len(pixel_per_res_element) = 2047. But we ignore it.
 
-            sn_list.append(sn)
-    else:
-        sn_list = None
+        with np.errstate(invalid="ignore"):
+            sn = (s/v**.5)*(_pixel_per_res_element**.5)
+
+        sn_list.append(sn)
 
     store_1dspec(obsset, v_list, s_list, sn_list=sn_list)
 
@@ -614,7 +619,8 @@ def extract_extended_spec1(obsset, data,
     return s_list, v_list, cr_mask, aux_images
 
 
-def extract_extended_spec(obsset, lacosmic_thresh=0.):
+def extract_extended_spec(obsset, lacosmic_thresh=0.,
+                          pixel_per_res_element=None):
 
     # refactored from recipe_extract.ProcessABBABand.process
 
@@ -639,22 +645,25 @@ def extract_extended_spec(obsset, lacosmic_thresh=0.):
 
     s_list, v_list, cr_mask, aux_images = _
 
-    if 1:
-        # calculate S/N per resolution
-        helper = ResourceHelper(obsset)
-        wvl_solutions = helper.get("wvl_solutions")
+    # calculate S/N per resolution
+    helper = ResourceHelper(obsset)
+    wvl_solutions = helper.get("wvl_solutions")
 
-        sn_list = []
-        for wvl, s, v in zip(wvl_solutions,
-                             s_list, v_list):
+    sn_list = []
+    for wvl, s, v in zip(wvl_solutions,
+                         s_list, v_list):
 
+        if pixel_per_res_element is None:
             dw = np.gradient(wvl)
-            pixel_per_res_element = (wvl/40000.)/dw
-            # print pixel_per_res_element[1024]
-            # len(pixel_per_res_element) = 2047. But we ignore it.
-            sn = (s/v**.5)*(pixel_per_res_element**.5)
+            _pixel_per_res_element = (wvl/40000.)/dw
+        else:
+            _pixel_per_res_element = float(pixel_per_res_element)
 
-            sn_list.append(sn)
+        # print pixel_per_res_element[1024]
+        # len(pixel_per_res_element) = 2047. But we ignore it.
+        sn = (s/v**.5)*(_pixel_per_res_element**.5)
+
+        sn_list.append(sn)
 
     store_1dspec(obsset, v_list, s_list, sn_list=sn_list)
 
