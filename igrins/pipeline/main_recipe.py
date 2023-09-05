@@ -15,11 +15,13 @@ def _parse_groups(groups):
         return [s.strip() for s in groups.split(",")]
 
 
-def get_selected_pmatch(recipes, recipe_name_pmatch, groups):
+def get_selected_pmatch(recipes, recipe_name_pmatch, groups,
+                        ignore_recipe_name=False):
     groups_parsed = _parse_groups(groups)
 
     selected = recipes.select_pmatch_by_groups(recipe_name_pmatch,
-                                                groups_parsed)
+                                               groups_parsed,
+                                               ignore_recipe_name=ignore_recipe_name)
 
     return selected
 
@@ -40,7 +42,7 @@ def get_selected(recipes, recipe_name_fnmatch, groups,
 def iter_obsset(recipe_name_fnmatch,
                 obsdate, config_file, bands, groups,
                 basename_postfix="", recipe_name_exclude=None,
-                runner_config=None):
+                runner_config=None, ignore_recipe_name=False):
 
     from ..igrins_libs.igrins_config import IGRINSConfig
     config = IGRINSConfig(config_file)
@@ -57,7 +59,8 @@ def iter_obsset(recipe_name_fnmatch,
         p_match = get_pmatch_from_fnmatch(recipe_name_fnmatch,
                                           recipe_name_exclude)
 
-    selected = get_selected_pmatch(recipes, p_match, groups)
+    selected = get_selected_pmatch(recipes, p_match, groups,
+                                   ignore_recipe_name=ignore_recipe_name)
     # selected = get_selected(recipes, recipe_name_fnmatch, groups)
 
     if len(selected) == 0:
@@ -263,7 +266,10 @@ def driver_func(command_name, steps, recipe_name_fnmatch, obsdate,
         recipe_name_fnmatch = ["*"]
 
     iter_obsset_kwargs = dict(runner_config=dict(debug=debug,
-                                                 log_level=log_level))
+                                                 command_name=command_name,
+                                                 log_level=log_level),
+                              ignore_recipe_name=override_recipe_name
+                              )
 
     obsset_list = [obsset for obsset in iter_obsset(recipe_name_fnmatch,
                                                     obsdate, config_file,
