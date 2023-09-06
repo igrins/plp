@@ -1,3 +1,5 @@
+import ast
+
 import numpy as np
 import pandas as pd
 
@@ -174,25 +176,29 @@ def _save_to_html():
                   orders_w_solutions, tgt.um,
                   tgt.spec, tgt.sn, i1i2_list)
 
-        if FIX_TELLURIC:
+        if fix_telluric:
             objroot = get_zeropadded_groupname(groupname)+"A0V"
             html_save(utdate, dirname, objroot, band,
                       orders_w_solutions, tgt.um,
                       a0v.flattened, tgt_spec_cor, i1i2_list,
                       spec_js_name="jj_a0v.js")
 
-
 def plot_spec(obsset, interactive=False,
+              fix_telluric="recipe",
               multiply_model_a0v=False):
     recipe = obsset.recipe_name
     target_type, nodding_type = recipe.split("_")
 
-    if target_type in ["A0V"]:
-        FIX_TELLURIC = False
-    elif target_type in ["STELLAR", "EXTENDED"]:
-        FIX_TELLURIC = True
+    if fix_telluric == "recipe":
+        if target_type in ["A0V"]:
+            fix_telluric = False
+        elif target_type in ["STELLAR", "EXTENDED"]:
+            fix_telluric = True
+        else:
+            raise ValueError("Unknown recipe : %s" % recipe)
     else:
-        raise ValueError("Unknown recipe : %s" % recipe)
+        if isinstance(fix_telluric, str):
+            fix_telluric = ast.literal_eval(fix_telluric)
 
     tgt = OnedSpecHelper(obsset, basename_postfix=obsset.basename_postfix)
 
@@ -210,7 +216,7 @@ def plot_spec(obsset, interactive=False,
 
     _plot_source_spec(fig1, tgt)
 
-    if FIX_TELLURIC:
+    if fix_telluric:
         fig1 = Figure(figsize=(12, 6))
         fig_list.append(fig1)
 
@@ -230,5 +236,6 @@ steps = [Step("Set basename_postfix", set_basename_postfix,
               basename_postfix=''),
          Step("Plot spec", plot_spec,
               interactive=ArghFactoryWithShort(False),
-              multiply_model_a0v=ArghFactoryWithShort(False)),
+              multiply_model_a0v=ArghFactoryWithShort(False),
+              fix_telluric="recipe"),
 ]
