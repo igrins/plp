@@ -17,8 +17,10 @@ def make_fake_order(obsset):
     # aperture_basename = src_spectra["aperture_basename"]
     aperture = get_simple_aperture_from_obsset(obsset)
 
+    # FIXME we just remove 1st and the last order as they may located outside
+    # the detector area.
     obsset.store(DESCS["ORDERS_JSON"],
-                 data=dict(orders=aperture.orders))
+                 data=dict(orders=aperture.orders[1:-1]))
 
                            # aperture_basename=aperture_basename,
                            # ref_spec_path=ref_spec_path))
