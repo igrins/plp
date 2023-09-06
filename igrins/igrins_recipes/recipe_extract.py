@@ -52,9 +52,14 @@ def _get_do_ab_from_recipe_name(obsset):
 
 def estimate_slit_profile_stellar(obsset,
                                   x1=800, x2=2048-800,
-                                  # do_ab="recipe",
                                   slit_profile_mode="1d",
                                   frac_slit=None):
+
+    command_name = obsset.runner_config["command_name"]
+    if "onoff" in command_name:
+        do_ab = False
+    else:
+        do_ab = True
 
     if frac_slit is not None:
         frac_slit = list(map(float, frac_slit.split(",")))
@@ -67,10 +72,8 @@ def estimate_slit_profile_stellar(obsset,
 
 def estimate_slit_profile_extended(obsset,
                                    x1=800, x2=2048-800,
-                                   # do_ab="recipe",
                                    frac_slit=None):
 
-    # do_ab = _get_do_ab_from_recipe_name(obsset)
     command_name = obsset.runner_config["command_name"]
     if "onoff" in command_name:
         do_ab = False
