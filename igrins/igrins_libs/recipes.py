@@ -435,17 +435,24 @@ class RecipeLogClass(pd.DataFrame):
 
         return self.iloc[indices]
 
-    def select_pmatch_by_groups(self, p_match, groups=None):
+    def select_pmatch_by_groups(self, p_match, groups=None,
+                                ignore_recipe_name=False):
         """p_match should be a function that returns True/False"""
 
         selected = []
         for i, row in self.iterrows():
-            for recipe_name in row["recipe"].split("|"):
-                if p_match(recipe_name):
+            if ignore_recipe_name:
                     obsids = [int(o) for o in row["obsids"]]
                     frames = row["frametypes"]
-                    _ = (recipe_name, obsids, frames, row)
+                    _ = (row["recipe"], obsids, frames, row)
                     selected.append(_)
+            else:
+                for recipe_name in row["recipe"].split("|"):
+                    if p_match(recipe_name):
+                        obsids = [int(o) for o in row["obsids"]]
+                        frames = row["frametypes"]
+                        _ = (recipe_name, obsids, frames, row)
+                        selected.append(_)
         # from collections import OrderedDict
         # dict_by_group = OrderedDict(_)
 
@@ -458,12 +465,14 @@ class RecipeLogClass(pd.DataFrame):
         return selected
 
     def select_fnmatch_by_groups(self, recipe_fnmatch, groups=None,
-                                 recipe_name_exclude=None):
+                                 recipe_name_exclude=None,
+                                 ignore_recipe_name=False):
 
         p_match = get_pmatch_from_fnmatch(recipe_fnmatch,
                                           recipe_name_exclude)
 
-        return self.select_pmatch_by_groups(p_match, groups=groups)
+        return self.select_pmatch_by_groups(p_match, groups=groups,
+                                            ignore_recipe_name=ignore_recipe_name)
 
 
 class RecipeLog(RecipeLogClass):

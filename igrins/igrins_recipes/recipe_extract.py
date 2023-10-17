@@ -52,11 +52,14 @@ def _get_do_ab_from_recipe_name(obsset):
 
 def estimate_slit_profile_stellar(obsset,
                                   x1=800, x2=2048-800,
-                                  do_ab="recipe",
                                   slit_profile_mode="1d",
                                   frac_slit=None):
 
-    do_ab = _get_do_ab_from_recipe_name(obsset)
+    command_name = obsset.runner_config["command_name"]
+    if "onoff" in command_name:
+        do_ab = False
+    else:
+        do_ab = True
 
     if frac_slit is not None:
         frac_slit = list(map(float, frac_slit.split(",")))
@@ -69,15 +72,18 @@ def estimate_slit_profile_stellar(obsset,
 
 def estimate_slit_profile_extended(obsset,
                                    x1=800, x2=2048-800,
-                                   do_ab="recipe",
-                                   slit_profile_mode="uniform",
                                    frac_slit=None):
 
-    do_ab = _get_do_ab_from_recipe_name(obsset)
+    command_name = obsset.runner_config["command_name"]
+    if "onoff" in command_name:
+        do_ab = False
+    else:
+        do_ab = True
+
     estimate_slit_profile(obsset,
                           x1=800, x2=2048-800,
                           do_ab=do_ab,
-                          slit_profile_mode=slit_profile_mode,
+                          slit_profile_mode="uniform",
                           frac_slit=frac_slit)
 
 
@@ -93,7 +99,9 @@ _steps_default = [
 
 
 _steps_stellar = [
-    Step("Make Combined Images", make_combined_images),
+    Step("Make Combined Images", make_combined_images,
+         force_image_combine=False,
+         pattern_remove_level="auto"),
     Step("Estimate slit profile (stellar)",
          estimate_slit_profile_stellar,
          slit_profile_mode="1d",
@@ -102,12 +110,13 @@ _steps_stellar = [
     #      extract_extended_spec),
     Step("Extract spectra (for stellar)",
          extract_stellar_spec,
-         extraction_mode="optimal"),
+         extraction_mode="optimal",
+         pixel_per_res_element=None,
+         ),
     Step("Generate Rectified 2d-spec", store_2dspec),
 ]
 
 steps_stellar = _steps_default + _steps_stellar
-
 
 _steps_stellar_pp = [
     Step("Extract spectra (PP for stellar)",
@@ -131,12 +140,15 @@ steps_a0v = steps_stellar + [Step("Flatten A0V", flatten_a0v),
 
 _steps_extended = [
     Step("Make Combined Images", make_combined_images,
+         force_image_combine=False,
+         pattern_remove_level="auto",
          allow_no_b_frame=False),
-    Step("Estimate slit profile (extended)", estimate_slit_profile,
-         slit_profile_mode="uniform"),
+    Step("Estimate slit profile (extended)", estimate_slit_profile_extended,
+         frac_slit=None),
     Step("Extract spectra (for extendeded)",
          extract_extended_spec,
          lacosmic_thresh=0.,
+         pixel_per_res_element=None,
          # extraction_mode="simple",
     ),
     # Step("Extract spectra (for stellar)",
@@ -147,6 +159,23 @@ _steps_extended = [
 
 steps_extended = _steps_default + _steps_extended
 
+# _steps_extended_dry = [
+#     Step("Make Combined Images", make_combined_images,
+#          force_image_combine=False,
+#          pattern_remove_level=0,
+#          allow_no_b_frame=False),
+#     Step("Estimate slit profile (extended)", estimate_slit_profile,
+#          slit_profile_mode="uniform"),
+#     Step("Extract spectra (for extendeded)",
+#          extract_extended_spec,
+#          lacosmic_thresh=0.,
+#          calculate_sn=False,
+#          # extraction_mode="simple",
+#     ),
+#     Step("Generate Rectified 2d-spec", store_2dspec)
+# ]
+
+# steps_extended_dry = _steps_default + _steps_extended_dry
 
 if __name__ == "__main__":
     pass
