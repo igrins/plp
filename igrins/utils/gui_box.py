@@ -17,7 +17,14 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.text import Text
 import matplotlib.patheffects as path_effects
 
-from matplotlib.tight_layout import get_renderer
+try: #Catch error for certain backends and use custom def in these cases
+    from matplotlib.tight_layout import get_renderer
+except:
+    def get_renderer(fig):
+        canvas = FigureCanvasAgg(fig)
+        renderer = canvas.get_renderer()
+
+        return renderer
 
 # def get_agg_renderer(fig):
 #     canvas = FigureCanvasAgg(fig)
