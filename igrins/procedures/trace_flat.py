@@ -536,7 +536,13 @@ def trace_centroids_chevyshev(centroid_bottom_list,
 
 def get_smoothed_order_spec(s):
     s = np.array(s)
-    k1, k2 = np.nonzero(np.isfinite(s))[0][[0, -1]]
+    try:
+        k1, k2 = np.nonzero(np.isfinite(s))[0][[0, -1]]
+    except IndexError:
+        s0 = np.empty_like(s)
+        s0.fill(np.nan)
+        return s0
+
     s1 = s[k1:k2+1]
 
     s0 = np.empty_like(s)
