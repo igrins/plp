@@ -50,7 +50,7 @@ def _match_order(src_spectra, ref_spectra):
     s_list_ref = ref_spectra["specs"]
 
     s_list_ = src_spectra["specs"]
-    s_list = [np.array(s) for s in s_list_]
+    s_list = [np.array(s, dtype=np.float64) for s in s_list_]
 
     # match the orders of s_list_src & s_list_dst
     from .match_orders import match_orders
