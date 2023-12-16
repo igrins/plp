@@ -16,7 +16,7 @@ def _get_int_from_config(obsset, kind, default):
 
 
 def setup_extraction_parameters(obsset, order_range="-1,-1",
-                                height_2dspec=0, correct_flexure=False):
+                                height_2dspec=0, correct_flexure=False, mask_cosmics=False):
 
     _order_range_s = order_range
     try:
@@ -34,7 +34,7 @@ def setup_extraction_parameters(obsset, order_range="-1,-1",
     obsset.set_recipe_parameters(order_start=order_start,
                                  order_end=order_end,
                                  height_2dspec=height_2dspec,
-                                 correct_flexure=correct_flexure)
+                                 correct_flexure=correct_flexure, mask_cosmics=mask_cosmics)
 
 
 def _get_combined_image(obsset):
@@ -571,8 +571,7 @@ def extract_stellar_spec_pp(obsset, extraction_mode="optimal", height_2dspec=0,
 
 
 def extract_extended_spec1(obsset, data,
-                           variance_map, variance_map0,
-                           lacosmic_thresh=0.):
+                           variance_map, variance_map0):
 
     # refactored from recipe_extract.ProcessABBABand.process
 
@@ -612,7 +611,6 @@ def extract_extended_spec1(obsset, data,
                              slitpos_map,
                              slitoffset_map,
                              gain,
-                             lacosmic_thresh=lacosmic_thresh,
                              debug=False)
 
     s_list, v_list, cr_mask, aux_images = _
@@ -620,7 +618,7 @@ def extract_extended_spec1(obsset, data,
     return s_list, v_list, cr_mask, aux_images
 
 
-def extract_extended_spec(obsset, lacosmic_thresh=0.,
+def extract_extended_spec(obsset,
                           pixel_per_res_element=None):
 
     # refactored from recipe_extract.ProcessABBABand.process
@@ -641,8 +639,7 @@ def extract_extended_spec(obsset, lacosmic_thresh=0.,
                                                  postfix=postfix).data
 
     _ = extract_extended_spec1(obsset, data,
-                               variance_map, variance_map0,
-                               lacosmic_thresh=lacosmic_thresh)
+                               variance_map, variance_map0)
 
     s_list, v_list, cr_mask, aux_images = _
 

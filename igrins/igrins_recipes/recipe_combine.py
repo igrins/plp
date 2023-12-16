@@ -1,8 +1,11 @@
 import numpy as np
+import copy
 # import scipy.ndimage as ni
 
 # from ..utils.image_combine import image_median
 # from ..igrins_libs.resource_helper_igrins import ResourceHelper
+
+from ..igrins_libs.cosmics import cosmicsimage
 
 from ..pipeline.steps import Step
 
@@ -19,19 +22,72 @@ from .gui_combine import setup_gui, factory_pattern_remove_n_smoothed
 from ..procedures.sky_spec import get_exptime
 from ..procedures.procedures_flexure_correction import estimate_flexure, estimate_flexure_short_exposures, check_telluric_shift
 
+import astroscrappy
+from scipy.ndimage import median_filter, binary_erosion, binary_dilation
+
+# astroscrappy.detect_cosmics(indat, inmask=None, inbkg=None, invar=None, sigclip=4.5, sigfrac=0.3, objlim=5.0, gain=1.0, readnoise=6.5, 
+#     satlevel=65536.0, niter=4, sepmed=True, cleantype='meanmask', fsmode='median', psfmodel='gauss', psffwhm=2.5, psfsize=7, psfk=None, 
+#     psfbeta=4.765, verbose=False)
+
 
 def _get_combined_image(obsset):
     # Should not use median, Use sum.
-    data_list = [hdu.data for hdu in obsset.get_hdus()]
-    date, band = obsset.get_resource_spec()
-    
+    import_data_list = [hdu.data for hdu in obsset.get_hdus()]
+    data_list = [] #Put the data list in a form that can be modified (not read only)
+    for import_data_list_frame in import_data_list:
+        data_list.append(np.array(import_data_list_frame.data))
+
+
+    #New scheme for cosmic ray masking
+    #Kyle Kaplan Dec 7, 2023
+    mask_cosmics = obsset.get_recipe_parameter("mask_cosmics")
+    if mask_cosmics == True:
+        # cosmics_sigmaclip = 15.0 #Set universal cosmic ray correction parameters
+        # cosmics_sigfrac = 0.3
+        # cosmcis_objlim = 5.0
+        # satlevel = -1
+        cosmics_sigmaclip = 1.7 #Set universal cosmic ray correction parameters
+        cosmics_sigfrac = 12.0
+        cosmcis_objlim = 4.0
+        satlevel = -1
+        n_frames = len(data_list) #Number of frames in nod
+        cr_mask_count = np.zeros(np.shape(data_list[0][4:-4, 4:-4])) #Create an array to count how many times a pixel is masked for cosmics
+        cr_masks = [] #Create a list of CR Masks
+        date, band = obsset.get_resource_spec()
+        if n_frames == 1: #Run only if n_frames is 1 (a single AB nod), this is rare but requires special treatment to interpolate over cosmics since we can't fill in masked cosmics with other frames
+                data_without_overscan = data_list[0][4:-4, 4:-4] #Cut overscan
+                if band == 'H':
+                    cr_mask, cr_array = astroscrappy.detect_cosmics(data_without_overscan, gain=2.05, readnoise=10.92, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for H-band
+                else: #if band == 'K'
+                    cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.21, readnoise=8.93, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for K-band
+                data_list[0][4:-4, 4:-4] = cr_array #Interpolate over any cosmics found
+        else: #If n_frames > 1, do the normal routine and use pixels frames without cosmics to fill in masked cosmics
+            cleaned_data_list = []
+            for i in range(n_frames):
+                data_without_overscan = data_list[i][4:-4, 4:-4] #Cut overscan
+                if band == 'H':
+                    cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.05, readnoise=10.92, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for H-band
+                else: #if band == 'K'
+                    cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.21, readnoise=8.93, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for K-band            
+                dilated_cr_mask = binary_dilation(cr_mask, iterations=1)
+                cr_masks.append(dilated_cr_mask)
+                cleaned_data_list.append(median_filter(cr_array, [5,5]))
+                cr_mask_count[dilated_cr_mask] += 1 #Increment mask count array for later scaling the non-masked pixels
+            masked_pixels_unlikely_to_be_cosmics = cr_mask_count == n_frames
+            cr_mask_count[masked_pixels_unlikely_to_be_cosmics] = 0 #Zero out pixels in the CR mask count unlikely to be cosmics
+            for i in range(n_frames): #Scale each frame to "fill" holes left by cosmic rays using data from other frames
+                data_list[i][4:-4, 4:-4][cr_masks[i]] = 0. #Zero out cosmic rays found
+                data_list[i][4:-4, 4:-4] *= (n_frames / (n_frames - cr_mask_count)) #Scale up pixels in frames without cosmics but where cosmics are in other frames
+                data_list[i][4:-4, 4:-4][masked_pixels_unlikely_to_be_cosmics] = cleaned_data_list[i][masked_pixels_unlikely_to_be_cosmics] #Fill in bad pixels
+
+
+
+
     correct_flexure = obsset.get_recipe_parameter("correct_flexure")
-    if correct_flexure == True:
-        
+    if correct_flexure == True:        
         exptime = get_exptime(obsset)
         if exptime >= 20.0:
             data_list = estimate_flexure(obsset, data_list, exptime) #Estimate flexure and apply correction
-
         if len(data_list) > 1: #Testing detection
             check_telluric_shift(obsset, data_list)
 
