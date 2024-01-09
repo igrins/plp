@@ -47,7 +47,7 @@ def _get_combined_image(obsset):
         # cosmcis_objlim = 5.0
         # satlevel = -1
         cosmics_sigmaclip = 1.7 #Set universal cosmic ray correction parameters
-        cosmics_sigfrac = 12.0
+        cosmics_sigfrac = 13.0
         cosmcis_objlim = 4.0
         satlevel = -1
         n_frames = len(data_list) #Number of frames in nod
