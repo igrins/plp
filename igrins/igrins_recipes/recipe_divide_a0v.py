@@ -43,7 +43,8 @@ def get_interpolated_vega_spec(obsset, um):
     a0v_model = A0VSpec(d)
 
     a0v_interp1d = a0v_model.get_flux_interp1d(1.3, 2.5,
-                                               flatten=True,
+                                               #flatten=True,
+                                               flatten=False,
                                                smooth_pixel=32)
 
     aa = [a0v_interp1d(wvl)[0] for wvl in zip(um)]
