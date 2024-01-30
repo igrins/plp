@@ -7,6 +7,12 @@ rm -r outdata/$UTDATE
 rm -r calib/secondary/$UTDATE
 rm -r calib/primary/$UTDATE
 #Run PLP
+
+
+# python ./igr_pipe.py clean-pattern-setup $UTDATE #Setup files needed for flexure correction
+
+
+
 python igr_pipe.py flat $UTDATE #Process flat
 python ./igr_pipe.py register-sky $UTDATE #First pass at wavelength solution using sky frame (incase THAR lamps don't exist)
 python ./igr_pipe.py flexure-setup $UTDATE #Setup files needed for flexure correction
@@ -19,6 +25,7 @@ python ./igr_pipe.py stellar-ab $UTDATE --correct-flexure --mask-cosmics #Reduce
 python ./igr_pipe.py stellar-onoff $UTDATE --correct-flexure --mask-cosmics #Reduce stellar sources nod off slit
 python ./igr_pipe.py extended-ab $UTDATE --correct-flexure --height-2dspec=100 --mask-cosmics #Reduce extended sources nod on slit
 python ./igr_pipe.py extended-onoff $UTDATE --correct-flexure --height-2dspec=100 --mask-cosmics #Reduce extended sources not off slit
+python ./igr_pipe.py divide-a0v $UTDATE #Reduce stellar sources nod off slit
 #python igr_pipe.py plot-spec $UTDATE --html-output #Make and publish HTML preview
 #python igr_pipe.py publish-html $UTDATE #Ditto
 echo "Done running"

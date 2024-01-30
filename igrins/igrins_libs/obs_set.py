@@ -4,11 +4,13 @@ ObsSet: Helper class for a single obsid, and its derived products.
 
 import re
 import fnmatch
+import glob
 
 import astropy.io.fits as pyfits
 
 from .. import DESCS
 from ..utils.load_fits import get_first_science_hdu
+from ..procedures.clean_pattern import clean_detector_pattern
 
 
 class ObsSet(object):
@@ -217,9 +219,37 @@ class ObsSet(object):
             obsids = self.get_obsids()
 
         hdus = []
+
+        # try:
+        #     date, band = self.get_resource_spec()
+        #     filename = glob.glob('calib/primary/'+date+'/SDC'+band+'_'+date+'*pattern_mask.fits')[0] #Load order map
+        #     bias_mask = pyfits.getdata(filename)
+
+        #     #bias_mask = self.load_resource_for(DESCS["PATTERNMASK_FITS"])
+        #     #bias_mask = self.load_resource_for("bias_mask")
+        #     #bias_mask = fits.getdata()
+
+
+        # except:
+        #     breakpoint()
+            
+        #     bias_mask = None
+
         for obsid in obsids:
             hdul = self.rs.load(obsid, DESCS["RAWIMAGE"], item_type="fits")
+
+
             hdu = get_first_science_hdu(hdul)
+
+            hdul[0].data = clean_detector_pattern(hdul[0].data) #Clean repeating detector battern from raw frames
+
+            # if bias_mask is not None: #Check if bias mask exists
+            #     print('LOOKS LIKE IT IS WORKING!!!!!')
+            #     #breakpoint()
+            #     hdul[0].data = clean_detector_pattern(hdul[0].data, bias_mask) #Clean repeating detector battern from raw frames
+            # else:
+            #     print('BIAS MASK NOT FOUND YET!!!  NEED TO MAKE IT AGAIN')
+
             hdus.append(hdu)
 
         return hdus
