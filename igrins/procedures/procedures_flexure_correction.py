@@ -217,7 +217,7 @@ def estimate_flexure_short_exposures(obsset, data_a, data_b, exptime):
 	mask = (fits.getdata('master_calib/'+band+'-band_limited_sky_mask.fits') == 1.0)  #(note we use a more conservative mask for short exposures)
 	refframe[~mask] = np.nan
 	combined_data = data_a + data_b - np.abs(data_a - data_b)
-	cleaned_combined_data = isolate_sky_lines(combined_data) / (exptime * len(obsset.get_obsids())) #Apply median filters to isolate sky lines from other signal and normalize by exposure time
+	cleaned_combined_data = isolate_sky_lines(combined_data / (exptime * len(obsset.get_obsids()))) #Apply median filters to isolate sky lines from other signal and normalize by exposure time
 	cleaned_combined_data[~mask] = np.nan #Apply mask to isolate sky lines on detector	
 	#dx, dy = cross_correlate(refframe, cleaned_combined_data) #Estimate delta-x and delta-y difference in pixels between the reference and data frames
 	dx = cross_correlate(refframe, cleaned_combined_data) #Estimate delta-x and delta-y difference in pixels between the reference and data frames
