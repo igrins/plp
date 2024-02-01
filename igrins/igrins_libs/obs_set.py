@@ -222,7 +222,6 @@ class ObsSet(object):
 
 
         for obsid in obsids:
-            breakpoint()
             hdul = self.rs.load(obsid, DESCS["RAWIMAGE"], item_type="fits")
 
 
