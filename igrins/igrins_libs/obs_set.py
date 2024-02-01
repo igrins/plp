@@ -220,35 +220,16 @@ class ObsSet(object):
 
         hdus = []
 
-        # try:
-        #     date, band = self.get_resource_spec()
-        #     filename = glob.glob('calib/primary/'+date+'/SDC'+band+'_'+date+'*pattern_mask.fits')[0] #Load order map
-        #     bias_mask = pyfits.getdata(filename)
-
-        #     #bias_mask = self.load_resource_for(DESCS["PATTERNMASK_FITS"])
-        #     #bias_mask = self.load_resource_for("bias_mask")
-        #     #bias_mask = fits.getdata()
-
-
-        # except:
-        #     breakpoint()
-            
-        #     bias_mask = None
 
         for obsid in obsids:
+            breakpoint()
             hdul = self.rs.load(obsid, DESCS["RAWIMAGE"], item_type="fits")
 
 
             hdu = get_first_science_hdu(hdul)
 
-            hdul[0].data = clean_detector_pattern(hdul[0].data) #Clean repeating detector battern from raw frames
-
-            # if bias_mask is not None: #Check if bias mask exists
-            #     print('LOOKS LIKE IT IS WORKING!!!!!')
-            #     #breakpoint()
-            #     hdul[0].data = clean_detector_pattern(hdul[0].data, bias_mask) #Clean repeating detector battern from raw frames
-            # else:
-            #     print('BIAS MASK NOT FOUND YET!!!  NEED TO MAKE IT AGAIN')
+            if self.recipe_name != 'FLAT': #Only clean non-flat frames
+                hdul[0].data = clean_detector_pattern(hdul[0].data) #Clean repeating detector battern from raw frames
 
             hdus.append(hdu)
 
