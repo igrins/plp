@@ -32,9 +32,9 @@ def stack_rows(masked_data, horizontal_mask=0):
 #Clean up the detector pattern and returned the cleaned image
 def clean_detector_pattern(data, median_filter_length=23):
     stddev = np.nanstd(data)
-    order_mask = (data >  1.0*stddev) & (data > 75)
+    order_mask = (data >  1.0*stddev) & (data > 100)
     cleaned_data = copy.deepcopy(data)
-    for i in [7, 8, 9, 10, 11, 13]:
+    for i in [7, 9, 11, 13]:
         masked_cleaned_data = copy.deepcopy(cleaned_data) #Remask the cleaned pattern for the next iteration
         masked_cleaned_data[order_mask] = np.nan
         pattern = stack_rows(masked_cleaned_data, horizontal_mask=i) #Get the first iteration of the pattern by stacking the 
