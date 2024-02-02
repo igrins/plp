@@ -10,7 +10,7 @@ import astropy.io.fits as pyfits
 
 from .. import DESCS
 from ..utils.load_fits import get_first_science_hdu
-from ..procedures.clean_pattern import clean_detector_pattern
+#from ..procedures.clean_pattern import clean_detector_pattern
 
 
 class ObsSet(object):
@@ -227,8 +227,8 @@ class ObsSet(object):
 
             hdu = get_first_science_hdu(hdul)
 
-            if self.recipe_name != 'FLAT': #Only clean non-flat frames
-                hdul[0].data = clean_detector_pattern(hdul[0].data) #Clean repeating detector battern from raw frames
+            # if self.recipe_name != 'FLAT': #Only clean non-flat frames
+            #     hdul[0].data = clean_detector_pattern(hdul[0].data) #Clean repeating detector battern from raw frames
 
             hdus.append(hdu)
 
