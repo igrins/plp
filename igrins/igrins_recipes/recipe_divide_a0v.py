@@ -91,7 +91,7 @@ def _make_spec_a0v_hdu_list(obsset, wvl, spec, a0v_spec, vega,
 
 
 def divide_a0v(obsset,
-               a0v=None,
+               a0v='GROUP2',
                a0v_obsid=None,
                basename_postfix=None,
                # outname_postfix=None,
