@@ -29,7 +29,7 @@ def get_group2(obsset):
         return group2
 
 
-def get_a0v_obsid(obsset, a0v='GROUP2', a0v_obsid=None):
+def get_a0v_obsid(obsset, a0v, a0v_obsid):
     group2 = get_group2(obsset)
     a0v_obsid = _filter_a0v(a0v, a0v_obsid, group2)
 
