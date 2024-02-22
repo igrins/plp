@@ -3,7 +3,9 @@ import copy
 # import scipy.ndimage as ni
 
 # from ..utils.image_combine import image_median
-# from ..igrins_libs.resource_helper_igrins import ResourceHelper
+
+from .. import get_obsset_helper
+from ..igrins_libs.resource_helper_igrins import ResourceHelper
 
 from ..igrins_libs.cosmics import cosmicsimage
 
@@ -23,49 +25,21 @@ from ..procedures.sky_spec import get_exptime
 from ..procedures.procedures_flexure_correction import estimate_flexure, estimate_flexure_short_exposures, check_telluric_shift
 
 import astroscrappy
-from scipy.ndimage import median_filter, binary_erosion, binary_dilation
+from scipy.ndimage import median_filter, binary_dilation
 
 from ..procedures.destriper import destriper
 
-# astroscrappy.detect_cosmics(indat, inmask=None, inbkg=None, invar=None, sigclip=4.5, sigfrac=0.3, objlim=5.0, gain=1.0, readnoise=6.5, 
-#     satlevel=65536.0, niter=4, sepmed=True, cleantype='meanmask', fsmode='median', psfmodel='gauss', psffwhm=2.5, psfsize=7, psfk=None, 
-#     psfbeta=4.765, verbose=False)
+
 
 
 def _get_combined_image(obsset):
     # Should not use median, Use sum.
     import_data_list = [hdu.data for hdu in obsset.get_hdus()]
     data_list = [] #Put the data list in a form that can be modified (not read only)
-    bias_mask = obsset.load_resource_for("bias_mask")
+
     for import_data_list_frame in import_data_list:
-        data_frame = np.array(import_data_list_frame.data)
-        #data_frame = destriper.get_destriped(data_frame, bias_mask, pattern=2048, hori=True)
-        data_frame = destriper.get_destriped(data_frame, mask=bias_mask, pattern=128, hori=True)
-        # data_frame = destriper.get_destriped(data_frame, bias_mask, pattern=64, hori=True)
-        data_list.append(data_frame)
-        #data_list.append(np.array(import_data_list_frame.data))
+        data_list.append(np.array(import_data_list_frame.data))
 
-
-
-    # #Clean pattern out of each frame
-    # 
-    # cleaned_data_list = []
-    # for data_frame in data_list:
-    #     cleaned_data_frame = destriper.get_destriped(data_frame, bias_mask, pattern=2048, hori=True)
-    #     cleaned_data_frame = destriper.get_destriped(cleaned_data_frame, bias_mask, pattern=128, hori=True)
-    #     cleaned_data_frame = destriper.get_destriped(cleaned_data_frame, bias_mask, pattern=64, hori=True)
-    #     cleaned_data_list.append(cleaned_data_frame)
-    # data_list = cleaned_data_list
-
-        # d2 = data_minus_raw
-    # dp = data_plus
-    # from ..procedures.destriper import destriper
-    # d2 = destriper.get_destriped(d2, bias_mask, pattern=2048, hori=True)
-    # d2 = destriper.get_destriped(d2, bias_mask, pattern=128, hori=True)
-    # d2 = destriper.get_destriped(d2, bias_mask, pattern=64, hori=True)
-    # dp = destriper.get_destriped(dp, bias_mask, pattern=2048, hori=True)
-    # dp = destriper.get_destriped(dp, bias_mask, pattern=128, hori=True)
-    # dp = destriper.get_destriped(dp, bias_mask, pattern=64, hori=True)
 
 
     #New scheme for cosmic ray masking
@@ -343,15 +317,12 @@ def make_combined_images(obsset, allow_no_b_frame=False,
 
     # dp = remove_pattern(data_plus, remove_level=1,
     #                     remove_amp_wise_var=False)
-    d2 = data_minus_raw
+
+
+    helper = ResourceHelper(obsset)
+    destripe_mask = helper.get("destripe_mask")
+    d2 = destriper.get_destriped(data_minus_raw, mask=destripe_mask, pattern=128, hori=True)
     dp = data_plus
-    # from ..procedures.destriper import destriper
-    # d2 = destriper.get_destriped(d2, bias_mask, pattern=2048, hori=True)
-    # d2 = destriper.get_destriped(d2, bias_mask, pattern=128, hori=True)
-    # d2 = destriper.get_destriped(d2, bias_mask, pattern=64, hori=True)
-    # dp = destriper.get_destriped(dp, bias_mask, pattern=2048, hori=True)
-    # dp = destriper.get_destriped(dp, bias_mask, pattern=128, hori=True)
-    # dp = destriper.get_destriped(dp, bias_mask, pattern=64, hori=True)
 
     gain = float(obsset.rs.query_ref_value("GAIN"))
 
