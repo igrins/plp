@@ -64,7 +64,7 @@ def get_interpolated_vega_spec(obsset, um):
 #     return tgt_spec_cor, thresh_masks, aa
 
 
-def _make_spec_a0v_hdu_list(obsset, wvl, spec, a0v_spec, vega,
+def _make_spec_a0v_hdu_list(obsset, wvl, spec, variance, a0v_spec, a0v_variance, vega,
                             a0v_fitted_continuum,
                             thresh_masks,
                             header_updates=None):
@@ -73,19 +73,27 @@ def _make_spec_a0v_hdu_list(obsset, wvl, spec, a0v_spec, vega,
     if header_updates is not None:
         primary_header_cards.extend(header_updates)
 
+    spec_divided_by_a0v_variance = vega**2 * (spec/a0v_spec)**2 * ( (variance/(spec**2)) + (a0v_variance/(a0v_spec**2)) ) #Compute variance for spec/a0v * vega using error propogation
+    spec_divided_by_cont_variance = (a0v_spec / a0v_fitted_continuum)**2 * spec_divided_by_a0v_variance #Scale to get the variance for spec /flattened a0v  * vega
+    
     _hdul = [
         (primary_header_cards, spec/a0v_spec*vega),
+        ([("EXTNAME", "SPEC_DIVIDE_A0V_VARIANCE")], spec_divided_by_a0v_variance),
         ([("EXTNAME", "WAVELENGTH")], wvl),
         ([("EXTNAME", "TGT_SPEC")], spec),
+        ([("EXTNAME", "TGT_SPEC_VARIANCE")], variance),
         ([("EXTNAME", "A0V_SPEC")], a0v_spec),
+        ([("EXTNAME", "A0V_SPEC_VARIANCE")], a0v_variance),
         ([("EXTNAME", "VEGA_SPEC")], vega),
         ([("EXTNAME", "SPEC_DIVIDE_CONT")], spec/a0v_fitted_continuum*vega),
+        ([("EXTNAME", "SPEC_DIVIDE_CONT_VARIANCE")], spec_divided_by_cont_variance),
         ([("EXTNAME", "MASK")], thresh_masks.astype("i"))
     ]
 
     # _hdul[0].verify(option="fix")
 
     hdul = obsset.get_hdul_to_write(*_hdul, convention="gemini")
+
 
     return hdul
 
@@ -119,12 +127,23 @@ def divide_a0v(obsset,
 
     thresh_masks = get_a0v_thresh_masks(a0v, threshold_a0v)
 
+    #breakpoint()
+
     hdul = _make_spec_a0v_hdu_list(obsset,
                                    tgt.um,
-                                   tgt.spec, a0v.spec, vega_spec,
+                                   tgt.spec,
+                                   tgt.variance,
+                                   a0v.spec, a0v.variance, vega_spec,
                                    a0v_fitted_continuum,
                                    thresh_masks,
                                    header_updates=None)
+
+    #Pass headers from .spec.fits and .variance.fits files to the various extensions, and make sure the OBSIDs are passed
+    hdul["TGT_SPEC"].header.update(tgt._spec_hdu_list[0].header)
+    hdul["TGT_SPEC"].header["OBSID"] = str(obsset.obsids[0])
+    hdul["A0V_SPEC"].header.update(a0v._spec_hdu_list[0].header)
+    hdul["A0V_SPEC"].header["OBSID"] = a0v_obsid
+
 
     obsset.store("SPEC_A0V_FITS", hdul, postfix=basename_postfix)
 
