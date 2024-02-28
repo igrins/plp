@@ -53,7 +53,7 @@ def _get_combined_image(obsset):
         cosmics_sigmaclip = 1.7 #Set universal cosmic ray correction parameters
         cosmics_sigfrac = 13.0
         cosmcis_objlim = 4.0
-        readnoise_multiplier = 3.0
+        readnoise_multiplier = 2.5
         satlevel = -1
         n_frames = len(data_list) #Number of frames in nod
         cr_mask_count = np.zeros(np.shape(data_list[0][4:-4, 4:-4])) #Create an array to count how many times a pixel is masked for cosmics
