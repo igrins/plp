@@ -311,18 +311,21 @@ def make_combined_images(obsset, allow_no_b_frame=False,
         remove_level = params["remove_level"]
         remove_amp_wise_var = params["amp_wise"]
 
-    # d2 = remove_pattern(data_minus_raw, mask=bias_mask,
-    #                     remove_level=remove_level,
-    #                     remove_amp_wise_var=remove_amp_wise_var)
+    d2 = remove_pattern(data_minus_raw, mask=bias_mask,
+                        remove_level=remove_level,
+                        remove_amp_wise_var=remove_amp_wise_var)
 
-    # dp = remove_pattern(data_plus, remove_level=1,
-    #                     remove_amp_wise_var=False)
+    dp = remove_pattern(data_plus, remove_level=1,
+                        remove_amp_wise_var=False)
 
 
     helper = ResourceHelper(obsset)
     destripe_mask = helper.get("destripe_mask")
-    d2 = destriper.get_destriped(data_minus_raw, mask=destripe_mask, pattern=128, hori=True)
-    dp = data_plus
+    # d2 = destriper.get_destriped(data_minus_raw, mask=destripe_mask, pattern=128, hori=True)
+    # dp = data_plus
+    d2 = destriper.get_destriped(d2, mask=destripe_mask, pattern=128, hori=True)
+
+
 
     gain = float(obsset.rs.query_ref_value("GAIN"))
 
