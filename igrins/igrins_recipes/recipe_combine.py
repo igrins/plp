@@ -53,7 +53,7 @@ def _get_combined_image(obsset):
         cosmics_sigmaclip = 1.7 #Set universal cosmic ray correction parameters
         cosmics_sigfrac = 13.0
         cosmcis_objlim = 4.0
-        readnoise_multiplier = 2.5
+        readnoise_multiplier = 2.25
         satlevel = -1
         n_frames = len(data_list) #Number of frames in nod
         cr_mask_count = np.zeros(np.shape(data_list[0][4:-4, 4:-4])) #Create an array to count how many times a pixel is masked for cosmics
@@ -323,7 +323,7 @@ def make_combined_images(obsset, allow_no_b_frame=False,
     destripe_mask = helper.get("destripe_mask")
     # d2 = destriper.get_destriped(data_minus_raw, mask=destripe_mask, pattern=128, hori=True)
     # dp = data_plus
-    d2 = destriper.get_destriped(d2, mask=destripe_mask, pattern=128, hori=True)
+    d2 = destriper.get_destriped(d2, mask=destripe_mask, pattern=64, hori=True, remove_vertical=False)
 
 
 
