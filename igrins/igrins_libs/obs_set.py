@@ -16,7 +16,7 @@ from ..utils.load_fits import get_first_science_hdu
 class ObsSet(object):
     def __init__(self, resource_stack, recipe_name, obsids, frametypes,
                  groupname=None, recipe_entry=None,
-                 reset_read_cache=False, basename_postfix="",
+                 reset_read_cache=True, basename_postfix="",
                  runner_config=None):
         self.rs = resource_stack
         self.recipe_name = recipe_name
