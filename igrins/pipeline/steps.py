@@ -113,6 +113,7 @@ def apply_steps(obsset, steps, kwargs=None, step_slice=None, on_raise=None,
 
     # if save_context_name is not None:
     #     obsset.rs.save_pickle(open(save_context_name, "wb"))
+    del obsset.rs #Fix memory leak
 
 
 # STEPS = {}
