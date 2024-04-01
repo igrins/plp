@@ -143,7 +143,10 @@ def _get_finite_boundary_indices(s1):
     #  if len(nonzero_indices) < 5:
     #      return 4, 4
 
-    k1, k2 = nonzero_indices[[0, -1]]
+    try:
+        k1, k2 = nonzero_indices[[0, -1]]
+    except IndexError:
+        return 0, 0
     k1 = max(k1, 4)
     k2 = min(k2, 2047-4)
     return k1, k2
