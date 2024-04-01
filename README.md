@@ -25,7 +25,7 @@ IGRINS pipeline package is currently in active development. Version 3 is the lat
 
 ## Documentation
 
-- https://github.com/igrins/plp/wiki/How-to-run-pipeline
+- https://github.com/igrins/plp/wiki/
 
 ## The Raw & Reduced IGRINS Spectral Archive (RRISA)
 IGRINS data is made publically availiable through the The Raw & Reduced IGRINS Spectral Archive (RRISA).  The current version of RRISA (v1) uses the IGRINS PLP v2 for it's data reductions.  The raw data are also availiable for RRISA for those who want to perform their own data reduction with the IGRINGS PLP.
