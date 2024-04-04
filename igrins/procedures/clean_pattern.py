@@ -2,7 +2,7 @@
 
 import numpy as np 
 import copy
-from scipy.ndimage import median_filter
+#from scipy.ndimage import median_filter
 from scipy.signal import medfilt2d
 
 
@@ -18,8 +18,8 @@ def stack_rows(masked_data, horizontal_mask=0):
         stackeddata[i*2,:,:] = masked_data[int(dpix*(i)):int((i+0.5)*dpix),:] #Unmirroed row
         stackeddata[i*2+1,:,:] = masked_data[int(dpix*(i+0.5)):int(dpix*(i+1)), :][::-1,:] #Mirroed row
         if horizontal_mask > 0:
-            stackeddata[i*2,:,:] -= median_filter(stackeddata[i*2,:,:], [1,horizontal_mask])
-            stackeddata[i*2+1,:,:] -= median_filter(stackeddata[i*2+1,:,:], [1,horizontal_mask])
+            stackeddata[i*2,:,:] -= medfilt2d(stackeddata[i*2,:,:], [1,horizontal_mask])
+            stackeddata[i*2+1,:,:] -= medfilt2d(stackeddata[i*2+1,:,:], [1,horizontal_mask])
     stackeddata[stackeddata == 0] = np.nan #Set any pixel not filled to nan before we collapse the 
     median_stacked_data = np.nanmedian(stackeddata,  axis=0) #Median collapse stack of half tiles rows to isolate the readout pattern, taking advantage of the fact it repeats many times and we can thake the mdian of multiple interorder background subtraced pixels    
     reconstructed_tile = np.zeros([dpix, 2048]) #Create an idealized 128x2048 "tile"
@@ -32,9 +32,9 @@ def stack_rows(masked_data, horizontal_mask=0):
 #Clean up the detector pattern and returned the cleaned image
 def clean_detector_pattern(data, median_filter_length=23):
     stddev = np.nanstd(data)
-    order_mask = (data >  1.0*stddev) & (data > 75)
+    order_mask = (data >  1.0*stddev) & (data > 100)
     cleaned_data = copy.deepcopy(data)
-    for i in [7, 8, 9, 10, 11, 13]:
+    for i in [7, 9, 11, 13, 15, 17]:
         masked_cleaned_data = copy.deepcopy(cleaned_data) #Remask the cleaned pattern for the next iteration
         masked_cleaned_data[order_mask] = np.nan
         pattern = stack_rows(masked_cleaned_data, horizontal_mask=i) #Get the first iteration of the pattern by stacking the 

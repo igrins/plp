@@ -47,7 +47,7 @@ class ResourceStack(object):
 
     # CONTEXT
 
-    def new_context(self, context_name, reset_read_cache=False):
+    def new_context(self, context_name, reset_read_cache=True):
         self.context_stack.new_context(context_name, reset_read_cache=reset_read_cache)
 
     def abort_context(self, context_name):

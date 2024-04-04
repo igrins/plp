@@ -45,6 +45,13 @@ class OnedSpecHelper(object):
         return sn
 
     @lazyprop
+    def variance(self):
+        variance_ =  self.obsset.load("VARIANCE_FITS",
+                               postfix=self.basename_postfix)
+        variance = variance_[0].data
+        return variance
+
+    @lazyprop
     def flattened_hdu_list(self):
         spec_hdu_list = self.obsset.load("SPEC_FITS_FLATTENED",
                                          postfix=self.basename_postfix)

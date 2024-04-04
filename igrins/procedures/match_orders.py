@@ -105,11 +105,10 @@ def match_specs(s_list_src, s_list_dst, frac_thresh=0.3):
 
 def match_orders(orders, s_list_src, s_list_dst, frac_thresh=0.3):
     do = match_specs(s_list_src, s_list_dst, frac_thresh=frac_thresh)
-
     center_indx0 = 0
     center_indx_dst0 = center_indx0 + do
     orders_dst = (np.arange(len(s_list_dst))
-                  + orders[center_indx0] - center_indx_dst0)
+                  + orders[center_indx0] + center_indx_dst0)
 
     return do, orders_dst
 
