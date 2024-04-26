@@ -167,7 +167,7 @@ def select_k_to_remove(c, n=2):
 
 
 def get_combined_images(obsset,
-                        allow_no_b_frame=False):
+                        allow_no_b_frame=True):
 
     ab_mode = obsset.recipe_name.endswith("AB")
 

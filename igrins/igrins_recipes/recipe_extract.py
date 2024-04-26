@@ -144,7 +144,7 @@ _steps_extended = [
     Step("Make Combined Images", make_combined_images,
          force_image_combine=False,
          pattern_remove_level="auto",
-         allow_no_b_frame=False),
+         allow_no_b_frame=True),
     Step("Estimate slit profile (extended)", estimate_slit_profile_extended,
          frac_slit=None),
     Step("Extract spectra (for extendeded)",
