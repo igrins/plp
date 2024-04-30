@@ -214,13 +214,14 @@ class PatternP64Zeroth(PatternBase):
     @classmethod
     def get(kls, d1, mask=None):
         p64a = dh.stack64(d1, mask)
-        p64a0 = np.median(p64a, axis=1)
+        p64a0 = np.nanmedian(p64a, axis=1)
 
-        return p64a0 - np.median(p64a0)
+        return p64a0 - np.nanmedian(p64a0)
 
     @classmethod
     def broadcast(kls, d1, p64a0):
         k = dh.concat(p64a0, [1, -1], 16)
+        
         return k[:, np.newaxis]
 
 
@@ -306,7 +307,6 @@ class PatternColWiseBiasC64(PatternBase):
     def broadcast(kls, d5, tck):
         spl = LSQUnivariateSpline._from_tck(tck)
         s = spl(np.arange(len(d5)))
-
         return s
 
 # def sub_col_median_slow(d5, mask=None):
