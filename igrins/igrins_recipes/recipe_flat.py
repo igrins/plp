@@ -17,7 +17,8 @@ def obsset_produce_qa_plots(obsset):
 
 
 steps = [Step("Combine Flat-Off", obsset_combine_flat_off,
-              flat_off_pattern_removal="guard"), # guard' | 'none'
+              flat_off_pattern_removal="guard",
+              rp_remove_mode="auto"), # guard' | 'none'
          Step("Hotpix Mask", make_hotpix_mask,
               sigma_clip1=100, sigma_clip2=5),
          Step("Combine Flat-On", combine_flat_on,
