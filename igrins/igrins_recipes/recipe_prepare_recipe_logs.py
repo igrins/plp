@@ -249,7 +249,7 @@ def tabulated_recipe_logs(obsdate, config):
 
     recipes["exptime-fmt"] = recipes.apply(fmt_exptime, axis=1)
 
-    from ..external.tabulate import tabulate
+    from ..external import tabulate
     r = tabulate(recipes[["group1", "objname", "recipe",
                           "exptime-fmt", "obsid-fmt", "frame-fmt"]],
                  headers=["GID", "Obj. Name", "Recip",
