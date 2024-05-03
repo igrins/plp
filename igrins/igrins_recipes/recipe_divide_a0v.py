@@ -13,8 +13,9 @@ from ..igrins_libs.oned_spec_helper import OnedSpecHelper
 from ..igrins_libs.a0v_obsid import get_a0v_obsid
 
 
-def set_basename_postfix(obsset):
+def set_basename_postfix(obsset, basename_postfix):
     pass
+    #obsset.set_basename_postfix(basename_postfix)
 
 
 def get_a0v_thresh_masks(a0v, threshold_a0v):
@@ -103,7 +104,7 @@ def divide_a0v(obsset,
                a0v_obsid=None,
                basename_postfix=None,
                # outname_postfix=None,
-               a0v_basename_postfix="",
+               #a0v_basename_postfix="",
                threshold_a0v=0.1):
 
     tgt = OnedSpecHelper(obsset, basename_postfix=basename_postfix)
@@ -113,10 +114,11 @@ def divide_a0v(obsset,
         a0v_obsid_ = obsset.query_resource_basename("a0v")
         a0v_obsid = obsset.rs.parse_basename(a0v_obsid_)
 
-    a0v_obsset = type(obsset)(obsset.rs, "A0V_AB", [a0v_obsid], ["A"],
-                              basename_postfix=a0v_basename_postfix)
+    a0v_obsset = type(obsset)(obsset.rs, "A0V_AB", [a0v_obsid], ["A"], basename_postfix=basename_postfix)
+                              #basename_postfix=a0v_basename_postfix)
 
-    a0v = OnedSpecHelper(a0v_obsset, basename_postfix=a0v_basename_postfix)
+    a0v = OnedSpecHelper(a0v_obsset, basename_postfix=basename_postfix)
+                            #basename_postfix=a0v_basename_postfix)
 
     # tgt_spec_cor, thresh_masks, aa = get_tgt_spec_cor(obsset, tgt, a0v,
     #                                                   threshold_a0v)
@@ -147,6 +149,9 @@ def divide_a0v(obsset,
 
     obsset.store("SPEC_A0V_FITS", hdul, postfix=basename_postfix)
 
-# Step("Set basename_postfix", set_basename_postfix),
 
-steps = [Step("Divide w/ A0V", divide_a0v)]
+steps = [
+        #Step("Set basename-postfix", set_basename_postfix,
+        # basename_postfix=""),
+        Step("Divide w/ A0V", divide_a0v, basename_postfix="")
+        ]
