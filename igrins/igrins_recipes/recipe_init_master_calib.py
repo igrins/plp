@@ -15,3 +15,15 @@ def init_master_calib():
     shutil.copytree(srcdir, destdir)
 
     print(f"created {destdir} directory and populated master calibration files.")
+
+    # now copy recipe.config
+    srcdir = files("igrins") / "recipe_config" / "recipe.config"
+    destdir = Path(".") / "recipe.config"
+
+    if destdir.exists():
+        print(f"{destdir} already exists. We skip copying {destdir}")
+        return
+
+    shutil.copy(srcdir, destdir)
+
+    print(f"created {destdir}.")
