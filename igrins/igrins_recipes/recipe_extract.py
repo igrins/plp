@@ -103,7 +103,8 @@ _steps_default = [
 _steps_stellar = [
     Step("Make Combined Images", make_combined_images,
          force_image_combine=False,
-         pattern_remove_level="auto"),
+         pattern_remove_level="auto",
+         allow_no_b_frame=True),
     Step("Estimate slit profile (stellar)",
          estimate_slit_profile_stellar,
          slit_profile_mode="1d",
