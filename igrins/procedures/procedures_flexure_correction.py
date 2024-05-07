@@ -7,7 +7,7 @@ from .estimate_sky import estimate_background, get_interpolated_cubic
 from ..procedures.destriper import destriper, stack128, stack64, get_stripe_pattern64
 from ..igrins_libs.resource_helper_igrins import ResourceHelper
 from astropy.io import fits
-import glob
+#import glob
 import copy
 
 from numpy.polynomial import Polynomial
@@ -119,8 +119,9 @@ def check_telluric_shift(obsset, datalist):
 		orders = [119, 120, 121]
 	elif band == 'K':
 		orders = [72, 73, 74]
-	filename = glob.glob('calib/primary/'+date+'/SKY_SDC'+band+'_'+date+'*order_map.fits')[0] #Load order map
-	order_map = fits.getdata(filename)
+	#filename = glob.glob('calib/primary/'+date+'/SKY_SDC'+band+'_'+date+'*order_map.fits')[0] #Load order map
+	#order_map = fits.getdata(filename)
+	order_map = obsset.load_resource_for("ordermap")[0].data
 	filtered_data1 = datalist[0] - np.nanmedian(datalist[0], 0) - np.nanmedian(datalist[0], 1)[:,np.newaxis] #Cross correlate each dataframe with the first data frame in the list
 	filtered_data1 -= median_filter(filtered_data1, [35,1])
 	for j in range(1, len(datalist)):
@@ -153,7 +154,8 @@ def check_telluric_shift(obsset, datalist):
 
 		#if abs(dx) > 0.0: #threshold for telluric shift
 		if True:
-			with open('outdata/'+date+"/telluric_shift_"+band+".csv", "a") as f: #Output flexure corrections to the textfile flexure.txt 
+			outdata_path = obsset.rs.storage.get_section('OUTDATA_PATH')
+			with open(outdata_path+"/telluric_shift_"+band+".csv", "a") as f: #Output flexure corrections to the textfile flexure.txt 
 				f.write(str(obsset.obsids[0])+', '+str(obsset.obsids[j])+', '+str(dx)+'\n')
 
 
@@ -162,8 +164,7 @@ def estimate_flexure(obsset, data, exptime):
 	date, band = get_date_and_band(obsset) #Grab date and band we are working in
 	flexure_corrected_data = [] #Create a list to store the flexure corrected data
 
-	filename = glob.glob('calib/primary/'+date+'/SDC'+band+'_'+date+'_*.sky_flexcorr.fits')[0] #Load reference frame created with recipe_flexure_setup
-	refframe = fits.getdata(filename)
+	refframe = copy.deepcopy(obsset.load_resource_for("flexcorr")[0].data)
 
 	# if exptime >= 20.0: #Load mask to isolate sky lines , for long exposures estimate flexure for each frame seperately
 	mask = (fits.getdata('master_calib/'+band+'-band_sky_mask.fits') == 1.0)
@@ -184,8 +185,8 @@ def estimate_flexure(obsset, data, exptime):
 
 		flexure_corrected_data.append(shifted_dataframe)
 		#print('dx =', dx, 'dy =', dy)
-		#breakpoint()
-		with open('outdata/'+date+"/flexure_"+band+".csv", "a") as f: #Output flexure corrections to the textfile flexure.txt 
+		outdata_path = obsset.rs.storage.get_section('OUTDATA_PATH')
+		with open(outdata_path+"/flexure_"+band+".csv", "a") as f: #Output flexure corrections to the textfile flexure.txt 
 			f.write(band+', '+str(obsset.obsids[i])+', '+str(dx)+'\n')
 
 
@@ -215,8 +216,7 @@ def estimate_flexure(obsset, data, exptime):
 
 def estimate_flexure_short_exposures(obsset, data_a, data_b, exptime):
 	date, band = get_date_and_band(obsset) #Grab date and band we are working in
-	filename = glob.glob('calib/primary/'+date+'/SDC'+band+'_'+date+'_*.sky_flexcorr.fits')[0] #Load reference frame created with recipe_flexure_setup
-	refframe = fits.getdata(filename)
+	refframe = copy.deepcopy(obsset.load_resource_for("flexcorr")[0].data)
 	mask = (fits.getdata('master_calib/'+band+'-band_limited_sky_mask.fits') == 1.0)  #(note we use a more conservative mask for short exposures)
 	refframe[~mask] = np.nan
 	combined_data = data_a + data_b - np.abs(data_a - data_b)
@@ -229,10 +229,8 @@ def estimate_flexure_short_exposures(obsset, data_a, data_b, exptime):
 	shifted_data_b = roll_along_axis(data_b, dx, axis=1) #Apply flexure correction
 	#shifted_data_b = roll_along_axis(shifted_data_b, dy, axis=0)
 
-	# print('OBSID:', obsset.obsids[0])
-	# breakpoint()
-
-	with open('outdata/'+date+"/flexure_"+band+".csv", "a") as f: #Output flexure corrections to the textfile flexure.txt 
+	outdata_path = obsset.rs.storage.get_section('OUTDATA_PATH')
+	with open(outdata_path +"/flexure_"+band+".csv", "a") as f: #Output flexure corrections to the textfile flexure.txt 
 		#f.write(band+', '+str(obsset.obsids[0])+', '+str(dx)+', '+str(dy)+'\n')
 		f.write(band+', '+str(obsset.obsids[0])+', '+str(dx)+'\n')
 
