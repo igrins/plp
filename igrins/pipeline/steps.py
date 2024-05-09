@@ -38,6 +38,9 @@ class ArghFactoryWithShort(ArghFactoryBase):
 
 
 class Step():
+    def __repr__(self):
+        return f"Step({self.name}, {self.kwargs})"
+
     def __init__(self, name, f, **kwargs):
         self.name = name
         self.f = f
@@ -59,9 +62,10 @@ class Step():
 
 
 def apply_steps(obsset, steps, kwargs=None, step_slice=None, on_raise=None,
-                progress_mode="terminal"):
+                progress_mode="terminal", delete_rs_on_return=True):
     """
     progress_mode : terminal, tqdm, notebook, etc
+    delete_rs_on_return : delete rs attribute to fix memory leak. Default is True.
     """
 
     if kwargs is None:
@@ -113,7 +117,8 @@ def apply_steps(obsset, steps, kwargs=None, step_slice=None, on_raise=None,
 
     # if save_context_name is not None:
     #     obsset.rs.save_pickle(open(save_context_name, "wb"))
-    del obsset.rs #Fix memory leak
+    if delete_rs_on_return:
+        del obsset.rs #Fix memory leak
 
 
 # STEPS = {}
