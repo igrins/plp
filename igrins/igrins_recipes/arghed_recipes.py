@@ -13,6 +13,8 @@ from ..igrins_recipes.recipe_init_master_calib \
 from ..igrins_recipes.recipe_prepare_recipe_logs \
     import (prepare_recipe_logs, show_recipe_logs)
 
+from ..igrins_recipes.igr_link_calib import link_calib
+
 
 from ..quicklook.obsset_ql import (create_argh_command_quicklook,
                                    create_argh_command_noise_guard)
@@ -36,6 +38,7 @@ def get_recipe_list():
     recipe_list = [init_master_calib,
                    prepare_recipe_logs,
                    show_recipe_logs,
+                   link_calib,
                    create_argh_command("flat"),
                    create_argh_command("flexure-setup" , ["SKY"]),
                    create_argh_command("combine", ["A0V_*",

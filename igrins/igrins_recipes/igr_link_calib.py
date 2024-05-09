@@ -6,6 +6,7 @@ import re
 import igrins
 from igrins.igrins_libs.recipes import RecipeLog
 from igrins.igrins_libs.igrins_config import IGRINSConfig as IGRINSConfig_
+from ..external import argh
 
 p_group1 = re.compile(r"(\d+)(.*)")
 
@@ -28,8 +29,8 @@ class IGRINSConfig(IGRINSConfig_):
                                  config_file=self)
 
 
-def link_calib(utdate_src: str, utdate_dst: str, recipe_name: str, s_obsid: int=9000,
-               igrins_config: IGRINSConfig | None =None):
+def _link_calib(utdate_src: str, utdate_dst: str, recipe_name: str, s_obsid: int=9000,
+                igrins_config: IGRINSConfig | None =None):
     # UTDATE_SRC, UTDATE_DST = "20240429", "20240427"
     # s_obsid = 9000
     # recipe_name = "FLAT"
@@ -74,12 +75,21 @@ def link_calib(utdate_src: str, utdate_dst: str, recipe_name: str, s_obsid: int=
     igrins_config.save_recipe_log(utdate_dst, rl_target)
 
 
+def link_calib(utdate_src: str, utdate_dst: str, recipe_name: str, s_obsid: int=9000,
+               config_file="recipe.config"):
+    igrins_config = IGRINSConfig(config_file)
+
+    _link_calib(utdate_src, utdate_dst, recipe_name, s_obsid,
+                igrins_config)
+
+
+
 def main():
     import sys
     utdate_src, utdate_dst, recipe_name, s_obsid = sys.argv[1:]
     igrins_config = IGRINSConfig()
-    link_calib(utdate_src, utdate_dst, recipe_name, s_obsid=int(s_obsid),
-               igrins_config=igrins_config)
+    _link_calib(utdate_src, utdate_dst, recipe_name, s_obsid=int(s_obsid),
+                igrins_config=igrins_config)
 
 
 if __name__ == '__main__':
