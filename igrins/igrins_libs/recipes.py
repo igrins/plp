@@ -395,7 +395,7 @@ class RecipeLogClass(pd.DataFrame):
         if bad_k:
             raise ValueError("keyname %s cannot be selected." % bad_k)
 
-        from collections import Iterable
+        from collections.abc import Iterable
 
         m_reversed = np.ones(len(self.index), dtype=bool)
 

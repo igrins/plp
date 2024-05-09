@@ -8,6 +8,7 @@ from .igrins_libs.storage_descriptions import load_descriptions
 
 from .igrins_libs.logger import set_level as set_log_level
 
+from .resource_manager import ResourceStack
 
 DESCS = load_descriptions()
 
@@ -104,7 +105,7 @@ class CalDB(object):
     This is a helper class to access the calibration files, but when no
     target obsid is necessary. Mostly for the test purpose.
     """
-    def __init__(self, obsdate, band, resource_manager):
+    def __init__(self, obsdate, band, resource_manager: ResourceStack):
         self.obsdate = obsdate
         self.band = band
         self.rm = resource_manager

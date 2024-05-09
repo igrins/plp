@@ -12,8 +12,8 @@ class StorageBase(object):
                 return fn1, helper.decompress
             fn_search_list.append(fn1)
         else:
-            raise RuntimeError("No candidate files are found : %s" 
-                               % fn_search_list)
+            raise FileNotFoundError("No candidate files are found : %s" 
+                                    % fn_search_list)
 
     def new_sectioned_storage(self, section):
         return SectionedStorage(self, section)
