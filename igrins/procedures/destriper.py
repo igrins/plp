@@ -5,11 +5,7 @@ from ..utils.image_combine import image_median
 # basic routines
 
 
-def stack_subrows(d, dy, mask=None, alt_sign=False, op="median"):
-    if mask is None:
-        mask = ~np.isfinite(d)
-    else:
-        mask = ~np.isfinite(d) | mask
+def get_stack_subrows(d, dy, mask=None, alt_sign=False):
 
     if len(d.shape) == 1:
         ny, = d.shape
@@ -32,14 +28,7 @@ def stack_subrows(d, dy, mask=None, alt_sign=False, op="median"):
             dd = [d[sl] for sl in dy_slices]
             msk = [mask[sl] for sl in dy_slices]
 
-        if op == "median":
-            ddm = image_median(dd, badmasks=msk)
-        elif op == "sum":
-            ddm = np.ma.array(dd, mask=msk).sum(axis=0)
-        elif op == "average":
-            ddm = np.ma.array(dd, mask=msk).average(axis=0)
-        else:
-            ValueError("unknown ope: {}".format(op))
+        return dd, msk
 
     else:
         if alt_sign:
@@ -48,14 +37,25 @@ def stack_subrows(d, dy, mask=None, alt_sign=False, op="median"):
         else:
             dd = [d[sl] for sl in dy_slices]
 
-        if op == "median":
-            ddm = np.median(dd, axis=0)
-        elif op == "sum":
-            ddm = np.sum(dd, axis=0)
-        elif op == "average":
-            ddm = np.average(dd, axis=0)
-        else:
-            ValueError("unknown ope: {}".format(op))
+        return dd
+
+
+def stack_subrows(d, dy, mask=None, alt_sign=False, op="median"):
+    if mask is None:
+        mask = ~np.isfinite(d)
+    else:
+        mask = ~np.isfinite(d) | mask
+
+    dd, msk = get_stack_subrows(d, dy, mask=mask, alt_sign=alt_sign)
+
+    if op == "median":
+        ddm = image_median(dd, badmasks=msk)
+    elif op == "sum":
+        ddm = np.ma.array(dd, mask=msk).sum(axis=0)
+    elif op == "average":
+        ddm = np.ma.array(dd, mask=msk).average(axis=0)
+    else:
+        raise ValueError("unknown ope: {}".format(op))
 
     return ddm
 
