@@ -229,16 +229,16 @@ def estimate_slit_profile(obsset,
                           x1=800, x2=2048-800,
                           do_ab=True,
                           slit_profile_mode="1d",
-                          frac_slit=None):
+                          frac_slit_list=None):
 
     if slit_profile_mode == "1d":
         from .slit_profile import estimate_slit_profile_1d
         estimate_slit_profile_1d(obsset, x1=x1, x2=x2, do_ab=do_ab,
-                                 frac_slit=frac_slit)
+                                 frac_slit_list=frac_slit_list)
     elif slit_profile_mode == "uniform":
         from .slit_profile import estimate_slit_profile_uniform
         estimate_slit_profile_uniform(obsset, do_ab=do_ab,
-                                      frac_slit=frac_slit)
+                                      frac_slit_list=frac_slit_list)
     else:
         msg = ("Unknwon mode ({}) in slit_profile estimation"
                .format(slit_profile_mode))
@@ -1000,87 +1000,3 @@ def _estimate_slit_profile_gauss_2d(ap, ods, g_list0,
         return func_dict.get(order, oo)(x_pixel, slitpos)
 
     return profile
-
-
-def update_slit_profile(obsset, slit_profile_mode="gauss2d", frac_slit=None):
-
-    # now try to derive the n-gaussian profile
-    # print("updating profile using the multi gauss fit")
-    assert slit_profile_mode in ["gauss", "gauss2d"]
-
-    s_list = list(obsset.load_fits_sci_hdu("SPEC_FITS").data)
-
-    helper = ResourceHelper(obsset)
-
-    ap = helper.get("aperture")
-
-    data_minus = obsset.load_fits_sci_hdu("COMBINED_IMAGE1").data
-    orderflat = helper.get("orderflat")
-    data_minus_flattened = data_minus / orderflat
-
-    ordermap = helper.get("ordermap")
-    ordermap_bpixed = helper.get("ordermap_bpixed")
-    slitpos_map = helper.get("slitposmap")
-
-    ods = _derive_data_for_slit_profile(ap, data_minus_flattened,
-                                        s_list, ordermap=ordermap)
-
-    glist = _estimate_slit_profile_glist(ap, ods,
-                                         ordermap_bpixed, slitpos_map,
-                                         x1=800, x2=2048-800,
-                                         do_ab=True)
-
-    if slit_profile_mode == "gauss2d":
-        profile = _estimate_slit_profile_gauss_2d(ap, ods, glist,
-                                                  ordermap_bpixed, slitpos_map,
-                                                  x1=800, x2=2048-800,
-                                                  do_ab=True)
-    elif slit_profile_mode == "gauss":
-        def profile(order, x_pixel, slitpos):
-            return glist(slitpos)
-    else:
-        msg = "unexpected slit_profile_mode: %s" % slit_profile_mode
-        raise ValueError(msg)
-
-    # profile_map = extractor.make_profile_map(ap,
-    #                                          profile,
-    #                                          frac_slit=self.frac_slit)
-
-    from .slit_profile import make_slitprofile_map
-    profile_map = make_slitprofile_map(ap, profile,
-                                       ordermap, slitpos_map,
-                                       frac_slit=frac_slit)
-
-    hdul = obsset.get_hdul_to_write(([], profile_map))
-    obsset.store("slitprofile_fits", hdul, cache_only=True)
-
-
-# if 0:
-#                 # _ = self._extract_spec_using_profile(extractor,
-#                 #                                      ap, profile_map,
-#                 #                                      variance_map,
-#                 #                                      variance_map0,
-#                 #                                      data_minus_flattened,
-#                 #                                      ordermap,
-#                 #                                      slitpos_map,
-#                 #                                      slitoffset_map,
-#                 #                                      debug=False)
-
-#                 # s_list, v_list, cr_mask, aux_images = _
-
-
-#                 sig_map = aux_images["sig_map"]
-#                 synth_map = aux_images["synth_map"]
-#                 shifted = aux_images["shifted"]
-
-#                 if 0: # save aux files
-#                     synth_map = ap.make_synth_map(ordermap, slitpos_map,
-#                                                   profile_map, s_list,
-#                                                   slitoffset_map=slitoffset_map
-#                                                   )
-
-#                     shifted = extractor.get_shifted_all(ap, profile_map,
-#                                                         variance_map,
-#                                                         synth_map,
-#                                                         slitoffset_map,
-#                                                         debug=False)
