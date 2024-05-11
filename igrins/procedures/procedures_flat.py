@@ -112,7 +112,8 @@ def combine_flat_off_old(hdul, destripe=True,
     return (cards, flat_off)
 
 
-def obsset_combine_flat_off(obsset, flat_off_pattern_removal="guard"):
+def obsset_combine_flat_off(obsset, flat_off_pattern_removal="guard",
+                            rp_remove_mode="auto"):
     """
     For flat-off, they are first guard-removed.
     ['amp_wise_bias_r2', 'p64_0th_order'].
@@ -142,7 +143,16 @@ def obsset_combine_flat_off(obsset, flat_off_pattern_removal="guard"):
     hdul = obsset_off.get_hdus()
 
     band = get_band(obsset)
-    rp_remove_mod, bg_y_slice = get_params(band)
+
+    "remove_bg"
+    _rp_remove_mode, bg_y_slice = get_params(band)
+    if rp_remove_mode == "auto":
+        rp_remove_mode = _rp_remove_mode
+    elif rp_remove_mode == "remove_bg":
+        rp_remove_mode = 1
+    else:
+        rp_remove_mode = 0
+
 
     # correct_bg_upper256 = True if band == "K" else False
 
@@ -150,7 +160,7 @@ def obsset_combine_flat_off(obsset, flat_off_pattern_removal="guard"):
     #                                    destripe=destripe,
     #                                    correct_bg_upper256=correct_bg_upper256)
     cards, flat_off = combine_flat_off_cube_201909(hdul,
-                                                   rp_remove_mod, bg_y_slice,
+                                                   rp_remove_mode, bg_y_slice,
                                                    flat_off_pattern_removal=flat_off_pattern_removal)
 
     hdu_cards = [Card(k, json_dumps(v)) for (k, v) in cards]
