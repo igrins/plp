@@ -55,6 +55,7 @@ def get_params(band):
     # print(band, mode, bg_y_slice)
     return mode, bg_y_slice
 
+from igrins.procedures.readout_pattern_helper import pipes, apply_pipe
 
 def make_flat_off_cube_201909(hdul, rp_remove_mod, bg_y_slice,
                               flat_off_pattern_removal="guard"):
@@ -65,6 +66,11 @@ def make_flat_off_cube_201909(hdul, rp_remove_mod, bg_y_slice,
     elif flat_off_pattern_removal == "guard":
         data_list = np.array([remove_pattern_from_guard(hdu.data)
                               for hdu in hdul])
+    elif flat_off_pattern_removal == "global_median":
+        p = [pipes["p64_global_median"]]
+        data_list = np.array([apply_pipe(hdu.data, p,)
+                              for hdu in hdul])
+
     else:
         raise ValueError(f"unupported flat_off_pattern_removel option: {flat_off_pattern_removal}")
 
@@ -144,7 +150,6 @@ def obsset_combine_flat_off(obsset, flat_off_pattern_removal="guard",
 
     band = get_band(obsset)
 
-    "remove_bg"
     _rp_remove_mode, bg_y_slice = get_params(band)
     if rp_remove_mode == "auto":
         rp_remove_mode = _rp_remove_mode
