@@ -113,7 +113,7 @@ _steps_default = [
     Step("Setup extraction parameters",
          setup_extraction_parameters,
          height_2dspec=0,
-         order_range="-1,-1",
+         order_range="",
          correct_flexure=False,
          mask_cosmics=False,
          ),

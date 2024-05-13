@@ -15,18 +15,19 @@ def _get_int_from_config(obsset, kind, default):
     return v
 
 
-def setup_extraction_parameters(obsset, order_range="-1,-1",
+def setup_extraction_parameters(obsset, order_range="",
                                 height_2dspec=0, correct_flexure=False, mask_cosmics=False):
 
-    _order_range_s = order_range
-    try:
-        order_start, order_end = map(int, _order_range_s.split(","))
-    except Exception:
-        msg = "Failed to parse order range: {}".format(_order_range_s)
-        raise ValueError(msg)
-
-    order_start = _get_int_from_config(obsset, "ORDER_START", order_start)
-    order_end = _get_int_from_config(obsset, "ORDER_END", order_end)
+    if order_range:
+        _order_range_s = order_range
+        try:
+            order_start, order_end = map(int, _order_range_s.split(","))
+        except Exception:
+            msg = "Failed to parse order range: {}".format(_order_range_s)
+            raise ValueError(msg)
+    else:
+        order_start = _get_int_from_config(obsset, "ORDER_START", -1)
+        order_end = _get_int_from_config(obsset, "ORDER_END", -1)
 
     height_2dspec = _get_int_from_config(obsset, "HEIGHT_2DSPEC",
                                          height_2dspec)
@@ -268,11 +269,42 @@ def get_wvl_header_data(obsset, wavelength_increasing_order=False):
     return header.copy(), hdu.data, convert_data
 
 
+def _reorder_data_to_orders_to_extract(ap, d0):
+    d_map = dict(zip(ap.orders, d0))
+    d0 = np.asarray(d0)
+    d = np.empty((len(ap.orders_to_extract),) + d0.shape[1:], dtype=d0.dtype)
+    d.fill(np.nan)
+
+    for i, o in enumerate(ap.orders_to_extract):
+        _d = d_map.get(o, None)
+        if _d is None:
+            continue
+        d[i] = _d
+
+    return d
+
+from astropy.io.fits.header import Header
+def remove_wat(header):
+    cards = [card for card in header.cards if not card.keyword.startswith("WAT")]
+    header = Header(cards)
+    return header
+
 def store_1dspec(obsset, v_list, s_list, sn_list=None):
 
     basename_postfix = obsset.basename_postfix
 
-    wvl_header, wvl_data, convert_data = get_wvl_header_data(obsset)
+    wvl_header, wvl_data0, convert_data = get_wvl_header_data(obsset)
+
+    if (obsset.get_recipe_parameter("order_start"),
+        obsset.get_recipe_parameter("order_end")) != (-1, -1):
+        # If custom extraction orders are used, just drop WAT headers for simplicity.
+        # FIXME We should rewrite the WAT header instead of removing it.
+        wvl_header = remove_wat(wvl_header)
+
+    helper = ResourceHelper(obsset)
+    ap = helper.get("aperture")
+
+    wvl_data = _reorder_data_to_orders_to_extract(ap, wvl_data0)
 
     d = np.array(v_list)
     v_data = convert_data(d.astype("float32"))
@@ -362,7 +394,12 @@ def store_2dspec(obsset,
     d0_shft_list, msk_shft_list = _
 
     with np.errstate(invalid="ignore"):
-        d = np.array(d0_shft_list) / np.array(msk_shft_list)
+        d0 = np.array(d0_shft_list) / np.array(msk_shft_list)
+
+    helper = ResourceHelper(obsset)
+    ap = helper.get("aperture")
+
+    d = _reorder_data_to_orders_to_extract(ap, d0)
 
     hdul = obsset.get_hdul_to_write(([], convert_data(d.astype("float32"))))
     # wvl_header.update(hdul[0].header)
@@ -380,7 +417,9 @@ def store_2dspec(obsset,
     d0_shft_list, msk_shft_list = _
 
     with np.errstate(invalid="ignore"):
-        d = np.array(d0_shft_list) / np.array(msk_shft_list)
+        d0 = np.array(d0_shft_list) / np.array(msk_shft_list)
+
+    d = _reorder_data_to_orders_to_extract(ap, d0)
 
     hdul = obsset.get_hdul_to_write(([], convert_data(d.astype("float32"))))
     # wvl_header.update(hdul[0].header)
@@ -441,17 +480,21 @@ def extract_stellar_spec(obsset, extraction_mode="optimal",
     s_list, v_list, cr_mask, aux_images = _
 
     # calculate S/N per resolution
-    wvl_solutions = helper.get("wvl_solutions")
+    wvl_solutions0 = helper.get("wvl_solutions")
+    wvl_solutions = _reorder_data_to_orders_to_extract(ap, wvl_solutions0)
 
     sn_list = []
     for wvl, s, v in zip(wvl_solutions,
                          s_list, v_list):
 
-        if pixel_per_res_element is None:
-            dw = np.gradient(wvl)
-            _pixel_per_res_element = (wvl/40000.)/dw
+        if wvl is None:
+            _pixel_per_res_element = np.nan
         else:
-            _pixel_per_res_element = float(pixel_per_res_element)
+            if pixel_per_res_element is None:
+                dw = np.gradient(wvl)
+                _pixel_per_res_element = (wvl/40000.)/dw
+            else:
+                _pixel_per_res_element = float(pixel_per_res_element)
 
         # print pixel_per_res_element[1024]
         # len(pixel_per_res_element) = 2047. But we ignore it.
@@ -645,17 +688,22 @@ def extract_extended_spec(obsset,
 
     # calculate S/N per resolution
     helper = ResourceHelper(obsset)
-    wvl_solutions = helper.get("wvl_solutions")
+    ap = helper.get("aperture")
+    wvl_solutions0 = helper.get("wvl_solutions")
+    wvl_solutions = _reorder_data_to_orders_to_extract(ap, wvl_solutions0)
 
     sn_list = []
     for wvl, s, v in zip(wvl_solutions,
                          s_list, v_list):
 
-        if pixel_per_res_element is None:
-            dw = np.gradient(wvl)
-            _pixel_per_res_element = (wvl/40000.)/dw
+        if wvl is None:
+            _pixel_per_res_element = np.nan
         else:
-            _pixel_per_res_element = float(pixel_per_res_element)
+            if pixel_per_res_element is None:
+                dw = np.gradient(wvl)
+                _pixel_per_res_element = (wvl/40000.)/dw
+            else:
+                _pixel_per_res_element = float(pixel_per_res_element)
 
         # print pixel_per_res_element[1024]
         # len(pixel_per_res_element) = 2047. But we ignore it.
