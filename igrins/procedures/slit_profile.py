@@ -124,9 +124,7 @@ def estimate_slit_profile_1d(obsset,
                                           postfix=obsset.basename_postfix).data
     data_minus_flattened = data_minus / orderflat
 
-    from .aperture_helper import get_aperture_from_obsset
-    orders = helper.get("orders")
-    ap = get_aperture_from_obsset(obsset, orders=orders)
+    ap = helper.get_aperture(obsset)
 
     ordermap = helper.get("ordermap")
     ordermap_bpixed = helper.get("ordermap_bpixed")
@@ -145,7 +143,7 @@ def estimate_slit_profile_1d(obsset,
         profile_x, profile_y = _get_norm_profile(bins, hh0)
         # profile = get_profile_func(profile_x, profile_y)
 
-    slit_profile_dict = dict(orders=orders,
+    slit_profile_dict = dict(orders=ap.orders_to_extract,
                              ab_mode=do_ab,
                              slit_profile_list=slit_profile_list,
                              profile_x=profile_x,
