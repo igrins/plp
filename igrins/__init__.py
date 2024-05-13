@@ -76,7 +76,7 @@ def load_recipe_log(obsdate, config_file=None):
 def get_obsset(obsdate, band, recipe_name_or_entry,
                obsids=None, frametypes=None,
                groupname=None, recipe_entry=None,
-               config_file=None):
+               config_file=None, runner_config=None):
     if isinstance(recipe_name_or_entry, str):
         recipe_name = recipe_name_or_entry
     else:
@@ -92,7 +92,7 @@ def get_obsset(obsdate, band, recipe_name_or_entry,
     from .pipeline.driver import get_obsset as _get_obsset
     obsset = _get_obsset(obsdate, recipe_name, band, obsids, frametypes,
                          groupname, recipe_entry,
-                         config_file=config_file)
+                         config_file=config_file, runner_config=runner_config)
     return obsset
 
 
