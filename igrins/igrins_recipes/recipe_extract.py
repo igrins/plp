@@ -102,11 +102,13 @@ def estimate_slit_profile_extended(obsset,
     else:
         do_ab = True
 
+    frac_slit_list = _convert_frac_slit(frac_slit)
+
     estimate_slit_profile(obsset,
                           x1=800, x2=2048-800,
                           do_ab=do_ab,
                           slit_profile_mode="uniform",
-                          frac_slit=frac_slit)
+                          frac_slit_list=frac_slit_list)
 
 
 _steps_default = [
