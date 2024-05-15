@@ -8,6 +8,7 @@ from .igrins_libs.storage_descriptions import load_descriptions
 
 from .igrins_libs.logger import set_level as set_log_level
 
+from .resource_manager import ResourceStack
 
 DESCS = load_descriptions()
 
@@ -75,7 +76,7 @@ def load_recipe_log(obsdate, config_file=None):
 def get_obsset(obsdate, band, recipe_name_or_entry,
                obsids=None, frametypes=None,
                groupname=None, recipe_entry=None,
-               config_file=None):
+               config_file=None, runner_config=None):
     if isinstance(recipe_name_or_entry, str):
         recipe_name = recipe_name_or_entry
     else:
@@ -91,7 +92,7 @@ def get_obsset(obsdate, band, recipe_name_or_entry,
     from .pipeline.driver import get_obsset as _get_obsset
     obsset = _get_obsset(obsdate, recipe_name, band, obsids, frametypes,
                          groupname, recipe_entry,
-                         config_file=config_file)
+                         config_file=config_file, runner_config=runner_config)
     return obsset
 
 
@@ -104,7 +105,7 @@ class CalDB(object):
     This is a helper class to access the calibration files, but when no
     target obsid is necessary. Mostly for the test purpose.
     """
-    def __init__(self, obsdate, band, resource_manager):
+    def __init__(self, obsdate, band, resource_manager: ResourceStack):
         self.obsdate = obsdate
         self.band = band
         self.rm = resource_manager

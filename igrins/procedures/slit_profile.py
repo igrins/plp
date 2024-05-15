@@ -77,7 +77,7 @@ def extract_slit_profile(ap, ordermap_bpixed, slitpos_map,
 
 def make_slitprofile_map(ap, profile,
                          ordermap, slitpos_map,
-                         frac_slit=None):
+                         frac_slit_list=None):
 
     # helper = ResourceHelper(obsset)
 
@@ -91,11 +91,12 @@ def make_slitprofile_map(ap, profile,
                                       profile)
 
     # select portion of the slit to extract
-
-    if frac_slit is not None:
-        frac1, frac2 = min(frac_slit), max(frac_slit)
-        slitpos_msk = (slitpos_map < frac1) | (slitpos_map > frac2)
-        profile_map[slitpos_msk] = np.nan
+    if frac_slit_list:
+        slitpos_msk = np.zeros(slitpos_map.shape, dtype=bool)
+        for frac_slits in frac_slit_list:
+            frac1, frac2 = min(frac_slits), max(frac_slits)
+            slitpos_msk[(frac1 < slitpos_map) & (slitpos_map < frac2)] = True
+        profile_map[~slitpos_msk] = np.nan
 
     return profile_map
 
@@ -106,7 +107,7 @@ def make_slitprofile_map(ap, profile,
 
 def estimate_slit_profile_1d(obsset,
                              x1=800, x2=2048-800,
-                             do_ab=True, frac_slit=None):
+                             do_ab=True, frac_slit_list=None):
     """
     return a profile function
 
@@ -124,9 +125,7 @@ def estimate_slit_profile_1d(obsset,
                                           postfix=obsset.basename_postfix).data
     data_minus_flattened = data_minus / orderflat
 
-    from .aperture_helper import get_aperture_from_obsset
-    orders = helper.get("orders")
-    ap = get_aperture_from_obsset(obsset, orders=orders)
+    ap = helper.get_aperture(obsset)
 
     ordermap = helper.get("ordermap")
     ordermap_bpixed = helper.get("ordermap_bpixed")
@@ -145,7 +144,7 @@ def estimate_slit_profile_1d(obsset,
         profile_x, profile_y = _get_norm_profile(bins, hh0)
         # profile = get_profile_func(profile_x, profile_y)
 
-    slit_profile_dict = dict(orders=orders,
+    slit_profile_dict = dict(orders=ap.orders_to_extract,
                              ab_mode=do_ab,
                              slit_profile_list=slit_profile_list,
                              profile_x=profile_x,
@@ -157,7 +156,7 @@ def estimate_slit_profile_1d(obsset,
     profile = _get_profile_func_from_dict(slit_profile_dict)
     profile_map = make_slitprofile_map(ap, profile,
                                        ordermap, slitpos_map,
-                                       frac_slit=frac_slit)
+                                       frac_slit_list=frac_slit_list)
 
     hdul = obsset.get_hdul_to_write(([], profile_map))
     obsset.store("slitprofile_fits", hdul, cache_only=True)
@@ -201,7 +200,7 @@ def get_profile_func_extended(obsset, do_ab):
 
 
 def estimate_slit_profile_uniform(obsset,
-                                  do_ab=True, frac_slit=None):
+                                  do_ab=True, frac_slit_list=None):
 
     from ..igrins_libs.resource_helper_igrins import ResourceHelper
     helper = ResourceHelper(obsset)
@@ -214,7 +213,7 @@ def estimate_slit_profile_uniform(obsset,
     profile = get_profile_func_extended(obsset, do_ab=do_ab)
     profile_map = make_slitprofile_map(ap, profile,
                                        ordermap, slitpos_map,
-                                       frac_slit=frac_slit)
+                                       frac_slit_list=frac_slit_list)
 
     hdul = obsset.get_hdul_to_write(([], profile_map))
     obsset.store("slitprofile_fits", hdul, cache_only=True)

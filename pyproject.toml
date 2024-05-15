@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "igrins"
+version = "3.0.0"
+description = "IGRINS Pipeline Package"
+authors = ["Jae-Joon Lee <lee.j.joon@gmail.com>"]
+license = "BSD"
+readme = "README.md"
+packages = [{include = "igrins"}]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<=3.11"
+numpy = "^1.26.4"
+scipy = "^1.13.0"
+astropy = "^6.0.1"
+matplotlib = "^3.8.4"
+pandas = "^2.2.2"
+
+[tool.poetry.scripts]
+igr_pipe = "igrins.igr_pipe:main"
+make_dtlog = "igrins.make_dtlog:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

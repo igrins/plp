@@ -284,19 +284,27 @@ def get_pmatch_from_fnmatch(recipe_fnmatch,
 
 #     return r
 
+recipe_log_dtypes = [('OBJNAME', np.unicode_), ('OBJTYPE', np.unicode_),
+                     ('GROUP1', np.unicode_), ('GROUP2', np.unicode_),
+                     ('EXPTIME', 'f'), ('RECIPE', np.unicode_),
+                     ('OBSIDS', np.unicode_),  ('FRAMETYPES', np.unicode_)]
+
+
+def write_recipe_logs(fn):
+
+    write_to_file(df_recipe_logs, fn_out)
+
+    df = pd.read_csv(fn, skiprows=0, dtype=recipe_log_dtypes, comment="#",
+                     escapechar="\\", skipinitialspace=True,
+                     keep_default_na=False,
+                     encoding="utf-8")
+    d = df.to_records(index=False)
+
+
 
 def load_recipe_as_dict(fn):
 
-    # dtypes = [('OBJNAME', 'S128'), ('OBJTYPE', 'S128'),
-    #           ('GROUP1', 'S128'), ('GROUP2', 'S128'),
-    #           ('EXPTIME', 'f'), ('RECIPE', 'S128'),
-    #           ('OBSIDS', 'S1024'),  ('FRAMETYPES', 'S1024')]
-    dtypes = [('OBJNAME', np.unicode_), ('OBJTYPE', np.unicode_),
-              ('GROUP1', np.unicode_), ('GROUP2', np.unicode_),
-              ('EXPTIME', 'f'), ('RECIPE', np.unicode_),
-              ('OBSIDS', np.unicode_),  ('FRAMETYPES', np.unicode_)]
-
-    df = pd.read_csv(fn, skiprows=0, dtype=dtypes, comment="#",
+    df = pd.read_csv(fn, skiprows=0, dtype=recipe_log_dtypes, comment="#",
                      escapechar="\\", skipinitialspace=True,
                      keep_default_na=False,
                      encoding="utf-8")
@@ -395,7 +403,7 @@ class RecipeLogClass(pd.DataFrame):
         if bad_k:
             raise ValueError("keyname %s cannot be selected." % bad_k)
 
-        from collections import Iterable
+        from collections.abc import Iterable
 
         m_reversed = np.ones(len(self.index), dtype=bool)
 
@@ -474,6 +482,31 @@ class RecipeLogClass(pd.DataFrame):
         return self.select_pmatch_by_groups(p_match, groups=groups,
                                             ignore_recipe_name=ignore_recipe_name)
 
+    def write_to_file(self, fn_out, lower_colnames=False):
+
+        headers = ["OBJNAME", "OBJTYPE", "GROUP1", "GROUP2", "EXPTIME", "RECIPE", "OBSIDS", "FRAMETYPES"]
+        if lower_colnames:
+            colnames = [dict(OBJTYPE="obstype").get(h, h.lower()) for h in headers]
+        else:
+            colnames = headers
+        rows = [", ".join(headers) + "\n",
+                "# Avaiable recipes : FLAT, SKY, A0V_AB, A0V_ONOFF, "
+                "STELLAR_AB, STELLAR_ONOFF, EXTENDED_AB, EXTENDED_ONOFF\n"]
+
+        def _check(v):
+            if isinstance(v, list):
+                return " ".join(map(str, v))
+            else:
+                return str(v)
+
+        for i, row in self.iterrows():
+            row = ", ".join([_check(row[c]) for c in colnames]) + "\n"
+            rows.append(row)
+
+        open(fn_out, "w").writelines(rows)
+
+
+
 
 class RecipeLog(RecipeLogClass):
     def __init__(self, obsdate, fn, allow_duplicate_groups=False,
@@ -489,3 +522,4 @@ class RecipeLog(RecipeLogClass):
 
         self._substitute_group1()
         _check(self, allow_duplicate_groups)
+

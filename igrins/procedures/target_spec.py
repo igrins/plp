@@ -15,18 +15,19 @@ def _get_int_from_config(obsset, kind, default):
     return v
 
 
-def setup_extraction_parameters(obsset, order_range="-1,-1",
+def setup_extraction_parameters(obsset, order_range="",
                                 height_2dspec=0, correct_flexure=False, mask_cosmics=False):
 
-    _order_range_s = order_range
-    try:
-        order_start, order_end = map(int, _order_range_s.split(","))
-    except Exception:
-        msg = "Failed to parse order range: {}".format(_order_range_s)
-        raise ValueError(msg)
-
-    order_start = _get_int_from_config(obsset, "ORDER_START", order_start)
-    order_end = _get_int_from_config(obsset, "ORDER_END", order_end)
+    if order_range:
+        _order_range_s = order_range
+        try:
+            order_start, order_end = map(int, _order_range_s.split(","))
+        except Exception:
+            msg = "Failed to parse order range: {}".format(_order_range_s)
+            raise ValueError(msg)
+    else:
+        order_start = _get_int_from_config(obsset, "ORDER_START", -1)
+        order_end = _get_int_from_config(obsset, "ORDER_END", -1)
 
     height_2dspec = _get_int_from_config(obsset, "HEIGHT_2DSPEC",
                                          height_2dspec)
@@ -229,7 +230,7 @@ def estimate_slit_profile(obsset,
                           x1=800, x2=2048-800,
                           do_ab=True,
                           slit_profile_mode="1d",
-                          frac_slit=None):
+                          frac_slit_list=None):
 
     if type(frac_slit) is str: #Convert frac slit to list of floats if not already floats
         frac_slit = list(map(float, frac_slit.split(",")))
@@ -237,11 +238,11 @@ def estimate_slit_profile(obsset,
     if slit_profile_mode == "1d":
         from .slit_profile import estimate_slit_profile_1d
         estimate_slit_profile_1d(obsset, x1=x1, x2=x2, do_ab=do_ab,
-                                 frac_slit=frac_slit)
+                                 frac_slit_list=frac_slit_list)
     elif slit_profile_mode == "uniform":
         from .slit_profile import estimate_slit_profile_uniform
         estimate_slit_profile_uniform(obsset, do_ab=do_ab,
-                                      frac_slit=frac_slit)
+                                      frac_slit_list=frac_slit_list)
     else:
         msg = ("Unknwon mode ({}) in slit_profile estimation"
                .format(slit_profile_mode))
@@ -271,11 +272,42 @@ def get_wvl_header_data(obsset, wavelength_increasing_order=False):
     return header.copy(), hdu.data, convert_data
 
 
+def _reorder_data_to_orders_to_extract(ap, d0):
+    d_map = dict(zip(ap.orders, d0))
+    d0 = np.asarray(d0)
+    d = np.empty((len(ap.orders_to_extract),) + d0.shape[1:], dtype=d0.dtype)
+    d.fill(np.nan)
+
+    for i, o in enumerate(ap.orders_to_extract):
+        _d = d_map.get(o, None)
+        if _d is None:
+            continue
+        d[i] = _d
+
+    return d
+
+from astropy.io.fits.header import Header
+def remove_wat(header):
+    cards = [card for card in header.cards if not card.keyword.startswith("WAT")]
+    header = Header(cards)
+    return header
+
 def store_1dspec(obsset, v_list, s_list, sn_list=None):
 
     basename_postfix = obsset.basename_postfix
 
-    wvl_header, wvl_data, convert_data = get_wvl_header_data(obsset)
+    wvl_header, wvl_data0, convert_data = get_wvl_header_data(obsset)
+
+    if (obsset.get_recipe_parameter("order_start"),
+        obsset.get_recipe_parameter("order_end")) != (-1, -1):
+        # If custom extraction orders are used, just drop WAT headers for simplicity.
+        # FIXME We should rewrite the WAT header instead of removing it.
+        wvl_header = remove_wat(wvl_header)
+
+    helper = ResourceHelper(obsset)
+    ap = helper.get("aperture")
+
+    wvl_data = _reorder_data_to_orders_to_extract(ap, wvl_data0)
 
     d = np.array(v_list)
     v_data = convert_data(d.astype("float32"))
@@ -365,7 +397,12 @@ def store_2dspec(obsset,
     d0_shft_list, msk_shft_list = _
 
     with np.errstate(invalid="ignore"):
-        d = np.array(d0_shft_list) / np.array(msk_shft_list)
+        d0 = np.array(d0_shft_list) / np.array(msk_shft_list)
+
+    helper = ResourceHelper(obsset)
+    ap = helper.get("aperture")
+
+    d = _reorder_data_to_orders_to_extract(ap, d0)
 
     hdul = obsset.get_hdul_to_write(([], convert_data(d.astype("float32"))))
     # wvl_header.update(hdul[0].header)
@@ -383,7 +420,9 @@ def store_2dspec(obsset,
     d0_shft_list, msk_shft_list = _
 
     with np.errstate(invalid="ignore"):
-        d = np.array(d0_shft_list) / np.array(msk_shft_list)
+        d0 = np.array(d0_shft_list) / np.array(msk_shft_list)
+
+    d = _reorder_data_to_orders_to_extract(ap, d0)
 
     hdul = obsset.get_hdul_to_write(([], convert_data(d.astype("float32"))))
     # wvl_header.update(hdul[0].header)
@@ -444,17 +483,21 @@ def extract_stellar_spec(obsset, extraction_mode="optimal",
     s_list, v_list, cr_mask, aux_images = _
 
     # calculate S/N per resolution
-    wvl_solutions = helper.get("wvl_solutions")
+    wvl_solutions0 = helper.get("wvl_solutions")
+    wvl_solutions = _reorder_data_to_orders_to_extract(ap, wvl_solutions0)
 
     sn_list = []
     for wvl, s, v in zip(wvl_solutions,
                          s_list, v_list):
 
-        if pixel_per_res_element is None:
-            dw = np.gradient(wvl)
-            _pixel_per_res_element = (wvl/40000.)/dw
+        if wvl is None:
+            _pixel_per_res_element = np.nan
         else:
-            _pixel_per_res_element = float(pixel_per_res_element)
+            if pixel_per_res_element is None:
+                dw = np.gradient(wvl)
+                _pixel_per_res_element = (wvl/40000.)/dw
+            else:
+                _pixel_per_res_element = float(pixel_per_res_element)
 
         # print pixel_per_res_element[1024]
         # len(pixel_per_res_element) = 2047. But we ignore it.
@@ -648,17 +691,22 @@ def extract_extended_spec(obsset,
 
     # calculate S/N per resolution
     helper = ResourceHelper(obsset)
-    wvl_solutions = helper.get("wvl_solutions")
+    ap = helper.get("aperture")
+    wvl_solutions0 = helper.get("wvl_solutions")
+    wvl_solutions = _reorder_data_to_orders_to_extract(ap, wvl_solutions0)
 
     sn_list = []
     for wvl, s, v in zip(wvl_solutions,
                          s_list, v_list):
 
-        if pixel_per_res_element is None:
-            dw = np.gradient(wvl)
-            _pixel_per_res_element = (wvl/40000.)/dw
+        if wvl is None:
+            _pixel_per_res_element = np.nan
         else:
-            _pixel_per_res_element = float(pixel_per_res_element)
+            if pixel_per_res_element is None:
+                dw = np.gradient(wvl)
+                _pixel_per_res_element = (wvl/40000.)/dw
+            else:
+                _pixel_per_res_element = float(pixel_per_res_element)
 
         # print pixel_per_res_element[1024]
         # len(pixel_per_res_element) = 2047. But we ignore it.
@@ -1003,87 +1051,3 @@ def _estimate_slit_profile_gauss_2d(ap, ods, g_list0,
         return func_dict.get(order, oo)(x_pixel, slitpos)
 
     return profile
-
-
-def update_slit_profile(obsset, slit_profile_mode="gauss2d", frac_slit=None):
-
-    # now try to derive the n-gaussian profile
-    # print("updating profile using the multi gauss fit")
-    assert slit_profile_mode in ["gauss", "gauss2d"]
-
-    s_list = list(obsset.load_fits_sci_hdu("SPEC_FITS").data)
-
-    helper = ResourceHelper(obsset)
-
-    ap = helper.get("aperture")
-
-    data_minus = obsset.load_fits_sci_hdu("COMBINED_IMAGE1").data
-    orderflat = helper.get("orderflat")
-    data_minus_flattened = data_minus / orderflat
-
-    ordermap = helper.get("ordermap")
-    ordermap_bpixed = helper.get("ordermap_bpixed")
-    slitpos_map = helper.get("slitposmap")
-
-    ods = _derive_data_for_slit_profile(ap, data_minus_flattened,
-                                        s_list, ordermap=ordermap)
-
-    glist = _estimate_slit_profile_glist(ap, ods,
-                                         ordermap_bpixed, slitpos_map,
-                                         x1=800, x2=2048-800,
-                                         do_ab=True)
-
-    if slit_profile_mode == "gauss2d":
-        profile = _estimate_slit_profile_gauss_2d(ap, ods, glist,
-                                                  ordermap_bpixed, slitpos_map,
-                                                  x1=800, x2=2048-800,
-                                                  do_ab=True)
-    elif slit_profile_mode == "gauss":
-        def profile(order, x_pixel, slitpos):
-            return glist(slitpos)
-    else:
-        msg = "unexpected slit_profile_mode: %s" % slit_profile_mode
-        raise ValueError(msg)
-
-    # profile_map = extractor.make_profile_map(ap,
-    #                                          profile,
-    #                                          frac_slit=self.frac_slit)
-
-    from .slit_profile import make_slitprofile_map
-    profile_map = make_slitprofile_map(ap, profile,
-                                       ordermap, slitpos_map,
-                                       frac_slit=frac_slit)
-
-    hdul = obsset.get_hdul_to_write(([], profile_map))
-    obsset.store("slitprofile_fits", hdul, cache_only=True)
-
-
-# if 0:
-#                 # _ = self._extract_spec_using_profile(extractor,
-#                 #                                      ap, profile_map,
-#                 #                                      variance_map,
-#                 #                                      variance_map0,
-#                 #                                      data_minus_flattened,
-#                 #                                      ordermap,
-#                 #                                      slitpos_map,
-#                 #                                      slitoffset_map,
-#                 #                                      debug=False)
-
-#                 # s_list, v_list, cr_mask, aux_images = _
-
-
-#                 sig_map = aux_images["sig_map"]
-#                 synth_map = aux_images["synth_map"]
-#                 shifted = aux_images["shifted"]
-
-#                 if 0: # save aux files
-#                     synth_map = ap.make_synth_map(ordermap, slitpos_map,
-#                                                   profile_map, s_list,
-#                                                   slitoffset_map=slitoffset_map
-#                                                   )
-
-#                     shifted = extractor.get_shifted_all(ap, profile_map,
-#                                                         variance_map,
-#                                                         synth_map,
-#                                                         slitoffset_map,
-#                                                         debug=False)

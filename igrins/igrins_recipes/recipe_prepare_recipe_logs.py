@@ -6,6 +6,7 @@ import pandas as pd
 from ..igrins_libs import dt_logs
 
 from ..igrins_libs.logger import logger
+from ..igrins_libs.recipes import RecipeLogClass
 from ..external import argh
 
 
@@ -68,25 +69,10 @@ def make_recipe_logs(obsdate, l, populate_group1=False,
     if keep_original:
         headers.append("_rows")
 
-    df_recipe_logs = pd.DataFrame(recipe_logs,
-                                  columns=headers)
+    df_recipe_logs = RecipeLogClass(recipe_logs,
+                                    columns=headers)
 
     return df_recipe_logs
-
-
-def write_to_file(df_recipe_logs, fn_out):
-
-    from six import StringIO
-    fout = StringIO()
-
-    headers = df_recipe_logs.keys()
-    fout.write(", ".join(headers) + "\n")
-    fout.write("# Avaiable recipes : FLAT, SKY, A0V_AB, A0V_ONOFF, "
-               "STELLAR_AB, STELLAR_ONOFF, EXTENDED_AB, EXTENDED_ONOFF\n")
-
-    df_recipe_logs.to_csv(fout, index=False, header=False)
-
-    open(fn_out, "w").write(fout.getvalue())
 
 
 @argh.arg("-n", "--no-tmp-file", default=False)
@@ -128,7 +114,7 @@ def prepare_recipe_logs(obsdate, config_file="recipe.config",
         raise RuntimeError("output file exists and "
                            "overwrite is not set: {}".format(fn_out))
 
-    write_to_file(df_recipe_logs, fn_out)
+    df_recipe_logs.write_to_file(fn_out)
 
     # df_recipe_logs.to_html("test2.html")
 
@@ -249,7 +235,7 @@ def tabulated_recipe_logs(obsdate, config):
 
     recipes["exptime-fmt"] = recipes.apply(fmt_exptime, axis=1)
 
-    from ..external.tabulate import tabulate
+    from ..external import tabulate
     r = tabulate(recipes[["group1", "objname", "recipe",
                           "exptime-fmt", "obsid-fmt", "frame-fmt"]],
                  headers=["GID", "Obj. Name", "Recip",

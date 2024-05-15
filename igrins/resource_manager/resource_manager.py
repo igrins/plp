@@ -90,7 +90,10 @@ class ResourceStack(object):
 
         section, fn = self.get_section_n_fn(basename, item_desc, postfix)
 
-        d = self.context_stack.locate(section, fn, item_type=item_type)
+        try:
+            d = self.context_stack.locate(section, fn, item_type=item_type)
+        except FileNotFoundError:
+            d = None
         return d
 
     def load(self, basename, item_desc, item_type=None, postfix=""):

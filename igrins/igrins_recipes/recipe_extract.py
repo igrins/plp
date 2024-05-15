@@ -50,6 +50,29 @@ def _get_do_ab_from_recipe_name(obsset):
     return do_ab
 
 
+def _convert_frac_slit(s: str | None) -> list[tuple]:
+    frac_slit_list = []
+    if s is None:
+        return frac_slit_list
+
+    ss = s.split(",")
+    if len(ss) == 2 and all(":" not in s1 for s1 in ss):
+        frac_slit = (float(ss[0]), float(ss[1]))
+        frac_slit_list.append(frac_slit)
+    else:
+        for s1 in ss:
+            frac_slit = tuple(map(float, s1.split(":")))
+            frac_slit_list.append(frac_slit)
+
+    return frac_slit_list
+
+def test_convert_frac_slit():
+
+    assert _convert_frac_slit("0.1,0.9") == [(0.1, 0.9)]
+    assert _convert_frac_slit("0.1:0.9") == [(0.1, 0.9)]
+    assert _convert_frac_slit("0.1:0.3,0.5:0.8") == [(0.1, 0.3), (0.5, 0.8)]
+
+
 def estimate_slit_profile_stellar(obsset,
                                   x1=800, x2=2048-800,
                                   slit_profile_mode="1d",
@@ -61,13 +84,12 @@ def estimate_slit_profile_stellar(obsset,
     else:
         do_ab = True
 
-    if frac_slit is not None:
-        frac_slit = list(map(float, frac_slit.split(",")))
+    frac_slit_list = _convert_frac_slit(frac_slit)
 
     estimate_slit_profile(obsset,
-                          x1=800, x2=2048-800,
+                          x1=x1, x2=x2,
                           do_ab=do_ab, slit_profile_mode=slit_profile_mode,
-                          frac_slit=frac_slit)
+                          frac_slit_list=frac_slit_list)
 
 
 def estimate_slit_profile_extended(obsset,
@@ -80,18 +102,20 @@ def estimate_slit_profile_extended(obsset,
     else:
         do_ab = True
 
+    frac_slit_list = _convert_frac_slit(frac_slit)
+
     estimate_slit_profile(obsset,
                           x1=800, x2=2048-800,
                           do_ab=do_ab,
                           slit_profile_mode="uniform",
-                          frac_slit=frac_slit)
+                          frac_slit_list=frac_slit_list)
 
 
 _steps_default = [
     Step("Setup extraction parameters",
          setup_extraction_parameters,
          height_2dspec=0,
-         order_range="-1,-1",
+         order_range="",
          correct_flexure=False,
          mask_cosmics=False,
          ),
@@ -108,7 +132,7 @@ _steps_stellar = [
     Step("Estimate slit profile (stellar)",
          estimate_slit_profile_stellar,
          slit_profile_mode="1d",
-         frac_slit=None),
+         frac_slit=None), # frac_slit can be "0.3,0.9" or "0.1:0.4,0.6:0.9"
     # Step("Extract spectra (for extendeded)",
     #      extract_extended_spec),
     Step("Extract spectra (for stellar)",

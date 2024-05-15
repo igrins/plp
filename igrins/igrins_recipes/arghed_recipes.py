@@ -7,8 +7,13 @@ from . import get_pipeline_steps
 from .argh_helper import get_default_values
 from .argh_helper import merge_signature, _merge_signature
 
+from ..igrins_recipes.recipe_init_master_calib \
+    import (init_master_calib)
+
 from ..igrins_recipes.recipe_prepare_recipe_logs \
     import (prepare_recipe_logs, show_recipe_logs)
+
+from ..igrins_recipes.igr_link_calib import link_calib
 
 
 from ..quicklook.obsset_ql import (create_argh_command_quicklook,
@@ -30,8 +35,10 @@ def create_argh_command(command_name, recipe_name_fnmatch=None,
 
 
 def get_recipe_list():
-    recipe_list = [prepare_recipe_logs,
+    recipe_list = [init_master_calib,
+                   prepare_recipe_logs,
                    show_recipe_logs,
+                   link_calib,
                    create_argh_command("flat"),
                    create_argh_command("flexure-setup" , ["SKY"]),
                    create_argh_command("combine", ["A0V_*",
