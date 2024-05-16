@@ -91,8 +91,8 @@ def _get_combined_image(obsset):
     correct_flexure = obsset.get_recipe_parameter("correct_flexure")
     if correct_flexure == True:        
         exptime = get_exptime(obsset)
-        if exptime >= 20.0:
-            data_list = estimate_flexure(obsset, data_list, exptime) #Estimate flexure and apply correction
+        # if exptime >= 20.0:
+        data_list = estimate_flexure(obsset, data_list, exptime) #Estimate flexure and apply correction
         if len(data_list) > 1: #Testing detection
             check_telluric_shift(obsset, data_list)
 
@@ -199,9 +199,9 @@ def get_combined_images(obsset,
         b_data = _get_combined_image(obsset_b)
 
         exptime = get_exptime(obsset_a)
-        correct_flexure = obsset.get_recipe_parameter("correct_flexure")
-        if correct_flexure == True and exptime < 20.0: #Flexure correct short exposures
-           a_data, b_data = estimate_flexure_short_exposures(obsset, a_data, b_data, exptime)
+        # correct_flexure = obsset.get_recipe_parameter("correct_flexure")
+        # if correct_flexure == True and exptime < 20.0: #Flexure correct short exposures
+        #    a_data, b_data = estimate_flexure_short_exposures(obsset, a_data, b_data, exptime)
 
 
         data_minus = a_data - a_b * b_data
