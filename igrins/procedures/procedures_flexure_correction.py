@@ -52,7 +52,7 @@ def roll_along_axis(array_to_correct, correction, axis=0): #Apply flexure correc
     return corrected_array
 
 
-def cross_correlate(reference, data, zoom_amount=1000, maximum_pixel_search=10):
+def cross_correlate(reference, data, zoom_amount=1000, maximum_pixel_search=6):
 	masked_reference = copy.deepcopy(reference)
 	masked_data = copy.deepcopy(data)
 	mask = (reference == 0) | np.isnan(reference) | (data == 0) | np.isnan(data)
