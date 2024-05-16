@@ -80,7 +80,7 @@ def cross_correlate(reference, data, zoom_amount=1000, maximum_pixel_search=10):
 	find_shift_from_maximum_x = np.unravel_index(np.argmax(fft_sub_result_x), fft_sub_result_x.shape[0]) #Find pixels with strongest correlation
 	fft_dx_result = (find_shift_from_maximum_x[0] -  (fft_sub_result_x.shape[0]/2))/zoom_amount #Calcualte the offset from the pixels with the strongest correlation
 
-	if (fft_dx_result == fft_sub_result_x[0]) or (fft_dx_result == fft_sub_result_x[-1]): #If flexure measured has hit the minimum or maximum shift checked, something went wrong, throw an exception
+	if abs(fft_dx_result) == maximum_pixel_search/2: #If flexure measured has hit the minimum or maximum shift checked, something went wrong, throw an exception
 		raise Exception("Flexure correction failed to find a good cross correlation between sky frame and this exposure.  Check sky frame is good and and sky emission lines are visible in this exposure.")
 
 
