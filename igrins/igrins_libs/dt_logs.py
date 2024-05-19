@@ -67,7 +67,7 @@ def _load_data_pandas(fn):
 
     from six import StringIO
     import re
-    p = re.compile("PY_VAR\d+")
+    p = re.compile(r"PY_VAR\d+")
     ss = p.sub("NaN", open(fn).read())
     open("ttt.txt", "w").write(ss)
     s = StringIO(ss)
@@ -121,7 +121,7 @@ def get_unique_obsid(obsdate, l, bands="HK"):
         obsdate1, obsid = fn.split(".")[0].split("_")[-2:]
         return int(obsdate1), int(obsid)
 
-    obsdate_obsid_list = [parse_obsdate_obsid(l1[0])
+    obsdate_obsid_list = [parse_obsdate_obsid(l1.iloc[0])
                           for i, l1 in l.iterrows()]
 
     maxobsid = max(obsid for obsdate, obsid in obsdate_obsid_list
@@ -149,7 +149,7 @@ def get_obsid_map(obsdate, l, bands="HK"):
 
     for i, l1 in l.iterrows():
         try:
-            fn = l1[0]
+            fn = l1.iloc[0]
             obsdate1, obsid = fn.split(".")[0].split("_")[-2:]
 
             if int(obsdate1) != obsdate0:
