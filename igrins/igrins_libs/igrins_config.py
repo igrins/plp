@@ -33,7 +33,7 @@ class IGRINSConfig(object):
         self.config = ConfigParser.ConfigParser()
 
         fp = StringIO(default_config_content)
-        self.config.readfp(fp)
+        self.config.read_file(fp)
 
         read_file = self.config.read(config_file)
         if not read_file:
