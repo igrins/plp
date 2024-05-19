@@ -69,7 +69,6 @@ def _load_data_pandas(fn):
     import re
     p = re.compile(r"PY_VAR\d+")
     ss = p.sub("NaN", open(fn).read())
-    open("ttt.txt", "w").write(ss)
     s = StringIO(ss)
 
     df = pd.read_csv(s, skiprows=2, dtype=dtypes, comment="#",
