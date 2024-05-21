@@ -63,7 +63,7 @@ def _get_df(obsset):
 
 def _filter_points(df, drop=0.10):
     ss0 = df.groupby("pixels0")["offsets"]
-    ss0_std = ss0.transform(np.std)
+    ss0_std = ss0.transform("std")
 
     ss = ss0.std()
     vmin = np.percentile(ss, 100*drop)
