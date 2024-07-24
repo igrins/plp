@@ -13,11 +13,14 @@ numpy = "^1.26.4"
 scipy = "^1.13.0"
 astropy = "^6.0.1"
 matplotlib = "^3.8.4"
-pandas = "^2.2.2"
+pandas = "^2.2.0"
+astroscrappy = "^1.2.0"
+simplejson = "^3.19.2"
 
 [tool.poetry.scripts]
 igr_pipe = "igrins.igr_pipe:main"
 make_dtlog = "igrins.make_dtlog:main"
+mef_extract = "igrins.mef_extract:main"
 
 [build-system]
 requires = ["poetry-core"]
