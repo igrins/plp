@@ -213,6 +213,7 @@ def get_combined_images(obsset,
 
     return data_minus, data_plus
 
+from ..procedures.procedure_dark import get_per_amp_stat
 
 def get_variances(data_minus, data_plus, gain):
 
@@ -223,9 +224,12 @@ def get_variances(data_minus, data_plus, gain):
     2nd is the all variance.
 
     """
-    from igrins.procedures.procedure_dark import get_per_amp_stat
 
-    guards = data_minus[:, [0, 1, 2, 3, -4, -3, -2, -1]]
+    # guards = data_minus[:, [0, 1, 2, 3, -4, -3, -2, -1]]
+    guards = data_minus[:, [0, 1, 2, 3]]
+
+    # FIXME IGRINS2 reference pixels may have pattern
+    guards = destriper.get_destriped(guards, pattern=64, hori=False, remove_vertical=False)
 
     qq = get_per_amp_stat(guards)
 
@@ -296,6 +300,7 @@ def make_combined_images(obsset, allow_no_b_frame=False,
     _ = get_combined_images(obsset,
                             allow_no_b_frame=allow_no_b_frame)
     data_minus_raw, data_plus = _
+
     bias_mask = obsset.load_resource_for("bias_mask")
 
     if interactive:
@@ -317,6 +322,17 @@ def make_combined_images(obsset, allow_no_b_frame=False,
 
     dp = remove_pattern(data_plus, remove_level=1,
                         remove_amp_wise_var=False)
+
+    # FIXME This is a workaround for the reference pixel issue in IGRINS2.
+
+    obsdate, band = obsset.get_resource_spec()
+
+    if band == "H":
+        dp[4:-4, 4:-4] -= np.median(dp[:512, 4:16])
+    elif band == "K":
+        dp[4:-4, 4:-4] -= np.median(dp[1600:, -16:-4])
+    else:
+        raise ValueError()
 
 
     helper = ResourceHelper(obsset)

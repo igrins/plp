@@ -52,6 +52,7 @@ def make_guard_n_bg_subtracted_images(obsset, no_bias_mask=False):
     hdul = obsset.get_hdul_to_write(*hdu_list)
     obsset.store(DESCS["RO_PATTERN_SUB_CUBE_IMAGES"], hdul, cache_only=True)
 
+from astropy.stats import sigma_clipped_stats
 
 def get_per_amp_stat(cube, namp=32, threshold=100):
     r = {}
@@ -62,8 +63,11 @@ def get_per_amp_stat(cube, namp=32, threshold=100):
 
     r["count_gt_threshold"] = np.sum(msk_100, axis=1)
 
-    r["stddev_lt_threshold"] = [np.std(ds1[~msk1])
+    r["stddev_lt_threshold"] = [sigma_clipped_stats(ds1[~msk1], sigma=5)[-1]
                                 for ds1, msk1 in zip(ds, msk_100)]
+
+    # r["stddev_lt_threshold"] = [np.std(ds1[~msk1])
+    #                             for ds1, msk1 in zip(ds, msk_100)]
 
     return r
 
