@@ -25,20 +25,35 @@ from ..procedures.sky_spec import get_exptime
 from ..procedures.procedures_flexure_correction import estimate_flexure, estimate_flexure_short_exposures, check_telluric_shift
 
 import astroscrappy
-from scipy.ndimage import median_filter, binary_dilation
+from scipy.ndimage import median_filter, binary_dilation, binary_erosion
 
 from ..procedures.destriper import destriper
 
 
 
 
-def _get_combined_image(obsset):
+def _get_combined_image(obsset, no_b=False):
     # Should not use median, Use sum.
     import_data_list = [hdu.data for hdu in obsset.get_hdus()]
     data_list = [] #Put the data list in a form that can be modified (not read only)
 
     for import_data_list_frame in import_data_list:
-        data_list.append(np.array(import_data_list_frame.data))
+        data = np.array(import_data_list_frame.data)
+        if no_b == True:
+            mask = (data > np.nanpercentile(data, 90.0)) & (~np.isfinite(data))
+            mask = binary_erosion(mask, iterations=1)
+            masked_data = copy.deepcopy(data)
+            masked_data[mask] = np.nan
+            data = data - np.nanmedian(masked_data, 0) #Remove pattern
+            data = data - np.nanmedian(masked_data, 1)[:,np.newaxis]
+            masked_data = copy.deepcopy(data)         
+            masked_data[mask] = np.nan
+            data = data - median_filter(masked_data, [1,151])
+            data_list.append(data - median_filter(masked_data, [1,51]))
+
+        else:
+            data_list.append(data)
+        
 
 
 
@@ -186,7 +201,7 @@ def get_combined_images(obsset,
         raise RuntimeError("No B Frame images are found")
 
     if nb == 0:
-        a_data = _get_combined_image(obsset_a)
+        a_data = _get_combined_image(obsset_a, no_b=True)
         data_minus = a_data
 
     else:  # nb > 0
@@ -311,19 +326,31 @@ def make_combined_images(obsset, allow_no_b_frame=False,
         remove_level = params["remove_level"]
         remove_amp_wise_var = params["amp_wise"]
 
-    d2 = remove_pattern(data_minus_raw, mask=bias_mask,
-                        remove_level=remove_level,
-                        remove_amp_wise_var=remove_amp_wise_var)
-
-    dp = remove_pattern(data_plus, remove_level=1,
-                        remove_amp_wise_var=False)
 
 
-    helper = ResourceHelper(obsset)
-    destripe_mask = helper.get("destripe_mask")
-    # d2 = destriper.get_destriped(data_minus_raw, mask=destripe_mask, pattern=128, hori=True)
-    # dp = data_plus
-    d2 = destriper.get_destriped(d2, mask=destripe_mask, pattern=64, hori=True, remove_vertical=False)
+    obsset_a = obsset.get_subset("A", "ON")
+    obsset_b = obsset.get_subset("B", "OFF")
+    na, nb = len(obsset_a.obsids), len(obsset_b.obsids)
+
+    #breakpoint()
+    disable_pattern_removal = obsset.get_recipe_parameter("disable_pattern_removal") #Let user disable the pattern removal
+    if nb > 0 and disable_pattern_removal==False:
+        d2 = remove_pattern(data_minus_raw, mask=bias_mask,
+                            remove_level=remove_level,
+                            remove_amp_wise_var=remove_amp_wise_var)
+
+        dp = remove_pattern(data_plus, remove_level=1,
+                            remove_amp_wise_var=False)
+
+
+        helper = ResourceHelper(obsset)
+        destripe_mask = helper.get("destripe_mask")
+        # d2 = destriper.get_destriped(data_minus_raw, mask=destripe_mask, pattern=128, hori=True)
+        # dp = data_plus
+        d2 = destriper.get_destriped(d2, mask=destripe_mask, pattern=64, hori=True, remove_vertical=False)
+    else:
+        d2 = data_minus_raw
+        dp = data_plus
 
 
 

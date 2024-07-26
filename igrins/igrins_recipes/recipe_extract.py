@@ -94,6 +94,7 @@ _steps_default = [
          order_range="-1,-1",
          correct_flexure=False,
          mask_cosmics=False,
+         disable_pattern_removal=False,
          ),
     Step("Set basename-postfix", set_basename_postfix,
          basename_postfix=""),
