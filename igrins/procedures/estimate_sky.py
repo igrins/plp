@@ -56,7 +56,7 @@ def estimate_background(data, msk, di=24, min_pixel=10):
             xc = i0 + sl_x.start + xc_sl
             yc = sl_y.start + yc_sl
 
-            v = np.median(bar_sl[msk_sl])
+            v = np.nanmedian(bar_sl[msk_sl])
             e = (bar_sl[msk_sl] - v)**2
             sky_points.append((xc, yc, v, e.sum()**.5))
 

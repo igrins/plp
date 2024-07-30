@@ -349,8 +349,40 @@ def make_combined_images(obsset, allow_no_b_frame=False,
         # dp = data_plus
         d2 = destriper.get_destriped(d2, mask=destripe_mask, pattern=64, hori=True, remove_vertical=False)
     else:
-        d2 = data_minus_raw
-        dp = data_plus
+        #d2 = data_minus_raw
+        #dp = data_plus
+
+
+
+
+
+
+        from ..procedures.estimate_sky import (estimate_background,
+                                   get_interpolated_cubic)
+
+
+
+
+        d2 = remove_pattern(data_minus_raw, remove_level=1,
+                            remove_amp_wise_var=False)
+        dp = remove_pattern(data_plus, remove_level=1,
+                            remove_amp_wise_var=False)
+
+        #Estimate and remove sky background
+        helper = ResourceHelper(obsset)
+        sky_mask = helper.get("sky_mask")
+
+        di = 24
+        min_pixel = 40
+        xc, yc, v, std = estimate_background(d2, sky_mask,
+                                             di=di, min_pixel=min_pixel)
+        
+        nx = ny = 2048
+        ZI3 = get_interpolated_cubic(nx, ny, xc, yc, v)
+        ZI3 = np.nan_to_num(ZI3)
+
+        # d2 -= ZI3
+        # dp -= ZI3
 
 
 
