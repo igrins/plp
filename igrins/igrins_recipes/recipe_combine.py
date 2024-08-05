@@ -280,10 +280,41 @@ def run_interactive(obsset,
 
     return params
 
+import scipy.ndimage as NI
+from scipy.interpolate import LSQUnivariateSpline
+
+def _remove_vertical_pattern(d2, bias_mask, hotpix):
+
+    mask = NI.binary_dilation(bias_mask, iterations=2)
+
+    k = np.ma.array(d2, mask=mask|hotpix).filled(np.nan)
+
+    x = np.arange(2048)
+    t = np.arange(128, 2048 - 128, 256)
+
+    z = np.zeros((2048, 2048), dtype=float)
+
+    for i in range(4, 2048-4):
+        y = k[:, i]
+        m = np.isfinite(y)
+        m[[0, 1, 2, 3, -4, -3, -2, -1]] = False
+
+        s = NI.median_filter(y[m], 15)
+        q = 4*np.median(np.abs(y[m] - s))
+
+        m[m] = (y[m] - s) < q
+
+        spl = LSQUnivariateSpline(x[m], y[m], t,
+                                  bbox=[0, 2047],
+                                  k=3, ext=0, check_finite=False)
+        z[:, i] = spl(x)
+
+    return d2 - z
 
 def make_combined_images(obsset, allow_no_b_frame=False,
                          remove_level=2,
                          remove_amp_wise_var=False,
+                         remove_vertical_pattern=False,
                          interactive=False,
                          cache_only=False):
 
@@ -298,6 +329,9 @@ def make_combined_images(obsset, allow_no_b_frame=False,
     data_minus_raw, data_plus = _
     bias_mask = obsset.load_resource_for("bias_mask")
 
+    d_hotpix = obsset.load_resource_for("hotpix_mask")
+    hotpix = d_hotpix > 0
+
     if interactive:
         params = run_interactive(obsset,
                                  data_minus_raw, data_plus, bias_mask,
@@ -311,9 +345,15 @@ def make_combined_images(obsset, allow_no_b_frame=False,
         remove_level = params["remove_level"]
         remove_amp_wise_var = params["amp_wise"]
 
-    d2 = remove_pattern(data_minus_raw, mask=bias_mask,
-                        remove_level=remove_level,
-                        remove_amp_wise_var=remove_amp_wise_var)
+    d2_ = remove_pattern(data_minus_raw, mask=bias_mask,
+                         remove_level=remove_level,
+                         remove_amp_wise_var=remove_amp_wise_var)
+
+    if remove_vertical_pattern:
+        print("removing vertical pattern")
+        d2 = _remove_vertical_pattern(d2_, bias_mask, hotpix)
+    else:
+        d2 = d2_
 
     dp = remove_pattern(data_plus, remove_level=1,
                         remove_amp_wise_var=False)

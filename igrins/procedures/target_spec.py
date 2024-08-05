@@ -185,6 +185,7 @@ from ..igrins_recipes.recipe_combine import (make_combined_images
 def make_combined_images(obsset,
                          allow_no_b_frame=False,
                          force_image_combine=False,
+                         remove_vertical_pattern=False,
                          pattern_remove_level="auto"):
 
     try:
@@ -200,6 +201,7 @@ def make_combined_images(obsset,
 
     _make_combined_images(obsset, allow_no_b_frame=allow_no_b_frame,
                           cache_only=True,
+                          remove_vertical_pattern=remove_vertical_pattern,
                           remove_level=pattern_remove_level)
 
 
