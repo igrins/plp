@@ -169,7 +169,8 @@ def estimate_flexure(obsset, data, exptime):
 
 	# if exptime >= 20.0: #Load mask to isolate sky lines , for long exposures estimate flexure for each frame seperately
 	master_cal_dir = obsset.rs.master_ref_loader.config.master_cal_dir
-	mask = (fits.getdata(master_cal_dir+'/'+band+'-band_sky_mask.fits') == 1.0)
+	#mask = (fits.getdata(master_cal_dir+'/'+band+'-band_sky_mask.fits') == 1.0)
+	mask = (fits.getdata(master_cal_dir+'/'+band+'-band_sky_mask_igrins2.fits') == 1.0)
 	refframe[~mask] = np.nan
 	#for dataframe in data:
 	for i in range(len(data)):
@@ -220,7 +221,8 @@ def estimate_flexure_short_exposures(obsset, data_a, data_b, exptime):
 	date, band = get_date_and_band(obsset) #Grab date and band we are working in
 	refframe = copy.deepcopy(obsset.load_resource_for("flexcorr")[0].data)
 	master_cal_dir = obsset.rs.master_ref_loader.config.master_cal_dir
-	mask = (fits.getdata(master_cal_dir+'/'+band+'-band_limited_sky_mask.fits') == 1.0)  #(note we use a more conservative mask for short exposures)
+	#mask = (fits.getdata(master_cal_dir+'/'+band+'-band_limited_sky_mask.fits') == 1.0)  #(note we use a more conservative mask for short exposures)
+	mask = (fits.getdata(master_cal_dir+'/'+band+'-band_limited_sky_mask_igrins2.fits') == 1.0)  #(note we use a more conservative mask for short exposures)
 	refframe[~mask] = np.nan
 	combined_data = data_a + data_b - np.abs(data_a - data_b)
 	cleaned_combined_data = isolate_sky_lines(combined_data / (exptime * len(obsset.get_obsids()))) #Apply median filters to isolate sky lines from other signal and normalize by exposure time

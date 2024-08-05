@@ -232,8 +232,8 @@ def estimate_slit_profile(obsset,
                           slit_profile_mode="1d",
                           frac_slit_list=None):
 
-    if type(frac_slit) is str: #Convert frac slit to list of floats if not already floats
-        frac_slit = list(map(float, frac_slit.split(",")))
+    if type(frac_slit_list) is str: #Convert frac slit to list of floats if not already floats
+        frac_slit_list = list(map(float, frac_slit_list.split(",")))
 
     if slit_profile_mode == "1d":
         from .slit_profile import estimate_slit_profile_1d
