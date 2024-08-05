@@ -190,6 +190,9 @@ _resource_definitions = dict(
     #
     wvlsol=("wvlsol", "SKY_WVLSOL_JSON"),
     wvlsol_fits=("wvlsol", "SKY_WVLSOL_FITS"),
+    #
+    flexcorr=("register", "FLEXCORR_FITS"),
+
 )
 
 
