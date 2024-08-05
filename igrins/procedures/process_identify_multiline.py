@@ -37,12 +37,12 @@ def identify_lines_from_spec(orders, spec_data, wvlsol,
     return fitted_pixels
 
 
-def identify_multiline(obsset):
+def identify_multiline(obsset, initial_wvlsol="_v0"):
 
     multi_spec = obsset.load("multi_spec_fits")
 
     # just to retrieve order information
-    wvlsol_v0 = obsset.load_resource_for("wvlsol_v0")
+    wvlsol_v0 = obsset.load_resource_for(f"wvlsol{initial_wvlsol}")
     orders = wvlsol_v0["orders"]
     wvlsol = wvlsol_v0["wvl_sol"]
 

@@ -32,24 +32,42 @@ def make_combined_image_sky(obsset, bg_subtraction_mode="flat"):
 
 
 def update_distortion_db(obsset):
-
     obsset.add_to_db("distortion")
 
 
 def update_wvlsol_db(obsset):
-
     obsset.add_to_db("wvlsol")
 
 
+def identify_multiline_from_v0(obsset):
+    identify_multiline(obsset, initial_wvlsol="_v0")
+
+
+# for H-band of IGRINS2, the initial wavelength solution (from IGRINS1) is
+# not good enough. We reidentify the lines again from the updated wavelength solution.
+
+def identify_multiline_from_v1(obsset):
+    _, band = obsset.get_resource_spec()
+    if band == "H":
+        identify_multiline(obsset, initial_wvlsol="")
+
+
+def rederive_wvlsol(obsset):
+    _, band = obsset.get_resource_spec()
+    if band == "H":
+        derive_wvlsol(obsset)
+
 steps = [Step("Make Combined Sky", make_combined_image_sky),
          Step("Extract spectra-multi", extract_spectra_multi),
-         Step("Identify lines in multi-slit", identify_multiline),
+         Step("Identify lines in multi-slit", identify_multiline_from_v0),
+         Step("Derive wvlsol", derive_wvlsol),
+         Step("Update wvlsol db", update_wvlsol_db),
+         Step("Re-identify lines in multi-slit", identify_multiline_from_v1),
+         Step("Re-derive wvlsol", rederive_wvlsol),
          Step("Derive Distortion Solution", volume_fit),
          Step("Make Ordermap/Slitposmap", make_ordermap_slitposmap),
          Step("Make Slitoffset map", make_slitoffsetmap),
          Step("Update distortion db", update_distortion_db),
-         Step("Derive wvlsol", derive_wvlsol),
-         Step("Update wvlsol db", update_wvlsol_db),
          Step("Make wvlmap", make_wavelength_map),
          Step("Save WAT header", save_wat_header),
 ]
