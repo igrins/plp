@@ -351,7 +351,14 @@ def make_combined_images(obsset, allow_no_b_frame=False,
 
     if remove_vertical_pattern:
         print("removing vertical pattern")
-        d2 = _remove_vertical_pattern(d2_, bias_mask, hotpix)
+        ordermask = obsset.load_resource_for("ordermap")[0].data > 0
+        # This is to remove the region for optical ghost in H
+        _, band = obsset.get_resource_spec()
+        # FIXME this is a workaround for IG2 Hㅁ band
+        if band == "H":
+            ordermask[40:112+40, 1925:] |= ordermask[:112, 1925:]
+
+        d2 = _remove_vertical_pattern(d2_, ordermask, hotpix)
     else:
         d2 = d2_
 
