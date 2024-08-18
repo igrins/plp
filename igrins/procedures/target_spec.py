@@ -450,6 +450,9 @@ def extract_stellar_spec(obsset, extraction_mode="optimal",
     orderflat = helper.get("orderflat")
     data_minus_flattened = data_minus / orderflat
 
+    data_minus_flattened[[0, 1, 2, 3, -4, -3, -2, -1]] = np.nan
+    data_minus_flattened[:, [0, 1, 2, 3, -4, -3, -2, -1]] = np.nan
+
     variance_map = obsset.load_fits_sci_hdu("combined_variance1",
                                             postfix=postfix).data
     variance_map0 = obsset.load_fits_sci_hdu("combined_variance0",
@@ -685,6 +688,9 @@ def extract_extended_spec(obsset,
                                                 postfix=postfix).data
         variance_map0 = obsset.load_fits_sci_hdu("combined_variance0",
                                                  postfix=postfix).data
+
+    data[[0, 1, 2, 3, -4, -3, -2, -1]] = np.nan
+    data[:, [0, 1, 2, 3, -4, -3, -2, -1]] = np.nan
 
     _ = extract_extended_spec1(obsset, data,
                                variance_map, variance_map0)
