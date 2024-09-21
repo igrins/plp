@@ -1,6 +1,7 @@
 import numpy as np
 
-from ..pipeline.steps import Step
+from ..pipeline.steps import Step, ArghFactoryWithShort
+
 # from ..pipeline.steps import Step, ArghFactoryWithShort
 
 # from ..procedures.sky_spec import make_combined_image_sky
@@ -21,7 +22,7 @@ def set_basename_postfix(obsset, basename_postfix):
 def get_a0v_thresh_masks(a0v, threshold_a0v):
     # thresh_masks = []
 
-    thresh_masks = np.ones(a0v.spec.shape, dtype="b")
+    thresh_masks = np.ones(a0v.spec.shape, dtype=bool)
 
     for t, t2, m in zip(a0v.spec,
                         a0v.flattened,
@@ -64,11 +65,13 @@ def get_interpolated_vega_spec(obsset, um):
 
 #     return tgt_spec_cor, thresh_masks, aa
 
+from ..procedures.order_mismatch_cor import get_order_match_corr
 
 def _make_spec_a0v_hdu_list(obsset, wvl, spec, variance, a0v_spec, a0v_variance, vega,
                             a0v_fitted_continuum,
                             thresh_masks,
-                            header_updates=None):
+                            header_updates=None,
+                            force_order_match=True):
 
     primary_header_cards = [("EXTNAME", "SPEC_DIVIDE_A0V")]
     if header_updates is not None:
@@ -76,9 +79,23 @@ def _make_spec_a0v_hdu_list(obsset, wvl, spec, variance, a0v_spec, a0v_variance,
 
     spec_divided_by_a0v_variance = vega**2 * (spec/a0v_spec)**2 * ( (variance/(spec**2)) + (a0v_variance/(a0v_spec**2)) ) #Compute variance for spec/a0v * vega using error propogation
     spec_divided_by_cont_variance = (a0v_spec / a0v_fitted_continuum)**2 * spec_divided_by_a0v_variance #Scale to get the variance for spec /flattened a0v  * vega
-    
+
+
+    if force_order_match:
+        from ..igrins_libs.resource_helper_igrins import ResourceHelper
+        helper = ResourceHelper(obsset)
+        orders = helper.get("orders")
+
+        _variance = (spec/a0v_spec)**2 * ( (variance/(spec**2)) + (a0v_variance/(a0v_spec**2)) ) #Compute variance for spec/a0v * vega using error propogation
+
+        mask, corr = get_order_match_corr(orders, wvl,
+                                          spec / a0v_spec, _variance)
+        thresh_masks[mask] = True
+    else:
+        corr = 1
+
     _hdul = [
-        (primary_header_cards, spec/a0v_spec*vega),
+        (primary_header_cards, spec/a0v_spec*vega/corr),
         ([("EXTNAME", "SPEC_DIVIDE_A0V_VARIANCE")], spec_divided_by_a0v_variance),
         ([("EXTNAME", "WAVELENGTH")], wvl),
         ([("EXTNAME", "TGT_SPEC")], spec),
@@ -91,6 +108,9 @@ def _make_spec_a0v_hdu_list(obsset, wvl, spec, variance, a0v_spec, a0v_variance,
         ([("EXTNAME", "MASK")], thresh_masks.astype("i"))
     ]
 
+    if force_order_match:
+        _hdul.append(([("EXTNAME", "ORDER_MATCH_COR")], corr))
+
     # _hdul[0].verify(option="fix")
 
     hdul = obsset.get_hdul_to_write(*_hdul, convention="gemini")
@@ -98,30 +118,32 @@ def _make_spec_a0v_hdu_list(obsset, wvl, spec, variance, a0v_spec, a0v_variance,
 
     return hdul
 
-
-def divide_a0v(obsset,
-               a0v='GROUP2',
-               a0v_obsid=None,
-               basename_postfix=None,
-               # outname_postfix=None,
-               #a0v_basename_postfix="",
-               threshold_a0v=0.1):
-
-    tgt = OnedSpecHelper(obsset, basename_postfix=basename_postfix)
+def get_a0v(obsset, a0v="GROUP2", a0v_obsid=None,
+            basename_postfix=None):
 
     a0v_obsid = get_a0v_obsid(obsset, a0v, a0v_obsid)
     if a0v_obsid is None:
         a0v_obsid_ = obsset.query_resource_basename("a0v")
         a0v_obsid = obsset.rs.parse_basename(a0v_obsid_)
 
-    a0v_obsset = type(obsset)(obsset.rs, "A0V_AB", [a0v_obsid], ["A"], basename_postfix=basename_postfix)
-                              #basename_postfix=a0v_basename_postfix)
+    a0v_obsset = type(obsset)(obsset.rs, "A0V_AB", [a0v_obsid], ["A"],
+                              basename_postfix=basename_postfix)
 
     a0v = OnedSpecHelper(a0v_obsset, basename_postfix=basename_postfix)
-                            #basename_postfix=a0v_basename_postfix)
 
-    # tgt_spec_cor, thresh_masks, aa = get_tgt_spec_cor(obsset, tgt, a0v,
-    #                                                   threshold_a0v)
+    return a0v
+
+def get_divide_a0v_hdul(obsset,
+                        a0v='GROUP2',
+                        a0v_obsid=None,
+                        basename_postfix=None,
+                        # outname_postfix=None,
+                        #a0v_basename_postfix="",
+                        no_order_match=False,
+                        threshold_a0v=0.1):
+
+    tgt = OnedSpecHelper(obsset, basename_postfix=basename_postfix)
+    a0v = get_a0v(obsset, a0v, a0v_obsid, basename_postfix)
 
     vega_spec = get_interpolated_vega_spec(obsset, tgt.um)
 
@@ -138,6 +160,7 @@ def divide_a0v(obsset,
                                    a0v.spec, a0v.variance, vega_spec,
                                    a0v_fitted_continuum,
                                    thresh_masks,
+                                   force_order_match=not no_order_match,
                                    header_updates=None)
 
     #Pass headers from .spec.fits and .variance.fits files to the various extensions, and make sure the OBSIDs are passed
@@ -146,6 +169,24 @@ def divide_a0v(obsset,
     hdul["A0V_SPEC"].header.update(a0v._spec_hdu_list[0].header)
     hdul["A0V_SPEC"].header["OBSID"] = a0v_obsid
 
+    return hdul
+
+
+def divide_a0v(obsset,
+               a0v='GROUP2',
+               a0v_obsid=None,
+               basename_postfix=None,
+               # outname_postfix=None,
+               #a0v_basename_postfix="",
+               no_order_match=False,
+               threshold_a0v=0.1):
+
+    hdul = get_divide_a0v_hdul(obsset,
+                               a0v=a0v,
+                               a0v_obsid=a0v_obsid,
+                               basename_postfix=basename_postfix,
+                               no_order_match=no_order_match,
+                               threshold_a0v=threshold_a0v)
 
     obsset.store("SPEC_A0V_FITS", hdul, postfix=basename_postfix)
 
@@ -153,5 +194,7 @@ def divide_a0v(obsset,
 steps = [
         #Step("Set basename-postfix", set_basename_postfix,
         # basename_postfix=""),
-        Step("Divide w/ A0V", divide_a0v, basename_postfix="")
+        Step("Divide w/ A0V", divide_a0v,
+             basename_postfix="",
+             no_order_match=ArghFactoryWithShort(False)),
         ]
