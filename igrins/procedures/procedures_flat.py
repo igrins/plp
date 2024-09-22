@@ -148,6 +148,13 @@ def obsset_combine_flat_off(obsset, flat_off_pattern_removal="guard",
 
     hdul = obsset_off.get_hdus()
 
+    # apply nonlineary correction
+    from .nonlinearity import get_nonlinearity_corrector
+    corrector = get_nonlinearity_corrector(obsset)
+
+    hdul = [type(hdu)(data=corrector(hdu.data), header=hdu.header)
+            for hdu in hdul]
+
     band = get_band(obsset)
 
     _rp_remove_mode, bg_y_slice = get_params(band)
@@ -280,7 +287,11 @@ def combine_flat_on(obsset, flat_on_pattern_removal="guard"):
 
     obsset_on = obsset.get_subset("ON")
 
-    data_list = [hdu.data for hdu in obsset_on.get_hdus()]
+    # apply nonlineary correction
+    from .nonlinearity import get_nonlinearity_corrector
+    corrector = get_nonlinearity_corrector(obsset)
+
+    data_list = [corrector(hdu.data) for hdu in obsset_on.get_hdus()]
 
     # data_list1 = [dh.sub_p64_from_guard(d) for d in data_list]
 

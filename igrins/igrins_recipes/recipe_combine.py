@@ -86,6 +86,11 @@ def _get_combined_image(obsset):
                 data_list[i][4:-4, 4:-4][masked_pixels_unlikely_to_be_cosmics] = cleaned_data_list[i][masked_pixels_unlikely_to_be_cosmics] #Fill in bad pixels
 
 
+    # correct nonlinearity
+    from ..procedures.nonlinearity import get_nonlinearity_corrector
+    corrector = get_nonlinearity_corrector(obsset)
+
+    data_list = [corrector(d) for d in data_list]
 
 
     correct_flexure = obsset.get_recipe_parameter("correct_flexure")
@@ -371,8 +376,6 @@ def make_combined_images(obsset, allow_no_b_frame=False,
     # d2 = destriper.get_destriped(data_minus_raw, mask=destripe_mask, pattern=128, hori=True)
     # dp = data_plus
     d2 = destriper.get_destriped(d2, mask=destripe_mask, pattern=64, hori=True, remove_vertical=False)
-
-
 
     gain = float(obsset.rs.query_ref_value("GAIN"))
 
