@@ -83,7 +83,7 @@ def fit_wvlsol(df, xdeg=4, ydeg=3):
     # return p, fit_results
 
 
-def derive_wvlsol(obsset):
+def derive_wvlsol(obsset, xdeg=4, ydeg=3):
 
     d = obsset.load("SKY_FITTED_PIXELS_JSON")
     df = pd.DataFrame(**d)
@@ -91,7 +91,7 @@ def derive_wvlsol(obsset):
     msk = df["slit_center"] == 0.5
     dfm = df[msk]
 
-    p, fit_results = fit_wvlsol(dfm)
+    p, fit_results = fit_wvlsol(dfm, xdeg=xdeg, ydeg=ydeg)
 
     from ..igrins_libs.resource_helper_igrins import ResourceHelper
     helper = ResourceHelper(obsset)

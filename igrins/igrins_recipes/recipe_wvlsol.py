@@ -55,7 +55,7 @@ def identify_multiline_from_v1(obsset):
 def rederive_wvlsol(obsset):
     _, band = obsset.get_resource_spec()
     if band == "H":
-        derive_wvlsol(obsset)
+        derive_wvlsol(obsset, xdeg=4, ydeg=4)
 
 steps = [Step("Make Combined Sky", make_combined_image_sky),
          Step("Extract spectra-multi", extract_spectra_multi),
