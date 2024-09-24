@@ -11,8 +11,8 @@ def badpixel_mask(d,
     import scipy.ndimage as ni
 
     if d_std2 is None:
-        d_std = d.std()
-        d_std2 = d[np.abs(d) < d_std * 3].std()
+        d_std = np.nanstd(d)
+        d_std2 = np.nanstd(d[np.abs(d) < d_std * 3])
 
     msk1_ = d > d_std2 * sigma_clip1
 
