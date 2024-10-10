@@ -87,7 +87,7 @@ def _get_combined_image(obsset, no_b=False):
             for i in range(n_frames):
                 data_without_overscan = data_list[i][4:-4, 4:-4] #Cut overscan
                 if band == 'H':
-                    cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.05, readnoise=10.92*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='fpatt') # Build the object for H-band
+                    cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.05, readnoise=10.92*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for H-band
                 else: #if band == 'K'
                     cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.21, readnoise=8.93*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for K-band            
                 dilated_cr_mask = binary_dilation(cr_mask, iterations=1)
