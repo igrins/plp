@@ -71,7 +71,7 @@ def cross_correlate(reference, data, zoom_amount=1000, maximum_pixel_search=10):
 	fft_sub_result_x = fft_result_x[x1:x2]
 
 	#Mask out large trends
-	n = len(fft_sub_result_x)
+	n = len(fft_sub_result_x) 
 	fit_x_array = np.arange(n)
 	fft_sub_result_mask = (fit_x_array < n*0.25) | (fit_x_array > n*0.75)
 	pfit = Polynomial.fit(fit_x_array[fft_sub_result_mask], fft_sub_result_x[fft_sub_result_mask], 2)
@@ -170,6 +170,7 @@ def estimate_flexure(obsset, data, exptime):
 	# if exptime >= 20.0: #Load mask to isolate sky lines , for long exposures estimate flexure for each frame seperately
 	master_cal_dir = obsset.rs.master_ref_loader.config.master_cal_dir
 	mask = (fits.getdata(master_cal_dir+'/'+band+'-band_sky_mask.fits') == 1.0)
+	#mask = (fits.getdata(master_cal_dir+'/'+band+'-band_sky_mask_igrins2.fits') == 1.0)
 	refframe[~mask] = np.nan
 	#for dataframe in data:
 	for i in range(len(data)):
@@ -221,6 +222,7 @@ def estimate_flexure_short_exposures(obsset, data_a, data_b, exptime):
 	refframe = copy.deepcopy(obsset.load_resource_for("flexcorr")[0].data)
 	master_cal_dir = obsset.rs.master_ref_loader.config.master_cal_dir
 	mask = (fits.getdata(master_cal_dir+'/'+band+'-band_limited_sky_mask.fits') == 1.0)  #(note we use a more conservative mask for short exposures)
+	#mask = (fits.getdata(master_cal_dir+'/'+band+'-band_limited_sky_mask_igrins2.fits') == 1.0)  #(note we use a more conservative mask for short exposures)
 	refframe[~mask] = np.nan
 	combined_data = data_a + data_b - np.abs(data_a - data_b)
 	cleaned_combined_data = isolate_sky_lines(combined_data / (exptime * len(obsset.get_obsids()))) #Apply median filters to isolate sky lines from other signal and normalize by exposure time

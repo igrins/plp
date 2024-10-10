@@ -40,7 +40,15 @@ def get_recipe_list():
                    create_argh_command("combine-sky", ["SKY", "SKY_AB"]),
                    create_argh_command("register-dry", ["FLAT"]),
                    create_argh_command("register-sky", ["SKY", "SKY_AB"]),
+
+                   create_argh_command("register-thar", ["THAR"]),
+
+
                    create_argh_command("wvlsol-sky", ["SKY", "SKY_AB"]),
+
+                   create_argh_command("wvlsol-thar", ["THAR"]),
+
+
                    create_argh_command("wvlsol-dry", ["FLAT"]),
                    create_argh_command("extract-sky", ["SKY", "SKY_AB"]),
                    create_argh_command("extract-arc", ["ARC_*"]),

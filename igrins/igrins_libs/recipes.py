@@ -291,10 +291,10 @@ def load_recipe_as_dict(fn):
     #           ('GROUP1', 'S128'), ('GROUP2', 'S128'),
     #           ('EXPTIME', 'f'), ('RECIPE', 'S128'),
     #           ('OBSIDS', 'S1024'),  ('FRAMETYPES', 'S1024')]
-    dtypes = [('OBJNAME', np.unicode_), ('OBJTYPE', np.unicode_),
-              ('GROUP1', np.unicode_), ('GROUP2', np.unicode_),
-              ('EXPTIME', 'f'), ('RECIPE', np.unicode_),
-              ('OBSIDS', np.unicode_),  ('FRAMETYPES', np.unicode_)]
+    dtypes = [('OBJNAME', np.str_), ('OBJTYPE', np.str_),
+              ('GROUP1', np.str_), ('GROUP2', np.str_),
+              ('EXPTIME', 'f'), ('RECIPE', np.str_),
+              ('OBSIDS', np.str_),  ('FRAMETYPES', np.str_)]
 
     df = pd.read_csv(fn, skiprows=0, dtype=dtypes, comment="#",
                      escapechar="\\", skipinitialspace=True,

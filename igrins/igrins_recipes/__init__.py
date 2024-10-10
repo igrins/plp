@@ -1,7 +1,10 @@
 import importlib
 
 translation_map = {"wvlsol-sky": "wvlsol",
-                   "register-sky": "register"}
+                   "register-sky": "register",
+                   "register-thar": "register",
+                   "wvlsol-thar": "wvlsol",
+                   }
 
 def get_pipeline_steps(recipe_name,
                        parent_module_name="igrins.igrins_recipes"):
