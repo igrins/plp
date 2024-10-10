@@ -39,20 +39,21 @@ def _get_combined_image(obsset, no_b=False):
 
     for import_data_list_frame in import_data_list:
         data = np.array(import_data_list_frame.data)
-        if no_b == True:
-            mask = (data > np.nanpercentile(data, 90.0)) & (~np.isfinite(data))
-            mask = binary_erosion(mask, iterations=1)
-            masked_data = copy.deepcopy(data)
-            masked_data[mask] = np.nan
-            data = data - np.nanmedian(masked_data, 0) #Remove pattern
-            data = data - np.nanmedian(masked_data, 1)[:,np.newaxis]
-            masked_data = copy.deepcopy(data)         
-            masked_data[mask] = np.nan
-            data = data - median_filter(masked_data, [1,151])
-            data_list.append(data - median_filter(masked_data, [1,51]))
+        # if no_b == True:
+        #     mask = (data > np.nanpercentile(data, 90.0)) & (~np.isfinite(data))
+        #     mask = binary_erosion(mask, iterations=1)
+        #     masked_data = copy.deepcopy(data)
+        #     masked_data[mask] = np.nan
+        #     data = data - np.nanmedian(masked_data, 0) #Remove pattern
+        #     data = data - np.nanmedian(masked_data, 1)[:,np.newaxis]
+        #     masked_data = copy.deepcopy(data)         
+        #     masked_data[mask] = np.nan
+        #     data = data - median_filter(masked_data, [1,151])
+        #     data_list.append(data - median_filter(masked_data, [1,51]))
 
-        else:
-            data_list.append(data)
+        # else:
+        #     data_list.append(data)
+        data_list.append(data)
         
 
 
@@ -86,7 +87,7 @@ def _get_combined_image(obsset, no_b=False):
             for i in range(n_frames):
                 data_without_overscan = data_list[i][4:-4, 4:-4] #Cut overscan
                 if band == 'H':
-                    cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.05, readnoise=10.92*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for H-band
+                    cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.05, readnoise=10.92*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='fpatt') # Build the object for H-band
                 else: #if band == 'K'
                     cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.21, readnoise=8.93*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for K-band            
                 dilated_cr_mask = binary_dilation(cr_mask, iterations=1)
@@ -223,8 +224,10 @@ def get_combined_images(obsset,
 
     if nb == 0:
         data_plus = a_data
+        # print('UH OH THIS IS WRONG!')
     else:
         data_plus = (a_data + (a_b**2)*b_data)
+        # print('THIS LOOKS RIGHT BUT CHECKING A_B JUST IN CASE ', a_b)
 
     return data_minus, data_plus
 
@@ -246,6 +249,7 @@ def get_variances(data_minus, data_plus, gain):
 
     s = np.array(qq["stddev_lt_threshold"]) ** 2
     variance_per_amp = np.repeat(s, 64*2048).reshape((-1, 2048))
+    # breakpoint()
 
     variance = variance_per_amp + np.abs(data_plus)/gain
 
@@ -332,7 +336,7 @@ def make_combined_images(obsset, allow_no_b_frame=False,
     obsset_b = obsset.get_subset("B", "OFF")
     na, nb = len(obsset_a.obsids), len(obsset_b.obsids)
 
-    #breakpoint()
+
     disable_pattern_removal = obsset.get_recipe_parameter("disable_pattern_removal") #Let user disable the pattern removal
     if nb > 0 and disable_pattern_removal==False:
         d2 = remove_pattern(data_minus_raw, mask=bias_mask,
@@ -349,44 +353,15 @@ def make_combined_images(obsset, allow_no_b_frame=False,
         # dp = data_plus
         d2 = destriper.get_destriped(d2, mask=destripe_mask, pattern=64, hori=True, remove_vertical=False)
     else:
-        #d2 = data_minus_raw
-        #dp = data_plus
 
-
-
-
-
-
-        from ..procedures.estimate_sky import (estimate_background,
-                                   get_interpolated_cubic)
-
-
-
-
-        d2 = remove_pattern(data_minus_raw, remove_level=1,
-                            remove_amp_wise_var=False)
         dp = remove_pattern(data_plus, remove_level=1,
                             remove_amp_wise_var=False)
-
-        #Estimate and remove sky background
-        helper = ResourceHelper(obsset)
-        sky_mask = helper.get("sky_mask")
-
-        di = 24
-        min_pixel = 40
-        xc, yc, v, std = estimate_background(d2, sky_mask,
-                                             di=di, min_pixel=min_pixel)
-        
-        nx = ny = 2048
-        ZI3 = get_interpolated_cubic(nx, ny, xc, yc, v)
-        ZI3 = np.nan_to_num(ZI3)
-
-        # d2 -= ZI3
-        # dp -= ZI3
-
-
+        d2 = data_minus_raw
+        # dp = data_plus
+        # d2 = data_plus
 
     gain = float(obsset.rs.query_ref_value("GAIN"))
+
 
     variance_map0, variance_map = get_variances(d2, dp, gain)
 
