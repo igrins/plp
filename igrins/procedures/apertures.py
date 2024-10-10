@@ -29,7 +29,7 @@ class Apertures(object):
         if (end_order is None) or (end_order < 0):
             end_order = self.orders[-1]
 
-        self.orders_to_extract = range(start_order, end_order+1)
+        self.orders_to_extract = list(range(start_order, end_order+1))
 
     def __init__(self, orders, bottomup_solutions,
                  basename="", order_minmax_to_extract=(-1, -1)):
@@ -176,6 +176,9 @@ class Apertures(object):
         return s_list
 
     def extract_spectra_from_ordermap(self, data, order_map):
+        # FIXME please check is orders_to_extract is propertly respected and
+        # then remove the raise statement
+        raise RuntimeError("This method is not tested.")
         slices = ni.find_objects(order_map)
         s_list = []
         for o in self.orders_to_extract:
@@ -239,6 +242,15 @@ class Apertures(object):
         slices = ni.find_objects(ordermap)
 
         for o in self.orders_to_extract:
+            if o > len(slices) or slices[o-1] is None:
+                s = np.empty(2048, dtype=float)
+                v = np.empty(2048, dtype=float)
+                s.fill(np.nan)
+                v.fill(np.nan)
+                s_list.append(s)
+                v_list.append(v)
+                continue
+
             sl = slices[o-1][0], slice(0, 2048)
             msk = (ordermap[sl] == o)
 
@@ -284,6 +296,15 @@ class Apertures(object):
         #     hl.append(pyfits.PrimaryHDU())
 
         for o in self.orders_to_extract:
+            if o > len(slices) or slices[o-1] is None:
+                s = np.empty(2048, dtype=float)
+                v = np.empty(2048, dtype=float)
+                s.fill(np.nan)
+                v.fill(np.nan)
+                s_list.append(s)
+                v_list.append(v)
+                continue
+
             sl = slices[o-1][0], slice(0, 2048)
             msk = (ordermap_bpixed[sl] == o) & msk1[sl]
 
@@ -627,7 +648,9 @@ class Apertures(object):
         xx = np.arange(2048)
 
         slices = ni.find_objects(order_map)
-        for o, s in zip(self.orders, s_list):
+        for o, s in zip(self.orders_to_extract, s_list):
+            if o > len(slices) or slices[o-1] is None:
+                continue
             sl = slices[o-1][0], slice(0, 2048)
             msk = (order_map[sl] == o)
 
