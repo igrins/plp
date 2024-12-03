@@ -140,6 +140,7 @@ _steps_stellar = [
          extract_stellar_spec,
          extraction_mode="optimal",
          pixel_per_res_element=None,
+         no_flat=False,
          ),
     Step("Generate Rectified 2d-spec", store_2dspec),
 ]
