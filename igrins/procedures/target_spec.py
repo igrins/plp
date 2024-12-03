@@ -394,7 +394,8 @@ def store_2dspec(obsset,
 
 def extract_stellar_spec(obsset, extraction_mode="optimal",
                          conserve_2d_flux=True,
-                         pixel_per_res_element=None):
+                         pixel_per_res_element=None,
+                         no_flat=False):
 
     # refactored from recipe_extract.ProcessABBABand.process
 
@@ -406,8 +407,13 @@ def extract_stellar_spec(obsset, extraction_mode="optimal",
     data_minus = obsset.load_fits_sci_hdu("COMBINED_IMAGE1",
                                           postfix=postfix).data
 
-    orderflat = helper.get("orderflat")
-    data_minus_flattened = data_minus / orderflat
+    if not no_flat:
+        orderflat = helper.get("orderflat")
+        data_minus_flattened = data_minus / orderflat
+    else:
+        print("#### NO FLAT")
+        orderflat = np.ones_like(data_minus)
+        data_minus_flattened = data_minus
 
     variance_map = obsset.load_fits_sci_hdu("combined_variance1",
                                             postfix=postfix).data
