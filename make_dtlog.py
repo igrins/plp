@@ -56,6 +56,8 @@ def write_dtlog(utdate, datadir: Path):
                         frmtype = "ON"
                     elif (hd0["GCALLAMP"] == "IRhigh") & (hd0["GCALSHUT"] == "CLOSED"):
                         frmtype = "OFF"
+                    elif (hd0["GCALLAMP"] == "IRhigh") & (hd0["GCALSHUT"] == "OPEN"):
+                        frmtype = "ON"
                     else:
                         raise RuntimeError("Check 'GCALLAMP' and 'GCALSHUT' keywords.")
                 else:
