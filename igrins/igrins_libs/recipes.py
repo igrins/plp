@@ -490,7 +490,7 @@ class RecipeLogClass(pd.DataFrame):
         else:
             colnames = headers
         rows = [", ".join(headers) + "\n",
-                "# Avaiable recipes : FLAT, SKY, A0V_AB, A0V_ONOFF, "
+                "# Available recipes : FLAT, SKY, A0V_AB, A0V_ONOFF, "
                 "STELLAR_AB, STELLAR_ONOFF, EXTENDED_AB, EXTENDED_ONOFF\n"]
 
         def _check(v):
