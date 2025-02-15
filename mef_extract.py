@@ -24,6 +24,7 @@ def match_flats(path_outdir):
             flat_H_files.append(all_H_files[i]) #Found H-band flats
     n_k_flats = len(flat_K_files)
     n_h_flats = len(flat_H_files)
+    breakpoint()
     if n_k_flats == n_h_flats:
         lowest_obsnum_h = int(flat_H_files[0]._str[-9:-5])
         lowest_obsnum_k = int(flat_K_files[0]._str[-9:-5])
@@ -33,7 +34,7 @@ def match_flats(path_outdir):
                 flat_K_files[i].replace(destination) #Move file
                 file_to_delete = Path(flat_K_files[i]._str.replace('SDCK', 'SDCH')) #Delete extra unneeded flat files
                 file_to_delete.unlink() #Delete file
-        else: #Else if K band flats have the lowst obsnum, move H band flats to match them
+        else: #Else if K band flats have the lowest obsnum, move H band flats to match them
             for i in range(n_k_flats):
                 destination = Path(flat_K_files[i]._str.replace('SDCK', 'SDCH')) #Get filename from K band flat, but change name to H band
                 flat_H_files[i].replace(destination) #Move file        

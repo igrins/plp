@@ -294,9 +294,9 @@ def remove_wat(header):
     header = Header(cards)
     return header
 
-def store_1dspec(obsset, v_list, s_list, sn_list=None):
+def store_1dspec(obsset, v_list, s_list, postfix='', sn_list=None):
 
-    basename_postfix = obsset.basename_postfix
+    basename_postfix = obsset.basename_postfix + postfix
 
     wvl_header, wvl_data0, convert_data = get_wvl_header_data(obsset)
 
@@ -670,7 +670,8 @@ def extract_extended_spec1(obsset, data,
 
 
 def extract_extended_spec(obsset,
-                          pixel_per_res_element=None):
+                          pixel_per_res_element=None, \
+                          add_sum_postfix=False):
 
     # refactored from recipe_extract.ProcessABBABand.process
 
@@ -722,14 +723,17 @@ def extract_extended_spec(obsset,
 
         sn_list.append(sn)
 
-    store_1dspec(obsset, v_list, s_list, sn_list=sn_list)
+    if add_sum_postfix: #If saving additional sum extraction, add '_sum' to fits file name
+        postfix='.sum'
+    else:
+        postfix=''
+    store_1dspec(obsset, v_list, s_list, postfix=postfix, sn_list=sn_list)
 
     shifted = aux_images["shifted"]
 
     _hdul = shifted.to_hdul()
     hdul = obsset.get_hdul_to_write(*_hdul)
     obsset.store("WVLCOR_IMAGE", hdul, postfix=obsset.basename_postfix)
-
     # store_2dspec(obsset,
     #              shifted.image,
     #              shifted.variance_map,
