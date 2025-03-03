@@ -73,7 +73,8 @@ def _make_spec_a0v_hdu_list(obsset, wvl, spec, variance, a0v_spec, a0v_variance,
                             header_updates=None,
                             force_order_match=True):
 
-    primary_header_cards = [("EXTNAME", "SPEC_DIVIDE_A0V")]
+    #primary_header_cards = [("EXTNAME", "SPEC_DIVIDE_A0V")]
+    primary_header_cards = [("EXTNAME", "SCI"), ("EXTVER", 1), ("EXTDESC", "SPEC_DIVIDE_A0V")]
     if header_updates is not None:
         primary_header_cards.extend(header_updates)
 
@@ -96,20 +97,31 @@ def _make_spec_a0v_hdu_list(obsset, wvl, spec, variance, a0v_spec, a0v_variance,
 
     _hdul = [
         (primary_header_cards, spec/a0v_spec*vega/corr),
-        ([("EXTNAME", "SPEC_DIVIDE_A0V_VARIANCE")], spec_divided_by_a0v_variance),
-        ([("EXTNAME", "WAVELENGTH")], wvl),
-        ([("EXTNAME", "TGT_SPEC")], spec),
-        ([("EXTNAME", "TGT_SPEC_VARIANCE")], variance),
-        ([("EXTNAME", "A0V_SPEC")], a0v_spec),
-        ([("EXTNAME", "A0V_SPEC_VARIANCE")], a0v_variance),
-        ([("EXTNAME", "VEGA_SPEC")], vega),
-        ([("EXTNAME", "SPEC_DIVIDE_CONT")], spec/a0v_fitted_continuum*vega),
-        ([("EXTNAME", "SPEC_DIVIDE_CONT_VARIANCE")], spec_divided_by_cont_variance),
-        ([("EXTNAME", "MASK")], thresh_masks.astype("i"))
+        # ([("EXTNAME", "SPEC_DIVIDE_A0V_VARIANCE")], spec_divided_by_a0v_variance),
+        # ([("EXTNAME", "WAVELENGTH")], wvl),
+        # ([("EXTNAME", "TGT_SPEC")], spec),
+        # ([("EXTNAME", "TGT_SPEC_VARIANCE")], variance),
+        # ([("EXTNAME", "A0V_SPEC")], a0v_spec),
+        # ([("EXTNAME", "A0V_SPEC_VARIANCE")], a0v_variance),
+        # ([("EXTNAME", "VEGA_SPEC")], vega),
+        # ([("EXTNAME", "SPEC_DIVIDE_CONT")], spec/a0v_fitted_continuum*vega),
+        # ([("EXTNAME", "SPEC_DIVIDE_CONT_VARIANCE")], spec_divided_by_cont_variance),
+        # ([("EXTNAME", "MASK")], thresh_masks.astype("i"))
+        ([("EXTNAME", "VAR"), ("EXTVER", 1), ("EXTDESC", "SPEC_DIVIDE_A0V_VARIANCE")], spec_divided_by_a0v_variance),
+        ([("EXTNAME", "SCI"), ("EXTVER", 2), ("EXTDESC", "WAVELENGTH")], wvl),
+        ([("EXTNAME", "SCI"), ("EXTVER", 3), ("EXTDESC", "TGT_SPEC")], spec),
+        ([("EXTNAME", "VAR"), ("EXTVER", 3), ("EXTDESC", "TGT_SPEC_VARIANCE")], variance),
+        ([("EXTNAME", "SCI"), ("EXTVER", 4), ("EXTDESC", "A0V_SPEC")], a0v_spec),
+        ([("EXTNAME", "VAR"), ("EXTVER", 4), ("EXTDESC", "A0V_SPEC_VARIANCE")], a0v_variance),
+        ([("EXTNAME", "SCI"), ("EXTVER", 5), ("EXTDESC", "VEGA_SPEC")], vega),
+        ([("EXTNAME", "SCI"), ("EXTVER", 6), ("EXTDESC", "SPEC_DIVIDE_CONT")], spec/a0v_fitted_continuum*vega),
+        ([("EXTNAME", "VAR"), ("EXTVER", 6), ("EXTDESC", "SPEC_DIVIDE_CONT_VARIANCE")], spec_divided_by_cont_variance),
+        ([("EXTNAME", "DQ"), ("EXTVER", 1), ("EXTDESC", "MASK")], thresh_masks.astype("i"))
     ]
 
     if force_order_match:
-        _hdul.append(([("EXTNAME", "ORDER_MATCH_COR")], corr))
+        #_hdul.append(([("EXTNAME", "ORDER_MATCH_COR")], corr))
+        _hdul.append(([("EXTNAME", "SCI"), ("EXTVER", 7), ("EXTDESC", "ORDER_MATCH_COR")], corr))
 
     # _hdul[0].verify(option="fix")
 
@@ -145,6 +157,7 @@ def get_divide_a0v_hdul(obsset,
     tgt = OnedSpecHelper(obsset, basename_postfix=basename_postfix)
     a0v = get_a0v(obsset, a0v, a0v_obsid, basename_postfix)
 
+
     vega_spec = get_interpolated_vega_spec(obsset, tgt.um)
 
     a0v_fitted_continuum = a0v.flattened_hdu_list["FITTED_CONTINUUM"].data
@@ -163,11 +176,20 @@ def get_divide_a0v_hdul(obsset,
                                    force_order_match=not no_order_match,
                                    header_updates=None)
 
+
+
+    if a0v_obsid == None: #Error catch, fill in a0v_obsid if it is None so that it properly saves in 
+        a0v_obsid = a0v.obsset.obsids[0]
+
     #Pass headers from .spec.fits and .variance.fits files to the various extensions, and make sure the OBSIDs are passed
-    hdul["TGT_SPEC"].header.update(tgt._spec_hdu_list[0].header)
-    hdul["TGT_SPEC"].header["OBSID"] = str(obsset.obsids[0])
-    hdul["A0V_SPEC"].header.update(a0v._spec_hdu_list[0].header)
-    hdul["A0V_SPEC"].header["OBSID"] = a0v_obsid
+    #hdul["TGT_SPEC"].header.update(tgt._spec_hdu_list[0].header)
+    #hdul["TGT_SPEC"].header["OBSID"] = str(obsset.obsids[0])
+    #hdul["A0V_SPEC"].header.update(a0v._spec_hdu_list[0].header)
+    #hdul["A0V_SPEC"].header["OBSID"] = a0v_obsid
+    hdul[4].header.update(tgt._spec_hdu_list[0].header)
+    hdul[4].header["OBSID"] = str(obsset.obsids[0])
+    hdul[6].header.update(a0v._spec_hdu_list[0].header)
+    hdul[6].header["OBSID"] = a0v_obsid
 
     return hdul
 
