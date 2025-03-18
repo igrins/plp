@@ -97,7 +97,7 @@ def _make_spec_a0v_hdu_list(obsset, wvl, spec, variance, a0v_spec, a0v_variance,
 
     _hdul = [
         (primary_header_cards, spec/a0v_spec*vega/corr),
-        # ([("EXTNAME", "SPEC_DIVIDE_A0V_VARIANCE")], spec_divided_by_a0v_variance),
+        # ([("EXTNAME", "SPEC_DIVIDE_A0V_VARIANCE")], spec_divided_by_a0v_variance), #Old EXTNAME
         # ([("EXTNAME", "WAVELENGTH")], wvl),
         # ([("EXTNAME", "TGT_SPEC")], spec),
         # ([("EXTNAME", "TGT_SPEC_VARIANCE")], variance),
@@ -107,7 +107,7 @@ def _make_spec_a0v_hdu_list(obsset, wvl, spec, variance, a0v_spec, a0v_variance,
         # ([("EXTNAME", "SPEC_DIVIDE_CONT")], spec/a0v_fitted_continuum*vega),
         # ([("EXTNAME", "SPEC_DIVIDE_CONT_VARIANCE")], spec_divided_by_cont_variance),
         # ([("EXTNAME", "MASK")], thresh_masks.astype("i"))
-        ([("EXTNAME", "VAR"), ("EXTVER", 1), ("EXTDESC", "SPEC_DIVIDE_A0V_VARIANCE")], spec_divided_by_a0v_variance),
+        ([("EXTNAME", "VAR"), ("EXTVER", 1), ("EXTDESC", "SPEC_DIVIDE_A0V_VARIANCE")], spec_divided_by_a0v_variance), #Changes made to EXTNAME for extenstion headers in spec_a0v.fits files for ingestion into Gemini Archive, moved old keyword value to new keyword EXTDESC
         ([("EXTNAME", "SCI"), ("EXTVER", 2), ("EXTDESC", "WAVELENGTH")], wvl),
         ([("EXTNAME", "SCI"), ("EXTVER", 3), ("EXTDESC", "TGT_SPEC")], spec),
         ([("EXTNAME", "VAR"), ("EXTVER", 3), ("EXTDESC", "TGT_SPEC_VARIANCE")], variance),
@@ -118,6 +118,8 @@ def _make_spec_a0v_hdu_list(obsset, wvl, spec, variance, a0v_spec, a0v_variance,
         ([("EXTNAME", "VAR"), ("EXTVER", 6), ("EXTDESC", "SPEC_DIVIDE_CONT_VARIANCE")], spec_divided_by_cont_variance),
         ([("EXTNAME", "DQ"), ("EXTVER", 1), ("EXTDESC", "MASK")], thresh_masks.astype("i"))
     ]
+
+
 
     if force_order_match:
         #_hdul.append(([("EXTNAME", "ORDER_MATCH_COR")], corr))
@@ -190,6 +192,12 @@ def get_divide_a0v_hdul(obsset,
     hdul[4].header["OBSID"] = str(obsset.obsids[0])
     hdul[6].header.update(a0v._spec_hdu_list[0].header)
     hdul[6].header["OBSID"] = a0v_obsid
+
+    #Delete keywords from headers carried over from the primary headers of single fits files that are not fits standard for an extension in a multi-extension fits file
+    del hdul[4].header['SIMPLE']
+    del hdul[4].header['EXTEND']
+    del hdul[6].header['SIMPLE']
+    del hdul[6].header['EXTEND']
 
     return hdul
 
