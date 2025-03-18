@@ -3,6 +3,9 @@ import scipy.ndimage as ni
 
 from ..utils.image_combine import image_median
 from ..igrins_libs.resource_helper_igrins import ResourceHelper
+from ..igrins_libs.igrins_config import IGRINSConfig
+
+config = IGRINSConfig("recipe.config")
 
 
 def _get_int_from_config(obsset, kind, default):
@@ -16,7 +19,8 @@ def _get_int_from_config(obsset, kind, default):
 
 
 def setup_extraction_parameters(obsset, order_range="",
-                                height_2dspec=0, correct_flexure=False, mask_cosmics=False):
+                                height_2dspec=0, correct_flexure=False, mask_cosmics=False,
+                                user='Default', version='Default'):
 
     if order_range:
         _order_range_s = order_range
@@ -35,7 +39,8 @@ def setup_extraction_parameters(obsset, order_range="",
     obsset.set_recipe_parameters(order_start=order_start,
                                  order_end=order_end,
                                  height_2dspec=height_2dspec,
-                                 correct_flexure=correct_flexure, mask_cosmics=mask_cosmics)
+                                 correct_flexure=correct_flexure, mask_cosmics=mask_cosmics,
+                                 user=user, version=version)
 
 
 def _get_combined_image(obsset):
@@ -298,6 +303,9 @@ def store_1dspec(obsset, v_list, s_list, postfix='', sn_list=None):
 
     basename_postfix = obsset.basename_postfix + postfix
 
+    user = obsset.get_recipe_parameter('user') #Get user and pipeline version for putting into fits headers later
+    version = obsset.get_recipe_parameter('version')
+
     wvl_header, wvl_data0, convert_data = get_wvl_header_data(obsset)
 
     if (obsset.get_recipe_parameter("order_start"),
@@ -318,6 +326,8 @@ def store_1dspec(obsset, v_list, s_list, postfix='', sn_list=None):
     wvl_header.update(hdul[0].header)
     hdul[0].header = wvl_header
     hdul[0].verify(option="silentfix")
+    hdul[0].header['USER'] = (user, 'User who ran data reduction')
+    hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
 
     obsset.store("VARIANCE_FITS", hdul,
                  postfix=basename_postfix)
@@ -340,15 +350,22 @@ def store_1dspec(obsset, v_list, s_list, postfix='', sn_list=None):
     wvl_header.update(hdul[0].header)
     hdul[0].header = wvl_header
     hdul[0].verify(option="silentfix")
+    hdul[0].header['USER'] = (user, 'User who ran data reduction')
+    hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
 
     obsset.store("SPEC_FITS", hdul,
                  postfix=basename_postfix)
+    #breakpoint()
 
 
 def store_2dspec(obsset,
                  conserve_flux=True):
 
     basename_postfix = obsset.basename_postfix
+
+
+    user = obsset.get_recipe_parameter('user') #Get user and pipeline version for putting into fits headers later
+    version = obsset.get_recipe_parameter('version')
 
     height_2dspec = obsset.get_recipe_parameter("height_2dspec")
 
@@ -409,6 +426,8 @@ def store_2dspec(obsset,
     hdul = obsset.get_hdul_to_write(([], convert_data(d.astype("float32"))))
     # wvl_header.update(hdul[0].header)
     hdul[0].header = wvl_header
+    hdul[0].header['USER'] = (user, 'User who ran data reduction')
+    hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
 
     obsset.store("SPEC2D_FITS", hdul, postfix=basename_postfix)
 
@@ -429,6 +448,8 @@ def store_2dspec(obsset,
     hdul = obsset.get_hdul_to_write(([], convert_data(d.astype("float32"))))
     # wvl_header.update(hdul[0].header)
     hdul[0].header = wvl_header
+    hdul[0].header['USER'] = (user, 'User who ran data reduction')
+    hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
 
     obsset.store("VAR2D_FITS", hdul, postfix=basename_postfix)
 
@@ -438,6 +459,8 @@ def extract_stellar_spec(obsset, extraction_mode="optimal",
                          pixel_per_res_element=None):
 
     # refactored from recipe_extract.ProcessABBABand.process
+    user = obsset.get_recipe_parameter('user') #Get user and pipeline version for putting into fits headers later
+    version = obsset.get_recipe_parameter('version')
 
     helper = ResourceHelper(obsset)
 
@@ -516,12 +539,17 @@ def extract_stellar_spec(obsset, extraction_mode="optimal",
 
     hdul = obsset.get_hdul_to_write(([], data_minus),
                                     ([], aux_images["synth_map"]))
+    hdul[0].header['USER'] = (user, 'User who ran data reduction')
+    hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
     obsset.store("DEBUG_IMAGE", hdul)
+
 
     shifted = aux_images["shifted"]
 
     _hdul = shifted.to_hdul()
     hdul = obsset.get_hdul_to_write(*_hdul)
+    hdul[0].header['USER'] = (user, 'User who ran data reduction')
+    hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
     obsset.store("WVLCOR_IMAGE", hdul)
 
     # store_2dspec(obsset,
@@ -544,7 +572,6 @@ def extract_stellar_spec_pp(obsset, extraction_mode="optimal", height_2dspec=0,
 
     """
     # refactored from recipe_extract.ProcessABBABand.process
-
     helper = ResourceHelper(obsset)
 
     ap = helper.get("aperture")
@@ -675,6 +702,9 @@ def extract_extended_spec(obsset,
 
     # refactored from recipe_extract.ProcessABBABand.process
 
+    user = obsset.get_recipe_parameter('user') #Get user and pipeline version for putting into fits headers later
+    version = obsset.get_recipe_parameter('version')
+
     from ..utils.load_fits import get_science_hdus
     postfix = obsset.basename_postfix
     hdul = get_science_hdus(obsset.load("COMBINED_IMAGE1",
@@ -733,6 +763,8 @@ def extract_extended_spec(obsset,
 
     _hdul = shifted.to_hdul()
     hdul = obsset.get_hdul_to_write(*_hdul)
+    hdul[0].header['USER'] = (user, 'User who ran data reduction')
+    hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
     obsset.store("WVLCOR_IMAGE", hdul, postfix=obsset.basename_postfix)
     # store_2dspec(obsset,
     #              shifted.image,

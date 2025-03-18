@@ -209,7 +209,8 @@ def divide_a0v(obsset,
                # outname_postfix=None,
                #a0v_basename_postfix="",
                no_order_match=False,
-               threshold_a0v=0.1):
+               threshold_a0v=0.1,
+               user='Default', version='Default'):
 
     hdul = get_divide_a0v_hdul(obsset,
                                a0v=a0v,
@@ -217,6 +218,9 @@ def divide_a0v(obsset,
                                basename_postfix=basename_postfix,
                                no_order_match=no_order_match,
                                threshold_a0v=threshold_a0v)
+
+    hdul[0].header['USER'] = (user, 'User who ran data reduction')
+    hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
 
     obsset.store("SPEC_A0V_FITS", hdul, postfix=basename_postfix)
 
@@ -226,5 +230,8 @@ steps = [
         # basename_postfix=""),
         Step("Divide w/ A0V", divide_a0v,
              basename_postfix="",
-             no_order_match=ArghFactoryWithShort(False)),
+             no_order_match=ArghFactoryWithShort(False),
+             user='Default',
+             version='Default',),
+
         ]

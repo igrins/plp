@@ -119,6 +119,8 @@ _steps_default = [
          order_range="",
          correct_flexure=False,
          mask_cosmics=False,
+         user='Default',
+         version='Default',
          ),
     Step("Set basename-postfix", set_basename_postfix,
          basename_postfix=""),
