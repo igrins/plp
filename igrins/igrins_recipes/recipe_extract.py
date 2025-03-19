@@ -121,6 +121,7 @@ _steps_default = [
          mask_cosmics=False,
          user='Default',
          version='Default',
+         slit_profile_method='column',
          ),
     Step("Set basename-postfix", set_basename_postfix,
          basename_postfix=""),

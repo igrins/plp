@@ -20,7 +20,7 @@ def _get_int_from_config(obsset, kind, default):
 
 def setup_extraction_parameters(obsset, order_range="",
                                 height_2dspec=0, correct_flexure=False, mask_cosmics=False,
-                                user='Default', version='Default'):
+                                user='Default', version='Default', slit_profile_method='column'):
 
     if order_range:
         _order_range_s = order_range
@@ -40,7 +40,7 @@ def setup_extraction_parameters(obsset, order_range="",
                                  order_end=order_end,
                                  height_2dspec=height_2dspec,
                                  correct_flexure=correct_flexure, mask_cosmics=mask_cosmics,
-                                 user=user, version=version)
+                                 user=user, version=version, slit_profile_method=slit_profile_method)
 
 
 def _get_combined_image(obsset):
@@ -239,13 +239,15 @@ def estimate_slit_profile(obsset,
                           slit_profile_mode="1d",
                           frac_slit_list=None):
 
+    slit_profile_method = obsset.get_recipe_parameter('slit_profile_method')
+
     if type(frac_slit_list) is str: #Convert frac slit to list of floats if not already floats
         frac_slit_list = list(map(float, frac_slit_list.split(",")))
 
     if slit_profile_mode == "1d":
         from .slit_profile import estimate_slit_profile_1d
         estimate_slit_profile_1d(obsset, x1=x1, x2=x2, do_ab=do_ab,
-                                 frac_slit_list=frac_slit_list)
+                                 frac_slit_list=frac_slit_list, method=slit_profile_method)
     elif slit_profile_mode == "uniform":
         from .slit_profile import estimate_slit_profile_uniform
         estimate_slit_profile_uniform(obsset, do_ab=do_ab,
