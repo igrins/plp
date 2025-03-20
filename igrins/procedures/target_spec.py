@@ -327,9 +327,9 @@ def store_1dspec(obsset, v_list, s_list, postfix='', sn_list=None):
     hdul = obsset.get_hdul_to_write(([], v_data))
     wvl_header.update(hdul[0].header)
     hdul[0].header = wvl_header
-    hdul[0].verify(option="silentfix")
     hdul[0].header['USER'] = (user, 'User who ran data reduction')
     hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
+    hdul[0].verify(option="silentfix")
 
     obsset.store("VARIANCE_FITS", hdul,
                  postfix=basename_postfix)
@@ -347,17 +347,34 @@ def store_1dspec(obsset, v_list, s_list, postfix='', sn_list=None):
     d = np.array(s_list)
     s_data = convert_data(d.astype("float32"))
 
+
     hdul = obsset.get_hdul_to_write(([], s_data),
-                                    ([], convert_data(wvl_data)))
+                                    ([], v_data),
+                                    ([], convert_data(wvl_data)), convention='gemini')
     wvl_header.update(hdul[0].header)
-    hdul[0].header = wvl_header
-    hdul[0].verify(option="silentfix")
+
+    hdul[0].header = wvl_header #Update headers
     hdul[0].header['USER'] = (user, 'User who ran data reduction')
     hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
+    hdul[1].header['EXTNAME'] = 'SCI'
+    hdul[2].header['EXTNAME'] = 'VAR'
+    hdul[3].header['EXTNAME'] = 'SCI'
+    hdul[1].header['EXTVER'] = '1'
+    hdul[2].header['EXTVER'] = '1'
+    hdul[3].header['EXTVER'] = '1'
+    hdul[1].header['EXTDESC'] = 'TGT_SPEC'
+    hdul[2].header['EXTDESC'] = 'TGT_SPEC_VARIANCE'
+    hdul[3].header['EXTDESC'] = 'WAVELENGTH'    
+    hdul[1].verify(option="silentfix")
+    hdul[2].verify(option="silentfix")
+    hdul[3].verify(option="silentfix")
+    hdul[0].header['NAXIS'] = 0 #Clean up primary header keywords to avoid errors involving NAXIS keywords
+    del hdul[0].header['NAXIS1']
+    del hdul[0].header['NAXIS2']
+
 
     obsset.store("SPEC_FITS", hdul,
                  postfix=basename_postfix)
-    #breakpoint()
 
 
 def store_2dspec(obsset,
@@ -410,28 +427,10 @@ def store_2dspec(obsset,
     ordermap_bpixed = helper.get("ordermap_bpixed")
 
     from .correct_distortion import get_rectified_2dspec
-    _ = get_rectified_2dspec(data_shft,
-                             ordermap_bpixed,
-                             bottom_up_solutions,
-                             conserve_flux=conserve_flux,
-                             height=height_2dspec)
-    d0_shft_list, msk_shft_list = _
 
-    with np.errstate(invalid="ignore"):
-        d0 = np.array(d0_shft_list) / np.array(msk_shft_list)
-
-    helper = ResourceHelper(obsset)
+    #helper = ResourceHelper(obsset)
     ap = helper.get("aperture")
 
-    d = _reorder_data_to_orders_to_extract(ap, d0)
-
-    hdul = obsset.get_hdul_to_write(([], convert_data(d.astype("float32"))))
-    # wvl_header.update(hdul[0].header)
-    hdul[0].header = wvl_header
-    hdul[0].header['USER'] = (user, 'User who ran data reduction')
-    hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
-
-    obsset.store("SPEC2D_FITS", hdul, postfix=basename_postfix)
 
     # OUTPUT VAR2D, added by Kyle Kaplan Feb 25, 2015 to get variance map
     # outputted as a datacube
@@ -445,15 +444,61 @@ def store_2dspec(obsset,
     with np.errstate(invalid="ignore"):
         d0 = np.array(d0_shft_list) / np.array(msk_shft_list)
 
-    d = _reorder_data_to_orders_to_extract(ap, d0)
+    v = _reorder_data_to_orders_to_extract(ap, d0)
 
-    hdul = obsset.get_hdul_to_write(([], convert_data(d.astype("float32"))))
+
+
+    hdul = obsset.get_hdul_to_write(([], convert_data(v.astype("float32"))))
     # wvl_header.update(hdul[0].header)
     hdul[0].header = wvl_header
     hdul[0].header['USER'] = (user, 'User who ran data reduction')
     hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
 
     obsset.store("VAR2D_FITS", hdul, postfix=basename_postfix)
+
+    _ = get_rectified_2dspec(data_shft,
+                             ordermap_bpixed,
+                             bottom_up_solutions,
+                             conserve_flux=conserve_flux,
+                             height=height_2dspec)
+    d0_shft_list, msk_shft_list = _
+
+    with np.errstate(invalid="ignore"):
+        d0 = np.array(d0_shft_list) / np.array(msk_shft_list)
+
+
+
+    d = _reorder_data_to_orders_to_extract(ap, d0)
+
+
+
+    hdul = obsset.get_hdul_to_write(([], convert_data(d.astype("float32"))),
+                                    ([], convert_data(v.astype("float32"))),
+                                    ([], convert_data(wvl_data)), convention='gemini')
+    # wvl_header.update(hdul[0].header)
+    hdul[0].header = wvl_header  #Update headers
+    hdul[0].header['USER'] = (user, 'User who ran data reduction')
+    hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
+    hdul[1].header['EXTNAME'] = 'SCI'
+    hdul[2].header['EXTNAME'] = 'VAR'
+    hdul[3].header['EXTNAME'] = 'SCI'
+    hdul[1].header['EXTVER'] = '1'
+    hdul[2].header['EXTVER'] = '1'
+    hdul[3].header['EXTVER'] = '1'
+    hdul[1].header['EXTDESC'] = 'TGT_SPEC'
+    hdul[2].header['EXTDESC'] = 'TGT_SPEC_VARIANCE'
+    hdul[3].header['EXTDESC'] = 'WAVELENGTH'    
+    hdul[1].verify(option="silentfix")
+    hdul[2].verify(option="silentfix")
+    hdul[3].verify(option="silentfix")
+    hdul[0].header['NAXIS'] = 0 #Clean up primary header keywords to avoid errors involving NAXIS keywords
+    #del hdul[0].header['NAXIS1']
+    #del hdul[0].header['NAXIS2']
+
+
+    obsset.store("SPEC2D_FITS", hdul, postfix=basename_postfix)
+
+
 
 
 def extract_stellar_spec(obsset, extraction_mode="optimal",
@@ -538,6 +583,7 @@ def extract_stellar_spec(obsset, extraction_mode="optimal",
         sn_list.append(sn)
 
     store_1dspec(obsset, v_list, s_list, sn_list=sn_list)
+
 
     hdul = obsset.get_hdul_to_write(([], data_minus),
                                     ([], aux_images["synth_map"]))
@@ -638,6 +684,7 @@ def extract_stellar_spec_pp(obsset, extraction_mode="optimal", height_2dspec=0,
         sn_list = None
 
     store_1dspec(obsset, v_list, s_list, sn_list=sn_list)
+
 
     # hdul = obsset.get_hdul_to_write(([], data_minus),
     #                                 ([], aux_images["synth_map"]))

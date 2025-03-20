@@ -132,7 +132,6 @@ def estimate_slit_profile_1d(obsset,
 
     """
 
-    breakpoint()
     helper = ResourceHelper(obsset)
 
     orderflat = helper.get("orderflat")

@@ -166,7 +166,6 @@ def get_divide_a0v_hdul(obsset,
 
     thresh_masks = get_a0v_thresh_masks(a0v, threshold_a0v)
 
-    #breakpoint()
 
     hdul = _make_spec_a0v_hdu_list(obsset,
                                    tgt.um,
