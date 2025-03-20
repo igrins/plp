@@ -187,16 +187,19 @@ def get_divide_a0v_hdul(obsset,
     #hdul["TGT_SPEC"].header["OBSID"] = str(obsset.obsids[0])
     #hdul["A0V_SPEC"].header.update(a0v._spec_hdu_list[0].header)
     #hdul["A0V_SPEC"].header["OBSID"] = a0v_obsid
-    hdul[4].header.update(tgt._spec_hdu_list[0].header)
+    #hdul[4].header.update(tgt._spec_hdu_list[0].header)
+    hdul[4].header.update(tgt.obsset.get_hdus()[0].header)
     hdul[4].header["OBSID"] = str(obsset.obsids[0])
-    hdul[6].header.update(a0v._spec_hdu_list[0].header)
+    #hdul[6].header.update(a0v._spec_hdu_list[0].header)
+    hdul[6].header.update(a0v.obsset.get_hdus()[0].header)
     hdul[6].header["OBSID"] = a0v_obsid
 
-    #Delete keywords from headers carried over from the primary headers of single fits files that are not fits standard for an extension in a multi-extension fits file
+
+    # #Delete keywords from headers carried over from the primary headers of single fits files that are not fits standard for an extension in a multi-extension fits file
     del hdul[4].header['SIMPLE']
-    del hdul[4].header['EXTEND']
+    #del hdul[4].header['EXTEND']
     del hdul[6].header['SIMPLE']
-    del hdul[6].header['EXTEND']
+    #del hdul[6].header['EXTEND']
 
     return hdul
 
