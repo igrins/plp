@@ -336,6 +336,13 @@ def make_combined_images(obsset, allow_no_b_frame=False,
     obsset_b = obsset.get_subset("B", "OFF")
     na, nb = len(obsset_a.obsids), len(obsset_b.obsids)
 
+    #For making readout pattern removal plots, should normally be commented out
+    cache_only = False
+    hdul = obsset.get_hdul_to_write(([], data_minus_raw))
+    obsset.store("data_minus_raw", data=hdul, cache_only=cache_only)
+    hdul = obsset.get_hdul_to_write(([], data_plus))
+    obsset.store("data_plus", data=hdul, cache_only=cache_only)
+
 
     disable_pattern_removal = obsset.get_recipe_parameter("disable_pattern_removal") #Let user disable the pattern removal
     if nb > 0 and disable_pattern_removal==False:
