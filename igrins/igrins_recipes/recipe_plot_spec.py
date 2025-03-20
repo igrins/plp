@@ -40,8 +40,12 @@ def _plot_source_spec(fig, tgt, objname=""):
 
 
 from ..igrins_libs.a0v_obsid import get_group2, get_a0v_obsid
+from ..procedures.order_mismatch_cor import get_order_match_corr
 
-def get_tgt_spec_cor(obsset, tgt, a0v, threshold_a0v, multiply_model_a0v):
+
+def get_tgt_spec_cor(obsset, tgt, a0v, threshold_a0v, multiply_model_a0v,
+                     force_order_match=True):
+
     tgt_spec_cor = []
     #for s, t in zip(s_list, telluric_cor):
     for s, t, t2 in zip(tgt.spec,
@@ -59,6 +63,24 @@ def get_tgt_spec_cor(obsset, tgt, a0v, threshold_a0v, multiply_model_a0v):
 
         tgt_spec_cor.append(st)
 
+    tgt_spec_cor = np.asarray(tgt_spec_cor)
+
+    if force_order_match:
+        # FIXME get_order_match_corr takes tgt/a0v but without vega model.
+        vega = 1
+        from ..igrins_libs.resource_helper_igrins import ResourceHelper
+        helper = ResourceHelper(obsset)
+        orders = helper.get("orders")
+
+        #Compute variance for spec/a0v * vega using error propogation
+        spec_divide_a0v_variance = (vega**2 * (tgt.spec/a0v.spec)**2 *
+                                    ( (tgt.variance/(tgt.spec**2))
+                                      + (a0v.variance/(a0v.spec**2)) ))
+
+        mask, corr = get_order_match_corr(orders, tgt.um,
+                                          tgt_spec_cor, spec_divide_a0v_variance)
+        tgt_spec_cor /= corr
+        tgt_spec_cor[mask] = np.nan
 
     if multiply_model_a0v:
         # multiply by A0V model
@@ -75,50 +97,19 @@ def get_tgt_spec_cor(obsset, tgt, a0v, threshold_a0v, multiply_model_a0v):
             aa = a0v_interp1d(wvl)
             s *= aa
 
-
     return tgt_spec_cor
 
 
-def _plot_div_a0v_spec(fig, tgt, obsset, a0v="GROUP2", a0v_obsid=None,
-                       threshold_a0v=0.1,
-                       objname="",
-                       multiply_model_a0v=False,
-                       html_output=False,
-                       a0v_basename_postfix=""):
-    # FIXME: This is simple copy from old version.
+from .recipe_divide_a0v import get_a0v, get_interpolated_vega_spec, get_a0v_thresh_masks
 
-    a0v_obsid = get_a0v_obsid(obsset, a0v, a0v_obsid)
-    if a0v_obsid is None:
-        a0v_obsid_ = obsset.query_resource_basename("a0v")
-        a0v_obsid = obsset.rs.parse_basename(a0v_obsid_)
-
-    logger.warn("using A0V:{}".format(a0v_obsid))
-
-    a0v_obsset = type(obsset)(obsset.rs, "A0V_AB", [a0v_obsid], ["A"],
-                              basename_postfix=a0v_basename_postfix)
-
-    a0v = OnedSpecHelper(a0v_obsset)
-
-    # if True:
-
-    #     if (a0v_obsid is None) or (a0v_obsid == "1"):
-    #         A0V_basename = extractor.basenames["a0v"]
-    #     else:
-    #         A0V_basename = "SDC%s_%s_%04d" % (band, utdate, int(a0v_obsid))
-    #         print(A0V_basename)
-
-    #     a0v = extractor.get_oned_spec_helper(A0V_basename,
-    #                                          basename_postfix=basename_postfix)
-    # config = obsset.rs.config
-
-    tgt_spec_cor = get_tgt_spec_cor(obsset, tgt, a0v,
-                                    threshold_a0v,
-                                    multiply_model_a0v)
+def _plot_div_a0v_spec(fig, tgt, a0v, vega, corr, mask=None, objname=""):
 
     ax2a = fig.add_subplot(211)
     ax2b = fig.add_subplot(212, sharex=ax2a)
 
-    #from ..libs.stddev_filter import window_stdev
+    tgt_spec_cor = tgt.spec/a0v.spec*vega/corr
+    if mask is not None:
+        tgt_spec_cor[mask] = np.nan
 
     for wvl, s, t in zip(tgt.um,
                          tgt_spec_cor,
@@ -130,18 +121,18 @@ def _plot_div_a0v_spec(fig, tgt, obsset, a0v="GROUP2", a0v_obsid=None,
     s_max_list = []
     s_min_list = []
     for s in tgt_spec_cor[3:-3]:
-        s_max_list.append(np.nanmax(s))
-        s_min_list.append(np.nanmin(s))
+        s_max_list.append(np.nanpercentile(s, 90))
+        s_min_list.append(np.nanpercentile(s, 10))
     s_max = np.max(s_max_list)
     s_min = np.min(s_min_list)
-    ds_pad = 0.05 * (s_max - s_min)
+    ds_pad = 0.2 * (s_max - s_min)
 
     ax2a.set_ylabel("A0V flattened")
     ax2a.set_ylim(-0.05, 1.1)
     ax2b.set_ylabel("Target / A0V")
     ax2b.set_xlabel("Wavelength [um]")
 
-    ax2b.set_ylim(s_min-ds_pad, s_max+ds_pad)
+    ax2b.set_ylim(np.min([s_min-ds_pad, 0.5*s_min]), s_max+2*ds_pad)
     ax2a.set_title(objname)
 
 
@@ -183,9 +174,11 @@ def _save_to_html():
                       a0v.flattened, tgt_spec_cor, i1i2_list,
                       spec_js_name="jj_a0v.js")
 
+
 def plot_spec(obsset, interactive=False,
               fix_telluric="recipe",
-              multiply_model_a0v=False):
+              multiply_model_a0v=False,
+              no_order_match=False):
     recipe = obsset.recipe_name
     target_type, nodding_type = recipe.split("_")
 
@@ -201,6 +194,33 @@ def plot_spec(obsset, interactive=False,
             fix_telluric = ast.literal_eval(fix_telluric)
 
     tgt = OnedSpecHelper(obsset, basename_postfix=obsset.basename_postfix)
+
+    a0v='GROUP2'
+    a0v_obsid=None
+    a0v = get_a0v(obsset, a0v, a0v_obsid, obsset.basename_postfix)
+
+    vega_spec = get_interpolated_vega_spec(obsset, tgt.um)
+
+    # a0v_fitted_continuum = a0v.flattened_hdu_list["FITTED_CONTINUUM"].data
+
+    thresh_masks = get_a0v_thresh_masks(a0v, threshold_a0v=0.1)
+
+    force_order_match = not no_order_match
+    if force_order_match:
+        from ..igrins_libs.resource_helper_igrins import ResourceHelper
+        helper = ResourceHelper(obsset)
+        orders = helper.get("orders")
+
+        vega = 1
+        _variance = vega_spec**2 * (tgt.spec/a0v.spec)**2 * ( (tgt.variance/(tgt.spec**2)) + (a0v.variance/(a0v.spec**2)) ) #Compute variance for spec/a0v * vega using error propogation
+
+        spec_cor = tgt.spec / a0v.spec # * vega_spec
+        spec_cor[thresh_masks] = np.nan
+        mask, corr = get_order_match_corr(orders, tgt.um,
+                                          spec_cor, _variance)
+        thresh_masks[mask] = True
+    else:
+        corr = 1
 
     do_interactive_figure = interactive
 
@@ -220,8 +240,8 @@ def plot_spec(obsset, interactive=False,
         fig1 = Figure(figsize=(12, 6))
         fig_list.append(fig1)
 
-        _plot_div_a0v_spec(fig1, tgt, obsset,
-                           multiply_model_a0v=multiply_model_a0v)
+        _plot_div_a0v_spec(fig1, tgt, a0v, vega_spec, corr, mask=thresh_masks,
+                            objname="")
 
     if fig_list:
         for fig in fig_list:
@@ -237,5 +257,6 @@ steps = [Step("Set basename_postfix", set_basename_postfix,
          Step("Plot spec", plot_spec,
               interactive=ArghFactoryWithShort(False),
               multiply_model_a0v=ArghFactoryWithShort(False),
+              no_order_match=ArghFactoryWithShort(False),
               fix_telluric="recipe"),
 ]

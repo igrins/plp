@@ -32,7 +32,8 @@ class OnedSpecHelper(object):
     @lazyprop
     def um(self):
         # um = list(self._spec_hdu_list[1].data)
-        um = self._spec_hdu_list[1].data
+        # um = self._spec_hdu_list[1].data
+        um = self._spec_hdu_list[2].data
         return um
 
     @lazyprop

@@ -3,6 +3,9 @@ import scipy.ndimage as ni
 
 from ..utils.image_combine import image_median
 from ..igrins_libs.resource_helper_igrins import ResourceHelper
+from ..igrins_libs.igrins_config import IGRINSConfig
+
+config = IGRINSConfig("recipe.config")
 
 
 def _get_int_from_config(obsset, kind, default):
@@ -16,7 +19,8 @@ def _get_int_from_config(obsset, kind, default):
 
 
 def setup_extraction_parameters(obsset, order_range="",
-                                height_2dspec=0, correct_flexure=False, mask_cosmics=False):
+                                height_2dspec=0, correct_flexure=False, mask_cosmics=False,
+                                user='Default', version='Default', slit_profile_method='column'):
 
     if order_range:
         _order_range_s = order_range
@@ -35,7 +39,8 @@ def setup_extraction_parameters(obsset, order_range="",
     obsset.set_recipe_parameters(order_start=order_start,
                                  order_end=order_end,
                                  height_2dspec=height_2dspec,
-                                 correct_flexure=correct_flexure, mask_cosmics=mask_cosmics)
+                                 correct_flexure=correct_flexure, mask_cosmics=mask_cosmics,
+                                 user=user, version=version, slit_profile_method=slit_profile_method)
 
 
 def _get_combined_image(obsset):
@@ -185,6 +190,7 @@ from ..igrins_recipes.recipe_combine import (make_combined_images
 def make_combined_images(obsset,
                          allow_no_b_frame=False,
                          force_image_combine=False,
+                         remove_vertical_pattern=False,
                          pattern_remove_level="auto"):
 
     try:
@@ -200,6 +206,7 @@ def make_combined_images(obsset,
 
     _make_combined_images(obsset, allow_no_b_frame=allow_no_b_frame,
                           cache_only=True,
+                          remove_vertical_pattern=remove_vertical_pattern,
                           remove_level=pattern_remove_level)
 
 
@@ -232,10 +239,15 @@ def estimate_slit_profile(obsset,
                           slit_profile_mode="1d",
                           frac_slit_list=None):
 
+    slit_profile_method = obsset.get_recipe_parameter('slit_profile_method')
+
+    if type(frac_slit_list) is str: #Convert frac slit to list of floats if not already floats
+        frac_slit_list = list(map(float, frac_slit_list.split(",")))
+
     if slit_profile_mode == "1d":
         from .slit_profile import estimate_slit_profile_1d
         estimate_slit_profile_1d(obsset, x1=x1, x2=x2, do_ab=do_ab,
-                                 frac_slit_list=frac_slit_list)
+                                 frac_slit_list=frac_slit_list, method=slit_profile_method)
     elif slit_profile_mode == "uniform":
         from .slit_profile import estimate_slit_profile_uniform
         estimate_slit_profile_uniform(obsset, do_ab=do_ab,
@@ -289,9 +301,12 @@ def remove_wat(header):
     header = Header(cards)
     return header
 
-def store_1dspec(obsset, v_list, s_list, sn_list=None):
+def store_1dspec(obsset, v_list, s_list, postfix='', sn_list=None):
 
-    basename_postfix = obsset.basename_postfix
+    basename_postfix = obsset.basename_postfix + postfix
+
+    user = obsset.get_recipe_parameter('user') #Get user and pipeline version for putting into fits headers later
+    version = obsset.get_recipe_parameter('version')
 
     wvl_header, wvl_data0, convert_data = get_wvl_header_data(obsset)
 
@@ -312,6 +327,8 @@ def store_1dspec(obsset, v_list, s_list, sn_list=None):
     hdul = obsset.get_hdul_to_write(([], v_data))
     wvl_header.update(hdul[0].header)
     hdul[0].header = wvl_header
+    hdul[0].header['USER'] = (user, 'User who ran data reduction')
+    hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
     hdul[0].verify(option="silentfix")
 
     obsset.store("VARIANCE_FITS", hdul,
@@ -330,11 +347,31 @@ def store_1dspec(obsset, v_list, s_list, sn_list=None):
     d = np.array(s_list)
     s_data = convert_data(d.astype("float32"))
 
+
     hdul = obsset.get_hdul_to_write(([], s_data),
-                                    ([], convert_data(wvl_data)))
+                                    ([], v_data),
+                                    ([], convert_data(wvl_data)), convention='gemini')
     wvl_header.update(hdul[0].header)
-    hdul[0].header = wvl_header
-    hdul[0].verify(option="silentfix")
+
+    hdul[0].header = wvl_header #Update headers
+    hdul[0].header['USER'] = (user, 'User who ran data reduction')
+    hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
+    hdul[1].header['EXTNAME'] = 'SCI'
+    hdul[2].header['EXTNAME'] = 'VAR'
+    hdul[3].header['EXTNAME'] = 'SCI'
+    hdul[1].header['EXTVER'] = '1'
+    hdul[2].header['EXTVER'] = '1'
+    hdul[3].header['EXTVER'] = '1'
+    hdul[1].header['EXTDESC'] = 'TGT_SPEC'
+    hdul[2].header['EXTDESC'] = 'TGT_SPEC_VARIANCE'
+    hdul[3].header['EXTDESC'] = 'WAVELENGTH'    
+    hdul[1].verify(option="silentfix")
+    hdul[2].verify(option="silentfix")
+    hdul[3].verify(option="silentfix")
+    hdul[0].header['NAXIS'] = 0 #Clean up primary header keywords to avoid errors involving NAXIS keywords
+    del hdul[0].header['NAXIS1']
+    del hdul[0].header['NAXIS2']
+
 
     obsset.store("SPEC_FITS", hdul,
                  postfix=basename_postfix)
@@ -344,6 +381,10 @@ def store_2dspec(obsset,
                  conserve_flux=True):
 
     basename_postfix = obsset.basename_postfix
+
+
+    user = obsset.get_recipe_parameter('user') #Get user and pipeline version for putting into fits headers later
+    version = obsset.get_recipe_parameter('version')
 
     height_2dspec = obsset.get_recipe_parameter("height_2dspec")
 
@@ -386,26 +427,10 @@ def store_2dspec(obsset,
     ordermap_bpixed = helper.get("ordermap_bpixed")
 
     from .correct_distortion import get_rectified_2dspec
-    _ = get_rectified_2dspec(data_shft,
-                             ordermap_bpixed,
-                             bottom_up_solutions,
-                             conserve_flux=conserve_flux,
-                             height=height_2dspec)
-    d0_shft_list, msk_shft_list = _
 
-    with np.errstate(invalid="ignore"):
-        d0 = np.array(d0_shft_list) / np.array(msk_shft_list)
-
-    helper = ResourceHelper(obsset)
+    #helper = ResourceHelper(obsset)
     ap = helper.get("aperture")
 
-    d = _reorder_data_to_orders_to_extract(ap, d0)
-
-    hdul = obsset.get_hdul_to_write(([], convert_data(d.astype("float32"))))
-    # wvl_header.update(hdul[0].header)
-    hdul[0].header = wvl_header
-
-    obsset.store("SPEC2D_FITS", hdul, postfix=basename_postfix)
 
     # OUTPUT VAR2D, added by Kyle Kaplan Feb 25, 2015 to get variance map
     # outputted as a datacube
@@ -419,13 +444,61 @@ def store_2dspec(obsset,
     with np.errstate(invalid="ignore"):
         d0 = np.array(d0_shft_list) / np.array(msk_shft_list)
 
-    d = _reorder_data_to_orders_to_extract(ap, d0)
+    v = _reorder_data_to_orders_to_extract(ap, d0)
 
-    hdul = obsset.get_hdul_to_write(([], convert_data(d.astype("float32"))))
+
+
+    hdul = obsset.get_hdul_to_write(([], convert_data(v.astype("float32"))))
     # wvl_header.update(hdul[0].header)
     hdul[0].header = wvl_header
+    hdul[0].header['USER'] = (user, 'User who ran data reduction')
+    hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
 
     obsset.store("VAR2D_FITS", hdul, postfix=basename_postfix)
+
+    _ = get_rectified_2dspec(data_shft,
+                             ordermap_bpixed,
+                             bottom_up_solutions,
+                             conserve_flux=conserve_flux,
+                             height=height_2dspec)
+    d0_shft_list, msk_shft_list = _
+
+    with np.errstate(invalid="ignore"):
+        d0 = np.array(d0_shft_list) / np.array(msk_shft_list)
+
+
+
+    d = _reorder_data_to_orders_to_extract(ap, d0)
+
+
+
+    hdul = obsset.get_hdul_to_write(([], convert_data(d.astype("float32"))),
+                                    ([], convert_data(v.astype("float32"))),
+                                    ([], convert_data(wvl_data)), convention='gemini')
+    # wvl_header.update(hdul[0].header)
+    hdul[0].header = wvl_header  #Update headers
+    hdul[0].header['USER'] = (user, 'User who ran data reduction')
+    hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
+    hdul[1].header['EXTNAME'] = 'SCI'
+    hdul[2].header['EXTNAME'] = 'VAR'
+    hdul[3].header['EXTNAME'] = 'SCI'
+    hdul[1].header['EXTVER'] = '1'
+    hdul[2].header['EXTVER'] = '1'
+    hdul[3].header['EXTVER'] = '1'
+    hdul[1].header['EXTDESC'] = 'TGT_SPEC'
+    hdul[2].header['EXTDESC'] = 'TGT_SPEC_VARIANCE'
+    hdul[3].header['EXTDESC'] = 'WAVELENGTH'    
+    hdul[1].verify(option="silentfix")
+    hdul[2].verify(option="silentfix")
+    hdul[3].verify(option="silentfix")
+    hdul[0].header['NAXIS'] = 0 #Clean up primary header keywords to avoid errors involving NAXIS keywords
+    #del hdul[0].header['NAXIS1']
+    #del hdul[0].header['NAXIS2']
+
+
+    obsset.store("SPEC2D_FITS", hdul, postfix=basename_postfix)
+
+
 
 
 def extract_stellar_spec(obsset, extraction_mode="optimal",
@@ -433,6 +506,8 @@ def extract_stellar_spec(obsset, extraction_mode="optimal",
                          pixel_per_res_element=None):
 
     # refactored from recipe_extract.ProcessABBABand.process
+    user = obsset.get_recipe_parameter('user') #Get user and pipeline version for putting into fits headers later
+    version = obsset.get_recipe_parameter('version')
 
     helper = ResourceHelper(obsset)
 
@@ -444,6 +519,9 @@ def extract_stellar_spec(obsset, extraction_mode="optimal",
 
     orderflat = helper.get("orderflat")
     data_minus_flattened = data_minus / orderflat
+
+    data_minus_flattened[[0, 1, 2, 3, -4, -3, -2, -1]] = np.nan
+    data_minus_flattened[:, [0, 1, 2, 3, -4, -3, -2, -1]] = np.nan
 
     variance_map = obsset.load_fits_sci_hdu("combined_variance1",
                                             postfix=postfix).data
@@ -506,14 +584,20 @@ def extract_stellar_spec(obsset, extraction_mode="optimal",
 
     store_1dspec(obsset, v_list, s_list, sn_list=sn_list)
 
+
     hdul = obsset.get_hdul_to_write(([], data_minus),
                                     ([], aux_images["synth_map"]))
+    hdul[0].header['USER'] = (user, 'User who ran data reduction')
+    hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
     obsset.store("DEBUG_IMAGE", hdul)
+
 
     shifted = aux_images["shifted"]
 
     _hdul = shifted.to_hdul()
     hdul = obsset.get_hdul_to_write(*_hdul)
+    hdul[0].header['USER'] = (user, 'User who ran data reduction')
+    hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
     obsset.store("WVLCOR_IMAGE", hdul)
 
     # store_2dspec(obsset,
@@ -536,7 +620,6 @@ def extract_stellar_spec_pp(obsset, extraction_mode="optimal", height_2dspec=0,
 
     """
     # refactored from recipe_extract.ProcessABBABand.process
-
     helper = ResourceHelper(obsset)
 
     ap = helper.get("aperture")
@@ -602,6 +685,7 @@ def extract_stellar_spec_pp(obsset, extraction_mode="optimal", height_2dspec=0,
 
     store_1dspec(obsset, v_list, s_list, sn_list=sn_list)
 
+
     # hdul = obsset.get_hdul_to_write(([], data_minus),
     #                                 ([], aux_images["synth_map"]))
     # obsset.store("DEBUG_IMAGE", hdul)
@@ -662,9 +746,13 @@ def extract_extended_spec1(obsset, data,
 
 
 def extract_extended_spec(obsset,
-                          pixel_per_res_element=None):
+                          pixel_per_res_element=None, \
+                          add_sum_postfix=False):
 
     # refactored from recipe_extract.ProcessABBABand.process
+
+    user = obsset.get_recipe_parameter('user') #Get user and pipeline version for putting into fits headers later
+    version = obsset.get_recipe_parameter('version')
 
     from ..utils.load_fits import get_science_hdus
     postfix = obsset.basename_postfix
@@ -680,6 +768,9 @@ def extract_extended_spec(obsset,
                                                 postfix=postfix).data
         variance_map0 = obsset.load_fits_sci_hdu("combined_variance0",
                                                  postfix=postfix).data
+
+    data[[0, 1, 2, 3, -4, -3, -2, -1]] = np.nan
+    data[:, [0, 1, 2, 3, -4, -3, -2, -1]] = np.nan
 
     _ = extract_extended_spec1(obsset, data,
                                variance_map, variance_map0)
@@ -711,14 +802,19 @@ def extract_extended_spec(obsset,
 
         sn_list.append(sn)
 
-    store_1dspec(obsset, v_list, s_list, sn_list=sn_list)
+    if add_sum_postfix: #If saving additional sum extraction, add '_sum' to fits file name
+        postfix='.sum'
+    else:
+        postfix=''
+    store_1dspec(obsset, v_list, s_list, postfix=postfix, sn_list=sn_list)
 
     shifted = aux_images["shifted"]
 
     _hdul = shifted.to_hdul()
     hdul = obsset.get_hdul_to_write(*_hdul)
+    hdul[0].header['USER'] = (user, 'User who ran data reduction')
+    hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
     obsset.store("WVLCOR_IMAGE", hdul, postfix=obsset.basename_postfix)
-
     # store_2dspec(obsset,
     #              shifted.image,
     #              shifted.variance_map,

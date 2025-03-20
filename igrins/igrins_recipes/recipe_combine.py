@@ -86,13 +86,18 @@ def _get_combined_image(obsset):
                 data_list[i][4:-4, 4:-4][masked_pixels_unlikely_to_be_cosmics] = cleaned_data_list[i][masked_pixels_unlikely_to_be_cosmics] #Fill in bad pixels
 
 
+    # correct nonlinearity
+    from ..procedures.nonlinearity import get_nonlinearity_corrector
+    corrector = get_nonlinearity_corrector(obsset)
+
+    data_list = [corrector(d) for d in data_list]
 
 
     correct_flexure = obsset.get_recipe_parameter("correct_flexure")
     if correct_flexure == True:        
         exptime = get_exptime(obsset)
-        if exptime >= 20.0:
-            data_list = estimate_flexure(obsset, data_list, exptime) #Estimate flexure and apply correction
+        # if exptime >= 20.0:
+        data_list = estimate_flexure(obsset, data_list, exptime) #Estimate flexure and apply correction
         if len(data_list) > 1: #Testing detection
             check_telluric_shift(obsset, data_list)
 
@@ -199,9 +204,9 @@ def get_combined_images(obsset,
         b_data = _get_combined_image(obsset_b)
 
         exptime = get_exptime(obsset_a)
-        correct_flexure = obsset.get_recipe_parameter("correct_flexure")
-        if correct_flexure == True and exptime < 20.0: #Flexure correct short exposures
-           a_data, b_data = estimate_flexure_short_exposures(obsset, a_data, b_data, exptime)
+        # correct_flexure = obsset.get_recipe_parameter("correct_flexure")
+        # if correct_flexure == True and exptime < 20.0: #Flexure correct short exposures
+        #    a_data, b_data = estimate_flexure_short_exposures(obsset, a_data, b_data, exptime)
 
 
         data_minus = a_data - a_b * b_data
@@ -213,6 +218,7 @@ def get_combined_images(obsset,
 
     return data_minus, data_plus
 
+from ..procedures.procedure_dark import get_per_amp_stat
 
 def get_variances(data_minus, data_plus, gain):
 
@@ -223,9 +229,12 @@ def get_variances(data_minus, data_plus, gain):
     2nd is the all variance.
 
     """
-    from igrins.procedures.procedure_dark import get_per_amp_stat
 
-    guards = data_minus[:, [0, 1, 2, 3, -4, -3, -2, -1]]
+    # guards = data_minus[:, [0, 1, 2, 3, -4, -3, -2, -1]]
+    guards = data_minus[:, [0, 1, 2, 3]]
+
+    # FIXME IGRINS2 reference pixels may have pattern
+    guards = destriper.get_destriped(guards, pattern=64, hori=False, remove_vertical=False)
 
     qq = get_per_amp_stat(guards)
 
@@ -280,10 +289,41 @@ def run_interactive(obsset,
 
     return params
 
+import scipy.ndimage as NI
+from scipy.interpolate import LSQUnivariateSpline
+
+def _remove_vertical_pattern(d2, bias_mask, hotpix):
+
+    mask = NI.binary_dilation(bias_mask, iterations=2)
+
+    k = np.ma.array(d2, mask=mask|hotpix).filled(np.nan)
+
+    x = np.arange(2048)
+    t = np.arange(128, 2048 - 128, 256)
+
+    z = np.zeros((2048, 2048), dtype=float)
+
+    for i in range(4, 2048-4):
+        y = k[:, i]
+        m = np.isfinite(y)
+        m[[0, 1, 2, 3, -4, -3, -2, -1]] = False
+
+        s = NI.median_filter(y[m], 15)
+        q = 4*np.median(np.abs(y[m] - s))
+
+        m[m] = (y[m] - s) < q
+
+        spl = LSQUnivariateSpline(x[m], y[m], t,
+                                  bbox=[0, 2047],
+                                  k=3, ext=0, check_finite=False)
+        z[:, i] = spl(x)
+
+    return d2 - z
 
 def make_combined_images(obsset, allow_no_b_frame=False,
                          remove_level=2,
                          remove_amp_wise_var=False,
+                         remove_vertical_pattern=False,
                          interactive=False,
                          cache_only=False):
 
@@ -296,7 +336,11 @@ def make_combined_images(obsset, allow_no_b_frame=False,
     _ = get_combined_images(obsset,
                             allow_no_b_frame=allow_no_b_frame)
     data_minus_raw, data_plus = _
+
     bias_mask = obsset.load_resource_for("bias_mask")
+
+    d_hotpix = obsset.load_resource_for("hotpix_mask")
+    hotpix = d_hotpix > 0
 
     if interactive:
         params = run_interactive(obsset,
@@ -311,12 +355,36 @@ def make_combined_images(obsset, allow_no_b_frame=False,
         remove_level = params["remove_level"]
         remove_amp_wise_var = params["amp_wise"]
 
-    d2 = remove_pattern(data_minus_raw, mask=bias_mask,
-                        remove_level=remove_level,
-                        remove_amp_wise_var=remove_amp_wise_var)
+    d2_ = remove_pattern(data_minus_raw, mask=bias_mask,
+                         remove_level=remove_level,
+                         remove_amp_wise_var=remove_amp_wise_var)
+
+    if remove_vertical_pattern:
+        print("removing vertical pattern")
+        ordermask = obsset.load_resource_for("ordermap")[0].data > 0
+        # This is to remove the region for optical ghost in H
+        _, band = obsset.get_resource_spec()
+        # FIXME this is a workaround for IG2 Hㅁ band
+        if band == "H":
+            ordermask[40:112+40, 1925:] |= ordermask[:112, 1925:]
+
+        d2 = _remove_vertical_pattern(d2_, ordermask, hotpix)
+    else:
+        d2 = d2_
 
     dp = remove_pattern(data_plus, remove_level=1,
                         remove_amp_wise_var=False)
+
+    # FIXME This is a workaround for the reference pixel issue in IGRINS2.
+
+    obsdate, band = obsset.get_resource_spec()
+
+    if band == "H":
+        dp[4:-4, 4:-4] -= np.median(dp[:512, 4:16])
+    elif band == "K":
+        dp[4:-4, 4:-4] -= np.median(dp[1600:, -16:-4])
+    else:
+        raise ValueError()
 
 
     helper = ResourceHelper(obsset)
@@ -324,8 +392,6 @@ def make_combined_images(obsset, allow_no_b_frame=False,
     # d2 = destriper.get_destriped(data_minus_raw, mask=destripe_mask, pattern=128, hori=True)
     # dp = data_plus
     d2 = destriper.get_destriped(d2, mask=destripe_mask, pattern=64, hori=True, remove_vertical=False)
-
-
 
     gain = float(obsset.rs.query_ref_value("GAIN"))
 

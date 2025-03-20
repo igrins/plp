@@ -7,6 +7,43 @@ import glob
 from astropy.io import fits
 from pathlib import Path
 
+
+#Match H and K band flats taken with different flat lamps so that they all have matching obsnums
+def match_flats(path_outdir):
+    all_K_files = sorted(path_outdir.glob("SDCK*.fits"))
+    all_H_files = sorted(path_outdir.glob("SDCH*.fits"))
+    n_raw_files = len(all_K_files)
+    flat_K_files = [] #Lists to store raw flats to match
+    flat_H_files = []
+    for i in range(n_raw_files):
+        k_header = fits.getheader(all_K_files[i])
+        h_header = fits.getheader(all_H_files[i])
+        if k_header['OBSTYPE'] == 'FLAT' and k_header['GCALLAMP'] == 'IRhigh' and k_header['GCALSHUT'] == 'OPEN':
+            flat_K_files.append(all_K_files[i]) #Found K-band flats
+        if h_header['OBSTYPE'] == 'FLAT' and h_header['GCALLAMP'] == 'QH' and h_header['GCALSHUT'] == 'CLOSED':
+            flat_H_files.append(all_H_files[i]) #Found H-band flats
+    n_k_flats = len(flat_K_files)
+    n_h_flats = len(flat_H_files)
+    breakpoint()
+    if n_k_flats == n_h_flats:
+        lowest_obsnum_h = int(flat_H_files[0]._str[-9:-5])
+        lowest_obsnum_k = int(flat_K_files[0]._str[-9:-5])
+        if lowest_obsnum_h < lowest_obsnum_k: #If H band flats have the lowest obsnum, move K band flats to match them
+            for i in range(n_k_flats):
+                destination = Path(flat_H_files[i]._str.replace('SDCH', 'SDCK')) #Get filename from H band flat, but change name to K band
+                flat_K_files[i].replace(destination) #Move file
+                file_to_delete = Path(flat_K_files[i]._str.replace('SDCK', 'SDCH')) #Delete extra unneeded flat files
+                file_to_delete.unlink() #Delete file
+        else: #Else if K band flats have the lowest obsnum, move H band flats to match them
+            for i in range(n_k_flats):
+                destination = Path(flat_K_files[i]._str.replace('SDCK', 'SDCH')) #Get filename from K band flat, but change name to H band
+                flat_H_files[i].replace(destination) #Move file        
+                file_to_delete = Path(flat_H_files[i]._str.replace('SDCH', 'SDCK')) #Delete extra unneeded flat files
+                file_to_delete.unlink() #Delete file
+    else:
+        print('Number of FLAT ONs for H and K band do not match.  Remove excess flats in one of tfhe other band and rerun.')
+
+
 def unbundle(indir: Path, utdate: str, outdir: Path):
     fn_list = sorted(indir.glob(f"N{utdate}*.fits*"))
 
@@ -68,6 +105,8 @@ SDCH_{ut_date}_*.fits, SDCK_{ut_date}_*.fits.
     outdir = args.outdir.format(ut_date=args.ut_date)
 
     unbundle(Path(args.mefdir), args.ut_date, Path(outdir))
+
+    match_flats(Path(outdir))
 
 
 if __name__ == "__main__":

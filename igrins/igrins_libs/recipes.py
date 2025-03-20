@@ -284,10 +284,10 @@ def get_pmatch_from_fnmatch(recipe_fnmatch,
 
 #     return r
 
-recipe_log_dtypes = [('OBJNAME', np.unicode_), ('OBJTYPE', np.unicode_),
-                     ('GROUP1', np.unicode_), ('GROUP2', np.unicode_),
-                     ('EXPTIME', 'f'), ('RECIPE', np.unicode_),
-                     ('OBSIDS', np.unicode_),  ('FRAMETYPES', np.unicode_)]
+recipe_log_dtypes = [('OBJNAME', np.str_), ('OBJTYPE', np.str_),
+                     ('GROUP1', np.str_), ('GROUP2', np.str_),
+                     ('EXPTIME', 'f'), ('RECIPE', np.str_),
+                     ('OBSIDS', np.str_),  ('FRAMETYPES', np.str_)]
 
 
 def write_recipe_logs(fn):
@@ -490,7 +490,7 @@ class RecipeLogClass(pd.DataFrame):
         else:
             colnames = headers
         rows = [", ".join(headers) + "\n",
-                "# Avaiable recipes : FLAT, SKY, A0V_AB, A0V_ONOFF, "
+                "# Available recipes : FLAT, SKY, A0V_AB, A0V_ONOFF, "
                 "STELLAR_AB, STELLAR_ONOFF, EXTENDED_AB, EXTENDED_ONOFF\n"]
 
         def _check(v):

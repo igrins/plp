@@ -11,6 +11,7 @@ from ..external import argh
 
 
 _default_recipe_name = dict(flat="FLAT", std="A0V_AB", tar="STELLAR_AB",
+                            sky="SKY",
                             dark="DARK",
                             arc_thar="ARC", arc_une="ARC")
 
@@ -38,6 +39,7 @@ def make_recipe_logs(obsdate, l, populate_group1=False,
     msk = d3["OBJTYPE"].str.lower() == "arc"
     d3.loc[msk, "OBJTYPE"] = "ARC_" + d3.loc[msk, "FRAMETYPE"].str.upper()
 
+
     groupby_keys = ["OBJNAME", "OBJTYPE", "GROUP1", "GROUP2", "EXPTIME"]
 
     recipe_logs = []
@@ -49,6 +51,12 @@ def make_recipe_logs(obsdate, l, populate_group1=False,
 
         obsids = " ".join(group["OBSID"].apply(str))
         frametypes = " ".join(group["FRAMETYPE"])
+
+
+        #For sky frames with RECIPE=SKY, change OBJTYPE to TAR
+        if objtype.lower() == 'sky':
+            objtype = 'TAR'
+
 
         if populate_group1:
             group1 = group["OBSID"].iloc[0]

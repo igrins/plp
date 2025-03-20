@@ -5,6 +5,10 @@ import scipy.ndimage as ni
 from ..utils.image_combine import image_median
 
 
+from .correct_distortion import ShiftX
+from scipy.interpolate import UnivariateSpline
+
+
 class ApCoeff(object):
     """
     Apcoeff from original PLP.
@@ -204,7 +208,6 @@ class Apertures(object):
 
         # it would be easier if shift data before all this?
         if slitoffset_map is not None:
-            from .correct_distortion import ShiftX
             shiftx = ShiftX(slitoffset_map)
 
             data, variance_map = data.copy(), variance_map.copy()
@@ -520,7 +523,6 @@ class Apertures(object):
 
         # it would be easier if shift data before all this?
         if slitoffset_map is not None:
-            from .correct_distortion import ShiftX
             shiftx = ShiftX(slitoffset_map)
 
             data, variance_map = data.copy(), variance_map.copy()
@@ -586,8 +588,9 @@ class Apertures(object):
         return s_list, v_list
 
 
+
     def make_profile_map(self, order_map, slitpos_map, lsf,
-                         slitoffset_map=None):
+                         slitoffset_map=None, slice_indicies=(0,2048)):
         """
         lsf : callable object which takes (o, x, slit_pos)
 
@@ -608,7 +611,8 @@ class Apertures(object):
 
         slices = ni.find_objects(order_map)
         for o in self.orders:
-            sl = slices[o-1][0], slice(0, 2048)
+            #sl = slices[o-1][0], slice(0, 2048)
+            sl = slices[o-1][0], slice(slice_indicies[0], slice_indicies[1])
             msk = (order_map[sl] == o)
 
             profile1 = np.zeros(profile_map[sl].shape, "d")
@@ -621,6 +625,34 @@ class Apertures(object):
             profile_map[sl][msk] = profile1[msk]
 
         return profile_map
+
+    def make_profile_column(self, order_map, slitpos_map, lsf,
+                         slitoffset_map=None, slice_index=0):
+        """
+        Like make_profile_map above but for a single column in the echellogram
+        """
+        iy, ix = np.indices(slitpos_map.shape)
+
+        if slitoffset_map is not None:
+            ix = ix - slitoffset_map[slice_index,slice_index]
+
+        profile_column = np.empty(slitpos_map.shape[1], "d")
+        profile_column.fill(np.nan)
+
+        for o in self.orders:
+            msk = (order_map[:,slice_index] == o)
+
+            profile1 = np.zeros(profile_column.shape, "d")
+            profile1[msk] = lsf(o, ix[msk], slitpos_map[:,slice_index][msk])
+            # TODO :make sure that renormalization is good thing to do.
+            profile_sum = np.nansum(np.abs(profile1), axis=0)
+            with np.errstate(invalid="ignore"):
+                profile1 /= profile_sum
+
+            profile_column[msk] = profile1[msk]
+
+        return profile_column
+
 
     def make_synth_map(self, order_map, slitpos_map,
                        profile_map, s_list,
@@ -658,7 +690,7 @@ class Apertures(object):
             if np.sum(msk_s) < 2:
                 continue
 
-            from scipy.interpolate import UnivariateSpline
+            
             s_spline = UnivariateSpline(xx[msk_s], s[msk_s], k=3, s=0,
                                         bbox=[0, 2047])
 

@@ -76,6 +76,7 @@ def test_convert_frac_slit():
 def estimate_slit_profile_stellar(obsset,
                                   x1=800, x2=2048-800,
                                   slit_profile_mode="1d",
+                                  #slit_profile_mode='uniform',
                                   frac_slit=None):
 
     command_name = obsset.runner_config["command_name"]
@@ -118,49 +119,12 @@ _steps_default = [
          order_range="",
          correct_flexure=False,
          mask_cosmics=False,
+         user='Default',
+         version='Default',
+         slit_profile_method='column',
          ),
     Step("Set basename-postfix", set_basename_postfix,
          basename_postfix=""),
-]
-
-
-_steps_stellar = [
-    Step("Make Combined Images", make_combined_images,
-         force_image_combine=False,
-         pattern_remove_level="auto"),
-    Step("Estimate slit profile (stellar)",
-         estimate_slit_profile_stellar,
-         slit_profile_mode="1d",
-         frac_slit=None), # frac_slit can be "0.3,0.9" or "0.1:0.4,0.6:0.9"
-    # Step("Extract spectra (for extendeded)",
-    #      extract_extended_spec),
-    Step("Extract spectra (for stellar)",
-         extract_stellar_spec,
-         extraction_mode="optimal",
-         pixel_per_res_element=None,
-         ),
-    Step("Generate Rectified 2d-spec", store_2dspec),
-]
-
-steps_stellar = _steps_default + _steps_stellar
-
-_steps_stellar_pp = [
-    Step("Extract spectra (PP for stellar)",
-         extract_stellar_spec_pp,
-         extraction_mode="optimal"),
-]
-
-
-steps_stellar_pp = _steps_default + _steps_stellar_pp
-
-
-def update_db(obsset):
-
-    obsset.add_to_db("a0v")
-
-
-steps_a0v = steps_stellar + [Step("Flatten A0V", flatten_a0v),
-                             Step("Update db", update_db)
 ]
 
 
@@ -168,6 +132,7 @@ _steps_extended = [
     Step("Make Combined Images", make_combined_images,
          force_image_combine=False,
          pattern_remove_level="auto",
+         remove_vertical_pattern=False,
          allow_no_b_frame=True),
     Step("Estimate slit profile (extended)", estimate_slit_profile_extended,
          frac_slit=None),
@@ -183,6 +148,66 @@ _steps_extended = [
 
 
 steps_extended = _steps_default + _steps_extended
+
+
+_steps_stellar = [
+    Step("Make Combined Images", make_combined_images,
+         force_image_combine=False,
+         pattern_remove_level="auto",
+         remove_vertical_pattern=False,
+         allow_no_b_frame=True),
+    Step("Estimate slit profile (stellar)",
+         estimate_slit_profile_stellar,
+         slit_profile_mode="1d",
+         frac_slit=None), # frac_slit can be "0.3,0.9" or "0.1:0.4,0.6:0.9"
+    # Step("Extract spectra (for extendeded)",
+    #      extract_extended_spec),
+    Step("Extract spectra (for stellar)",
+         extract_stellar_spec,
+         extraction_mode="optimal",
+         pixel_per_res_element=None,
+         ),
+
+    #Add sum extraction
+    Step("Estimate slit profile (extended)", estimate_slit_profile_extended,
+         frac_slit=None),
+    Step("Extract spectra (for extendeded)",
+         extract_extended_spec,
+         pixel_per_res_element=None,
+         add_sum_postfix=True,
+         # extraction_mode="simple",
+    ),
+
+
+    Step("Generate Rectified 2d-spec", store_2dspec),
+]
+
+#steps_stellar = _steps_default + _steps_extended
+steps_stellar = _steps_default + _steps_stellar
+
+_steps_stellar_pp = [
+    Step("Extract spectra (PP for stellar)",
+         extract_stellar_spec_pp,
+         extraction_mode="optimal"),
+]
+
+#steps_stellar_pp = _steps_default + _steps_extended
+steps_stellar_pp = _steps_default + _steps_stellar_pp
+
+
+
+def update_db(obsset):
+
+    obsset.add_to_db("a0v")
+
+
+steps_a0v = steps_stellar + [Step("Flatten A0V", flatten_a0v),
+                             Step("Update db", update_db)
+]
+
+
+
+
 
 # _steps_extended_dry = [
 #     Step("Make Combined Images", make_combined_images,
