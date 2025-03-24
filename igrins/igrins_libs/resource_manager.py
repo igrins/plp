@@ -59,6 +59,7 @@ class IgrinsBasenameHelper():
     p = re.compile(r"N(\d+\w*)S(\d+\w*)_(\w+)([^_]*)")
     p_obsid = re.compile(r"(\d+)(.*)")
 
+
     def __init__(self, obsdate, band):
         self.obsdate = obsdate
         self.band = band
@@ -70,6 +71,8 @@ class IgrinsBasenameHelper():
             obsid_, group_postfix = self.p_obsid.match(obsid).groups()
             obsid = int(obsid_)
 
+
+
         #return "SDC{band}_{obsdate}_{obsid:04d}{group_postfix}".format(obsdate=self.obsdate,
         return "N{obsdate}S{obsid:04d}_{band}{group_postfix}".format(obsdate=self.obsdate,
                                                                        band=self.band,
@@ -78,7 +81,8 @@ class IgrinsBasenameHelper():
 
     def from_basename(self, basename):
         m = self.p.match(basename)
-        return str(int(m.group(3))) + m.group(4)
+        #return str(int(m.group(3))) + m.group(4)
+        return str(int(m.group(2)))
 
     def parse_basename(self, basename):
         return self.from_basename(basename)

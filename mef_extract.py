@@ -27,7 +27,6 @@ def match_flats(path_outdir):
             flat_H_files.append(all_H_files[i]) #Found H-band flats
     n_k_flats = len(flat_K_files)
     n_h_flats = len(flat_H_files)
-    breakpoint()
     if n_k_flats == n_h_flats:
         # lowest_obsnum_h = int(flat_H_files[0]._str[-9:-5])
         # lowest_obsnum_k = int(flat_K_files[0]._str[-9:-5])
