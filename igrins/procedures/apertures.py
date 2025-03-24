@@ -624,42 +624,32 @@ class Apertures(object):
 
 
 
-    def make_profile_map(self, order_map, slitpos_map, lsf,
-                         slitoffset_map=None, slice_indicies=(0,2048)):
+    def make_profile_column(self, order_map, slitpos_map, lsf,
+                         slitoffset_map=None, slice_index=0):
         """
-        lsf : callable object which takes (o, x, slit_pos)
-
-        o : order (integer)
-        x : detector position in dispersion direction
-        slit_pos : 0..1
-
-        x and slit_pos can be array.
+        Like make_profile_map above but for a single column in the echellogram
         """
-
         iy, ix = np.indices(slitpos_map.shape)
 
         if slitoffset_map is not None:
-            ix = ix - slitoffset_map
+            ix = ix - slitoffset_map[slice_index,slice_index]
 
-        profile_map = np.empty(slitpos_map.shape, "d")
-        profile_map.fill(np.nan)
+        profile_column = np.empty(slitpos_map.shape[1], "d")
+        profile_column.fill(np.nan)
 
-        slices = ni.find_objects(order_map)
         for o in self.orders:
-            #sl = slices[o-1][0], slice(0, 2048)
-            sl = slices[o-1][0], slice(slice_indicies[0], slice_indicies[1])
-            msk = (order_map[sl] == o)
+            msk = (order_map[:,slice_index] == o)
 
-            profile1 = np.zeros(profile_map[sl].shape, "d")
-            profile1[msk] = lsf(o, ix[sl][msk], slitpos_map[sl][msk])
+            profile1 = np.zeros(profile_column.shape, "d")
+            profile1[msk] = lsf(o, ix[msk], slitpos_map[:,slice_index][msk])
             # TODO :make sure that renormalization is good thing to do.
-            profile_sum = np.abs(profile1).sum(axis=0)
+            profile_sum = np.nansum(np.abs(profile1), axis=0)
             with np.errstate(invalid="ignore"):
                 profile1 /= profile_sum
 
-            profile_map[sl][msk] = profile1[msk]
+            profile_column[msk] = profile1[msk]
 
-        return profile_map
+        return profile_column
 
     def make_synth_map(self, order_map, slitpos_map,
                        profile_map, s_list,
