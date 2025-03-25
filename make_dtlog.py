@@ -19,11 +19,12 @@ def write_dtlog(utdate, datadir: Path):
     # dir = args.dir[0] if args.dir else f"./indata/{utdate}"
     # fn_out = os.path.join(dir, f"IGRINS_DT_Log_{utdate}-1_H.txt")
 
-    fn_list = sorted(datadir.glob(f"SDCH_{utdate}_*.fits"))
+    #fn_list = sorted(datadir.glob(f"SDCH_{utdate}_*.fits"))
+    fn_list = sorted(datadir.glob(f"N{utdate}S*.fits"))
 
     if len(fn_list) == 0:
         raise RuntimeError(
-            f"No SDCH* file is found in {datadir} or No {datadir} is found.")
+            f"No N* file is found in {datadir} or No {datadir} is found.")
 
     headers_string = ("FILENAME,OBSTIME,GROUP1,GROUP2,OBJNAME,OBJTYPE,FRAMETYPE,"
                       "EXPTIME,ROTPA,RA,DEC,AM")
@@ -117,7 +118,7 @@ def write_dtlog(utdate, datadir: Path):
 def main():
     parser = argparse.ArgumentParser(
         # formatter_class=argparse.RawTextHelpFormatter,
-        description="Make a DT Log from the headers of ./indata/ut_date/SDCH* files.",
+        description="Make a DT Log from the headers of ./indata/ut_date/N* files.",
         epilog="examples:\n" +
         "  make_dtlog.py 20240425\n\n" +
         "version:\n  " + __version__)

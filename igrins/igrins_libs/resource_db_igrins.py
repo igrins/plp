@@ -95,7 +95,8 @@ class ResourceDBFile(ResourceDBBase):
                     continue
 
                 try:
-                    obsid_ = int(l1.strip().split("_")[-1])
+                    #obsid_ = int(l1.strip().split("_")[-1])
+                    obsid_ = int(l1.strip().split("_")[0].split('S')[1])
                 except ValueError:
                     continue
 
@@ -145,9 +146,14 @@ class ResourceDBFile(ResourceDBBase):
         import re
         p = re.compile(r"\D+")
 
+
+
         obsid_list, basename_list = self.get_obsid_list(postfix)
 
-        obsid_part = basename.strip().split("_")[-1]
+
+
+        #obsid_part = basename.strip().split("_")[-1].split('S')[-1]
+        obsid_part = basename.strip().split("_")[0].split('S')[-1]
         obsid = int(p.split(obsid_part)[0])
 
         if obsid_list:

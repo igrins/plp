@@ -55,6 +55,10 @@ def _get_combined_image(obsset):
         cosmcis_objlim = 4.0
         readnoise_multiplier = 2.25
         satlevel = -1
+        h_band_gain = 2.5
+        k_band_gain = 2.5
+        h_band_read_noise = 5.2 #Note for fowler 16
+        k_band_read_noise = 6.7
         n_frames = len(data_list) #Number of frames in nod
         cr_mask_count = np.zeros(np.shape(data_list[0][4:-4, 4:-4])) #Create an array to count how many times a pixel is masked for cosmics
         cr_masks = [] #Create a list of CR Masks
@@ -62,18 +66,18 @@ def _get_combined_image(obsset):
         if n_frames == 1: #Run only if n_frames is 1 (a single AB nod), this is rare but requires special treatment to interpolate over cosmics since we can't fill in masked cosmics with other frames
                 data_without_overscan = data_list[0][4:-4, 4:-4] #Cut overscan
                 if band == 'H':
-                    cr_mask, cr_array = astroscrappy.detect_cosmics(data_without_overscan, gain=2.05, readnoise=10.92*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for H-band
+                    cr_mask, cr_array = astroscrappy.detect_cosmics(data_without_overscan, gain=h_band_gain, readnoise=h_band_read_noise, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for H-band
                 else: #if band == 'K'
-                    cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.21, readnoise=8.93*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for K-band
+                    cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=k_band_gain, readnoise=k_band_read_noise, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for K-band
                 data_list[0][4:-4, 4:-4] = cr_array #Interpolate over any cosmics found
         else: #If n_frames > 1, do the normal routine and use pixels frames without cosmics to fill in masked cosmics
             cleaned_data_list = []
             for i in range(n_frames):
                 data_without_overscan = data_list[i][4:-4, 4:-4] #Cut overscan
                 if band == 'H':
-                    cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.05, readnoise=10.92*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for H-band
+                    cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=h_band_gain, readnoise=h_band_read_noise, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for H-band
                 else: #if band == 'K'
-                    cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.21, readnoise=8.93*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for K-band            
+                    cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=k_band_gain, readnoise=k_band_read_noise, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for K-band            
                 dilated_cr_mask = binary_dilation(cr_mask, iterations=1)
                 cr_masks.append(dilated_cr_mask)
                 cleaned_data_list.append(median_filter(cr_array, [5,5]))
