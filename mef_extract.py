@@ -110,7 +110,8 @@ N{ut_date}*_H.fits, N{ut_date}*_K.fits.
                         default=".")
     parser.add_argument("--outdir", type=str, help="Ouput data directory. Default is ./indata/{ut_date}",
                         default="./indata/{ut_date}")
-    parser.add_argument("--disable-match-flats", help="Disable matching obsnums for seperately taken H and K band flat ON calibrations.")
+    parser.add_argument("--disable-match-flats", help="Disable matching obsnums for seperately taken H and K band flat ON calibrations.",
+                        action='store_false')
     # main(parser.parse_args(args=None if sys.argv[1:] else ["--help"]))
 
     args = parser.parse_args(args=None if sys.argv[1:] else ["--help"])
