@@ -117,7 +117,7 @@ def get_unique_obsid(obsdate, l, bands="HK"):
     obsdate0 = int(obsdate)
 
     def parse_obsdate_obsid(fn):
-        obsdate1, obsid = fn.split(".")[0].split("_")[-2:]
+        obsdate1, obsid = fn.split('_')[0].replace('N','').split('S')
         return int(obsdate1), int(obsid)
 
     obsdate_obsid_list = [parse_obsdate_obsid(l1.iloc[0])
@@ -149,7 +149,7 @@ def get_obsid_map(obsdate, l, bands="HK"):
     for i, l1 in l.iterrows():
         try:
             fn = l1.iloc[0]
-            obsdate1, obsid = fn.split(".")[0].split("_")[-2:]
+            obsdate1, obsid = fn.split('_')[0].replace('N','').split('S')
 
             if int(obsdate1) != obsdate0:
                 obsid_link_list.append((obsdate1, int(obsid), fn))
