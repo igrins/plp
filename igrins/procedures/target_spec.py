@@ -356,6 +356,8 @@ def store_1dspec(obsset, v_list, s_list, postfix='', sn_list=None):
     hdul[0].header = wvl_header #Update headers
     hdul[0].header['USER'] = (user, 'User who ran data reduction')
     hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
+    hdul[0].header['OBSIDS'] = (obsset.get_obsids_string(), 'All Observation IDs used in stack')
+    hdul[0].header['FRMTYPES'] = (obsset.get_frametypes_string(), 'All Frametypes used in stack (A or B)')
     hdul[1].header['EXTNAME'] = 'SCI'
     hdul[2].header['EXTNAME'] = 'VAR'
     hdul[3].header['EXTNAME'] = 'SCI'
@@ -479,6 +481,8 @@ def store_2dspec(obsset,
     hdul[0].header = wvl_header  #Update headers
     hdul[0].header['USER'] = (user, 'User who ran data reduction')
     hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
+    hdul[0].header['OBSIDS'] = (obsset.get_obsids_string(), 'All Observation IDs used in stack')
+    hdul[0].header['FRMTYPES'] = (obsset.get_frametypes_string(), 'All Frametypes used in stack (A or B)')
     hdul[1].header['EXTNAME'] = 'SCI'
     hdul[2].header['EXTNAME'] = 'VAR'
     hdul[3].header['EXTNAME'] = 'SCI'
