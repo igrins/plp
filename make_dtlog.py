@@ -20,7 +20,7 @@ def write_dtlog(utdate, datadir: Path):
     # fn_out = os.path.join(dir, f"IGRINS_DT_Log_{utdate}-1_H.txt")
 
     #fn_list = sorted(datadir.glob(f"SDCH_{utdate}_*.fits"))
-    fn_list = sorted(datadir.glob(f"N{utdate}S*.fits"))
+    fn_list = sorted(datadir.glob(f"N{utdate}S*_H.fits"))
 
     if len(fn_list) == 0:
         raise RuntimeError(
@@ -44,7 +44,7 @@ def write_dtlog(utdate, datadir: Path):
 
         filename = fi.name # split("/")[-1]
         obstime = hd0["UTSTART"].split("T")[-1][:11]
-        objname = hd0["OBJECT"]
+        objname = hd0["OBJECT"].replace(',','-')
 
         match hd0["OBSTYPE"]:
             case "DARK":
@@ -53,11 +53,9 @@ def write_dtlog(utdate, datadir: Path):
             case "FLAT":
                 objtype = "FLAT"
                 if "GCALLAMP" in hd0:
-                    if (hd0["GCALLAMP"] == "QH") & (hd0["GCALSHUT"] == "CLOSED"):
-                        frmtype = "ON"
-                    elif (hd0["GCALLAMP"] == "IRhigh") & (hd0["GCALSHUT"] == "CLOSED"):
+                    if (hd0["GCALLAMP"] == "IRhigh") & (hd0["GCALSHUT"] == "CLOSED"):
                         frmtype = "OFF"
-                    elif (hd0["GCALLAMP"] == "IRhigh") & (hd0["GCALSHUT"] == "OPEN"):
+                    elif ((hd0["GCALLAMP"] == "QH") & (hd0["GCALSHUT"] == "CLOSED")) or (hd0["GCALLAMP"] == "IRhigh") & (hd0["GCALSHUT"] == "OPEN"):
                         frmtype = "ON"
                     else:
                         raise RuntimeError("Check 'GCALLAMP' and 'GCALSHUT' keywords.")
@@ -85,8 +83,8 @@ def write_dtlog(utdate, datadir: Path):
                 match (hd0["POFFSET0"], hd0["QOFFSET0"]):
                     case (0, -1.25): frmtype = "A"
                     case (0, 1.25): frmtype = "B"
-                    case (0, 0): frmtype = "ON"
-                    case (_,_): frmtype = "OFF"
+                    case (0, 0): frmtype = "A"
+                    case (_,_): frmtype = "B"
             else:
                 frmtype ="A"
 

@@ -54,8 +54,9 @@ def make_recipe_logs(obsdate, l, populate_group1=False,
 
 
         #For sky frames with RECIPE=SKY, change OBJTYPE to TAR
-        if objtype.lower() == 'sky':
+        if objtype.lower() == 'sky' or objname== 'Blank sky':
             objtype = 'TAR'
+            recipe_name = 'SKY'
 
 
         if populate_group1:
