@@ -120,7 +120,6 @@ N{ut_date}*_H.fits, N{ut_date}*_K.fits.
 
     unbundle(Path(args.mefdir), args.ut_date, Path(outdir))
 
-    breakpoint()
     if not args.disable_match_flats:
         match_flats(Path(outdir))
     else:
