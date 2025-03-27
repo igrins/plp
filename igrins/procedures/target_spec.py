@@ -361,9 +361,9 @@ def store_1dspec(obsset, v_list, s_list, postfix='', sn_list=None):
     hdul[1].header['EXTNAME'] = 'SCI'
     hdul[2].header['EXTNAME'] = 'VAR'
     hdul[3].header['EXTNAME'] = 'SCI'
-    hdul[1].header['EXTVER'] = '1'
-    hdul[2].header['EXTVER'] = '1'
-    hdul[3].header['EXTVER'] = '1'
+    hdul[1].header['EXTVER'] = 1
+    hdul[2].header['EXTVER'] = 1
+    hdul[3].header['EXTVER'] = 1
     hdul[1].header['EXTDESC'] = 'TGT_SPEC'
     hdul[2].header['EXTDESC'] = 'TGT_SPEC_VARIANCE'
     hdul[3].header['EXTDESC'] = 'WAVELENGTH'    
@@ -486,9 +486,9 @@ def store_2dspec(obsset,
     hdul[1].header['EXTNAME'] = 'SCI'
     hdul[2].header['EXTNAME'] = 'VAR'
     hdul[3].header['EXTNAME'] = 'SCI'
-    hdul[1].header['EXTVER'] = '1'
-    hdul[2].header['EXTVER'] = '1'
-    hdul[3].header['EXTVER'] = '1'
+    hdul[1].header['EXTVER'] = 1
+    hdul[2].header['EXTVER'] = 1
+    hdul[3].header['EXTVER'] = 1
     hdul[1].header['EXTDESC'] = 'TGT_SPEC'
     hdul[2].header['EXTDESC'] = 'TGT_SPEC_VARIANCE'
     hdul[3].header['EXTDESC'] = 'WAVELENGTH'    
