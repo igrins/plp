@@ -477,7 +477,7 @@ def store_2dspec(obsset,
     hdul = obsset.get_hdul_to_write(([], convert_data(d.astype("float32"))),
                                     ([], convert_data(v.astype("float32"))),
                                     ([], convert_data(wvl_data)), convention='gemini')
-    # wvl_header.update(hdul[0].header)
+    wvl_header.update(hdul[0].header)
     hdul[0].header = wvl_header  #Update headers
     hdul[0].header['USER'] = (user, 'User who ran data reduction')
     hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
@@ -496,9 +496,9 @@ def store_2dspec(obsset,
     hdul[2].verify(option="silentfix")
     hdul[3].verify(option="silentfix")
     hdul[0].header['NAXIS'] = 0 #Clean up primary header keywords to avoid errors involving NAXIS keywords
-    #del hdul[0].header['NAXIS1']
-    #del hdul[0].header['NAXIS2']
-
+    del hdul[0].header['NAXIS1']
+    del hdul[0].header['NAXIS2']
+    del hdul[0].header['NAXIS3']
 
     obsset.store("SPEC2D_FITS", hdul, postfix=basename_postfix)
 
