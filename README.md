@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.18579.svg)](http://dx.doi.org/10.5281/zenodo.18579)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.11080095.svg)](https://doi.org/10.5281/zenodo.11080095)
 
 # IGRINS Pipeline Package
 
@@ -15,9 +15,13 @@ executed. Unfortunately, this is not properly done. Therefore, to run
 the pipeline, you should have an input file describing which recipe
 should be used to which data sets.
 
-IGRINS pipeline package is currently in active development. Version 3 is the latest version and is recommended for use for reducing data from the McDonald 2.7m, LDT/DCT, and Gemini-South telescopes.  Version 2 will still work for those who need it.  Version 1, that was originally developed by Prof. Soojong Pak's team at Kyung Hee University (KHU), is deprecated and is not recommended to use.  Versions 2-3 were developed by the pipeline team at KASI (led by Dr. Jae-Joon Lee) in close collaboration with KHU's team.  Additional development and testing for v3 has been carried out by Kyle Kaplan and Erica Sawczynec at the University of Texas at Austin Department of Astronomy.
+IGRINS pipeline package is currently in active development. Version 3 is the latest version and is recommended for use for reducing data from IGRINS on the McDonald 2.7m, LDT/DCT, and Gemini-South telescopes.  
 
+Version 2 will still work for those who need it.  Version 1, that was originally developed by Prof. Soojong Pak's team at Kyung Hee University (KHU), is deprecated and is not recommended to use.  Versions 2-3 were developed by the pipeline team at KASI (led by Dr. Jae-Joon Lee) in close collaboration with KHU's team.  Additional development and testing for v3 has been carried out by Kyle Kaplan and Erica Sawczynec at the University of Texas at Austin Department of Astronomy.
 
+# IGRINS-2 Pipeline
+
+The `igrins2` branch should be used for those who want to reduce IGRINS-2 data.
 
 ## Downloads
 
@@ -27,13 +31,21 @@ IGRINS pipeline package is currently in active development. Version 3 is the lat
 
 - https://github.com/igrins/plp/wiki/
 
-## The Raw & Reduced IGRINS Spectral Archive (RRISA)
-IGRINS data is made publically availiable through the The Raw & Reduced IGRINS Spectral Archive (RRISA).  The current version of RRISA (v1) uses the IGRINS PLP v2 for it's data reductions.  The raw data are also availiable for RRISA for those who want to perform their own data reduction with the IGRINGS PLP.
+## Data Access and Archives
 
-- RRISA v1: https://igrinscontact.github.io
+IGRINS data are made publicly available through the The Raw & Reduced IGRINS Spectral Archive (RRISA).
+
+- RRISA: https://igrinscontact.github.io
+
+IGRINS-2 data are made available through the Gemini Archive.
+
+- Gemini Archive: https://archive.gemini.edu
 
 
 ## Publications
+
+Many of the updates for v3 of the IGRINS PLP are described in the RRISA paper.
+- https://ui.adsabs.harvard.edu/abs/2025PASP..137c4505S
 
 The version 1 pipeline is described in the following publication.
 - http://adsabs.harvard.edu/abs/2014AdSpR..53.1647S
