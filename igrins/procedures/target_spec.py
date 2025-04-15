@@ -16,7 +16,7 @@ def _get_int_from_config(obsset, kind, default):
 
 
 def setup_extraction_parameters(obsset, order_range="-1,-1",
-                                height_2dspec=0, correct_flexure=False, mask_cosmics=False):
+                                height_2dspec=0, correct_flexure=False, mask_cosmics=False, disable_pattern_removal=False):
 
     _order_range_s = order_range
     try:
@@ -34,7 +34,7 @@ def setup_extraction_parameters(obsset, order_range="-1,-1",
     obsset.set_recipe_parameters(order_start=order_start,
                                  order_end=order_end,
                                  height_2dspec=height_2dspec,
-                                 correct_flexure=correct_flexure, mask_cosmics=mask_cosmics)
+                                 correct_flexure=correct_flexure, mask_cosmics=mask_cosmics, disable_pattern_removal=disable_pattern_removal)
 
 
 def _get_combined_image(obsset):

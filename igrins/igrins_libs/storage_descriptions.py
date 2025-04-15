@@ -63,6 +63,10 @@ COMBINED_VARIANCE0_DESC = ("OUTDATA_PATH",
                            "{basename}{postfix}.combined_variance0.fits")
 INTERORDER_BACKGROUND_DESC = ("OUTDATA_PATH",
                               "{basename}{postfix}.interorder_background.fits")
+DATA_MINUS_RAW_DESC = ("OUTDATA_PATH", "{basename}{postfix}.data_minus_raw.fits")
+DATA_PLUS_DESC = ("OUTDATA_PATH", "{basename}{postfix}.data_plus.fits")
+
+
 
 SLITPROFILE_FITS_DESC = ("OUTDATA_PATH",
                         "{basename}{postfix}.slitprofile.fits")
