@@ -108,6 +108,27 @@ class ObsSet(object):
 
             return obsids
 
+    def get_obsids_string(self):
+         obsids_list = self.get_obsids()
+         obsids_string = ''
+         n = len(obsids_list)
+         for i in range(n):
+             obsids_string += str(obsids_list[i])
+             if i < n-1:
+                 obsids_string += ', '
+         return obsids_string
+ 
+     def get_frametypes_string(self):
+         frametypes_list = self.frametypes
+         frametypes_string = ''
+         n = len(frametypes_list)
+         for i in range(n):
+             frametypes_string += frametypes_list[i]
+             if i < n-1:
+                 frametypes_string += ', '
+         return frametypes_string
+            
+
     def get_subset(self, *frametypes):
         ofs = [(o, f) for o, f in zip(self.obsids, self.frametypes)
                if f in frametypes]

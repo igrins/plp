@@ -305,6 +305,10 @@ def store_1dspec(obsset, v_list, s_list, sn_list=None):
                                     ([], convert_data(wvl_data)))
     wvl_header.update(hdul[0].header)
     hdul[0].header = wvl_header
+
+    hdul[0].header['OBSIDS'] = (obsset.get_obsids_string(), 'All Observation IDs used in stack')
+    hdul[0].header['FRMTYPES'] = (obsset.get_frametypes_string(), 'All Frametypes used in stack (A or B)')
+
     hdul[0].verify(option="silentfix")
 
     obsset.store("SPEC_FITS", hdul,
@@ -370,6 +374,9 @@ def store_2dspec(obsset,
     hdul = obsset.get_hdul_to_write(([], convert_data(d.astype("float32"))))
     # wvl_header.update(hdul[0].header)
     hdul[0].header = wvl_header
+
+    hdul[0].header['OBSIDS'] = (obsset.get_obsids_string(), 'All Observation IDs used in stack')
+    hdul[0].header['FRMTYPES'] = (obsset.get_frametypes_string(), 'All Frametypes used in stack (A or B)') 
 
     obsset.store("SPEC2D_FITS", hdul, postfix=basename_postfix)
 
