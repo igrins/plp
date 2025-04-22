@@ -86,7 +86,7 @@ def write_to_file(df_recipe_logs, fn_out):
 
     headers = df_recipe_logs.keys()
     fout.write(", ".join(headers) + "\n")
-    fout.write("# Avaiable recipes : FLAT, SKY, A0V_AB, A0V_ONOFF, "
+    fout.write("# Available recipes : FLAT, SKY, A0V_AB, A0V_ONOFF, "
                "STELLAR_AB, STELLAR_ONOFF, EXTENDED_AB, EXTENDED_ONOFF\n")
 
     df_recipe_logs.to_csv(fout, index=False, header=False)
