@@ -8,6 +8,11 @@ SLIT_PROFILE_METHOD=column #Method for determining slit profile for optimal extr
 
 echo "Enter UTDATE:" #Prompt user to enter date
 read UTDATE #Get date from user
+if ! [[ "$UTDATE" =~ ^[0-9]+$ ]] #Check if UT date is integer
+    then
+        echo "UTDATE is incorrect format.  Should be YYYYMMDD."
+        exit 1 #End script if the UT DATE is wrong
+fi
 #Clean up previous files, if any
 rm -r outdata/$UTDATE
 rm -r calib/secondary/$UTDATE
