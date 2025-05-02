@@ -75,9 +75,9 @@ def _get_combined_image(obsset):
             for i in range(n_frames):
                 data_without_overscan = data_list[i][4:-4, 4:-4] #Cut overscan
                 if band == 'H':
-                    cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=h_band_gain, readnoise=h_band_read_noise, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for H-band
+                    cr_mask_astroscrappy, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=h_band_gain, readnoise=h_band_read_noise, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for H-band
                 else: #if band == 'K'
-                    cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=k_band_gain, readnoise=k_band_read_noise, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for K-band            
+                    cr_mask_astroscrappy, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=k_band_gain, readnoise=k_band_read_noise, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for K-band            
                 filtered_data_1 = cr_array - median_filter(cr_array, [7,1]) #Apply an additional mask for CRs and electronic noise that might have been missed by astroscrappy
                 filtered_data_2 = filtered_data_1 - median_filter(filtered_data_1, [1,11])
                 cr_mask_median_filter = (np.abs(filtered_data_2) > 40.0) & ( np.abs(filtered_data_2 /cr_array) > 0.6)
