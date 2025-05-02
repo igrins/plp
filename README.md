@@ -15,13 +15,13 @@ executed. Unfortunately, this is not properly done. Therefore, to run
 the pipeline, you should have an input file describing which recipe
 should be used to which data sets.
 
-IGRINS pipeline package is currently in active development. Version 3 is the latest version and is recommended for use for reducing data from IGRINS on the McDonald 2.7m, LDT/DCT, and Gemini-South telescopes.  
+IGRINS pipeline package is currently in active development. Version 3.1 is the latest version and is recommended for use for reducing data from IGRINS on the McDonald 2.7m, LDT/DCT, and Gemini-South telescopes.  
 
-Version 2 will still work for those who need it.  Version 1, that was originally developed by Prof. Soojong Pak's team at Kyung Hee University (KHU), is deprecated and is not recommended to use.  Versions 2-3 were developed by the pipeline team at KASI (led by Dr. Jae-Joon Lee) in close collaboration with KHU's team.  Additional development and testing for v3 has been carried out by Kyle Kaplan and Erica Sawczynec at the University of Texas at Austin Department of Astronomy.
+Versions 3.0.0 and 2 will still work for those who need it, but we reccomend upgrading to the latest version.  Version 1, was originally developed by Prof. Soojong Pak's team at Kyung Hee University (KHU), and is deprecated.  Versions 2-3 were developed by the pipeline team at KASI (led by Dr. Jae-Joon Lee) in close collaboration with KHU's team.  Additional development and testing for v3 has been carried out by Kyle Kaplan and Erica Sawczynec at the University of Texas at Austin Department of Astronomy.
 
 # IGRINS-2 Pipeline
 
-The `igrins2` branch should be used for those who want to reduce IGRINS-2 data.
+Relesaes labeled IGRINS-2 or the `igrins2` branch should be used for those who want to reduce IGRINS-2 data.
 
 ## Downloads
 
