@@ -43,7 +43,7 @@ def _get_combined_image(obsset):
 
 
     #New scheme for cosmic ray masking
-    #Kyle Kaplan Dec 7, 2023
+    #Kyle Kaplan Dec 7, 2023, updated May 2, 2025 to add additional filter
     mask_cosmics = obsset.get_recipe_parameter("mask_cosmics")
     if mask_cosmics == True:
         # cosmics_sigmaclip = 15.0 #Set universal cosmic ray correction parameters
@@ -78,10 +78,13 @@ def _get_combined_image(obsset):
                     cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=h_band_gain, readnoise=h_band_read_noise, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for H-band
                 else: #if band == 'K'
                     cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=k_band_gain, readnoise=k_band_read_noise, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for K-band            
-                dilated_cr_mask = binary_dilation(cr_mask, iterations=1)
-                cr_masks.append(dilated_cr_mask)
-                cleaned_data_list.append(median_filter(cr_array, [5,5]))
-                cr_mask_count[dilated_cr_mask] += 1 #Increment mask count array for later scaling the non-masked pixels
+                filtered_data_1 = cr_array - median_filter(cr_array, [7,1]) #Apply an additional mask for CRs and electronic noise that might have been missed by astroscrappy
+                filtered_data_2 = filtered_data_1 - median_filter(filtered_data_1, [1,11])
+                cr_mask_median_filter = (np.abs(filtered_data_2) > 40.0) & ( np.abs(filtered_data_2 /cr_array) > 0.6)
+                cr_mask = binary_dilation(cr_mask_astroscrappy, iterations=1) | cr_mask_median_filter #Combine old and new masks
+                cr_masks.append(cr_mask)
+                cleaned_data_list.append(median_filter(cr_array, [3,3])) #Generate smoothed data to fill in pixels that were masked
+                cr_mask_count[cr_mask] += 1 #Increment mask count array for later scaling the non-masked pixels
             masked_pixels_unlikely_to_be_cosmics = cr_mask_count == n_frames
             cr_mask_count[masked_pixels_unlikely_to_be_cosmics] = 0 #Zero out pixels in the CR mask count unlikely to be cosmics
             for i in range(n_frames): #Scale each frame to "fill" holes left by cosmic rays using data from other frames
