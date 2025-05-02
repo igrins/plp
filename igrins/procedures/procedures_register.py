@@ -120,12 +120,15 @@ def _get_offset_transform(thar_spec_src, thar_spec_dst):
         # reduce the search range for correlation peak using the model
         # prediction.
         ym = int(model_robust.predict_y(i))
-        x1 = int(max(0, (center - ym) - 20))
-        x2 = int(min((center - ym) + 20 + 1, 2048))
-        # print i, x1, x2
-        ym2 = center - (np.argmax(cor_list[i][x1:x2]) + x1)
-        # print ym2
-        offsets2[i] = ym2
+        try:  #Error catch in odd instances ThAr registering doesn't fully work
+            x1 = int(max(0, (center - ym) - 20))
+            x2 = int(min((center - ym) + 20 + 1, 2048))
+            # print i, x1, x2
+            ym2 = center - (np.argmax(cor_list[i][x1:x2]) + x1)
+            # print ym2
+            offsets2[i] = ym2
+        except:
+            pass
 
     def get_offsetter(o):
         def _f(x, o=o):

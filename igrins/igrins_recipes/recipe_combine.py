@@ -25,25 +25,88 @@ from ..procedures.sky_spec import get_exptime
 from ..procedures.procedures_flexure_correction import estimate_flexure, estimate_flexure_short_exposures, check_telluric_shift
 
 import astroscrappy
-from scipy.ndimage import median_filter, binary_dilation
+from scipy.ndimage import median_filter, binary_dilation, binary_erosion
 
 from ..procedures.destriper import destriper
 
 
 
 
-def _get_combined_image(obsset):
+def _get_combined_image(obsset, no_b=False):
     # Should not use median, Use sum.
     import_data_list = [hdu.data for hdu in obsset.get_hdus()]
     data_list = [] #Put the data list in a form that can be modified (not read only)
 
     for import_data_list_frame in import_data_list:
-        data_list.append(np.array(import_data_list_frame.data))
+        data = np.array(import_data_list_frame.data)
+        # if no_b == True:
+        #     mask = (data > np.nanpercentile(data, 90.0)) & (~np.isfinite(data))
+        #     mask = binary_erosion(mask, iterations=1)
+        #     masked_data = copy.deepcopy(data)
+        #     masked_data[mask] = np.nan
+        #     data = data - np.nanmedian(masked_data, 0) #Remove pattern
+        #     data = data - np.nanmedian(masked_data, 1)[:,np.newaxis]
+        #     masked_data = copy.deepcopy(data)         
+        #     masked_data[mask] = np.nan
+        #     data = data - median_filter(masked_data, [1,151])
+        #     data_list.append(data - median_filter(masked_data, [1,51]))
+
+        # else:
+        #     data_list.append(data)
+        data_list.append(data)
+        
 
 
 
-    #New scheme for cosmic ray masking
-    #Kyle Kaplan Dec 7, 2023
+    # #Older cosmic ray masking scheme, commented out
+    # #Kyle Kaplan Dec 7, 2023
+    # mask_cosmics = obsset.get_recipe_parameter("mask_cosmics")
+    # if mask_cosmics == True:
+    #     # cosmics_sigmaclip = 15.0 #Set universal cosmic ray correction parameters
+    #     # cosmics_sigfrac = 0.3
+    #     # cosmcis_objlim = 5.0
+    #     # satlevel = -1
+    #     cosmics_sigmaclip = 1.7 #Set universal cosmic ray correction parameters
+    #     cosmics_sigfrac = 13.0
+    #     cosmcis_objlim = 4.0
+    #     readnoise_multiplier = 2.25
+    #     satlevel = -1
+    #     n_frames = len(data_list) #Number of frames in nod
+    #     cr_mask_count = np.zeros(np.shape(data_list[0][4:-4, 4:-4])) #Create an array to count how many times a pixel is masked for cosmics
+    #     cr_masks = [] #Create a list of CR Masks
+    #     date, band = obsset.get_resource_spec()
+    #     if n_frames == 1: #Run only if n_frames is 1 (a single AB nod), this is rare but requires special treatment to interpolate over cosmics since we can't fill in masked cosmics with other frames
+    #             data_without_overscan = data_list[0][4:-4, 4:-4] #Cut overscan
+    #             if band == 'H':
+    #                 cr_mask, cr_array = astroscrappy.detect_cosmics(data_without_overscan, gain=2.05, readnoise=10.92*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for H-band
+    #             else: #if band == 'K'
+    #                 cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.21, readnoise=8.93*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for K-band
+    #             data_list[0][4:-4, 4:-4] = cr_array #Interpolate over any cosmics found
+    #     else: #If n_frames > 1, do the normal routine and use pixels frames without cosmics to fill in masked cosmics
+    #         cleaned_data_list = []
+    #         for i in range(n_frames):
+    #             data_without_overscan = data_list[i][4:-4, 4:-4] #Cut overscan
+    #             if band == 'H':
+    #                 cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.05, readnoise=10.92*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for H-band
+    #             else: #if band == 'K'
+    #                 cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.21, readnoise=8.93*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for K-band            
+    #             dilated_cr_mask = binary_dilation(cr_mask, iterations=1)
+    #             cr_masks.append(dilated_cr_mask)
+    #             cleaned_data_list.append(median_filter(cr_array, [5,5]))
+    #             cr_mask_count[dilated_cr_mask] += 1 #Increment mask count array for later scaling the non-masked pixels
+    #         masked_pixels_unlikely_to_be_cosmics = cr_mask_count == n_frames
+    #         cr_mask_count[masked_pixels_unlikely_to_be_cosmics] = 0 #Zero out pixels in the CR mask count unlikely to be cosmics
+    #         for i in range(n_frames): #Scale each frame to "fill" holes left by cosmic rays using data from other frames
+    #             data_list[i][4:-4, 4:-4][cr_masks[i]] = 0. #Zero out cosmic rays found
+    #             data_list[i][4:-4, 4:-4] *= (n_frames / (n_frames - cr_mask_count)) #Scale up pixels in frames without cosmics but where cosmics are in other frames
+    #             data_list[i][4:-4, 4:-4][masked_pixels_unlikely_to_be_cosmics] = cleaned_data_list[i][masked_pixels_unlikely_to_be_cosmics] #Fill in bad pixels
+
+
+
+
+
+    #Updated scheme for cosmic ray masking
+    #Kyle Kaplan Dec 7, 2023, updated May 2, 2025 to add additional filter
     mask_cosmics = obsset.get_recipe_parameter("mask_cosmics")
     if mask_cosmics == True:
         # cosmics_sigmaclip = 15.0 #Set universal cosmic ray correction parameters
@@ -71,19 +134,23 @@ def _get_combined_image(obsset):
             for i in range(n_frames):
                 data_without_overscan = data_list[i][4:-4, 4:-4] #Cut overscan
                 if band == 'H':
-                    cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.05, readnoise=10.92*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for H-band
+                    cr_mask_astroscrappy, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.05, readnoise=10.92*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for H-band
                 else: #if band == 'K'
-                    cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.21, readnoise=8.93*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for K-band            
-                dilated_cr_mask = binary_dilation(cr_mask, iterations=1)
-                cr_masks.append(dilated_cr_mask)
-                cleaned_data_list.append(median_filter(cr_array, [5,5]))
-                cr_mask_count[dilated_cr_mask] += 1 #Increment mask count array for later scaling the non-masked pixels
+                    cr_mask_astroscrappy, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.21, readnoise=8.93*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for K-band            
+                filtered_data_1 = cr_array - median_filter(cr_array, [7,1]) #Apply an additional mask for CRs and electronic noise that might have been missed by astroscrappy
+                filtered_data_2 = filtered_data_1 - median_filter(filtered_data_1, [1,11])
+                cr_mask_median_filter = (np.abs(filtered_data_2) > 40.0) & ( np.abs(filtered_data_2 /cr_array) > 0.6)
+                cr_mask = binary_dilation(cr_mask_astroscrappy, iterations=1) | cr_mask_median_filter #Combine old and new masks
+                cr_masks.append(cr_mask)
+                cleaned_data_list.append(median_filter(cr_array, [3,3])) #Generate smoothed data to fill in pixels that were masked
+                cr_mask_count[cr_mask] += 1 #Increment mask count array for later scaling the non-masked pixels
             masked_pixels_unlikely_to_be_cosmics = cr_mask_count == n_frames
             cr_mask_count[masked_pixels_unlikely_to_be_cosmics] = 0 #Zero out pixels in the CR mask count unlikely to be cosmics
             for i in range(n_frames): #Scale each frame to "fill" holes left by cosmic rays using data from other frames
-                data_list[i][4:-4, 4:-4][cr_masks[i]] = 0. #Zero out cosmic rays found
+                data_list[i][4:-4, 4:-4][cr_masks[i] & ~masked_pixels_unlikely_to_be_cosmics] = 0. #Zero out cosmic rays found
                 data_list[i][4:-4, 4:-4] *= (n_frames / (n_frames - cr_mask_count)) #Scale up pixels in frames without cosmics but where cosmics are in other frames
                 data_list[i][4:-4, 4:-4][masked_pixels_unlikely_to_be_cosmics] = cleaned_data_list[i][masked_pixels_unlikely_to_be_cosmics] #Fill in bad pixels
+
 
 
 
@@ -186,7 +253,7 @@ def get_combined_images(obsset,
         raise RuntimeError("No B Frame images are found")
 
     if nb == 0:
-        a_data = _get_combined_image(obsset_a)
+        a_data = _get_combined_image(obsset_a, no_b=True)
         data_minus = a_data
 
     else:  # nb > 0
@@ -208,8 +275,10 @@ def get_combined_images(obsset,
 
     if nb == 0:
         data_plus = a_data
+        # print('UH OH THIS IS WRONG!')
     else:
         data_plus = (a_data + (a_b**2)*b_data)
+        # print('THIS LOOKS RIGHT BUT CHECKING A_B JUST IN CASE ', a_b)
 
     return data_minus, data_plus
 
@@ -231,6 +300,7 @@ def get_variances(data_minus, data_plus, gain):
 
     s = np.array(qq["stddev_lt_threshold"]) ** 2
     variance_per_amp = np.repeat(s, 64*2048).reshape((-1, 2048))
+    # breakpoint()
 
     variance = variance_per_amp + np.abs(data_plus)/gain
 
@@ -285,7 +355,7 @@ def make_combined_images(obsset, allow_no_b_frame=False,
                          remove_level=2,
                          remove_amp_wise_var=False,
                          interactive=False,
-                         cache_only=False):
+                         cache_only=True):
 
     if remove_level == "auto":
         remove_level = 2
@@ -311,23 +381,45 @@ def make_combined_images(obsset, allow_no_b_frame=False,
         remove_level = params["remove_level"]
         remove_amp_wise_var = params["amp_wise"]
 
-    d2 = remove_pattern(data_minus_raw, mask=bias_mask,
-                        remove_level=remove_level,
-                        remove_amp_wise_var=remove_amp_wise_var)
-
-    dp = remove_pattern(data_plus, remove_level=1,
-                        remove_amp_wise_var=False)
 
 
-    helper = ResourceHelper(obsset)
-    destripe_mask = helper.get("destripe_mask")
-    # d2 = destriper.get_destriped(data_minus_raw, mask=destripe_mask, pattern=128, hori=True)
-    # dp = data_plus
-    d2 = destriper.get_destriped(d2, mask=destripe_mask, pattern=64, hori=True, remove_vertical=False)
+    obsset_a = obsset.get_subset("A", "ON")
+    obsset_b = obsset.get_subset("B", "OFF")
+    na, nb = len(obsset_a.obsids), len(obsset_b.obsids)
+
+    # #For making readout pattern removal plots, should normally be commented out
+    # cache_only = False
+    # hdul = obsset.get_hdul_to_write(([], data_minus_raw))
+    # obsset.store("data_minus_raw", data=hdul, cache_only=cache_only)
+    # hdul = obsset.get_hdul_to_write(([], data_plus))
+    # obsset.store("data_plus", data=hdul, cache_only=cache_only)
 
 
+    disable_pattern_removal = obsset.get_recipe_parameter("disable_pattern_removal") #Let user disable the pattern removal
+    if nb > 0 and disable_pattern_removal==False:
+        d2 = remove_pattern(data_minus_raw, mask=bias_mask,
+                            remove_level=remove_level,
+                            remove_amp_wise_var=remove_amp_wise_var)
+
+        dp = remove_pattern(data_plus, remove_level=1,
+                            remove_amp_wise_var=False)
+
+
+        helper = ResourceHelper(obsset)
+        destripe_mask = helper.get("destripe_mask")
+        # d2 = destriper.get_destriped(data_minus_raw, mask=destripe_mask, pattern=128, hori=True)
+        # dp = data_plus
+        d2 = destriper.get_destriped(d2, mask=destripe_mask, pattern=64, hori=True, remove_vertical=False)
+    else:
+
+        dp = remove_pattern(data_plus, remove_level=1,
+                            remove_amp_wise_var=False)
+        d2 = data_minus_raw
+        # dp = data_plus
+        # d2 = data_plus
 
     gain = float(obsset.rs.query_ref_value("GAIN"))
+
 
     variance_map0, variance_map = get_variances(d2, dp, gain)
 

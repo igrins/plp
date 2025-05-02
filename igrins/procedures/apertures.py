@@ -29,7 +29,7 @@ class Apertures(object):
         if (end_order is None) or (end_order < 0):
             end_order = self.orders[-1]
 
-        self.orders_to_extract = range(start_order, end_order+1)
+        self.orders_to_extract = list(range(start_order, end_order+1))
 
     def __init__(self, orders, bottomup_solutions,
                  basename="", order_minmax_to_extract=(-1, -1)):
@@ -176,6 +176,9 @@ class Apertures(object):
         return s_list
 
     def extract_spectra_from_ordermap(self, data, order_map):
+        # FIXME please check is orders_to_extract is propertly respected and
+        # then remove the raise statement
+        raise RuntimeError("This method is not tested.")
         slices = ni.find_objects(order_map)
         s_list = []
         for o in self.orders_to_extract:
@@ -239,6 +242,15 @@ class Apertures(object):
         slices = ni.find_objects(ordermap)
 
         for o in self.orders_to_extract:
+            if o > len(slices) or slices[o-1] is None:
+                s = np.empty(2048, dtype=float)
+                v = np.empty(2048, dtype=float)
+                s.fill(np.nan)
+                v.fill(np.nan)
+                s_list.append(s)
+                v_list.append(v)
+                continue
+
             sl = slices[o-1][0], slice(0, 2048)
             msk = (ordermap[sl] == o)
 
@@ -284,6 +296,15 @@ class Apertures(object):
         #     hl.append(pyfits.PrimaryHDU())
 
         for o in self.orders_to_extract:
+            if o > len(slices) or slices[o-1] is None:
+                s = np.empty(2048, dtype=float)
+                v = np.empty(2048, dtype=float)
+                s.fill(np.nan)
+                v.fill(np.nan)
+                s_list.append(s)
+                v_list.append(v)
+                continue
+
             sl = slices[o-1][0], slice(0, 2048)
             msk = (ordermap_bpixed[sl] == o) & msk1[sl]
 
@@ -601,6 +622,35 @@ class Apertures(object):
 
         return profile_map
 
+
+
+    def make_profile_column(self, order_map, slitpos_map, lsf,
+                         slitoffset_map=None, slice_index=0):
+        """
+        Like make_profile_map above but for a single column in the echellogram
+        """
+        iy, ix = np.indices(slitpos_map.shape)
+
+        if slitoffset_map is not None:
+            ix = ix - slitoffset_map[slice_index,slice_index]
+
+        profile_column = np.empty(slitpos_map.shape[1], "d")
+        profile_column.fill(np.nan)
+
+        for o in self.orders:
+            msk = (order_map[:,slice_index] == o)
+
+            profile1 = np.zeros(profile_column.shape, "d")
+            profile1[msk] = lsf(o, ix[msk], slitpos_map[:,slice_index][msk])
+            # TODO :make sure that renormalization is good thing to do.
+            profile_sum = np.nansum(np.abs(profile1), axis=0)
+            with np.errstate(invalid="ignore"):
+                profile1 /= profile_sum
+
+            profile_column[msk] = profile1[msk]
+
+        return profile_column
+
     def make_synth_map(self, order_map, slitpos_map,
                        profile_map, s_list,
                        slitoffset_map=None):
@@ -627,7 +677,9 @@ class Apertures(object):
         xx = np.arange(2048)
 
         slices = ni.find_objects(order_map)
-        for o, s in zip(self.orders, s_list):
+        for o, s in zip(self.orders_to_extract, s_list):
+            if o > len(slices) or slices[o-1] is None:
+                continue
             sl = slices[o-1][0], slice(0, 2048)
             msk = (order_map[sl] == o)
 

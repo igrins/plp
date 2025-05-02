@@ -16,7 +16,7 @@ def _get_int_from_config(obsset, kind, default):
 
 
 def setup_extraction_parameters(obsset, order_range="-1,-1",
-                                height_2dspec=0, correct_flexure=False, mask_cosmics=False):
+                                height_2dspec=0, correct_flexure=False, mask_cosmics=False, disable_pattern_removal=False, slit_profile_method='column'):
 
     _order_range_s = order_range
     try:
@@ -34,7 +34,7 @@ def setup_extraction_parameters(obsset, order_range="-1,-1",
     obsset.set_recipe_parameters(order_start=order_start,
                                  order_end=order_end,
                                  height_2dspec=height_2dspec,
-                                 correct_flexure=correct_flexure, mask_cosmics=mask_cosmics)
+                                 correct_flexure=correct_flexure, mask_cosmics=mask_cosmics, disable_pattern_removal=disable_pattern_removal, slit_profile_method=slit_profile_method)
 
 
 def _get_combined_image(obsset):
@@ -231,13 +231,15 @@ def estimate_slit_profile(obsset,
                           slit_profile_mode="1d",
                           frac_slit=None):
 
+    slit_profile_method = obsset.get_recipe_parameter('slit_profile_method')
+
     if type(frac_slit) is str: #Convert frac slit to list of floats if not already floats
         frac_slit = list(map(float, frac_slit.split(",")))
 
     if slit_profile_mode == "1d":
         from .slit_profile import estimate_slit_profile_1d
         estimate_slit_profile_1d(obsset, x1=x1, x2=x2, do_ab=do_ab,
-                                 frac_slit=frac_slit)
+                                 frac_slit=frac_slit, method=slit_profile_method)
     elif slit_profile_mode == "uniform":
         from .slit_profile import estimate_slit_profile_uniform
         estimate_slit_profile_uniform(obsset, do_ab=do_ab,
@@ -305,6 +307,10 @@ def store_1dspec(obsset, v_list, s_list, sn_list=None):
                                     ([], convert_data(wvl_data)))
     wvl_header.update(hdul[0].header)
     hdul[0].header = wvl_header
+
+    hdul[0].header['OBSIDS'] = (obsset.get_obsids_string(), 'All Observation IDs used in stack')
+    hdul[0].header['FRMTYPES'] = (obsset.get_frametypes_string(), 'All Frametypes used in stack (A or B)')
+
     hdul[0].verify(option="silentfix")
 
     obsset.store("SPEC_FITS", hdul,
@@ -370,6 +376,9 @@ def store_2dspec(obsset,
     hdul = obsset.get_hdul_to_write(([], convert_data(d.astype("float32"))))
     # wvl_header.update(hdul[0].header)
     hdul[0].header = wvl_header
+
+    hdul[0].header['OBSIDS'] = (obsset.get_obsids_string(), 'All Observation IDs used in stack')
+    hdul[0].header['FRMTYPES'] = (obsset.get_frametypes_string(), 'All Frametypes used in stack (A or B)') 
 
     obsset.store("SPEC2D_FITS", hdul, postfix=basename_postfix)
 

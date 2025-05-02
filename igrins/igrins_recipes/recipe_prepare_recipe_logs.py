@@ -10,6 +10,7 @@ from ..external import argh
 
 
 _default_recipe_name = dict(flat="FLAT", std="A0V_AB", tar="STELLAR_AB",
+                            sky='SKY',
                             dark="DARK",
                             arc_thar="ARC", arc_une="ARC")
 
@@ -49,6 +50,10 @@ def make_recipe_logs(obsdate, l, populate_group1=False,
         obsids = " ".join(group["OBSID"].apply(str))
         frametypes = " ".join(group["FRAMETYPE"])
 
+        if objtype.lower() == 'sky' or objname=='Blank sky' or objname=='SKY 300s':
+            objtype = 'TAR'
+            recipe_name = 'SKY'
+
         if populate_group1:
             group1 = group["OBSID"].iloc[0]
 
@@ -81,7 +86,7 @@ def write_to_file(df_recipe_logs, fn_out):
 
     headers = df_recipe_logs.keys()
     fout.write(", ".join(headers) + "\n")
-    fout.write("# Avaiable recipes : FLAT, SKY, A0V_AB, A0V_ONOFF, "
+    fout.write("# Available recipes : FLAT, SKY, A0V_AB, A0V_ONOFF, "
                "STELLAR_AB, STELLAR_ONOFF, EXTENDED_AB, EXTENDED_ONOFF\n")
 
     df_recipe_logs.to_csv(fout, index=False, header=False)
