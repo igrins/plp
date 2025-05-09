@@ -70,7 +70,8 @@ def _make_spec_a0v_hdu_list(obsset, wvl, spec, variance, a0v_spec, a0v_variance,
                             thresh_masks,
                             header_updates=None):
 
-    primary_header_cards = [("EXTNAME", "SPEC_DIVIDE_A0V")]
+    #primary_header_cards = [("EXTNAME", "SPEC_DIVIDE_A0V")]
+    primary_header_cards = [("EXTNAME", "SCI"), ("EXTVER", 1), ("EXTDESC", "SPEC_DIVIDE_A0V")]
     if header_updates is not None:
         primary_header_cards.extend(header_updates)
 
@@ -79,16 +80,16 @@ def _make_spec_a0v_hdu_list(obsset, wvl, spec, variance, a0v_spec, a0v_variance,
     
     _hdul = [
         (primary_header_cards, spec/a0v_spec*vega),
-        ([("EXTNAME", "SPEC_DIVIDE_A0V_VARIANCE")], spec_divided_by_a0v_variance),
-        ([("EXTNAME", "WAVELENGTH")], wvl),
-        ([("EXTNAME", "TGT_SPEC")], spec),
-        ([("EXTNAME", "TGT_SPEC_VARIANCE")], variance),
-        ([("EXTNAME", "A0V_SPEC")], a0v_spec),
-        ([("EXTNAME", "A0V_SPEC_VARIANCE")], a0v_variance),
-        ([("EXTNAME", "VEGA_SPEC")], vega),
-        ([("EXTNAME", "SPEC_DIVIDE_CONT")], spec/a0v_fitted_continuum*vega),
-        ([("EXTNAME", "SPEC_DIVIDE_CONT_VARIANCE")], spec_divided_by_cont_variance),
-        ([("EXTNAME", "MASK")], thresh_masks.astype("i"))
+        ([("EXTNAME", "VAR"), ("EXTVER", 1), ("EXTDESC", "SPEC_DIVIDE_A0V_VARIANCE")], spec_divided_by_a0v_variance), #Changes made to EXTNAME for extenstion headers in spec_a0v.fits files for ingestion into Gemini Archive, moved old keyword value to new keyword EXTDESC
+        ([("EXTNAME", "SCI"), ("EXTVER", 2), ("EXTDESC", "WAVELENGTH")], wvl),
+        ([("EXTNAME", "SCI"), ("EXTVER", 3), ("EXTDESC", "TGT_SPEC")], spec),
+        ([("EXTNAME", "VAR"), ("EXTVER", 3), ("EXTDESC", "TGT_SPEC_VARIANCE")], variance),
+        ([("EXTNAME", "SCI"), ("EXTVER", 4), ("EXTDESC", "A0V_SPEC")], a0v_spec),
+        ([("EXTNAME", "VAR"), ("EXTVER", 4), ("EXTDESC", "A0V_SPEC_VARIANCE")], a0v_variance),
+        ([("EXTNAME", "SCI"), ("EXTVER", 5), ("EXTDESC", "VEGA_SPEC")], vega),
+        ([("EXTNAME", "SCI"), ("EXTVER", 6), ("EXTDESC", "SPEC_DIVIDE_CONT")], spec/a0v_fitted_continuum*vega),
+        ([("EXTNAME", "VAR"), ("EXTVER", 6), ("EXTDESC", "SPEC_DIVIDE_CONT_VARIANCE")], spec_divided_by_cont_variance),
+        ([("EXTNAME", "DQ"), ("EXTVER", 1), ("EXTDESC", "MASK")], thresh_masks.astype("i"))
     ]
 
     # _hdul[0].verify(option="fix")
@@ -105,7 +106,8 @@ def divide_a0v(obsset,
                basename_postfix=None,
                # outname_postfix=None,
                #a0v_basename_postfix="",
-               threshold_a0v=0.1):
+               threshold_a0v=0.1,
+               user='Default', version='Default'):
 
     tgt = OnedSpecHelper(obsset, basename_postfix=basename_postfix)
 
@@ -140,12 +142,26 @@ def divide_a0v(obsset,
                                    thresh_masks,
                                    header_updates=None)
 
-    #Pass headers from .spec.fits and .variance.fits files to the various extensions, and make sure the OBSIDs are passed
-    hdul["TGT_SPEC"].header.update(tgt._spec_hdu_list[0].header)
-    hdul["TGT_SPEC"].header["OBSID"] = str(obsset.obsids[0])
-    hdul["A0V_SPEC"].header.update(a0v._spec_hdu_list[0].header)
-    hdul["A0V_SPEC"].header["OBSID"] = a0v_obsid
+    if a0v_obsid == None: #Error catch, fill in a0v_obsid if it is None so that it properly saves in 
+        a0v_obsid = a0v.obsset.obsids[0]
 
+    #Pass headers from .spec.fits and .variance.fits files to the various extensions, and make sure the OBSIDs are passed
+
+    hdul[4].header.update(tgt.obsset.get_hdus()[0].header)
+    hdul[4].header["OBSID"] = str(obsset.obsids[0])
+    hdul[6].header.update(a0v.obsset.get_hdus()[0].header)
+    hdul[6].header["OBSID"] = a0v_obsid
+
+
+    # #Delete keywords from headers carried over from the primary headers of single fits files that are not fits standard for an extension in a multi-extension fits file
+    del hdul[4].header['SIMPLE']
+    del hdul[6].header['SIMPLE']
+
+    obsdate, band = obsset.get_resource_spec()
+    obsid = obsset.master_obsid
+
+    hdul[0].header['USER'] = (user, 'User who ran data reduction')
+    hdul[0].header['VERSION'] = (version, 'Version of data reduction software used')
 
     obsset.store("SPEC_A0V_FITS", hdul, postfix=basename_postfix)
 
@@ -153,5 +169,7 @@ def divide_a0v(obsset,
 steps = [
         #Step("Set basename-postfix", set_basename_postfix,
         # basename_postfix=""),
-        Step("Divide w/ A0V", divide_a0v, basename_postfix="")
+        Step("Divide w/ A0V", divide_a0v, basename_postfix="",
+            user='Default',
+            version='Default',)
         ]

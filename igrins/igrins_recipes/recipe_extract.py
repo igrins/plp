@@ -95,6 +95,8 @@ _steps_default = [
          correct_flexure=False,
          mask_cosmics=False,
          disable_pattern_removal=False,
+         user='Default',
+         version='Default',
          slit_profile_method='column',
          ),
     Step("Set basename-postfix", set_basename_postfix,
