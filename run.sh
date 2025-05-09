@@ -30,7 +30,7 @@ python ./igr_pipe.py stellar-ab $UTDATE --correct-flexure --height-2dspec=100 --
 python ./igr_pipe.py stellar-onoff $UTDATE --correct-flexure --height-2dspec=100 --mask-cosmics --user=$USER --version=$VERSION --slit-profile-method=$SLIT_PROFILE_METHOD #Reduce stellar sources nod off slit
 python ./igr_pipe.py extended-ab $UTDATE --correct-flexure --height-2dspec=100 --mask-cosmics --user=$USER --version=$VERSION #Reduce extended sources nod on slit
 python ./igr_pipe.py extended-onoff $UTDATE --correct-flexure --height-2dspec=100 --mask-cosmics --user=$USER --version=$VERSION #Reduce extended sources not off slit
-python ./igr_pipe.py divide-a0v $UTDATE --user=$USER --version=$VERSION #Reduce stellar sources nod off slit
+python ./igr_pipe.py divide-a0v $UTDATE -n --user=$USER --version=$VERSION #Reduce stellar sources nod off slit
 #python igr_pipe.py plot-spec $UTDATE --html-output #Make and publish HTML preview
 #python igr_pipe.py publish-html $UTDATE #Ditto
 
