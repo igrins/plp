@@ -111,6 +111,8 @@ def divide_a0v(obsset,
 
     tgt = OnedSpecHelper(obsset, basename_postfix=basename_postfix)
 
+
+
     a0v_obsid = get_a0v_obsid(obsset, a0v, a0v_obsid)
     if a0v_obsid is None:
         a0v_obsid_ = obsset.query_resource_basename("a0v")
@@ -131,7 +133,6 @@ def divide_a0v(obsset,
 
     thresh_masks = get_a0v_thresh_masks(a0v, threshold_a0v)
 
-    #breakpoint()
 
     hdul = _make_spec_a0v_hdu_list(obsset,
                                    tgt.um,
