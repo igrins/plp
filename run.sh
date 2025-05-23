@@ -46,8 +46,8 @@ do
 	OBSID=$(printf "%04d" $i)
 	mv outdata/$UTDATE\/SDCH_$UTDATE\_$OBSID\.spec.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_H.spec.fits  2>/dev/null #Note 2>/dev/null is to silence mv errors when it doesn't find a file
 	mv outdata/$UTDATE\/SDCK_$UTDATE\_$OBSID\.spec.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_K.spec.fits  2>/dev/null
-	mv outdata/$UTDATE\/SDCH_$UTDATE\_$OBSID\.sum.spec.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_H..sum.spec.fits  2>/dev/null
-	mv outdata/$UTDATE\/SDCK_$UTDATE\_$OBSID\.sum.spec.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_K..sum.spec.fits  2>/dev/null
+	mv outdata/$UTDATE\/SDCH_$UTDATE\_$OBSID\.sum.spec.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_H.sum.spec.fits  2>/dev/null
+	mv outdata/$UTDATE\/SDCK_$UTDATE\_$OBSID\.sum.spec.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_K.sum.spec.fits  2>/dev/null
 	mv outdata/$UTDATE\/SDCH_$UTDATE\_$OBSID\.spec2d.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_H.spec2d.fits  2>/dev/null
 	mv outdata/$UTDATE\/SDCK_$UTDATE\_$OBSID\.spec2d.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_K.spec2d.fits  2>/dev/null
 	mv outdata/$UTDATE\/SDCH_$UTDATE\_$OBSID\.spec_a0v.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_H.spec_a0v.fits  2>/dev/null
