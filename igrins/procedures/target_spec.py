@@ -393,7 +393,9 @@ def store_2dspec(obsset,
     ordermap_bpixed = helper.get("ordermap_bpixed")
 
     from .correct_distortion import get_rectified_2dspec
-    _ = get_rectified_2dspec(data_shft,
+
+    
+    _ = get_rectified_2dspec(variance_map_shft,
                              ordermap_bpixed,
                              bottom_up_solutions,
                              conserve_flux=conserve_flux,
