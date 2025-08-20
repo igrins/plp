@@ -182,6 +182,17 @@ def estimate_slit_profile_1d(obsset,
             else:
                 profile_x, profile_y = _get_norm_profile(bins, hh0)
                 # profile = get_profile_func(profile_x, profile_y)
+
+            # for j in range(len(ap.orders_to_extract)):
+            #     slit_profile_dict = dict(orders=ap.orders_to_extract[j],
+            #                              ab_mode=do_ab,
+            #                              slit_profile_list=slit_profile_list,
+            #                              profile_x=profile_x,
+            #                              profile_y=slit_profile_list[j])
+            #                              #profile_y=profile_y)
+            #     order_mask = ordermap[:,i] == ap.orders_to_extract[j]
+            #     profile_map[order_mask,i] = ap.make_profile_column(ordermap, slitpos_map, _get_profile_func_from_dict(slit_profile_dict), slice_index=i)[order_mask]
+
             slit_profile_dict = dict(orders=ap.orders_to_extract,
                                      ab_mode=do_ab,
                                      slit_profile_list=slit_profile_list,
@@ -189,6 +200,12 @@ def estimate_slit_profile_1d(obsset,
                                      profile_y=profile_y)
             profile_map[:,i] = ap.make_profile_column(ordermap, slitpos_map, _get_profile_func_from_dict(slit_profile_dict), slice_index=i)
 
+    # select portion of the slit to extract
+
+    if frac_slit is not None:
+        frac1, frac2 = min(frac_slit), max(frac_slit)
+        slitpos_msk = (slitpos_map < frac1) | (slitpos_map > frac2)
+        profile_map[slitpos_msk] = np.nan
 
     hdul = obsset.get_hdul_to_write(([], profile_map))
     obsset.store("slitprofile_fits", hdul, cache_only=True)
