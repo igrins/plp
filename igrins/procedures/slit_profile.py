@@ -123,7 +123,7 @@ def make_slitprofile_map(ap, profile,
 
 def estimate_slit_profile_1d(obsset,
                              x1=800, x2=2048-800,
-                             do_ab=True, frac_slit_list=None, method='column'):
+                             do_ab=True, frac_slit_list=[], method='column'):
     """
     return a profile function
 
@@ -206,7 +206,7 @@ def estimate_slit_profile_1d(obsset,
 
         # select portion of the slit to extract
 
-    if frac_slit_list is not None:
+    if len(frac_slit_list) > 1:
         frac1, frac2 = min(frac_slit_list), max(frac_slit_list)
         slitpos_msk = (slitpos_map < frac1) | (slitpos_map > frac2)
         profile_map[slitpos_msk] = np.nan
