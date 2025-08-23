@@ -411,16 +411,19 @@ def make_combined_images(obsset, allow_no_b_frame=False,
     else:
         raise ValueError()
 
-
     helper = ResourceHelper(obsset)
     destripe_mask = helper.get("destripe_mask")
     # d2 = destriper.get_destriped(data_minus_raw, mask=destripe_mask, pattern=128, hori=True)
     # dp = data_plus
-    d2 = destriper.get_destriped(d2, mask=destripe_mask, pattern=64, hori=True, remove_vertical=False)
+    destriped_d2 = destriper.get_destriped(d2, mask=destripe_mask, pattern=64, hori=True, remove_vertical=False)
+
+    goodpix = np.isfinite(destriped_d2) & ~np.isnan(destriped_d2) #Catch only good destriped pixels
+    d2[goodpix] = destriped_d2[goodpix]
 
     gain = float(obsset.rs.query_ref_value("GAIN"))
 
     variance_map0, variance_map = get_variances(d2, dp, gain)
+
 
     hdul = obsset.get_hdul_to_write(([], d2))
 
