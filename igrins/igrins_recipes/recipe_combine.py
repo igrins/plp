@@ -72,7 +72,7 @@ def _get_combined_image(obsset):
                         cr_mask, cr_array = astroscrappy.detect_cosmics(data_without_overscan, gain=h_band_gain, readnoise=h_band_read_noise, sigclip = use_this_sigclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for H-band
                     else: #if band == 'K'
                         cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=k_band_gain, readnoise=k_band_read_noise, sigclip = use_this_sigclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for K-band
-                    ratio = np.sum(cr_mask_astroscrappy) / np.size(cr_mask_astroscrappy)
+                    ratio = np.sum(cr_mask) / np.size(cr_mask)
                     use_this_sigclip = 2 * use_this_sigclip #Double sigma clip in case we need to try again
                     if ratio > 0.005:
                         print('UH OH!  CR MASKING IS TOO PERMISSIVE.  DOUBLE THE SIGMA CLIP AND TRY AGAIN.')
