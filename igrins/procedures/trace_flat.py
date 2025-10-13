@@ -43,7 +43,7 @@ def estimate_bg_mean_std(flat, pad=4, smoothing_length=150):
 
     over_half_mask = flat_dist > 0.5 * max(flat_dist)
     max_width_slice = max((sl.stop-sl.start, sl) for sl,
-                          in ni.find_objects(over_half_mask))[1]
+                          in ni.find_objects(over_half_mask.astype(np.int64)))[1]
 
     flat_selected = flat_sorted[max_width_slice]
 
