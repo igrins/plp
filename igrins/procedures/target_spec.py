@@ -521,7 +521,8 @@ def extract_stellar_spec(obsset, extraction_mode="optimal",
     data_minus = obsset.load_fits_sci_hdu("COMBINED_IMAGE1",
                                           postfix=postfix).data
 
-    orderflat = helper.get("orderflat")
+    #orderflat = helper.get("orderflat")
+    orderflat = helper.get("orderflat_no_hotpix") #Fix for spikes in optimally extracted spectra
     data_minus_flattened = data_minus / orderflat
 
     data_minus_flattened[[0, 1, 2, 3, -4, -3, -2, -1]] = np.nan
