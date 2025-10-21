@@ -69,6 +69,22 @@ class ResourceHelper(object):
 
         return orderflat
 
+
+    @resource("orderflat_no_hotpix")
+    def get_orderflat_no_hotpix(self, obsset):
+
+        orderflat_ = obsset.load_resource_sci_hdu_for("order_flat")
+        bias_mask = obsset.load_resource_for("bias_mask")
+        #badpix_mask = self.get("badpix_mask")
+        badpix_mask = self.get("badpix_mask_no_hotpix")
+
+        orderflat = orderflat_.data.copy()
+        orderflat[badpix_mask] = np.nan
+
+        orderflat[~bias_mask] = 1.
+
+        return orderflat
+
     @resource("ordermap")
     def get_ordermap(self, obsset):
 
@@ -141,6 +157,16 @@ class ResourceHelper(object):
 
         return ap
 
+    #Fix for spikes in optimally extracted spectra
+    @resource("badpix_mask_no_hotpix")
+    def get_badpix_mask_no_hotpix(self, obsset):
+
+        #d_hotpix = obsset.load_resource_for("hotpix_mask")
+        d_deadpix = obsset.load_resource_for("deadpix_mask")
+        #badpix_mask = d_hotpix | d_deadpix
+        badpix_mask = d_deadpix
+
+        return badpix_mask
 
 # if 0:
 #     rm = ResourceManager()
