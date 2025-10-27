@@ -687,7 +687,7 @@ class Apertures(object):
             msk = (order_map[sl] == o)
 
             msk_s = np.isfinite(s)
-            if np.sum(msk_s) < 2:
+            if np.sum(msk_s) <= 2:
                 continue
 
             
