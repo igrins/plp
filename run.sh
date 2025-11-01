@@ -1,7 +1,7 @@
 #!/bin/bash
 #Simple script to fully run IGRINS PLP on any UTDATE
 USER=Default #Name of user running script, will be passed to FTIS headers
-VERSION=igrins_v3.1 #Version of PLP being used to run script, will be passed to FTIS headers
+VERSION=igrins_v3.2 #Version of PLP being used to run script, will be passed to FTIS headers
 SLIT_PROFILE_METHOD=column #Method for determining slit profile for optimal extraction, column=use running median per column across detector (new method, default),  full=use single median profile across entire detector (old method, might be needed for very low SNR targets)
 
 echo "Enter UTDATE:" #Prompt user to enter date
@@ -41,18 +41,18 @@ python ./igr_pipe.py divide-a0v $UTDATE --user=$USER --version=$VERSION #Reduce 
 
 
 #Batch rename to Gemini naming convention
-for i in $(seq 1 9999) #Loop through all possible obsids
-do
-	OBSID=$(printf "%04d" $i)
-	mv outdata/$UTDATE\/SDCH_$UTDATE\_$OBSID\.spec.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_H.spec.fits  2>/dev/null #Note 2>/dev/null is to silence mv errors when it doesn't find a file
-	mv outdata/$UTDATE\/SDCK_$UTDATE\_$OBSID\.spec.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_K.spec.fits  2>/dev/null
-	mv outdata/$UTDATE\/SDCH_$UTDATE\_$OBSID\.sum.spec.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_H.sum.spec.fits  2>/dev/null
-	mv outdata/$UTDATE\/SDCK_$UTDATE\_$OBSID\.sum.spec.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_K.sum.spec.fits  2>/dev/null
-	mv outdata/$UTDATE\/SDCH_$UTDATE\_$OBSID\.spec2d.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_H.spec2d.fits  2>/dev/null
-	mv outdata/$UTDATE\/SDCK_$UTDATE\_$OBSID\.spec2d.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_K.spec2d.fits  2>/dev/null
-	mv outdata/$UTDATE\/SDCH_$UTDATE\_$OBSID\.spec_a0v.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_H.spec_a0v.fits  2>/dev/null
-	mv outdata/$UTDATE\/SDCK_$UTDATE\_$OBSID\.spec_a0v.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_K.spec_a0v.fits  2>/dev/null
-done
+#for i in $(seq 1 9999) #Loop through all possible obsids
+#do
+#	OBSID=$(printf "%04d" $i)
+#	mv outdata/$UTDATE\/SDCH_$UTDATE\_$OBSID\.spec.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_H.spec.fits  2>/dev/null #Note 2>/dev/null is to silence mv errors when it doesn't find a file
+#	mv outdata/$UTDATE\/SDCK_$UTDATE\_$OBSID\.spec.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_K.spec.fits  2>/dev/null
+#	mv outdata/$UTDATE\/SDCH_$UTDATE\_$OBSID\.sum.spec.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_H.sum.spec.fits  2>/dev/null
+#	mv outdata/$UTDATE\/SDCK_$UTDATE\_$OBSID\.sum.spec.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_K.sum.spec.fits  2>/dev/null
+#	mv outdata/$UTDATE\/SDCH_$UTDATE\_$OBSID\.spec2d.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_H.spec2d.fits  2>/dev/null
+#	mv outdata/$UTDATE\/SDCK_$UTDATE\_$OBSID\.spec2d.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_K.spec2d.fits  2>/dev/null
+#	mv outdata/$UTDATE\/SDCH_$UTDATE\_$OBSID\.spec_a0v.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_H.spec_a0v.fits  2>/dev/null
+#	mv outdata/$UTDATE\/SDCK_$UTDATE\_$OBSID\.spec_a0v.fits  outdata/$UTDATE\/N$UTDATE\S$OBSID\_K.spec_a0v.fits  2>/dev/null
+#done
 
 
 echo "Done running"
