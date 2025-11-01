@@ -124,19 +124,37 @@ def _get_combined_image(obsset, no_b=False):
         date, band = obsset.get_resource_spec()
         if n_frames == 1: #Run only if n_frames is 1 (a single AB nod), this is rare but requires special treatment to interpolate over cosmics since we can't fill in masked cosmics with other frames
                 data_without_overscan = data_list[0][4:-4, 4:-4] #Cut overscan
-                if band == 'H':
-                    cr_mask, cr_array = astroscrappy.detect_cosmics(data_without_overscan, gain=2.05, readnoise=10.92*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for H-band
-                else: #if band == 'K'
-                    cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.21, readnoise=8.93*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for K-band
+                ratio = 1.0
+                use_this_sigclip = cosmics_sigmaclip
+                while ratio > 0.005: #Catch for a too permissive CR mask, to avoid masking things that are not CRs 
+                    if band == 'H':
+                        cr_mask, cr_array = astroscrappy.detect_cosmics(data_without_overscan, gain=2.05, readnoise=10.92*readnoise_multiplier, sigclip = use_this_sigclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for H-band
+                    else: #if band == 'K'
+                        cr_mask, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.21, readnoise=8.93*readnoise_multiplier, sigclip = use_this_sigclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for K-band
+                    ratio = np.sum(cr_mask) / np.size(cr_mask)
+                    use_this_sigclip = 2 * use_this_sigclip #Double sigma clip in case we need to try again
+                    if ratio > 0.005:
+                        print('UH OH!  CR MASKING IS TOO PERMISSIVE.  DOUBLE THE SIGMA CLIP AND TRY AGAIN.')
+                    else:
+                        print('Looks like a good CR mask!')    
                 data_list[0][4:-4, 4:-4] = cr_array #Interpolate over any cosmics found
         else: #If n_frames > 1, do the normal routine and use pixels frames without cosmics to fill in masked cosmics
             cleaned_data_list = []
             for i in range(n_frames):
                 data_without_overscan = data_list[i][4:-4, 4:-4] #Cut overscan
-                if band == 'H':
-                    cr_mask_astroscrappy, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.05, readnoise=10.92*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for H-band
-                else: #if band == 'K'
-                    cr_mask_astroscrappy, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.21, readnoise=8.93*readnoise_multiplier, sigclip = cosmics_sigmaclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for K-band            
+                ratio = 1.0
+                use_this_sigclip = cosmics_sigmaclip
+                while ratio > 0.005: #Catch for a too permissive CR mask, to avoid masking things that are not CRs 
+                    if band == 'H':
+                        cr_mask_astroscrappy, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.05, readnoise=10.92*readnoise_multiplier, sigclip = use_this_sigclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for H-band
+                    else: #if band == 'K'
+                        cr_mask_astroscrappy, cr_array  = astroscrappy.detect_cosmics(data_without_overscan, gain=2.21, readnoise=8.93*readnoise_multiplier, sigclip = use_this_sigclip, sigfrac = cosmics_sigfrac, objlim = cosmcis_objlim, niter=4, verbose=True, cleantype='medmask') # Build the object for K-band            
+                    ratio = np.sum(cr_mask_astroscrappy) / np.size(cr_mask_astroscrappy)
+                    use_this_sigclip = 2 * use_this_sigclip #Double sigma clip in case we need to try again
+                    if ratio > 0.005:
+                        print('UH OH!  CR MASKING IS TOO PERMISSIVE.  DOUBLE THE SIGMA CLIP AND TRY AGAIN.')
+                    else:
+                        print('Looks like a good CR mask!')   
                 filtered_data_1 = cr_array - median_filter(cr_array, [7,1]) #Apply an additional mask for CRs and electronic noise that might have been missed by astroscrappy
                 filtered_data_2 = filtered_data_1 - median_filter(filtered_data_1, [1,11])
                 cr_mask_median_filter = (np.abs(filtered_data_2) > 40.0) & ( np.abs(filtered_data_2 /cr_array) > 0.6)
@@ -409,7 +427,10 @@ def make_combined_images(obsset, allow_no_b_frame=False,
         destripe_mask = helper.get("destripe_mask")
         # d2 = destriper.get_destriped(data_minus_raw, mask=destripe_mask, pattern=128, hori=True)
         # dp = data_plus
-        d2 = destriper.get_destriped(d2, mask=destripe_mask, pattern=64, hori=True, remove_vertical=False)
+        destriped_d2 = destriper.get_destriped(d2, mask=destripe_mask, pattern=64, hori=True, remove_vertical=False)
+
+        goodpix = np.isfinite(destriped_d2) & ~np.isnan(destriped_d2) #Catch only good destriped pixels
+        d2[goodpix] = destriped_d2[goodpix]
     else:
 
         dp = remove_pattern(data_plus, remove_level=1,
