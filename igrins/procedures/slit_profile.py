@@ -206,8 +206,10 @@ def estimate_slit_profile_1d(obsset,
 
         # select portion of the slit to extract
 
-    if len(frac_slit_list) > 1:
-        frac1, frac2 = min(frac_slit_list), max(frac_slit_list)
+    #if len(frac_slit_list) > 1:
+    for frac_slit in frac_slit_list:
+        #frac1, frac2 = min(frac_slit_list), max(frac_slit_list)
+        frac1, frac2 = min(frac_slit), max(frac_slit)
         slitpos_msk = (slitpos_map < frac1) | (slitpos_map > frac2)
         profile_map[slitpos_msk] = np.nan
 
