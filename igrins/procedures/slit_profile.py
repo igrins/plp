@@ -280,8 +280,18 @@ def estimate_slit_profile_uniform(obsset,
 
     profile = get_profile_func_extended(obsset, do_ab=do_ab)
     profile_map = make_slitprofile_map(ap, profile,
-                                       ordermap, slitpos_map,
-                                       frac_slit_list=frac_slit_list)
+                                       ordermap, slitpos_map)
+                                       #frac_slit_list=frac_slit_list)
+
+
+    # select portion of the slit to extract
+    if frac_slit_list:
+        slitpos_msk = np.zeros(slitpos_map.shape, dtype=bool)
+        for frac_slits in frac_slit_list:
+            frac1, frac2 = min(frac_slits), max(frac_slits)
+            slitpos_msk[(frac1 < slitpos_map) & (slitpos_map < frac2)] = True
+        profile_map[~slitpos_msk] = np.nan
+
 
     hdul = obsset.get_hdul_to_write(([], profile_map))
     obsset.store("slitprofile_fits", hdul, cache_only=True)
