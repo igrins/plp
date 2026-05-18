@@ -229,21 +229,21 @@ def estimate_slit_profile(obsset,
                           x1=800, x2=2048-800,
                           do_ab=True,
                           slit_profile_mode="1d",
-                          frac_slit=None):
+                          frac_slit_list=None):
 
     slit_profile_method = obsset.get_recipe_parameter('slit_profile_method')
 
-    if type(frac_slit) is str: #Convert frac slit to list of floats if not already floats
-        frac_slit = list(map(float, frac_slit.split(",")))
+    if type(frac_slit_list) is str: #Convert frac slit to list of floats if not already floats
+        frac_slit_list = list(map(float, frac_slit_list.split(",")))
 
     if slit_profile_mode == "1d":
         from .slit_profile import estimate_slit_profile_1d
         estimate_slit_profile_1d(obsset, x1=x1, x2=x2, do_ab=do_ab,
-                                 frac_slit=frac_slit, method=slit_profile_method)
+                                 frac_slit_list=frac_slit_list, method=slit_profile_method)
     elif slit_profile_mode == "uniform":
         from .slit_profile import estimate_slit_profile_uniform
         estimate_slit_profile_uniform(obsset, do_ab=do_ab,
-                                      frac_slit=frac_slit)
+                                      frac_slit_list=frac_slit_list)
     else:
         msg = ("Unknwon mode ({}) in slit_profile estimation"
                .format(slit_profile_mode))
