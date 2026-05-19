@@ -2,7 +2,7 @@
 
 #Simple script to fully run IGRINS PLP on any UTDATE
 USER=Default #Name of user running script, will be passed to FTIS headers
-VERSION=igrins-2_v3.1 #Version of PLP being used to run script, will be passed to FTIS headers
+VERSION=igrins-2_v3.3 #Version of PLP being used to run script, will be passed to FTIS headers
 SLIT_PROFILE_METHOD=column #Method for determining slit profile for optimal extraction, column=use running median per column across detector (new method, default),  full=use single median profile across entire detector (old method, might be needed for very low SNR targets)
 
 

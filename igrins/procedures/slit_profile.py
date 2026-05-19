@@ -91,7 +91,7 @@ def extract_slit_profile(ap, ordermap_bpixed, slitpos_map,
 
 def make_slitprofile_map(ap, profile,
                          ordermap, slitpos_map,
-                         frac_slit_list=None, slice_indicies=(0,2048)):
+                         slice_indicies=(0,2048)):
 
     # helper = ResourceHelper(obsset)
 
@@ -103,15 +103,6 @@ def make_slitprofile_map(ap, profile,
     profile_map = ap.make_profile_map(ordermap,
                                       slitpos_map,
                                       profile, slice_indicies=slice_indicies)
-
-    # select portion of the slit to extract
-    if frac_slit_list:
-        #slitpos_msk = np.zeros(slitpos_map.shape, dtype=bool)
-        for frac_slits in frac_slit_list:
-            #frac1, frac2 = min(frac_slits), max(frac_slits)
-            #slitpos_msk[(frac1 < slitpos_map) & (slitpos_map < frac2)] = True
-            profile_map[(min(frac_slits) < slitpos_map) & (slitpos_map <  max(frac_slits))] = np.nan
-        #profile_map[~slitpos_msk] = np.nan
 
 
     return profile_map
@@ -173,8 +164,7 @@ def estimate_slit_profile_1d(obsset,
                      postfix=obsset.basename_postfix)
         profile = _get_profile_func_from_dict(slit_profile_dict)
         profile_map = make_slitprofile_map(ap, profile,
-                                           ordermap, slitpos_map,
-                                           frac_slit_list=frac_slit_list)
+                                           ordermap, slitpos_map)
     elif method == 'column': #New method that uses a running median to find the profile per column
         profile_map = np.zeros([2048, 2048])
 
@@ -204,12 +194,15 @@ def estimate_slit_profile_1d(obsset,
             profile_map[:,i] = ap.make_profile_column(ordermap, slitpos_map, _get_profile_func_from_dict(slit_profile_dict), slice_index=i)
 
 
-        # select portion of the slit to extract
 
-    if len(frac_slit_list) > 1:
-        frac1, frac2 = min(frac_slit_list), max(frac_slit_list)
-        slitpos_msk = (slitpos_map < frac1) | (slitpos_map > frac2)
-        profile_map[slitpos_msk] = np.nan
+    # select portion of the slit to extract
+    if frac_slit_list:
+        slitpos_msk = np.zeros(slitpos_map.shape, dtype=bool)
+        for frac_slits in frac_slit_list:
+            frac1, frac2 = min(frac_slits), max(frac_slits)
+            slitpos_msk[(frac1 < slitpos_map) & (slitpos_map < frac2)] = True
+        profile_map[~slitpos_msk] = np.nan
+
 
 
     hdul = obsset.get_hdul_to_write(([], profile_map))
@@ -265,8 +258,17 @@ def estimate_slit_profile_uniform(obsset,
 
     profile = get_profile_func_extended(obsset, do_ab=do_ab)
     profile_map = make_slitprofile_map(ap, profile,
-                                       ordermap, slitpos_map,
-                                       frac_slit_list=frac_slit_list)
+                                       ordermap, slitpos_map)
+
+
+    # select portion of the slit to extract
+    if frac_slit_list:
+        slitpos_msk = np.zeros(slitpos_map.shape, dtype=bool)
+        for frac_slits in frac_slit_list:
+            frac1, frac2 = min(frac_slits), max(frac_slits)
+            slitpos_msk[(frac1 < slitpos_map) & (slitpos_map < frac2)] = True
+        profile_map[~slitpos_msk] = np.nan
+
 
     hdul = obsset.get_hdul_to_write(([], profile_map))
     obsset.store("slitprofile_fits", hdul, cache_only=True)
