@@ -188,7 +188,7 @@ steps_extended = _steps_default + _steps_extended
 
 steps_a0v = steps_stellar + [Step("Flatten A0V", flatten_a0v),
 # steps_a0v = steps_extended + [Step("Flatten A0V", flatten_a0v), #Hack to sum extract standard star if needed
-#                              Step("Update db", update_db)
+                             Step("Update db", update_db)
 ]
 
 
